@@ -2,7 +2,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { FilePlusIcon, HistoryIcon, LandmarkIcon, UserPlusIcon, UsersIcon, LogOutIcon } from '../constants';
-import { useData } from '../../context/DataContext';
+import { useData } from '../context/DataContext';
 
 const navItems = [
   { path: '/', label: 'Add Customer', icon: UserPlusIcon },

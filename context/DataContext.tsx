@@ -1,9 +1,8 @@
-
-
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { supabase } from '../src/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import type { Customer, Loan, Subscription, Installment, NewCustomer, NewLoan, NewSubscription, NewInstallment, LoanWithCustomer, SubscriptionWithCustomer } from '../types';
+import { useData } from '@/context/DataContext';
 
 // Centralized error parser
 const parseSupabaseError = (error: any, context: string): string => {

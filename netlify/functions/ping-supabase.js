@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'; // You'll need to install this
-import type { Config } from "@netlify/functions"; // For TypeScript, but good for type hinting
+//import type { Config } from "@netlify/functions"; // For TypeScript, but good for type hinting
 
 // Load environment variables
 // It's crucial to set these as Netlify Environment Variables!

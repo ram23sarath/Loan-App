@@ -38,7 +38,7 @@ const LoginPage = () => {
   return (
     <div className="flex items-center justify-center min-h-screen">
        <GlassCard className="w-full max-w-md" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
-          <h2 className="text-3xl font-bold text-center mb-6 text-gray-800">LoanMgr Login</h2>
+          <h2 className="text-3xl font-bold text-center mb-6 text-gray-800">Loan Management Login</h2>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium mb-2">Email Address</label>

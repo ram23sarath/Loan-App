@@ -25,7 +25,28 @@ const itemVariants = {
 };
 
 const CustomerListPage = () => {
-  const { customers, loans, subscriptions, installments, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, isRefreshing } = useData();
+  const { customers, loans, subscriptions, installments, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, isRefreshing, signOut } = useData();
+  // Auto logout after 30 minutes of inactivity
+  React.useEffect(() => {
+    let timer: NodeJS.Timeout;
+    const resetTimer = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        signOut();
+        alert('You have been logged out due to inactivity.');
+      }, 30 * 60 * 1000); // 30 minutes
+    };
+    window.addEventListener('mousemove', resetTimer);
+    window.addEventListener('keydown', resetTimer);
+    window.addEventListener('click', resetTimer);
+    resetTimer();
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener('mousemove', resetTimer);
+      window.removeEventListener('keydown', resetTimer);
+      window.removeEventListener('click', resetTimer);
+    };
+  }, [signOut]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState('date-desc');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);

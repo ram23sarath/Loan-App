@@ -28,6 +28,27 @@ const AnimatedRoutes = () => {
 }
 
 const App = () => {
+  const { signOut } = React.useContext(require('./context/DataContext').DataContext);
+  React.useEffect(() => {
+    let timer: any;
+    const resetTimer = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        signOut();
+        alert('You have been logged out due to inactivity.');
+      }, 30 * 60 * 1000); // 30 minutes
+    };
+    window.addEventListener('mousemove', resetTimer);
+    window.addEventListener('keydown', resetTimer);
+    window.addEventListener('click', resetTimer);
+    resetTimer();
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener('mousemove', resetTimer);
+      window.removeEventListener('keydown', resetTimer);
+      window.removeEventListener('click', resetTimer);
+    };
+  }, [signOut]);
   return (
     <DataProvider>
       <HashRouter>

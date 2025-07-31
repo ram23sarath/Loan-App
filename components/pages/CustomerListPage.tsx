@@ -29,6 +29,7 @@ const CustomerListPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState('date-desc');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
   const handleDeleteCustomer = async (customer: Customer) => {
     if (window.confirm(`Are you sure you want to delete ${customer.name}? This will also delete all associated loans, subscriptions, and installments.`)) {
@@ -210,7 +211,7 @@ const CustomerListPage = () => {
                       )}
                     </td>
                     <td className="px-4 py-2 flex gap-2">
-                      <motion.button onClick={e => {e.stopPropagation(); setSelectedCustomer(customer);}} className="p-2 rounded-full hover:bg-blue-500/10 transition-colors flex-shrink-0" aria-label={`Edit ${customer.name}`} whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}>
+                      <motion.button onClick={e => {e.stopPropagation(); setEditingCustomer(customer);}} className="p-2 rounded-full hover:bg-blue-500/10 transition-colors flex-shrink-0" aria-label={`Edit ${customer.name}`} whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}>
                         <span className="text-blue-600 font-bold">Edit</span>
                       </motion.button>
                       <motion.button onClick={e => {e.stopPropagation(); handleDeleteCustomer(customer);}} className="p-2 rounded-full hover:bg-red-500/10 transition-colors flex-shrink-0" aria-label={`Delete ${customer.name}`} whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}>
@@ -236,6 +237,19 @@ const CustomerListPage = () => {
             deleteLoan={deleteLoan}
             deleteSubscription={deleteSubscription}
             deleteInstallment={deleteInstallment}
+          />
+        )}
+        {editingCustomer && (
+          <CustomerDetailModal
+            customer={editingCustomer}
+            loans={loans.filter(l => l.customer_id === editingCustomer.id)}
+            subscriptions={subscriptions.filter(s => s.customer_id === editingCustomer.id)}
+            installments={installments}
+            onClose={() => setEditingCustomer(null)}
+            deleteLoan={deleteLoan}
+            deleteSubscription={deleteSubscription}
+            deleteInstallment={deleteInstallment}
+            enableEdit
           />
         )}
       </AnimatePresence>

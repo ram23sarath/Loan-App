@@ -89,50 +89,21 @@ const SubscriptionListPage = () => {
           <p className="text-center text-gray-500">No subscriptions recorded yet.</p>
         </GlassCard>
       ) : (
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="space-y-6"
-      >
-        {subscriptions.map(sub => (
-          <GlassCard key={sub.id} variants={itemVariants} whileHover={{y: -5, transition: { duration: 0.2 }}}>
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-xl font-bold">{sub.customers?.name ?? 'Unknown Customer'}</h3>
-                <p className="text-xs text-gray-400">Receipt: {sub.receipt}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-cyan-600">${sub.amount.toLocaleString()}</p>
-                    <p className="text-xs text-gray-500">For Year: {sub.year}</p>
-                  </div>
-                   <motion.button
-                        onClick={() => handleSendWhatsApp(sub)}
-                        className="p-2 rounded-full hover:bg-green-500/10 transition-colors"
-                        aria-label="Send on WhatsApp"
-                        whileHover={{ scale: 1.2 }}
-                        whileTap={{ scale: 0.9 }}
-                    >
-                        <WhatsAppIcon className="w-5 h-5 text-green-500" />
-                    </motion.button>
-                   <motion.button
-                        onClick={() => handleDeleteSubscription(sub)}
-                        className="p-2 rounded-full hover:bg-red-500/10 transition-colors"
-                        aria-label={`Delete subscription for ${sub.customers?.name}`}
-                        whileHover={{ scale: 1.2 }}
-                        whileTap={{ scale: 0.9 }}
-                    >
-                        <Trash2Icon className="w-5 h-5 text-red-500" />
-                    </motion.button>
-              </div>
-            </div>
-            <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between text-sm text-gray-600">
-                <span>Date: {formatDate(sub.date)}</span>
-            </div>
-          </GlassCard>
-        ))}
-      </motion.div>
+        <GlassCard className="!p-2">
+          <ul className="divide-y divide-gray-200">
+            {subscriptions.map(sub => (
+              <li key={sub.id} className="flex items-center justify-between py-2">
+                <div className="flex flex-col">
+                  <span className="font-bold text-base">{sub.customers?.name ?? 'Unknown Customer'}</span>
+                  <span className="text-xs text-gray-400">Receipt: {sub.receipt}</span>
+                  <span className="text-xs text-cyan-600">Amount: ${sub.amount.toLocaleString()} | Year: {sub.year}</span>
+                  <span className="text-xs text-gray-500">Date: {formatDate(sub.date)}</span>
+                </div>
+                {/* ...existing code for actions... */}
+              </li>
+            ))}
+          </ul>
+        </GlassCard>
       )}
     </PageWrapper>
   );

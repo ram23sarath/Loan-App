@@ -136,40 +136,33 @@ const LoanListPage = () => {
         <GlassCard>
           <p className="text-center text-gray-500">No loans recorded yet.</p>
         </GlassCard>
+        <GlassCard>
+          <p className="text-center text-gray-500">No loans recorded yet.</p>
+        </GlassCard>
       ) : (
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="space-y-6"
-      >
-        {loans.map(loan => {
-          const loanInstallments = installments.filter(i => i.loan_id === loan.id).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-          const latestInstallment = loanInstallments.length > 0 ? loanInstallments[0] : null;
-          const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
-          const totalRepayable = loan.original_amount + loan.interest_amount;
-          const progressPercentage = totalRepayable > 0 ? (amountPaid / totalRepayable) * 100 : 0;
-          const isPaidOff = amountPaid >= totalRepayable;
-
-          return (
-            <GlassCard key={loan.id} variants={itemVariants} whileHover={{y: -5, transition: { duration: 0.2 }}}>
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-xl font-bold">{loan.customers?.name ?? 'Unknown Customer'}</h3>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-right">
-                    <p className={`text-2xl font-bold ${isPaidOff ? 'text-green-500' : 'text-amber-500'}`}>
-                      ${totalRepayable.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                        (${loan.original_amount.toLocaleString()} + ${loan.interest_amount.toLocaleString()} interest)
-                    </p>
+        <GlassCard className="!p-2">
+          <ul className="divide-y divide-gray-200">
+            {loans.map(loan => {
+              const loanInstallments = installments.filter(i => i.loan_id === loan.id).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+              const latestInstallment = loanInstallments.length > 0 ? loanInstallments[0] : null;
+              const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
+              const totalRepayable = loan.original_amount + loan.interest_amount;
+              const progressPercentage = totalRepayable > 0 ? (amountPaid / totalRepayable) * 100 : 0;
+              const isPaidOff = amountPaid >= totalRepayable;
+              return (
+                <li key={loan.id} className="flex items-center justify-between py-2">
+                  <div className="flex flex-col">
+                    <span className="font-bold text-base">{loan.customers?.name ?? 'Unknown Customer'}</span>
+                    <span className="text-xs text-gray-400">Loan: ${loan.original_amount.toLocaleString()} | Interest: ${loan.interest_amount.toLocaleString()}</span>
+                    <span className="text-xs text-green-600">Paid: ${amountPaid.toLocaleString()} / ${totalRepayable.toLocaleString()}</span>
                   </div>
-                   <motion.button
-                        onClick={() => handleSendWhatsApp(loan, latestInstallment)}
-                        className="p-2 rounded-full hover:bg-green-500/10 transition-colors"
-                        aria-label="Send on WhatsApp"
+                  {/* ...existing code for actions... */}
+                </li>
+              );
+            })}
+          </ul>
+        </GlassCard>
+      )}
                         whileHover={{ scale: 1.2 }}
                         whileTap={{ scale: 0.9 }}
                     >

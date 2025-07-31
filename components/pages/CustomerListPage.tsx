@@ -177,32 +177,28 @@ const CustomerListPage = () => {
           <p className="text-center text-gray-500">{searchTerm ? 'No customers match your search.' : 'No customers found. Add one to get started!'}</p>
         </GlassCard>
       ) : (
-        <motion.div variants={containerVariants} initial="hidden" animate="visible" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAndSortedCustomers.map(customer => {
-            const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
-            const totalInterest = customerLoans.reduce((acc, loan) => acc + loan.interest_amount, 0);
-
-            return (
-              <GlassCard key={customer.id} variants={itemVariants} layoutId={`customer-card-${customer.id}`} whileHover={{y: -5, transition: { duration: 0.2 }}}>
-                <div className="flex justify-between items-start gap-2">
-                  <div className="flex-grow cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
-                    <h3 className="text-xl font-bold truncate">{customer.name}</h3>
-                    <p className="text-gray-500">{customer.phone}</p>
+        <GlassCard className="!p-2">
+          <ul className="divide-y divide-gray-200">
+            {filteredAndSortedCustomers.map(customer => {
+              const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
+              const totalInterest = customerLoans.reduce((acc, loan) => acc + loan.interest_amount, 0);
+              return (
+                <li key={customer.id} className="flex items-center justify-between py-2">
+                  <div className="flex flex-col cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
+                    <span className="font-bold text-base truncate">{customer.name}</span>
+                    <span className="text-gray-500 text-sm">{customer.phone}</span>
+                    {customerLoans.length > 0 && (
+                      <span className="text-xs text-green-600">Interest: ${totalInterest.toLocaleString()}</span>
+                    )}
                   </div>
-                  <motion.button onClick={() => handleDeleteCustomer(customer)} className="p-2 rounded-full hover:bg-red-500/10 transition-colors flex-shrink-0" aria-label={`Delete ${customer.name}`} whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}>
+                  <motion.button onClick={() => handleDeleteCustomer(customer)} className="p-2 rounded-full hover:bg-red-500/10 transition-colors flex-shrink-0 ml-2" aria-label={`Delete ${customer.name}`} whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}>
                     <Trash2Icon className="w-5 h-5 text-red-500" />
                   </motion.button>
-                </div>
-                {customerLoans.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-gray-200 cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
-                    <p className="text-sm text-gray-600">Total Interest from Loans:</p>
-                    <p className="text-lg font-semibold text-green-600">${totalInterest.toLocaleString()}</p>
-                  </div>
-                )}
-              </GlassCard>
-            );
-          })}
-        </motion.div>
+                </li>
+              );
+            })}
+          </ul>
+        </GlassCard>
       )}
 
       <AnimatePresence>

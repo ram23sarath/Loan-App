@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
@@ -31,7 +30,7 @@ const AnimatedRoutes = () => {
 
 import { useData } from './context/DataContext';
 
-const App = () => {
+const AutoLogout = () => {
   const { signOut } = useData();
   React.useEffect(() => {
     let timer: any;
@@ -53,25 +52,28 @@ const App = () => {
       window.removeEventListener('click', resetTimer);
     };
   }, [signOut]);
-  return (
-    <DataProvider>
-      <HashRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/*" element={
-            <ProtectedRoute>
-              <div className="flex w-full h-screen overflow-hidden">
-                <Sidebar />
-                <main className="flex-1 h-full overflow-y-auto">
-                  <AnimatedRoutes />
-                </main>
-              </div>
-            </ProtectedRoute>
-          } />
-        </Routes>
-      </HashRouter>
-    </DataProvider>
-  );
+  return null;
 };
+
+const App = () => (
+  <DataProvider>
+    <AutoLogout />
+    <HashRouter>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/*" element={
+          <ProtectedRoute>
+            <div className="flex w-full h-screen overflow-hidden">
+              <Sidebar />
+              <main className="flex-1 h-full overflow-y-auto">
+                <AnimatedRoutes />
+              </main>
+            </div>
+          </ProtectedRoute>
+        } />
+      </Routes>
+    </HashRouter>
+  </DataProvider>
+);
 
 export default App;

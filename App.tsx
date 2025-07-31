@@ -27,8 +27,10 @@ const AnimatedRoutes = () => {
   );
 }
 
+import { useData } from './context/DataContext';
+
 const App = () => {
-  const { signOut } = React.useContext(require('./context/DataContext').DataContext);
+  const { signOut } = useData();
   React.useEffect(() => {
     let timer: any;
     const resetTimer = () => {

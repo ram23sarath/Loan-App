@@ -92,14 +92,18 @@ const SubscriptionListPage = () => {
         <GlassCard className="!p-2">
           <ul className="divide-y divide-gray-200">
             {subscriptions.map(sub => (
-              <li key={sub.id} className="flex items-center justify-between py-2">
-                <div className="flex flex-col">
-                  <span className="font-bold text-base">{sub.customers?.name ?? 'Unknown Customer'}</span>
-                  <span className="text-xs text-gray-400">Receipt: {sub.receipt}</span>
-                  <span className="text-xs text-cyan-600">Amount: ${sub.amount.toLocaleString()} | Year: {sub.year}</span>
-                  <span className="text-xs text-gray-500">Date: {formatDate(sub.date)}</span>
+              <li key={sub.id} className="flex flex-col py-4 px-2 bg-white rounded-lg shadow-sm mb-2">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                  <div>
+                    <span className="font-bold text-lg text-indigo-700">{sub.customers?.name ?? 'Unknown Customer'}</span>
+                    <span className="block text-xs text-gray-400 mt-1">Receipt: {sub.receipt}</span>
+                    <span className="block text-xs text-cyan-600 mt-1">Amount: ${sub.amount.toLocaleString()} | Year: {sub.year}</span>
+                    <span className="block text-xs text-gray-500 mt-1">Date: {formatDate(sub.date)}</span>
+                  </div>
                 </div>
-                {/* ...existing code for actions... */}
+                <div className="flex items-center gap-2 mt-2 md:mt-0">
+                  {/* ...existing code for actions... */}
+                </div>
               </li>
             ))}
           </ul>

@@ -35,9 +35,9 @@ const App = () => {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/*" element={
             <ProtectedRoute>
-              <div className="flex min-h-screen w-full">
+              <div className="flex w-full h-screen overflow-hidden">
                 <Sidebar />
-                <main className="flex-1">
+                <main className="flex-1 h-full overflow-y-auto">
                   <AnimatedRoutes />
                 </main>
               </div>

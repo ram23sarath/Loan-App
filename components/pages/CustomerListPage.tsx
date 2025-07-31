@@ -183,21 +183,37 @@ const CustomerListPage = () => {
               <tr>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Interest</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Total Loan Amount</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Subscriptions</th>
                 <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredAndSortedCustomers.map(customer => {
                 const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
-                const totalInterest = customerLoans.reduce((acc, loan) => acc + loan.interest_amount, 0);
+                const totalLoanAmount = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+                const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
                 return (
                   <tr key={customer.id} className="bg-white hover:bg-gray-50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
                     <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
                     <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
-                    <td className="px-4 py-2 text-green-600">${totalInterest.toLocaleString()}</td>
-                    <td className="px-4 py-2">
-                      <motion.button onClick={e => {e.stopPropagation(); handleDeleteCustomer(customer);}} className="p-2 rounded-full hover:bg-red-500/10 transition-colors flex-shrink-0 ml-2" aria-label={`Delete ${customer.name}`} whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}>
+                    <td className="px-4 py-2 text-green-600">${totalLoanAmount.toLocaleString()}</td>
+                    <td className="px-4 py-2 text-cyan-600">
+                      {customerSubscriptions.length > 0 ? (
+                        customerSubscriptions.map(sub => (
+                          <div key={sub.id} className="mb-1">
+                            <span className="font-semibold">${sub.amount.toLocaleString()}</span> <span className="text-xs text-gray-500">({sub.year})</span>
+                          </div>
+                        ))
+                      ) : (
+                        <span className="text-xs text-gray-400">None</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 flex gap-2">
+                      <motion.button onClick={e => {e.stopPropagation(); setSelectedCustomer(customer);}} className="p-2 rounded-full hover:bg-blue-500/10 transition-colors flex-shrink-0" aria-label={`Edit ${customer.name}`} whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}>
+                        <span className="text-blue-600 font-bold">Edit</span>
+                      </motion.button>
+                      <motion.button onClick={e => {e.stopPropagation(); handleDeleteCustomer(customer);}} className="p-2 rounded-full hover:bg-red-500/10 transition-colors flex-shrink-0" aria-label={`Delete ${customer.name}`} whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}>
                         <Trash2Icon className="w-5 h-5 text-red-500" />
                       </motion.button>
                     </td>

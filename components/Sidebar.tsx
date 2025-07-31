@@ -29,7 +29,7 @@ const Sidebar = () => {
     <aside className="w-64 h-screen p-4 flex-shrink-0">
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm h-full flex flex-col">
         <div className="p-4 border-b border-gray-200">
-          <h1 className="text-2xl font-bold text-center text-gray-800">LoanMgr</h1>
+          <h1 className="text-2xl font-bold text-center text-gray-800">Loan Management</h1>
         </div>
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           {navItems.map(item => (

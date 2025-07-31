@@ -183,17 +183,21 @@ const CustomerListPage = () => {
               const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
               const totalInterest = customerLoans.reduce((acc, loan) => acc + loan.interest_amount, 0);
               return (
-                <li key={customer.id} className="flex items-center justify-between py-2">
-                  <div className="flex flex-col cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
-                    <span className="font-bold text-base truncate">{customer.name}</span>
-                    <span className="text-gray-500 text-sm">{customer.phone}</span>
-                    {customerLoans.length > 0 && (
-                      <span className="text-xs text-green-600">Interest: ${totalInterest.toLocaleString()}</span>
-                    )}
+                <li key={customer.id} className="flex flex-col py-4 px-2 bg-white rounded-lg shadow-sm mb-2">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
+                    <div>
+                      <span className="font-bold text-lg text-indigo-700">{customer.name}</span>
+                      <span className="block text-xs text-gray-500 mt-1">{customer.phone}</span>
+                      {customerLoans.length > 0 && (
+                        <span className="block text-xs text-green-600 mt-1">Interest: ${totalInterest.toLocaleString()}</span>
+                      )}
+                    </div>
                   </div>
-                  <motion.button onClick={() => handleDeleteCustomer(customer)} className="p-2 rounded-full hover:bg-red-500/10 transition-colors flex-shrink-0 ml-2" aria-label={`Delete ${customer.name}`} whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}>
-                    <Trash2Icon className="w-5 h-5 text-red-500" />
-                  </motion.button>
+                  <div className="flex items-center gap-2 mt-2 md:mt-0">
+                    <motion.button onClick={() => handleDeleteCustomer(customer)} className="p-2 rounded-full hover:bg-red-500/10 transition-colors flex-shrink-0 ml-2" aria-label={`Delete ${customer.name}`} whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}>
+                      <Trash2Icon className="w-5 h-5 text-red-500" />
+                    </motion.button>
+                  </div>
                 </li>
               );
             })}

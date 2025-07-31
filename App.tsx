@@ -12,6 +12,8 @@ import SubscriptionListPage from './components/pages/SubscriptionListPage';
 import LoginPage from './components/pages/LoginPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
+// AnimatedRoutes component to handle page transitions
+
 const AnimatedRoutes = () => {
   const location = useLocation();
   return (

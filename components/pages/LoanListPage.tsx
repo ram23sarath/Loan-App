@@ -136,9 +136,6 @@ const LoanListPage = () => {
         <GlassCard>
           <p className="text-center text-gray-500">No loans recorded yet.</p>
         </GlassCard>
-        <GlassCard>
-          <p className="text-center text-gray-500">No loans recorded yet.</p>
-        </GlassCard>
       ) : (
         <GlassCard className="!p-2">
           <ul className="divide-y divide-gray-200">

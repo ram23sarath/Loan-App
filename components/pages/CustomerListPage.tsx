@@ -25,7 +25,7 @@ const itemVariants = {
 };
 
 const CustomerListPage = () => {
-  const { customers, loans, subscriptions, installments, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, isRefreshing, signOut, updateCustomer } = useData();
+  const { customers, loans, subscriptions, installments, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, isRefreshing, signOut, updateCustomer, updateLoan, updateSubscription } = useData();
   // Auto logout after 30 minutes of inactivity
   React.useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -300,13 +300,29 @@ const CustomerListPage = () => {
           type={editModal.type}
           data={editModal.data}
           onSave={async (updated) => {
-            if (editModal.type === 'customer') {
-              try {
+            try {
+              if (editModal.type === 'customer') {
                 await updateCustomer(updated.id, { name: updated.name, phone: updated.phone });
-                setEditModal(null);
-              } catch (err: any) {
-                alert(err.message || 'Failed to update customer');
+              } else if (editModal.type === 'loan') {
+                await updateLoan(updated.id, {
+                  original_amount: updated.original_amount,
+                  interest_amount: updated.interest_amount,
+                  payment_date: updated.payment_date,
+                  total_instalments: updated.total_instalments,
+                  // add other loan fields as needed
+                });
+              } else if (editModal.type === 'subscription') {
+                await updateSubscription(updated.id, {
+                  amount: updated.amount,
+                  year: updated.year,
+                  date: updated.date,
+                  receipt: updated.receipt,
+                  // add other subscription fields as needed
+                });
               }
+              setEditModal(null);
+            } catch (err: any) {
+              alert(err.message || 'Failed to update record');
             }
           }}
           onClose={() => setEditModal(null)}

@@ -315,7 +315,7 @@ const AddRecordPage = () => {
                                 valueAsNumber: true,
                                 min: { value: 0.01, message: "Amount must be positive" }
                             })}
-                            placeholder={`e.g., ${monthlyInstallment}`}
+                            placeholder={`e.g., ₹${monthlyInstallment}`}
                             className={inputStyles}
                             disabled={isSubmittingInstallment}
                         />

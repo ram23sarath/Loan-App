@@ -289,15 +289,15 @@ const CustomerListPage = () => {
                     <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
                     <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
                     <td className="px-4 py-2 text-green-600">
-                      Principal: ${totalPrincipalPaid.toLocaleString()}<br />
-                      Interest: ${totalInterestCollected.toLocaleString()}<br />
-                      <span className="text-xs text-gray-500">(Total: ${(totalPrincipalPaid + totalInterestCollected).toLocaleString()})</span>
+                      Principal: ₹{totalPrincipalPaid.toLocaleString()}<br />
+                      Interest: ₹{totalInterestCollected.toLocaleString()}<br />
+                      <span className="text-xs text-gray-500">(Total: ₹{(totalPrincipalPaid + totalInterestCollected).toLocaleString()})</span>
                     </td>
                     <td className="px-4 py-2 text-cyan-600">
                       {customerSubscriptions.length > 0 ? (
                         customerSubscriptions.map(sub => (
                           <div key={sub.id} className="mb-1">
-                            <span className="font-semibold">${sub.amount.toLocaleString()}</span>{' '}
+                            <span className="font-semibold">₹{sub.amount.toLocaleString()}</span>{' '}
                             <span className="text-xs text-gray-500">({sub.year})</span>
                           </div>
                         ))

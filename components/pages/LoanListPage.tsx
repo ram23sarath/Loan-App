@@ -113,14 +113,14 @@ const LoanListPage = () => {
 
       let message = '';
       if (latestInstallment) {
-          let paymentMessage = `your installment payment of $${latestInstallment.amount}`;
+          let paymentMessage = `your installment payment of ₹${latestInstallment.amount}`;
           if (latestInstallment.late_fee && latestInstallment.late_fee > 0) {
-              paymentMessage += ` (including a $${latestInstallment.late_fee} late fee)`;
+              paymentMessage += ` (including a ₹${latestInstallment.late_fee} late fee)`;
           }
           message = `Hi ${customer.name}, ${paymentMessage} (Installment #${latestInstallment.installment_number}) was received on ${formatDate(latestInstallment.date, 'whatsapp')}. Thank you.`;
       } else {
           const totalRepayable = loan.original_amount + loan.interest_amount;
-          message = `Hi ${customer.name}, this is a confirmation of your loan of $${loan.original_amount} taken on ${formatDate(loan.payment_date, 'whatsapp')}. Total repayable is $${totalRepayable}. Thank you.`;
+          message = `Hi ${customer.name}, this is a confirmation of your loan of ₹${loan.original_amount} taken on ${formatDate(loan.payment_date, 'whatsapp')}. Total repayable is ₹${totalRepayable}. Thank you.`;
       }
 
       const whatsappUrl = `https://wa.me/${customer.phone}?text=${encodeURIComponent(message)}`;
@@ -167,11 +167,11 @@ const LoanListPage = () => {
           <div className="flex items-center gap-4">
             <GlassCard className="!p-4">
                 <p className="text-sm text-gray-500">Total Interest Collected</p>
-                <p className="text-2xl font-bold text-green-600">${totalInterestCollected.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-green-600">₹{totalInterestCollected.toLocaleString()}</p>
             </GlassCard>
              <GlassCard className="!p-4">
                 <p className="text-sm text-gray-500">Total Late Fee Collected</p>
-                <p className="text-2xl font-bold text-orange-600">${totalLateFeeCollected.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-orange-600">₹{totalLateFeeCollected.toLocaleString()}</p>
             </GlassCard>
             <motion.button
               onClick={handleExport}
@@ -205,7 +205,7 @@ const LoanListPage = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col">
                       <span className="font-bold text-base">{loan.customers?.name ?? 'Unknown Customer'}</span>
-                      <span className="text-xs text-gray-400">Loan: ${loan.original_amount.toLocaleString()} | Interest: ${loan.interest_amount.toLocaleString()}</span>
+                      <span className="text-xs text-gray-400">Loan: ₹{loan.original_amount.toLocaleString()} | Interest: ₹{loan.interest_amount.toLocaleString()}</span>
                       <span className="text-xs text-green-600">Paid: ${amountPaid.toLocaleString()} / ${totalRepayable.toLocaleString()}</span>
                     </div>
                     <div className="flex items-center gap-2">

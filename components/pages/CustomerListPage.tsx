@@ -78,16 +78,17 @@ const CustomerListPage = () => {
     const customerSummaryData = customers.map(customer => {
       const customerLoans = loans.filter(l => l.customer_id === customer.id);
       const customerSubscriptions = subscriptions.filter(s => s.customer_id === customer.id);
-      const totalLoanAmount = customerLoans.reduce((acc, loan) => acc + loan.original_amount, 0);
-      const totalInterest = customerLoans.reduce((acc, loan) => acc + loan.interest_amount, 0);
-      const totalSubscriptionAmount = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
+      const originalAmount = customerLoans.reduce((acc, loan) => acc + loan.original_amount, 0);
+      const interestAmount = customerLoans.reduce((acc, loan) => acc + loan.interest_amount, 0);
+      const totalAmount = originalAmount + interestAmount;
+      const subscriptionAmount = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
       return {
-        'Customer ID': customer.id,
         'Name': customer.name,
         'Phone Number': customer.phone,
-        'Total Loan Amount': totalLoanAmount,
-        'Total Interest': totalInterest,
-        'Total Subscription Amount': totalSubscriptionAmount,
+        'Original Amount': originalAmount,
+        'Interest Amount': interestAmount,
+        'Total Amount': totalAmount,
+        'Subscription Amount': subscriptionAmount,
       };
     });
 

@@ -92,18 +92,25 @@ const SubscriptionListPage = () => {
         <GlassCard className="!p-2">
           <ul className="divide-y divide-gray-200">
             {subscriptions.map(sub => (
-              <li key={sub.id} className="flex flex-col py-4 px-2 bg-white rounded-lg shadow-sm mb-2">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                  <div>
-                    <span className="font-bold text-lg text-indigo-700">{sub.customers?.name ?? 'Unknown Customer'}</span>
-                    <span className="block text-xs text-gray-400 mt-1">Receipt: {sub.receipt}</span>
-                    <span className="block text-xs text-cyan-600 mt-1">Amount: ₹{sub.amount.toLocaleString()} | Year: {sub.year}</span>
-                    <span className="block text-xs text-gray-500 mt-1">Date: {formatDate(sub.date)}</span>
+              <li key={sub.id} className="flex flex-row items-center justify-between gap-6 py-6 px-8 bg-white rounded-xl shadow mb-4 border border-gray-100 w-full">
+                <div className="flex flex-col gap-2 flex-1">
+                  <span className="font-bold text-2xl text-indigo-700">{sub.customers?.name ?? 'Unknown Customer'}</span>
+                  <div className="flex flex-wrap gap-4 mt-2">
+                    <span className="bg-gray-100 rounded-lg px-4 py-2 text-base font-medium text-gray-700 shadow-sm">Receipt: <span className="font-bold text-gray-900">{sub.receipt}</span></span>
+                    <span className="bg-cyan-100 rounded-lg px-4 py-2 text-base font-medium text-cyan-800 shadow-sm">Amount: <span className="font-bold">₹{sub.amount.toLocaleString()}</span></span>
+                    <span className="bg-indigo-100 rounded-lg px-4 py-2 text-base font-medium text-indigo-800 shadow-sm">Year: <span className="font-bold">{sub.year}</span></span>
+                    <span className="bg-gray-200 rounded-lg px-4 py-2 text-base font-medium text-gray-700 shadow-sm">Date: <span className="font-bold">{formatDate(sub.date)}</span></span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 mt-2 md:mt-0">
-                  {/* ...existing code for actions... */}
-                </div>
+                <motion.button
+                  onClick={() => handleDeleteSubscription(sub)}
+                  className="p-3 rounded-full hover:bg-red-500/10 transition-colors ml-4 self-start"
+                  aria-label={`Delete subscription for ${sub.customers?.name}`}
+                  whileHover={{ scale: 1.2 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <Trash2Icon className="w-7 h-7 text-red-500" />
+                </motion.button>
               </li>
             ))}
           </ul>

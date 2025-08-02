@@ -206,7 +206,7 @@ const LoanListPage = () => {
                     <div className="flex flex-col">
                       <span className="font-bold text-base">{loan.customers?.name ?? 'Unknown Customer'}</span>
                       <span className="text-xs text-gray-400">Loan: ₹{loan.original_amount.toLocaleString()} | Interest: ₹{loan.interest_amount.toLocaleString()}</span>
-                      <span className="text-xs text-green-600">Paid: ${amountPaid.toLocaleString()} / ${totalRepayable.toLocaleString()}</span>
+                      <span className="text-xs text-green-600">Paid: ₹{amountPaid.toLocaleString()} / ₹{totalRepayable.toLocaleString()}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <motion.button
@@ -244,8 +244,8 @@ const LoanListPage = () => {
                       />
                     </div>
                     <div className="flex justify-between items-center text-xs mt-1 text-gray-500">
-                      <span>${amountPaid.toLocaleString()}</span>
-                      <span>${totalRepayable.toLocaleString()}</span>
+                      <span>₹{amountPaid.toLocaleString()}</span>
+                      <span>₹{totalRepayable.toLocaleString()}</span>
                     </div>
                   </div>
                   {loanInstallments.length > 0 && (
@@ -259,9 +259,9 @@ const LoanListPage = () => {
                           </div>
                           <div className="flex items-center gap-3">
                             <p className="font-semibold text-green-600">
-                              ${installment.amount.toLocaleString()}
+                              ₹{installment.amount.toLocaleString()}
                               {installment.late_fee && installment.late_fee > 0 && (
-                                <span className="text-xs text-orange-500 ml-1">(+${installment.late_fee} late)</span>
+                                <span className="text-xs text-orange-500 ml-1">(+₹{installment.late_fee} late)</span>
                               )}
                             </p>
                             <motion.button

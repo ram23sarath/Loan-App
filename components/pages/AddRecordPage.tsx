@@ -378,11 +378,11 @@ const AddRecordPage = () => {
                     <h3 className="text-xl font-semibold text-center">Loan Details</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <input {...loanForm.register('original_amount', {required: 'Original amount is required', valueAsNumber: true, min: {value: 1, message: "Amount must be positive"}})} type="number" placeholder="Original Amount" className={inputStyles} disabled={isSubmittingLoan}/>
+                            <input {...loanForm.register('original_amount', {required: 'Original amount is required', valueAsNumber: true, min: {value: 1, message: "Amount must be positive"}})} type="number" placeholder="₹ Original Amount" className={inputStyles} disabled={isSubmittingLoan}/>
                             {loanForm.formState.errors.original_amount && <p className="text-red-600 text-sm mt-1">{loanForm.formState.errors.original_amount.message}</p>}
                         </div>
                         <div>
-                            <input {...loanForm.register('totalRepayableAmount', {required: 'Total repayable is required', valueAsNumber: true})} type="number" placeholder="Total Repayable Amount" className={inputStyles} disabled={isSubmittingLoan}/>
+                            <input {...loanForm.register('totalRepayableAmount', {required: 'Total repayable is required', valueAsNumber: true})} type="number" placeholder="₹ Total Repayable Amount" className={inputStyles} disabled={isSubmittingLoan}/>
                              {loanForm.formState.errors.totalRepayableAmount && <p className="text-red-600 text-sm mt-1">{loanForm.formState.errors.totalRepayableAmount.message}</p>}
                         </div>
                         <div>
@@ -405,7 +405,7 @@ const AddRecordPage = () => {
                     <h3 className="text-xl font-semibold text-center">Subscription Details</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <input {...subscriptionForm.register('amount', {required: 'Amount is required', valueAsNumber: true, min: {value: 1, message: 'Amount must be positive'}})} type="number" placeholder="Amount" className={inputStyles} disabled={isSubmittingSubscription}/>
+                        <input {...subscriptionForm.register('amount', {required: 'Amount is required', valueAsNumber: true, min: {value: 1, message: 'Amount must be positive'}})} type="number" placeholder="₹ Amount" className={inputStyles} disabled={isSubmittingSubscription}/>
                         {subscriptionForm.formState.errors.amount && <p className="text-red-600 text-sm mt-1">{subscriptionForm.formState.errors.amount.message}</p>}
                       </div>
                       <div>

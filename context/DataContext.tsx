@@ -46,27 +46,6 @@ interface DataContextType {
   updateLoan: (loanId: string, updates: Partial<Loan>) => Promise<Loan>;
   addSubscription: (subscription: NewSubscription) => Promise<Subscription>;
   updateSubscription: (subscriptionId: string, updates: Partial<Subscription>) => Promise<Subscription>;
-  const updateLoan = async (loanId: string, updates: Partial<Loan>): Promise<Loan> => {
-    try {
-      const { data, error } = await supabase.from('loans').update(updates).eq('id', loanId).select().single();
-      if (error || !data) throw error;
-      await fetchData();
-      return data as Loan;
-    } catch (error) {
-      throw new Error(parseSupabaseError(error, `updating loan ${loanId}`));
-    }
-  };
-
-  const updateSubscription = async (subscriptionId: string, updates: Partial<Subscription>): Promise<Subscription> => {
-    try {
-      const { data, error } = await supabase.from('subscriptions').update(updates).eq('id', subscriptionId).select().single();
-      if (error || !data) throw error;
-      await fetchData();
-      return data as Subscription;
-    } catch (error) {
-      throw new Error(parseSupabaseError(error, `updating subscription ${subscriptionId}`));
-    }
-  };
   addInstallment: (installment: NewInstallment) => Promise<Installment>;
   deleteCustomer: (customerId: string) => Promise<void>;
   deleteLoan: (loanId: string) => Promise<void>;
@@ -129,6 +108,28 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       return data as Customer;
     } catch (error) {
       throw new Error(parseSupabaseError(error, `updating customer ${customerId}`));
+    }
+  };
+
+  const updateLoan = async (loanId: string, updates: Partial<Loan>): Promise<Loan> => {
+    try {
+      const { data, error } = await supabase.from('loans').update(updates).eq('id', loanId).select().single();
+      if (error || !data) throw error;
+      await fetchData();
+      return data as Loan;
+    } catch (error) {
+      throw new Error(parseSupabaseError(error, `updating loan ${loanId}`));
+    }
+  };
+
+  const updateSubscription = async (subscriptionId: string, updates: Partial<Subscription>): Promise<Subscription> => {
+    try {
+      const { data, error } = await supabase.from('subscriptions').update(updates).eq('id', subscriptionId).select().single();
+      if (error || !data) throw error;
+      await fetchData();
+      return data as Subscription;
+    } catch (error) {
+      throw new Error(parseSupabaseError(error, `updating subscription ${subscriptionId}`));
     }
   };
   

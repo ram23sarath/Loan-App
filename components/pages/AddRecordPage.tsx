@@ -246,10 +246,10 @@ const AddRecordPage = () => {
 
   return (
     <PageWrapper>
-      <GlassCard className="w-full max-w-2xl mx-auto">
-        <h2 className="text-3xl font-bold text-center mb-6">Record an Action</h2>
-
-        <div className="space-y-6">
+      <div className="flex items-center justify-center min-h-[60vh] px-2 sm:px-0">
+        <GlassCard className="w-full max-w-xs sm:max-w-2xl !p-4 sm:!p-8 mx-auto">
+          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-4 sm:mb-6">Record an Action</h2>
+          <div className="space-y-4 sm:space-y-6">
           <div className="mb-4">
             <label className="block text-sm font-medium mb-1">Select Customer</label>
             <div className="relative" ref={dropdownRef}>
@@ -478,7 +478,8 @@ const AddRecordPage = () => {
             </AnimatePresence>
           </div>
         </div>
-      </GlassCard>
+        </GlassCard>
+      </div>
     </PageWrapper>
   );
 };

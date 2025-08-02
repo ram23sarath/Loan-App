@@ -155,6 +155,19 @@ const AddRecordPage = () => {
   const handleInstallmentSubmit: SubmitHandler<InstallmentInputs> = async (data) => {
     if (!activeLoan) return;
 
+    // Calculate total paid so far for this loan
+    const loanInstallments = installments.filter(i => i.loan_id === activeLoan.id);
+    const totalPaid = loanInstallments.reduce((sum, inst) => sum + inst.amount, 0);
+    const totalRepayable = activeLoan.original_amount + activeLoan.interest_amount;
+    const newTotalPaid = totalPaid + data.amount;
+    if (newTotalPaid > totalRepayable) {
+      installmentForm.setError('amount', {
+        type: 'manual',
+        message: `Total paid (₹${newTotalPaid.toLocaleString()}) cannot exceed total repayable (₹${totalRepayable.toLocaleString()})`
+      });
+      return;
+    }
+
     const installmentPayload: NewInstallment = {
         loan_id: activeLoan.id,
         installment_number: data.installment_number,

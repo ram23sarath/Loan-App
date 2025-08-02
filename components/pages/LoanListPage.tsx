@@ -131,30 +131,30 @@ const LoanListPage = () => {
     return (
         <PageWrapper>
             {/* Header */}
-            <div className="flex justify-between items-center mb-8">
-                <h2 className="text-4xl font-bold flex items-center gap-4">
-                    <LandmarkIcon className="w-10 h-10"/>
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4 sm:gap-0 px-2 sm:px-0">
+                <h2 className="text-2xl sm:text-4xl font-bold flex items-center gap-3 sm:gap-4">
+                    <LandmarkIcon className="w-8 h-8 sm:w-10 sm:h-10"/>
                     <span>Loan Details</span>
-                    {isRefreshing && <SpinnerIcon className="w-8 h-8 animate-spin text-indigo-500" />}
+                    {isRefreshing && <SpinnerIcon className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-indigo-500" />}
                 </h2>
                 {loans.length > 0 && (
-                    <div className="flex items-center gap-4">
-                        <GlassCard className="!p-4">
-                            <p className="text-sm text-gray-500">Total Interest Collected</p>
-                            <p className="text-2xl font-bold text-green-600">₹{totalInterestCollected.toLocaleString()}</p>
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+                        <GlassCard className="!p-3 sm:!p-4 w-full sm:w-auto">
+                            <p className="text-xs sm:text-sm text-gray-500">Total Interest Collected</p>
+                            <p className="text-xl sm:text-2xl font-bold text-green-600">₹{totalInterestCollected.toLocaleString()}</p>
                         </GlassCard>
-                        <GlassCard className="!p-4">
-                            <p className="text-sm text-gray-500">Total Late Fee Collected</p>
-                            <p className="text-2xl font-bold text-orange-600">₹{totalLateFeeCollected.toLocaleString()}</p>
+                        <GlassCard className="!p-3 sm:!p-4 w-full sm:w-auto">
+                            <p className="text-xs sm:text-sm text-gray-500">Total Late Fee Collected</p>
+                            <p className="text-xl sm:text-2xl font-bold text-orange-600">₹{totalLateFeeCollected.toLocaleString()}</p>
                         </GlassCard>
                         <motion.button
                             onClick={handleExport}
-                            className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 transition-colors p-3 rounded-lg font-semibold h-full"
+                            className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 transition-colors p-2 sm:p-3 rounded-lg font-semibold w-full sm:w-auto"
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                         >
                             <FileDownIcon className="w-5 h-5"/>
-                            Export
+                            <span className="hidden sm:inline">Export</span>
                         </motion.button>
                     </div>
                 )}
@@ -166,7 +166,7 @@ const LoanListPage = () => {
                     <p className="text-center text-gray-500">No loans recorded yet.</p>
                 </GlassCard>
             ) : (
-                <GlassCard className="!p-2">
+                <GlassCard className="!p-2 sm:!p-4">
                     <ul className="space-y-4">
                         {loans.map(loan => {
                             const loanInstallments = installments.filter(i => i.loan_id === loan.id).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -177,73 +177,71 @@ const LoanListPage = () => {
                             const isPaidOff = amountPaid >= totalRepayable;
 
                             return (
-                                <li key={loan.id} className="py-6 px-8 bg-white rounded-xl shadow border border-gray-100 w-full">
-                                    <div className="flex flex-row items-center justify-between gap-6">
+                                <li key={loan.id} className="py-4 px-2 sm:py-6 sm:px-8 bg-white rounded-xl shadow border border-gray-100 w-full">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
                                         <div className="flex flex-col gap-2 flex-1">
-                                            <span className="font-bold text-2xl text-indigo-700">{loan.customers?.name ?? 'Unknown Customer'}</span>
-                                            <div className="flex flex-wrap gap-4 mt-2">
-                                                <span className="bg-gray-100 rounded-lg px-4 py-2 text-base font-medium text-gray-700 shadow-sm">Loan: <span className="font-bold text-gray-900">₹{loan.original_amount.toLocaleString()}</span></span>
-                                                <span className="bg-yellow-100 rounded-lg px-4 py-2 text-base font-medium text-yellow-800 shadow-sm">Interest: <span className="font-bold">₹{loan.interest_amount.toLocaleString()}</span></span>
-                                                <span className="bg-green-100 rounded-lg px-4 py-2 text-base font-medium text-green-800 shadow-sm">Paid: <span className="font-bold">₹{amountPaid.toLocaleString()}</span></span>
-                                                <span className="bg-indigo-100 rounded-lg px-4 py-2 text-base font-medium text-indigo-800 shadow-sm">Total: <span className="font-bold">₹{totalRepayable.toLocaleString()}</span></span>
-                                                <span className="bg-gray-200 rounded-lg px-4 py-2 text-base font-medium text-gray-700 shadow-sm">Installments: <span className="font-bold">{loanInstallments.length} / {loan.total_instalments}</span></span>
+                                            <span className="font-bold text-lg sm:text-2xl text-indigo-700 break-words">{loan.customers?.name ?? 'Unknown Customer'}</span>
+                                            <div className="flex flex-wrap gap-2 sm:gap-4 mt-2">
+                                                <span className="bg-gray-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-gray-700 shadow-sm">Loan: <span className="font-bold text-gray-900">₹{loan.original_amount.toLocaleString()}</span></span>
+                                                <span className="bg-yellow-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-yellow-800 shadow-sm">Interest: <span className="font-bold">₹{loan.interest_amount.toLocaleString()}</span></span>
+                                                <span className="bg-green-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-green-800 shadow-sm">Paid: <span className="font-bold">₹{amountPaid.toLocaleString()}</span></span>
+                                                <span className="bg-indigo-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-indigo-800 shadow-sm">Total: <span className="font-bold">₹{totalRepayable.toLocaleString()}</span></span>
+                                                <span className="bg-gray-200 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-gray-700 shadow-sm">Installments: <span className="font-bold">{loanInstallments.length} / {loan.total_instalments}</span></span>
                                             </div>
                                         </div>
-                                        <div className="flex flex-col gap-4 items-end">
+                                        <div className="flex flex-row sm:flex-col gap-2 sm:gap-4 items-end sm:items-end justify-end">
                                             <motion.button
                                                 onClick={() => handleSendWhatsApp(loan, latestInstallment)}
-                                                className="p-3 rounded-full hover:bg-green-500/10 transition-colors"
+                                                className="p-2 sm:p-3 rounded-full hover:bg-green-500/10 transition-colors"
                                                 aria-label="Send on WhatsApp"
                                                 whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}
                                             >
-                                                <WhatsAppIcon className="w-7 h-7 text-green-500" />
+                                                <WhatsAppIcon className="w-6 h-6 sm:w-7 sm:h-7 text-green-500" />
                                             </motion.button>
                                             <motion.button
                                                 onClick={() => handleDeleteLoan(loan)}
-                                                className="p-3 rounded-full hover:bg-red-500/10 transition-colors"
+                                                className="p-2 sm:p-3 rounded-full hover:bg-red-500/10 transition-colors"
                                                 aria-label={`Delete loan for ${loan.customers?.name}`}
                                                 whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}
                                             >
-                                                <Trash2Icon className="w-7 h-7 text-red-500" />
+                                                <Trash2Icon className="w-6 h-6 sm:w-7 sm:h-7 text-red-500" />
                                             </motion.button>
                                         </div>
                                     </div>
-                                    
                                     {/* Progress Bar */}
                                     <div className="mt-4 pt-4 border-t border-gray-200">
-                                        <div className="flex justify-between items-center text-lg mb-2">
+                                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center text-base sm:text-lg mb-2 gap-1 sm:gap-0">
                                             <span className="text-gray-600">Progress</span>
                                             <span className={`font-semibold ${isPaidOff ? 'text-green-600' : 'text-gray-800'}`}>{loanInstallments.length} of {loan.total_instalments} Paid</span>
                                         </div>
-                                        <div className="w-full bg-gray-200 rounded-full h-3">
+                                        <div className="w-full bg-gray-200 rounded-full h-2.5 sm:h-3">
                                             <motion.div 
-                                                className={`h-3 rounded-full ${isPaidOff ? 'bg-green-500' : 'bg-indigo-500'}`} 
+                                                className={`h-2.5 sm:h-3 rounded-full ${isPaidOff ? 'bg-green-500' : 'bg-indigo-500'}`} 
                                                 initial={{width: 0}}
                                                 animate={{width: `${progressPercentage}%`}}
                                                 transition={{duration: 0.5}}
                                             />
                                         </div>
-                                        <div className="flex justify-between items-center text-base mt-2 text-gray-500">
+                                        <div className="flex justify-between items-center text-xs sm:text-base mt-2 text-gray-500">
                                             <span>₹{amountPaid.toLocaleString()}</span>
                                             <span>₹{totalRepayable.toLocaleString()}</span>
                                         </div>
                                     </div>
-
                                     {/* Installment List */}
                                     {loanInstallments.length > 0 && (
                                         <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
-                                            <h4 className="text-lg font-semibold text-gray-600 mb-1">Recorded Installments:</h4>
+                                            <h4 className="text-base sm:text-lg font-semibold text-gray-600 mb-1">Recorded Installments:</h4>
                                             {loanInstallments.map(installment => (
-                                                <div key={installment.id} className="flex justify-between items-center bg-gray-100 p-3 rounded-md">
+                                                <div key={installment.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gray-100 p-2 sm:p-3 rounded-md gap-2 sm:gap-0">
                                                     <div>
-                                                        <p className="font-medium text-base">Installment #{installment.installment_number}</p>
-                                                        <p className="text-sm text-gray-500">Date: {formatDate(installment.date)} | Receipt: {installment.receipt_number}</p>
+                                                        <p className="font-medium text-sm sm:text-base">Installment #{installment.installment_number}</p>
+                                                        <p className="text-xs sm:text-sm text-gray-500">Date: {formatDate(installment.date)} | Receipt: {installment.receipt_number}</p>
                                                     </div>
-                                                    <div className="flex items-center gap-3">
-                                                        <p className="font-semibold text-green-600 text-lg">
+                                                    <div className="flex items-center gap-2 sm:gap-3">
+                                                        <p className="font-semibold text-green-600 text-base sm:text-lg">
                                                             ₹{installment.amount.toLocaleString()}
                                                             {installment.late_fee > 0 && (
-                                                                <span className="text-sm text-orange-500 ml-1">(+₹{installment.late_fee} late)</span>
+                                                                <span className="text-xs sm:text-sm text-orange-500 ml-1">(+₹{installment.late_fee} late)</span>
                                                             )}
                                                         </p>
                                                         <motion.button
@@ -268,37 +266,37 @@ const LoanListPage = () => {
 
             {/* Modals for Deletion Confirmation */}
             {deleteTarget && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-                    <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
-                        <h3 className="text-lg font-bold mb-4">Delete Loan</h3>
-                        <p className="mb-6">Are you sure you want to delete this loan for <span className="font-semibold">{deleteTarget.customers?.name ?? 'Unknown Customer'}</span>? This will also delete all associated installments.</p>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-2">
+                    <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-xs sm:max-w-sm">
+                        <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Delete Loan</h3>
+                        <p className="mb-4 sm:mb-6 text-sm sm:text-base">Are you sure you want to delete this loan for <span className="font-semibold">{deleteTarget.customers?.name ?? 'Unknown Customer'}</span>? This will also delete all associated installments.</p>
                         <div className="flex justify-end gap-2">
-                            <button onClick={cancelDeleteLoan} className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancel</button>
-                            <button onClick={confirmDeleteLoan} className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Delete</button>
+                            <button onClick={cancelDeleteLoan} className="px-3 py-2 rounded text-xs sm:text-base bg-gray-200 hover:bg-gray-300">Cancel</button>
+                            <button onClick={confirmDeleteLoan} className="px-3 py-2 rounded text-xs sm:text-base bg-red-600 text-white hover:bg-red-700">Delete</button>
                         </div>
                     </div>
                 </div>
             )}
             {deleteInstallmentTarget && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-                    <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
-                        <h3 className="text-lg font-bold mb-4">Delete Installment</h3>
-                        <p className="mb-6">Are you sure you want to delete installment #{deleteInstallmentTarget.number}?</p>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-2">
+                    <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-xs sm:max-w-sm">
+                        <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Delete Installment</h3>
+                        <p className="mb-4 sm:mb-6 text-sm sm:text-base">Are you sure you want to delete installment #{deleteInstallmentTarget.number}?</p>
                         <div className="flex justify-end gap-2">
-                            <button onClick={cancelDeleteInstallment} className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancel</button>
-                            <button onClick={confirmDeleteInstallment} className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Delete</button>
+                            <button onClick={cancelDeleteInstallment} className="px-3 py-2 rounded text-xs sm:text-base bg-gray-200 hover:bg-gray-300">Cancel</button>
+                            <button onClick={confirmDeleteInstallment} className="px-3 py-2 rounded text-xs sm:text-base bg-red-600 text-white hover:bg-red-700">Delete</button>
                         </div>
                     </div>
                 </div>
             )}
             {deleteCustomerTarget && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-                    <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
-                        <h3 className="text-lg font-bold mb-4">Delete Customer</h3>
-                        <p className="mb-6">Are you sure you want to delete <span className="font-semibold">{deleteCustomerTarget.name}</span>? This will also delete all associated loans, subscriptions, and installments.</p>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-2">
+                    <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-xs sm:max-w-sm">
+                        <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Delete Customer</h3>
+                        <p className="mb-4 sm:mb-6 text-sm sm:text-base">Are you sure you want to delete <span className="font-semibold">{deleteCustomerTarget.name}</span>? This will also delete all associated loans, subscriptions, and installments.</p>
                         <div className="flex justify-end gap-2">
-                            <button onClick={cancelDeleteCustomer} className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancel</button>
-                            <button onClick={confirmDeleteCustomer} className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Delete</button>
+                            <button onClick={cancelDeleteCustomer} className="px-3 py-2 rounded text-xs sm:text-base bg-gray-200 hover:bg-gray-300">Cancel</button>
+                            <button onClick={confirmDeleteCustomer} className="px-3 py-2 rounded text-xs sm:text-base bg-red-600 text-white hover:bg-red-700">Delete</button>
                         </div>
                     </div>
                 </div>

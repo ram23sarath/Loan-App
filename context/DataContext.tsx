@@ -175,19 +175,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Remove user_id from customer creation
   const addCustomer = async (customerData: Omit<NewCustomer, 'user_id'>): Promise<Customer> => {
-    const user = session?.user;
-    if (!user) throw new Error("You must be logged in to add a customer.");
-
-    const customerPayload: NewCustomer = { ...customerData, user_id: user.id };
-    
     try {
-        const { data, error } = await supabase.from('customers').insert([customerPayload] as any).select().single();
-        if (error || !data) throw error;
-        await fetchData();
-        return data as Customer;
+      const { data, error } = await supabase.from('customers').insert([customerData] as any).select().single();
+      if (error || !data) throw error;
+      await fetchData();
+      return data as Customer;
     } catch(error) {
-        throw new Error(parseSupabaseError(error, 'adding customer'));
+      throw new Error(parseSupabaseError(error, 'adding customer'));
     }
   };
 

@@ -51,7 +51,7 @@ const CustomerListPage = () => {
   const [sortOption, setSortOption] = useState('date-desc');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [editModal, setEditModal] = useState<{ type: 'customer' | 'loan' | 'subscription'; data: any } | null>(null);
+  const [editModal, setEditModal] = useState<{ type: 'customer' | 'loan' | 'subscription' | 'customer_loan'; data: any } | null>(null);
 
   const handleDeleteCustomer = async (customer: Customer) => {
     if (window.confirm(`Are you sure you want to delete ${customer.name}? This will also delete all associated loans, subscriptions, and installments.`)) {
@@ -85,6 +85,10 @@ const CustomerListPage = () => {
       const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
       const totalRepayable = loan.original_amount + loan.interest_amount;
       const isPaidOff = amountPaid >= totalRepayable;
+      // Calculate how much of the original amount has been paid
+      const principalPaid = Math.min(amountPaid, loan.original_amount);
+      // Interest is considered collected only after original amount is fully paid
+      const interestCollected = amountPaid > loan.original_amount ? Math.min(amountPaid - loan.original_amount, loan.interest_amount) : 0;
       return {
         'Loan ID': loan.id,
         'Customer Name': loan.customers?.name ?? 'N/A',
@@ -92,6 +96,8 @@ const CustomerListPage = () => {
         'Interest Amount': loan.interest_amount,
         'Total Repayable': totalRepayable,
         'Amount Paid': amountPaid,
+        'Principal Paid': principalPaid,
+        'Interest Collected': interestCollected,
         'Balance': totalRepayable - amountPaid,
         'Loan Date': loan.payment_date,
         'Installments': `${loanInstallments.length} / ${loan.total_instalments}`,
@@ -222,6 +228,30 @@ const CustomerListPage = () => {
             <tbody>
               {filteredAndSortedCustomers.map(customer => {
                 const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
+                // Calculate principal and interest logic for display
+                let totalPrincipalPaid = 0;
+                let totalInterestCollected = 0;
+                customerLoans.forEach(loan => {
+                  const loanInstallments = installments
+                    .filter(i => i.loan_id === loan.id)
+                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                  let principalPaid = 0;
+                  let interestPaid = 0;
+                  for (const inst of loanInstallments) {
+                    if (principalPaid < loan.original_amount) {
+                      const principalToPay = Math.min(inst.amount, loan.original_amount - principalPaid);
+                      principalPaid += principalToPay;
+                      // If installment is larger than remaining principal, the rest is interest
+                      if (inst.amount > principalToPay) {
+                        interestPaid += inst.amount - principalToPay;
+                      }
+                    } else {
+                      interestPaid += inst.amount;
+                    }
+                  }
+                  totalPrincipalPaid += principalPaid;
+                  totalInterestCollected += Math.min(interestPaid, loan.interest_amount);
+                });
                 const totalLoanAmount = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
                 const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
                 return (
@@ -232,7 +262,11 @@ const CustomerListPage = () => {
                   >
                     <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
                     <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
-                    <td className="px-4 py-2 text-green-600">${totalLoanAmount.toLocaleString()}</td>
+                    <td className="px-4 py-2 text-green-600">
+                      Principal: ${totalPrincipalPaid.toLocaleString()}<br />
+                      Interest: ${totalInterestCollected.toLocaleString()}<br />
+                      <span className="text-xs text-gray-500">(Total: ${(totalPrincipalPaid + totalInterestCollected).toLocaleString()})</span>
+                    </td>
                     <td className="px-4 py-2 text-cyan-600">
                       {customerSubscriptions.length > 0 ? (
                         customerSubscriptions.map(sub => (
@@ -249,7 +283,9 @@ const CustomerListPage = () => {
                       <motion.button
                         onClick={e => {
                           e.stopPropagation();
-                          setEditModal({ type: 'customer', data: customer });
+                          const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
+                          const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
+                          setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {}, subscription: customerSubscriptions[0] || {} } });
                         }}
                         className="p-2 rounded-full hover:bg-blue-500/10 transition-colors flex-shrink-0"
                         aria-label={`Edit ${customer.name}`}
@@ -309,7 +345,6 @@ const CustomerListPage = () => {
                   interest_amount: updated.interest_amount,
                   payment_date: updated.payment_date,
                   total_instalments: updated.total_instalments,
-                  // add other loan fields as needed
                 });
               } else if (editModal.type === 'subscription') {
                 await updateSubscription(updated.id, {
@@ -317,8 +352,26 @@ const CustomerListPage = () => {
                   year: updated.year,
                   date: updated.date,
                   receipt: updated.receipt,
-                  // add other subscription fields as needed
                 });
+              } else if (editModal.type === 'customer_loan') {
+                // Update customer, loan, and subscription if present
+                await updateCustomer(updated.customer.id, { name: updated.customer.name, phone: updated.customer.phone });
+                if (updated.loan && updated.loan.id) {
+                  await updateLoan(updated.loan.id, {
+                    original_amount: updated.loan.original_amount,
+                    interest_amount: updated.loan.interest_amount,
+                    payment_date: updated.loan.payment_date,
+                    total_instalments: updated.loan.total_instalments,
+                  });
+                }
+                if (updated.subscription && updated.subscription.id) {
+                  await updateSubscription(updated.subscription.id, {
+                    amount: updated.subscription.amount,
+                    year: updated.subscription.year,
+                    date: updated.subscription.date,
+                    receipt: updated.subscription.receipt,
+                  });
+                }
               }
               setEditModal(null);
             } catch (err: any) {

@@ -81,14 +81,29 @@ const CustomerListPage = () => {
     });
 
     const allLoansData = loans.map(loan => {
-      const loanInstallments = installments.filter(i => i.loan_id === loan.id);
-      const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
+      const loanInstallments = installments.filter(i => i.loan_id === loan.id)
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      let amountPaid = 0;
+      let principalPaid = 0;
+      let interestCollected = 0;
+
+      for (const inst of loanInstallments) {
+        amountPaid += inst.amount;
+
+        if (principalPaid < loan.original_amount) {
+          const principalPortion = Math.min(inst.amount, loan.original_amount - principalPaid);
+          principalPaid += principalPortion;
+          const interestPortion = inst.amount - principalPortion;
+          interestCollected += interestPortion;
+        } else {
+          interestCollected += inst.amount;
+        }
+      }
+
       const totalRepayable = loan.original_amount + loan.interest_amount;
       const isPaidOff = amountPaid >= totalRepayable;
-      // Calculate how much of the original amount has been paid
-      const principalPaid = Math.min(amountPaid, loan.original_amount);
-      // Interest is considered collected only after original amount is fully paid
-      const interestCollected = amountPaid > loan.original_amount ? Math.min(amountPaid - loan.original_amount, loan.interest_amount) : 0;
+
       return {
         'Loan ID': loan.id,
         'Customer Name': loan.customers?.name ?? 'N/A',
@@ -228,29 +243,29 @@ const CustomerListPage = () => {
             <tbody>
               {filteredAndSortedCustomers.map(customer => {
                 const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
-                // Calculate principal and interest logic for display
                 let totalPrincipalPaid = 0;
                 let totalInterestCollected = 0;
                 customerLoans.forEach(loan => {
+                  // Get all installments for this loan, sorted by date
                   const loanInstallments = installments
                     .filter(i => i.loan_id === loan.id)
                     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-                  let principalPaid = 0;
-                  let interestPaid = 0;
-                  for (const inst of loanInstallments) {
-                    if (principalPaid < loan.original_amount) {
-                      const principalToPay = Math.min(inst.amount, loan.original_amount - principalPaid);
-                      principalPaid += principalToPay;
-                      // If installment is larger than remaining principal, the rest is interest
-                      if (inst.amount > principalToPay) {
-                        interestPaid += inst.amount - principalToPay;
-                      }
-                    } else {
-                      interestPaid += inst.amount;
-                    }
+                  
+                  // Calculate total amount paid through installments
+                  const totalPaidForLoan = loanInstallments.reduce((sum, inst) => sum + inst.amount, 0);
+                  
+                  // Add to principal paid (capped at original amount)
+                  const principalPaidForLoan = Math.min(totalPaidForLoan, loan.original_amount);
+                  totalPrincipalPaid += principalPaidForLoan;
+                  
+                  // Only if total paid exceeds original amount, count the excess as interest
+                  if (totalPaidForLoan > loan.original_amount) {
+                    const interestCollectedForLoan = Math.min(
+                      totalPaidForLoan - loan.original_amount,
+                      loan.interest_amount
+                    );
+                    totalInterestCollected += interestCollectedForLoan;
                   }
-                  totalPrincipalPaid += principalPaid;
-                  totalInterestCollected += Math.min(interestPaid, loan.interest_amount);
                 });
                 const totalLoanAmount = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
                 const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
@@ -354,7 +369,6 @@ const CustomerListPage = () => {
                   receipt: updated.receipt,
                 });
               } else if (editModal.type === 'customer_loan') {
-                // Update customer, loan, and subscription if present
                 await updateCustomer(updated.customer.id, { name: updated.customer.name, phone: updated.customer.phone });
                 if (updated.loan && updated.loan.id) {
                   await updateLoan(updated.loan.id, {

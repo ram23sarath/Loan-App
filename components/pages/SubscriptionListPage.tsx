@@ -97,7 +97,7 @@ const SubscriptionListPage = () => {
                   <div>
                     <span className="font-bold text-lg text-indigo-700">{sub.customers?.name ?? 'Unknown Customer'}</span>
                     <span className="block text-xs text-gray-400 mt-1">Receipt: {sub.receipt}</span>
-                    <span className="block text-xs text-cyan-600 mt-1">Amount: ${sub.amount.toLocaleString()} | Year: {sub.year}</span>
+                    <span className="block text-xs text-cyan-600 mt-1">Amount: ₹{sub.amount.toLocaleString()} | Year: {sub.year}</span>
                     <span className="block text-xs text-gray-500 mt-1">Date: {formatDate(sub.date)}</span>
                   </div>
                 </div>

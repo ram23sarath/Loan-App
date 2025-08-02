@@ -26,7 +26,7 @@ const itemVariants = {
 };
 
 const CustomerListPage = () => {
-  const { customers, loans, subscriptions, installments, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, isRefreshing, signOut } = useData();
+  const { customers, loans, subscriptions, installments, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, isRefreshing, signOut, updateCustomer } = useData();
   // Auto logout after 30 minutes of inactivity
   React.useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -267,9 +267,15 @@ const CustomerListPage = () => {
         <EditModal
           type={editModal.type}
           data={editModal.data}
-          onSave={(updated) => {
-            // TODO: Implement update logic for customer
-            setEditModal(null);
+          onSave={async (updated) => {
+            if (editModal.type === 'customer') {
+              try {
+                await updateCustomer(updated.id, { name: updated.name, phone: updated.phone });
+                setEditModal(null);
+              } catch (err: any) {
+                alert(err.message || 'Failed to update customer');
+              }
+            }
           }}
           onClose={() => setEditModal(null)}
         />

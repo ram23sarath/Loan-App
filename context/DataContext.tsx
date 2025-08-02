@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, ReactNode, useEffect, useCa
 import { supabase } from '../src/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import type { Customer, Loan, Subscription, Installment, NewCustomer, NewLoan, NewSubscription, NewInstallment, LoanWithCustomer, SubscriptionWithCustomer } from '../types';
-import { useData } from '@/context/DataContext';
+
 
 // Centralized error parser
 const parseSupabaseError = (error: any, context: string): string => {
@@ -169,6 +169,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      // Clear Supabase session from browser storage to prevent auto-restore
+      localStorage.removeItem('supabase.auth.token');
+      // Remove all keys starting with sb- (Supabase v2)
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-')) localStorage.removeItem(key);
+      });
+      sessionStorage.removeItem('supabase.auth.token');
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.startsWith('sb-')) sessionStorage.removeItem(key);
+      });
       // The onAuthStateChange listener will handle clearing data
     } catch(error) {
         throw new Error(parseSupabaseError(error, 'signing out'));

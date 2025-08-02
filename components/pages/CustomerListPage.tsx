@@ -67,6 +67,8 @@ const CustomerListPage = () => {
   const handleComprehensiveExport = () => {
     const customerSummaryData = customers.map(customer => {
       const customerLoans = loans.filter(l => l.customer_id === customer.id);
+            onEditLoan={loan => setEditModal({ type: 'loan', data: loan })}
+            onEditSubscription={sub => setEditModal({ type: 'subscription', data: sub })}
       const customerSubscriptions = subscriptions.filter(s => s.customer_id === customer.id);
       const totalLoanAmount = customerLoans.reduce((acc, loan) => acc + loan.original_amount, 0);
       const totalInterest = customerLoans.reduce((acc, loan) => acc + loan.interest_amount, 0);

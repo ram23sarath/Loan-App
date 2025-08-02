@@ -15,6 +15,8 @@ interface CustomerDetailModalProps {
   deleteLoan: (loanId: string) => Promise<void>;
   deleteSubscription: (subscriptionId: string) => Promise<void>;
   deleteInstallment: (installmentId: string) => Promise<void>;
+  onEditLoan?: (loan: LoanWithCustomer) => void;
+  onEditSubscription?: (sub: SubscriptionWithCustomer) => void;
 }
 
 const backdropVariants: Variants = {
@@ -162,6 +164,15 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({ customer, loa
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <motion.button
+                                                onClick={() => onEditLoan && onEditLoan(loan)}
+                                                className="p-2 rounded-full hover:bg-blue-500/10 transition-colors"
+                                                aria-label={`Edit loan from ${loan.payment_date}`}
+                                                whileHover={{ scale: 1.2 }}
+                                                whileTap={{ scale: 0.9 }}
+                                            >
+                                                <span className="text-blue-600 font-bold">Edit</span>
+                                            </motion.button>
+                                            <motion.button
                                                 onClick={() => handleDeleteLoan(loan)}
                                                 className="p-2 rounded-full hover:bg-red-500/10 transition-colors"
                                                 aria-label={`Delete loan from ${loan.payment_date}`}
@@ -171,7 +182,6 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({ customer, loa
                                                 <Trash2Icon className="w-5 h-5 text-red-500" />
                                             </motion.button>
                                         </div>
-                                    </div>
                                     <div className="w-full bg-gray-200 rounded-full h-2 my-2">
                                         <div className={`h-2 rounded-full ${isPaidOff ? 'bg-green-500' : 'bg-indigo-500'}`} style={{width: `${progress}%`}} />
                                     </div>
@@ -229,15 +239,24 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({ customer, loa
                                  </div>
                                  <div className="flex items-center gap-4">
                                      <p className="font-bold text-xl text-cyan-600">${sub.amount.toLocaleString()}</p>
-                                      <motion.button
+                                     <motion.button
+                                        onClick={() => onEditSubscription && onEditSubscription(sub)}
+                                        className="p-2 rounded-full hover:bg-blue-500/10 transition-colors"
+                                        aria-label={`Edit subscription for ${sub.year}`}
+                                        whileHover={{ scale: 1.2 }}
+                                        whileTap={{ scale: 0.9 }}
+                                     >
+                                        <span className="text-blue-600 font-bold">Edit</span>
+                                     </motion.button>
+                                     <motion.button
                                         onClick={() => handleDeleteSubscription(sub)}
                                         className="p-2 rounded-full hover:bg-red-500/10 transition-colors"
                                         aria-label={`Delete subscription for ${sub.year}`}
                                         whileHover={{ scale: 1.2 }}
                                         whileTap={{ scale: 0.9 }}
-                                      >
+                                     >
                                         <Trash2Icon className="w-5 h-5 text-red-500" />
-                                      </motion.button>
+                                     </motion.button>
                                  </div>
                              </div>
                          ))}

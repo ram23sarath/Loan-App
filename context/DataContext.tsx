@@ -43,7 +43,30 @@ interface DataContextType {
   addCustomer: (customer: Omit<NewCustomer, 'user_id'>) => Promise<Customer>;
   updateCustomer: (customerId: string, updates: Partial<Customer>) => Promise<Customer>;
   addLoan: (loan: NewLoan) => Promise<Loan>;
+  updateLoan: (loanId: string, updates: Partial<Loan>) => Promise<Loan>;
   addSubscription: (subscription: NewSubscription) => Promise<Subscription>;
+  updateSubscription: (subscriptionId: string, updates: Partial<Subscription>) => Promise<Subscription>;
+  const updateLoan = async (loanId: string, updates: Partial<Loan>): Promise<Loan> => {
+    try {
+      const { data, error } = await supabase.from('loans').update(updates).eq('id', loanId).select().single();
+      if (error || !data) throw error;
+      await fetchData();
+      return data as Loan;
+    } catch (error) {
+      throw new Error(parseSupabaseError(error, `updating loan ${loanId}`));
+    }
+  };
+
+  const updateSubscription = async (subscriptionId: string, updates: Partial<Subscription>): Promise<Subscription> => {
+    try {
+      const { data, error } = await supabase.from('subscriptions').update(updates).eq('id', subscriptionId).select().single();
+      if (error || !data) throw error;
+      await fetchData();
+      return data as Subscription;
+    } catch (error) {
+      throw new Error(parseSupabaseError(error, `updating subscription ${subscriptionId}`));
+    }
+  };
   addInstallment: (installment: NewInstallment) => Promise<Installment>;
   deleteCustomer: (customerId: string) => Promise<void>;
   deleteLoan: (loanId: string) => Promise<void>;
@@ -97,6 +120,17 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       setIsRefreshing(false);
     }
   }, []);
+
+  const updateCustomer = async (customerId: string, updates: Partial<Customer>): Promise<Customer> => {
+    try {
+      const { data, error } = await supabase.from('customers').update(updates).eq('id', customerId).select().single();
+      if (error || !data) throw error;
+      await fetchData();
+      return data as Customer;
+    } catch (error) {
+      throw new Error(parseSupabaseError(error, `updating customer ${customerId}`));
+    }
+  };
   
   const clearData = () => {
       setCustomers([]);
@@ -230,7 +264,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <DataContext.Provider value={{ session, customers, loans, subscriptions, installments, loading, isRefreshing, signInWithPassword, signOut, addCustomer, updateCustomer, addLoan, addSubscription, addInstallment, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment }}>
+    <DataContext.Provider value={{ session, customers, loans, subscriptions, installments, loading, isRefreshing, signInWithPassword, signOut, addCustomer, updateCustomer, addLoan, updateLoan, addSubscription, updateSubscription, addInstallment, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment }}>
       {children}
     </DataContext.Provider>
   );

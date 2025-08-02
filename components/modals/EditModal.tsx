@@ -24,32 +24,57 @@ const EditModal: React.FC<EditModalProps> = ({ type, data, onSave, onClose }) =>
           <form className="space-y-4" onSubmit={e => { e.preventDefault(); onSave(form); }}>
             <div>
               <label className="block text-sm font-medium mb-1">Name</label>
-              <input
-                name="name"
-                type="text"
-                value={form.name || ''}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded px-3 py-2"
-                required
-              />
+              <input name="name" type="text" value={form.name || ''} onChange={handleChange} className="w-full border border-gray-300 rounded px-3 py-2" required />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Phone</label>
-              <input
-                name="phone"
-                type="tel"
-                value={form.phone || ''}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded px-3 py-2"
-                required
-                maxLength={10}
-                pattern="^\d{10}$"
-              />
+              <input name="phone" type="tel" value={form.phone || ''} onChange={handleChange} className="w-full border border-gray-300 rounded px-3 py-2" required maxLength={10} pattern="^\d{10}$" />
             </div>
             <button type="submit" className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded">Save</button>
           </form>
         )}
-        {/* TODO: Add forms for loan and subscription editing */}
+        {type === 'loan' && (
+          <form className="space-y-4" onSubmit={e => { e.preventDefault(); onSave(form); }}>
+            <div>
+              <label className="block text-sm font-medium mb-1">Original Amount</label>
+              <input name="original_amount" type="number" value={form.original_amount || ''} onChange={handleChange} className="w-full border border-gray-300 rounded px-3 py-2" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Interest Amount</label>
+              <input name="interest_amount" type="number" value={form.interest_amount || ''} onChange={handleChange} className="w-full border border-gray-300 rounded px-3 py-2" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Total Installments</label>
+              <input name="total_instalments" type="number" value={form.total_instalments || ''} onChange={handleChange} className="w-full border border-gray-300 rounded px-3 py-2" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Payment Date</label>
+              <input name="payment_date" type="date" value={form.payment_date ? form.payment_date.slice(0,10) : ''} onChange={handleChange} className="w-full border border-gray-300 rounded px-3 py-2" required />
+            </div>
+            <button type="submit" className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded">Save</button>
+          </form>
+        )}
+        {type === 'subscription' && (
+          <form className="space-y-4" onSubmit={e => { e.preventDefault(); onSave(form); }}>
+            <div>
+              <label className="block text-sm font-medium mb-1">Amount</label>
+              <input name="amount" type="number" value={form.amount || ''} onChange={handleChange} className="w-full border border-gray-300 rounded px-3 py-2" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Year</label>
+              <input name="year" type="number" value={form.year || ''} onChange={handleChange} className="w-full border border-gray-300 rounded px-3 py-2" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Date</label>
+              <input name="date" type="date" value={form.date ? form.date.slice(0,10) : ''} onChange={handleChange} className="w-full border border-gray-300 rounded px-3 py-2" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Receipt</label>
+              <input name="receipt" type="text" value={form.receipt || ''} onChange={handleChange} className="w-full border border-gray-300 rounded px-3 py-2" required />
+            </div>
+            <button type="submit" className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded">Save</button>
+          </form>
+        )}
       </div>
     </div>
   );

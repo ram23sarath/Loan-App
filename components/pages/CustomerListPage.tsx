@@ -26,6 +26,13 @@ const itemVariants = {
 
 const CustomerListPage = () => {
   const { customers, loans, subscriptions, installments, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, isRefreshing, signOut, updateCustomer, updateLoan, updateSubscription } = useData();
+  const [deleteCustomerTarget, setDeleteCustomerTarget] = React.useState<{id: string, name: string} | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortOption, setSortOption] = useState('date-desc');
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [editModal, setEditModal] = useState<{ type: 'customer' | 'loan' | 'subscription' | 'customer_loan'; data: any } | null>(null);
+
   // Auto logout after 30 minutes of inactivity
   React.useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -47,20 +54,24 @@ const CustomerListPage = () => {
       window.removeEventListener('click', resetTimer);
     };
   }, [signOut]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortOption, setSortOption] = useState('date-desc');
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [editModal, setEditModal] = useState<{ type: 'customer' | 'loan' | 'subscription' | 'customer_loan'; data: any } | null>(null);
 
-  const handleDeleteCustomer = async (customer: Customer) => {
-    if (window.confirm(`Are you sure you want to delete ${customer.name}? This will also delete all associated loans, subscriptions, and installments.`)) {
+  const handleDeleteCustomer = (customer) => {
+    setDeleteCustomerTarget({ id: customer.id, name: customer.name });
+  };
+
+  const confirmDeleteCustomer = async () => {
+    if (deleteCustomerTarget) {
       try {
-        await deleteCustomer(customer.id);
+        await deleteCustomer(deleteCustomerTarget.id);
+        setDeleteCustomerTarget(null);
       } catch (error: any) {
         alert(error.message);
       }
     }
+  };
+
+  const cancelDeleteCustomer = () => {
+    setDeleteCustomerTarget(null);
   };
 
   const handleComprehensiveExport = () => {
@@ -394,6 +405,18 @@ const CustomerListPage = () => {
           }}
           onClose={() => setEditModal(null)}
         />
+      )}
+      {deleteCustomerTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
+            <h3 className="text-lg font-bold mb-4">Delete Customer</h3>
+            <p className="mb-6">Are you sure you want to delete <span className="font-semibold">{deleteCustomerTarget.name}</span>? This will also delete all associated loans, subscriptions, and installments.</p>
+            <div className="flex justify-end gap-2">
+              <button onClick={cancelDeleteCustomer} className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancel</button>
+              <button onClick={confirmDeleteCustomer} className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Delete</button>
+            </div>
+          </div>
+        </div>
       )}
     </PageWrapper>
   );

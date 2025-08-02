@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import * as XLSX from 'xlsx';
@@ -27,7 +26,21 @@ const itemVariants = {
 
 const LoanListPage = () => {
   const { customers, loans, installments, deleteLoan, deleteInstallment, isRefreshing } = useData();
-  const totalInterestCollected = loans.reduce((acc, loan) => acc + loan.interest_amount, 0);
+  const totalInterestCollected = loans.reduce((acc, loan) => {
+    // Get all installments for this loan
+    const loanInstallments = installments.filter(i => i.loan_id === loan.id);
+    // Calculate total amount paid for this loan
+    const totalPaidForLoan = loanInstallments.reduce((sum, inst) => sum + inst.amount, 0);
+    // Only add to interest collected if payments exceed the original loan amount
+    if (totalPaidForLoan > loan.original_amount) {
+      const interestCollected = Math.min(
+        totalPaidForLoan - loan.original_amount, // only count payments beyond original amount
+        loan.interest_amount // cap at the maximum interest amount
+      );
+      return acc + interestCollected;
+    }
+    return acc; // if principal not fully paid, no interest is collected
+  }, 0);
   const totalLateFeeCollected = installments.reduce((acc, inst) => acc + (inst.late_fee || 0), 0);
 
   const handleDeleteLoan = async (loan: LoanWithCustomer) => {
@@ -146,84 +159,85 @@ const LoanListPage = () => {
               const totalRepayable = loan.original_amount + loan.interest_amount;
               const progressPercentage = totalRepayable > 0 ? (amountPaid / totalRepayable) * 100 : 0;
               const isPaidOff = amountPaid >= totalRepayable;
-               return (
-                 <li key={loan.id} className="flex flex-col py-4 px-2 bg-white rounded-lg shadow-sm mb-2">
-                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                     <div className="flex items-center gap-4">
-                       <div>
-                         <span className="font-bold text-lg text-indigo-700">{loan.customers?.name ?? 'Unknown Customer'}</span>
-                         <span className="block text-xs text-gray-400 mt-1">Loan: ${loan.original_amount.toLocaleString()} | Interest: ${loan.interest_amount.toLocaleString()}</span>
-                         <span className="block text-xs text-green-600 mt-1">Paid: ${amountPaid.toLocaleString()} / ${totalRepayable.toLocaleString()}</span>
-                       </div>
-                       <div className="flex flex-col items-center min-w-[120px]">
-                         <span className={`font-semibold text-xs mb-1 ${isPaidOff ? 'text-green-600' : 'text-gray-800'}`}>{loanInstallments.length} / {loan.total_instalments} Paid</span>
-                         <div className="w-full bg-gray-200 rounded-full h-2.5">
-                           <motion.div 
-                             className={`h-2.5 rounded-full ${isPaidOff ? 'bg-green-500' : 'bg-indigo-500'}`} 
-                             style={{ width: `${progressPercentage}%` }}
-                             initial={{width: 0}}
-                             animate={{width: `${progressPercentage}%`}}
-                             transition={{duration: 0.5}}
-                           />
-                         </div>
-                         <div className="flex justify-between w-full text-xs mt-1 text-gray-500">
-                           <span>${amountPaid.toLocaleString()}</span>
-                           <span>${totalRepayable.toLocaleString()}</span>
-                         </div>
-                       </div>
-                     </div>
-                     <div className="flex items-center gap-2 mt-2 md:mt-0">
-                       <motion.button
-                         onClick={() => handleSendWhatsApp(loan, latestInstallment)}
-                         className="p-2 rounded-full hover:bg-green-500/10 transition-colors"
-                         aria-label="Send on WhatsApp"
-                         whileHover={{ scale: 1.2 }}
-                         whileTap={{ scale: 0.9 }}
-                       >
-                         <WhatsAppIcon className="w-5 h-5 text-green-500" />
-                       </motion.button>
-                       <motion.button
-                         onClick={() => handleDeleteLoan(loan)}
-                         className="p-2 rounded-full hover:bg-red-500/10 transition-colors"
-                         aria-label={`Delete loan for ${loan.customers?.name}`}
-                         whileHover={{ scale: 1.2 }}
-                         whileTap={{ scale: 0.9 }}
-                       >
-                         <Trash2Icon className="w-5 h-5 text-red-500" />
-                       </motion.button>
-                     </div>
-                   </div>
-                   {loanInstallments.length > 0 && (
-                     <div className="mt-4 pt-2 border-t border-gray-200 space-y-2">
-                       <h4 className="text-sm font-semibold text-gray-600 mb-1">Recorded Installments:</h4>
-                       {loanInstallments.map(installment => (
-                         <div key={installment.id} className="flex justify-between items-center bg-gray-100 p-2 rounded-md">
-                           <div>
-                             <p className="font-medium text-sm">Installment #{installment.installment_number}</p>
-                             <p className="text-xs text-gray-500">Date: {formatDate(installment.date)} | Receipt: {installment.receipt_number}</p>
-                           </div>
-                           <div className="flex items-center gap-3">
-                             <p className="font-semibold text-green-600">
-                               ${installment.amount.toLocaleString()}
-                               {installment.late_fee && installment.late_fee > 0 && (
-                                 <span className="text-xs text-orange-500 ml-1">(+${installment.late_fee} late)</span>
-                               )}
-                             </p>
-                             <motion.button
-                               onClick={() => handleDeleteInstallment(installment.id, installment.installment_number)}
-                               className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
-                               aria-label={`Delete installment #${installment.installment_number}`}
-                               whileHover={{ scale: 1.2 }}
-                               whileTap={{ scale: 0.9 }}
-                             >
-                               <Trash2Icon className="w-4 h-4 text-red-500" />
-                             </motion.button>
-                           </div>
-                         </div>
-                       ))}
-                     </div>
-                   )}
-                 </li>
+              return (
+                <li key={loan.id} className="flex flex-col py-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-base">{loan.customers?.name ?? 'Unknown Customer'}</span>
+                      <span className="text-xs text-gray-400">Loan: ${loan.original_amount.toLocaleString()} | Interest: ${loan.interest_amount.toLocaleString()}</span>
+                      <span className="text-xs text-green-600">Paid: ${amountPaid.toLocaleString()} / ${totalRepayable.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <motion.button
+                        onClick={() => handleSendWhatsApp(loan, latestInstallment)}
+                        className="p-2 rounded-full hover:bg-green-500/10 transition-colors"
+                        aria-label="Send on WhatsApp"
+                        whileHover={{ scale: 1.2 }}
+                        whileTap={{ scale: 0.9 }}
+                      >
+                        <WhatsAppIcon className="w-5 h-5 text-green-500" />
+                      </motion.button>
+                      <motion.button
+                        onClick={() => handleDeleteLoan(loan)}
+                        className="p-2 rounded-full hover:bg-red-500/10 transition-colors"
+                        aria-label={`Delete loan for ${loan.customers?.name}`}
+                        whileHover={{ scale: 1.2 }}
+                        whileTap={{ scale: 0.9 }}
+                      >
+                        <Trash2Icon className="w-5 h-5 text-red-500" />
+                      </motion.button>
+                    </div>
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <div className="flex justify-between items-center text-sm mb-2">
+                      <span className="text-gray-600">Progress</span>
+                      <span className={`font-semibold ${isPaidOff ? 'text-green-600' : 'text-gray-800'}`}>{loanInstallments.length} of {loan.total_instalments} Paid</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <motion.div 
+                        className={`h-2.5 rounded-full ${isPaidOff ? 'bg-green-500' : 'bg-indigo-500'}`} 
+                        style={{ width: `${progressPercentage}%` }}
+                        initial={{width: 0}}
+                        animate={{width: `${progressPercentage}%`}}
+                        transition={{duration: 0.5}}
+                      />
+                    </div>
+                    <div className="flex justify-between items-center text-xs mt-1 text-gray-500">
+                      <span>${amountPaid.toLocaleString()}</span>
+                      <span>${totalRepayable.toLocaleString()}</span>
+                    </div>
+                  </div>
+                  {loanInstallments.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-gray-200 space-y-2">
+                      <h4 className="text-sm font-semibold text-gray-600 mb-1">Recorded Installments:</h4>
+                      {loanInstallments.map(installment => (
+                        <div key={installment.id} className="flex justify-between items-center bg-gray-100 p-2 rounded-md">
+                          <div>
+                            <p className="font-medium text-sm">Installment #{installment.installment_number}</p>
+                            <p className="text-xs text-gray-500">Date: {formatDate(installment.date)} | Receipt: {installment.receipt_number}</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <p className="font-semibold text-green-600">
+                              ${installment.amount.toLocaleString()}
+                              {installment.late_fee && installment.late_fee > 0 && (
+                                <span className="text-xs text-orange-500 ml-1">(+${installment.late_fee} late)</span>
+                              )}
+                            </p>
+                            <motion.button
+                              onClick={() => handleDeleteInstallment(installment.id, installment.installment_number)}
+                              className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                              aria-label={`Delete installment #${installment.installment_number}`}
+                              whileHover={{ scale: 1.2 }}
+                              whileTap={{ scale: 0.9 }}
+                            >
+                              <Trash2Icon className="w-4 h-4 text-red-500" />
+                            </motion.button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </li>
               );
             })}
           </ul>

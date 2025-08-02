@@ -167,10 +167,10 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({ customer, loa
                                     <div className="flex justify-between items-start">
                                         <div>
                                             <p className="font-bold text-lg">Loan from {formatDate(loan.payment_date)}</p>
-                                            <p className="text-xs text-gray-500">Total: ${totalRepayable.toLocaleString()} (${loan.original_amount.toLocaleString()} + ${loan.interest_amount.toLocaleString()} interest)</p>
+                                            <p className="text-xs text-gray-500">Total: ₹{totalRepayable.toLocaleString()} (₹{loan.original_amount.toLocaleString()} + ₹{loan.interest_amount.toLocaleString()} interest)</p>
                                             <p className="text-xs text-gray-500 mt-1">
-                                              Principal Paid: ${principalPaid.toLocaleString()}<br />
-                                              Interest Collected: {amountPaid >= loan.original_amount ? `$${interestCollected.toLocaleString()}` : '$0'}
+                                              Principal Paid: ₹{principalPaid.toLocaleString()}<br />
+                                              Interest Collected: {amountPaid >= loan.original_amount ? `₹{interestCollected.toLocaleString()}` : '₹0'}
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-2">

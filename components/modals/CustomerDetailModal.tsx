@@ -155,12 +155,23 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({ customer, loa
                              const totalRepayable = loan.original_amount + loan.interest_amount;
                              const progress = totalRepayable > 0 ? (amountPaid / totalRepayable) * 100 : 0;
                              const isPaidOff = amountPaid >= totalRepayable;
+                             // Principal paid is up to the original amount
+                             const principalPaid = Math.min(amountPaid, loan.original_amount);
+                             // Interest is only collected after the original amount is fully paid
+                             let interestCollected = 0;
+                             if (amountPaid > loan.original_amount) {
+                               interestCollected = Math.min(amountPaid - loan.original_amount, loan.interest_amount);
+                             }
                             return (
                                 <div key={loan.id} className="p-4 bg-gray-50 rounded-lg">
                                     <div className="flex justify-between items-start">
                                         <div>
                                             <p className="font-bold text-lg">Loan from {formatDate(loan.payment_date)}</p>
                                             <p className="text-xs text-gray-500">Total: ${totalRepayable.toLocaleString()} (${loan.original_amount.toLocaleString()} + ${loan.interest_amount.toLocaleString()} interest)</p>
+                                            <p className="text-xs text-gray-500 mt-1">
+                                              Principal Paid: ${principalPaid.toLocaleString()}<br />
+                                              Interest Collected: {amountPaid >= loan.original_amount ? `$${interestCollected.toLocaleString()}` : '$0'}
+                                            </p>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <motion.button

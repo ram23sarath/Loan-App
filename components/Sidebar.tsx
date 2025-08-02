@@ -27,7 +27,7 @@ const Sidebar = () => {
     }
   };
 
-  // Hide sidebar on mobile, show hamburger
+  // Responsive sidebar and bottom nav
   return (
     <>
       {/* Hamburger for mobile */}
@@ -39,7 +39,23 @@ const Sidebar = () => {
         <HamburgerIcon className="w-7 h-7 text-gray-700" />
       </button>
 
-      {/* Overlay drawer for mobile */}
+      {/* Bottom nav for mobile: only icons */}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 flex justify-around items-center py-2 sm:hidden">
+        {navItems.map(item => (
+          <NavLink
+            key={item.path}
+            to={item.path}
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center px-2 ${isActive ? 'text-indigo-600' : 'text-gray-500'}`
+            }
+            aria-label={item.label}
+          >
+            <item.icon className="w-6 h-6" />
+          </NavLink>
+        ))}
+      </nav>
+
+      {/* Overlay drawer for mobile (full menu) */}
       <div
         className={`fixed inset-0 z-50 transition-all duration-300 sm:static sm:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'} sm:relative sm:w-64`}
         style={{ pointerEvents: open ? 'auto' : 'none' }}
@@ -69,7 +85,7 @@ const Sidebar = () => {
                 onClick={() => setOpen(false)}
               >
                 <item.icon className="w-6 h-6 mr-3" />
-                <span className="hidden sm:inline">{item.label}</span>
+                <span>{item.label}</span>
               </NavLink>
             ))}
           </nav>
@@ -85,7 +101,7 @@ const Sidebar = () => {
               className="w-full flex items-center justify-center p-3 rounded-lg transition-colors duration-200 text-red-600 bg-red-50 hover:bg-red-100 font-semibold"
             >
               <LogOutIcon className="w-5 h-5 mr-2" />
-              <span className="hidden sm:inline">Logout</span>
+              <span>Logout</span>
             </button>
           </div>
           <div className="p-4 border-t border-gray-200 text-center text-xs text-gray-400">

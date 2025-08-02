@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
@@ -56,71 +55,70 @@ const CustomerListPage = () => {
 
   const handleDeleteCustomer = async (customer: Customer) => {
     if (window.confirm(`Are you sure you want to delete ${customer.name}? This will also delete all associated loans, subscriptions, and installments.`)) {
-        try {
-            await deleteCustomer(customer.id);
-        } catch (error: any) {
-            alert(error.message);
-        }
+      try {
+        await deleteCustomer(customer.id);
+      } catch (error: any) {
+        alert(error.message);
+      }
     }
   };
 
   const handleComprehensiveExport = () => {
     const customerSummaryData = customers.map(customer => {
       const customerLoans = loans.filter(l => l.customer_id === customer.id);
-            onEditLoan={loan => setEditModal({ type: 'loan', data: loan })}
-            onEditSubscription={sub => setEditModal({ type: 'subscription', data: sub })}
       const customerSubscriptions = subscriptions.filter(s => s.customer_id === customer.id);
       const totalLoanAmount = customerLoans.reduce((acc, loan) => acc + loan.original_amount, 0);
       const totalInterest = customerLoans.reduce((acc, loan) => acc + loan.interest_amount, 0);
       const totalSubscriptionAmount = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
-      return { 
-        'Customer ID': customer.id, 
-        'Name': customer.name, 
-        'Phone Number': customer.phone, 
-        'Total Loan Amount': totalLoanAmount, 
-        'Total Interest': totalInterest, 
-        'Total Subscription Amount': totalSubscriptionAmount 
+      return {
+        'Customer ID': customer.id,
+        'Name': customer.name,
+        'Phone Number': customer.phone,
+        'Total Loan Amount': totalLoanAmount,
+        'Total Interest': totalInterest,
+        'Total Subscription Amount': totalSubscriptionAmount,
       };
     });
-    
+
     const allLoansData = loans.map(loan => {
       const loanInstallments = installments.filter(i => i.loan_id === loan.id);
       const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
       const totalRepayable = loan.original_amount + loan.interest_amount;
       const isPaidOff = amountPaid >= totalRepayable;
-      return { 
-        'Loan ID': loan.id, 
-        'Customer Name': loan.customers?.name ?? 'N/A', 
-        'Original Amount': loan.original_amount, 
-        'Interest Amount': loan.interest_amount, 
-        'Total Repayable': totalRepayable, 'Amount Paid': amountPaid, 
-        'Balance': totalRepayable - amountPaid, 
-        'Loan Date': loan.payment_date, 
-        'Installments': `${loanInstallments.length} / ${loan.total_instalments}`, 
-        'Status': isPaidOff ? 'Paid Off' : 'In Progress' 
+      return {
+        'Loan ID': loan.id,
+        'Customer Name': loan.customers?.name ?? 'N/A',
+        'Original Amount': loan.original_amount,
+        'Interest Amount': loan.interest_amount,
+        'Total Repayable': totalRepayable,
+        'Amount Paid': amountPaid,
+        'Balance': totalRepayable - amountPaid,
+        'Loan Date': loan.payment_date,
+        'Installments': `${loanInstallments.length} / ${loan.total_instalments}`,
+        'Status': isPaidOff ? 'Paid Off' : 'In Progress',
       };
     });
 
-    const allSubscriptionsData = subscriptions.map(sub => ({ 
-        'Subscription ID': sub.id, 
-        'Customer Name': sub.customers?.name ?? 'N/A', 
-        'Amount': sub.amount, 
-        'Year': sub.year, 
-        'Date': sub.date, 
-        'Receipt': sub.receipt 
+    const allSubscriptionsData = subscriptions.map(sub => ({
+      'Subscription ID': sub.id,
+      'Customer Name': sub.customers?.name ?? 'N/A',
+      'Amount': sub.amount,
+      'Year': sub.year,
+      'Date': sub.date,
+      'Receipt': sub.receipt,
     }));
 
     const allInstallmentsData = installments.map(inst => {
       const parentLoan = loans.find(l => l.id === inst.loan_id);
       return {
-          'Installment ID': inst.id, 
-          'Loan ID': inst.loan_id, 
-          'Customer Name': parentLoan?.customers?.name ?? 'N/A', 
-          'Installment Number': inst.installment_number, 
-          'Amount Paid': inst.amount, 
-          'Payment Date': inst.date, 
-          'Receipt Number': inst.receipt_number 
-      }
+        'Installment ID': inst.id,
+        'Loan ID': inst.loan_id,
+        'Customer Name': parentLoan?.customers?.name ?? 'N/A',
+        'Installment Number': inst.installment_number,
+        'Amount Paid': inst.amount,
+        'Payment Date': inst.date,
+        'Receipt Number': inst.receipt_number,
+      };
     });
 
     const wb = XLSX.utils.book_new();
@@ -162,13 +160,18 @@ const CustomerListPage = () => {
     <PageWrapper>
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-4xl font-bold flex items-center gap-4">
-          <UsersIcon className="w-10 h-10"/>
+          <UsersIcon className="w-10 h-10" />
           <span>All Customers</span>
           {isRefreshing && <SpinnerIcon className="w-8 h-8 animate-spin text-indigo-500" />}
         </h2>
         {customers.length > 0 && (
-          <motion.button onClick={handleComprehensiveExport} className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 transition-colors p-3 rounded-lg font-semibold" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <FileDownIcon className="w-5 h-5"/>
+          <motion.button
+            onClick={handleComprehensiveExport}
+            className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 transition-colors p-3 rounded-lg font-semibold"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <FileDownIcon className="w-5 h-5" />
             Export Comprehensive Report
           </motion.button>
         )}
@@ -200,7 +203,9 @@ const CustomerListPage = () => {
 
       {filteredAndSortedCustomers.length === 0 && !isRefreshing ? (
         <GlassCard>
-          <p className="text-center text-gray-500">{searchTerm ? 'No customers match your search.' : 'No customers found. Add one to get started!'}</p>
+          <p className="text-center text-gray-500">
+            {searchTerm ? 'No customers match your search.' : 'No customers found. Add one to get started!'}
+          </p>
         </GlassCard>
       ) : (
         <GlassCard className="!p-2">
@@ -220,7 +225,11 @@ const CustomerListPage = () => {
                 const totalLoanAmount = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
                 const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
                 return (
-                  <tr key={customer.id} className="bg-white hover:bg-gray-50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
+                  <tr
+                    key={customer.id}
+                    className="bg-white hover:bg-gray-50 transition cursor-pointer"
+                    onClick={() => setSelectedCustomer(customer)}
+                  >
                     <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
                     <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
                     <td className="px-4 py-2 text-green-600">${totalLoanAmount.toLocaleString()}</td>
@@ -228,7 +237,8 @@ const CustomerListPage = () => {
                       {customerSubscriptions.length > 0 ? (
                         customerSubscriptions.map(sub => (
                           <div key={sub.id} className="mb-1">
-                            <span className="font-semibold">${sub.amount.toLocaleString()}</span> <span className="text-xs text-gray-500">({sub.year})</span>
+                            <span className="font-semibold">${sub.amount.toLocaleString()}</span>{' '}
+                            <span className="text-xs text-gray-500">({sub.year})</span>
                           </div>
                         ))
                       ) : (
@@ -236,10 +246,28 @@ const CustomerListPage = () => {
                       )}
                     </td>
                     <td className="px-4 py-2 flex gap-2">
-                      <motion.button onClick={e => {e.stopPropagation(); setEditModal({ type: 'customer', data: customer });}} className="p-2 rounded-full hover:bg-blue-500/10 transition-colors flex-shrink-0" aria-label={`Edit ${customer.name}`} whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}>
+                      <motion.button
+                        onClick={e => {
+                          e.stopPropagation();
+                          setEditModal({ type: 'customer', data: customer });
+                        }}
+                        className="p-2 rounded-full hover:bg-blue-500/10 transition-colors flex-shrink-0"
+                        aria-label={`Edit ${customer.name}`}
+                        whileHover={{ scale: 1.2 }}
+                        whileTap={{ scale: 0.9 }}
+                      >
                         <span className="text-blue-600 font-bold">Edit</span>
                       </motion.button>
-                      <motion.button onClick={e => {e.stopPropagation(); handleDeleteCustomer(customer);}} className="p-2 rounded-full hover:bg-red-500/10 transition-colors flex-shrink-0" aria-label={`Delete ${customer.name}`} whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}>
+                      <motion.button
+                        onClick={e => {
+                          e.stopPropagation();
+                          handleDeleteCustomer(customer);
+                        }}
+                        className="p-2 rounded-full hover:bg-red-500/10 transition-colors flex-shrink-0"
+                        aria-label={`Delete ${customer.name}`}
+                        whileHover={{ scale: 1.2 }}
+                        whileTap={{ scale: 0.9 }}
+                      >
                         <Trash2Icon className="w-5 h-5 text-red-500" />
                       </motion.button>
                     </td>

@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useLocation } from 'react-router-dom';
@@ -37,6 +35,7 @@ const getTodayDateString = (): string => {
 const AddRecordPage = () => {
   const { customers, loans, installments, addLoan, addSubscription, addInstallment } = useData();
   const location = useLocation();
+  const [customerSearch, setCustomerSearch] = useState('');
 
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [action, setAction] = useState<'loan' | 'subscription' | 'installment' | null>(null);
@@ -206,22 +205,84 @@ const AddRecordPage = () => {
   const { isSubmitting: isSubmittingInstallment } = installmentForm.formState;
 
 
+
+  // Custom dropdown with search inside
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+  const filteredCustomers = customers.filter(c =>
+    c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+    c.phone.includes(customerSearch)
+  );
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    if (dropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [dropdownOpen]);
+
   return (
     <PageWrapper>
       <GlassCard className="w-full max-w-2xl mx-auto">
         <h2 className="text-3xl font-bold text-center mb-6">Record an Action</h2>
+
         <div className="space-y-6">
-          <div>
-            <label htmlFor="customer" className="block text-sm font-medium mb-2">Select Customer</label>
-            <select
-              id="customer"
-              value={selectedCustomerId}
-              onChange={(e) => setSelectedCustomerId(e.target.value)}
-              className={selectStyles}
-            >
-              <option value="">-- Select a customer --</option>
-              {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-1">Select Customer</label>
+            <div className="relative" ref={dropdownRef}>
+              <button
+                type="button"
+                className="w-full bg-white border border-gray-300 rounded-lg py-2 px-4 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 flex justify-between items-center"
+                onClick={() => setDropdownOpen((open) => !open)}
+              >
+                {selectedCustomerId
+                  ? (() => {
+                      const selected = customers.find(c => c.id === selectedCustomerId);
+                      return selected ? `${selected.name} (${selected.phone})` : 'Select...';
+                    })()
+                  : 'Select...'}
+                <svg className={`w-4 h-4 ml-2 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+              </button>
+              {dropdownOpen && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto animate-fadeIn">
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="Search by name or phone..."
+                    value={customerSearch}
+                    onChange={e => setCustomerSearch(e.target.value)}
+                    className="w-full mb-2 bg-white border-b border-gray-200 rounded-t-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-400"
+                  />
+                  <ul>
+                    {filteredCustomers.length === 0 && (
+                      <li className="px-4 py-2 text-gray-400">No customers found</li>
+                    )}
+                    {filteredCustomers.map(customer => (
+                      <li
+                        key={customer.id}
+                        className={`px-4 py-2 cursor-pointer hover:bg-indigo-100 ${selectedCustomerId === customer.id ? 'bg-indigo-50 font-bold' : ''}`}
+                        onClick={() => {
+                          setSelectedCustomerId(customer.id);
+                          setDropdownOpen(false);
+                        }}
+                      >
+                        {customer.name} ({customer.phone})
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
           
           <AnimatePresence>

@@ -223,7 +223,9 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({ customer, loa
                             )
                         })}
                     </div>
-                ) : <p className="text-gray-500">No loan records for this customer.</p>}
+                ) : (
+                    <p className="text-gray-500">No loan records for this customer.</p>
+                )}
             </GlassCard>
             
             {/* Subscriptions Section */}

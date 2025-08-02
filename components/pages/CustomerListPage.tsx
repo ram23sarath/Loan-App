@@ -290,6 +290,8 @@ const CustomerListPage = () => {
             deleteLoan={deleteLoan}
             deleteSubscription={deleteSubscription}
             deleteInstallment={deleteInstallment}
+            onEditLoan={(loan) => setEditModal({ type: 'loan', data: loan })}
+            onEditSubscription={(sub) => setEditModal({ type: 'subscription', data: sub })}
           />
         )}
       </AnimatePresence>

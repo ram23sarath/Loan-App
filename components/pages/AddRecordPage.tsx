@@ -114,7 +114,7 @@ const AddRecordPage = () => {
         if (customer) {
             setLastTransactionInfo({
                 phone: customer.phone,
-                message: `Hi ${customer.name}, your new loan of $${newLoan.original_amount} has been approved on ${formatDate(newLoan.payment_date, 'whatsapp')}. Total repayable is $${data.totalRepayableAmount}. Thank you.`
+                message: `Hi ${customer.name}, your new loan of ₹${newLoan.original_amount} has been approved on ${formatDate(newLoan.payment_date, 'whatsapp')}. Total repayable is ₹${data.totalRepayableAmount}. Thank you.`
             });
         }
         loanForm.reset({ payment_date: getTodayDateString() });
@@ -135,7 +135,7 @@ const AddRecordPage = () => {
         if (customer) {
             setLastTransactionInfo({
                 phone: customer.phone,
-                message: `Hi ${customer.name}, your subscription of $${newSubscription.amount} for the year ${newSubscription.year} has been recorded on ${formatDate(newSubscription.date, 'whatsapp')}. Thank you.`
+                message: `Hi ${customer.name}, your subscription of ₹${newSubscription.amount} for the year ${newSubscription.year} has been recorded on ${formatDate(newSubscription.date, 'whatsapp')}. Thank you.`
             });
         }
 
@@ -171,14 +171,14 @@ const AddRecordPage = () => {
         const newInstallment = await addInstallment(installmentPayload);
         const customer = customers.find(c => c.id === activeLoan.customer_id);
         if(customer) {
-            let paymentMessage = `your installment payment of $${newInstallment.amount}`;
+            let paymentMessage = `your installment payment of ₹${newInstallment.amount}`;
             if (newInstallment.late_fee && newInstallment.late_fee > 0) {
-                paymentMessage += ` (including a $${newInstallment.late_fee} late fee)`;
+                paymentMessage += ` (including a ₹${newInstallment.late_fee} late fee)`;
             }
             
             setLastTransactionInfo({
                 phone: customer.phone,
-                message: `Hi ${customer.name}, ${paymentMessage} (Installment #${newInstallment.installment_number}) was received on ${formatDate(newInstallment.date, 'whatsapp')}. Thank you.`
+            message: `Hi ${customer.name}, ${paymentMessage} (Installment #${newInstallment.installment_number}) was received on ${formatDate(newInstallment.date, 'whatsapp')}. Thank you.`
             });
         }
         

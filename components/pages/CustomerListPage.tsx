@@ -192,20 +192,20 @@ const CustomerListPage = () => {
   return (
     <PageWrapper>
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-4 sm:gap-0 px-2 sm:px-0">
-        <h2 className="text-2xl sm:text-4xl font-bold flex items-center gap-3 sm:gap-4">
-          <UsersIcon className="w-8 h-8 sm:w-10 sm:h-10" />
+        <h2 className="text-xl sm:text-4xl font-bold flex items-center gap-2 sm:gap-4">
+          <UsersIcon className="w-7 h-7 sm:w-10 sm:h-10" />
           <span>All Customers</span>
-          {isRefreshing && <SpinnerIcon className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-indigo-500" />}
+          {isRefreshing && <SpinnerIcon className="w-5 h-5 sm:w-8 sm:h-8 animate-spin text-indigo-500" />}
         </h2>
         {customers.length > 0 && (
           <motion.button
             onClick={handleComprehensiveExport}
-            className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 transition-colors p-3 rounded-lg font-semibold"
+            className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 transition-colors p-2 sm:p-3 rounded-lg font-semibold text-xs sm:text-base"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
             <FileDownIcon className="w-5 h-5" />
-            Export Comprehensive Report
+            <span className="hidden sm:inline">Export Comprehensive Report</span>
           </motion.button>
         )}
       </div>
@@ -241,104 +241,175 @@ const CustomerListPage = () => {
           </p>
         </GlassCard>
       ) : (
-        <GlassCard className="!p-2">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead>
-              <tr>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Total Loan Amount</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Subscriptions</th>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAndSortedCustomers.map(customer => {
-                const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
-                let totalPrincipalPaid = 0;
-                let totalInterestCollected = 0;
-                customerLoans.forEach(loan => {
-                  // Get all installments for this loan, sorted by date
-                  const loanInstallments = installments
-                    .filter(i => i.loan_id === loan.id)
-                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-                  
-                  // Calculate total amount paid through installments
-                  const totalPaidForLoan = loanInstallments.reduce((sum, inst) => sum + inst.amount, 0);
-                  
-                  // Add to principal paid (capped at original amount)
-                  const principalPaidForLoan = Math.min(totalPaidForLoan, loan.original_amount);
-                  totalPrincipalPaid += principalPaidForLoan;
-                  
-                  // Only if total paid exceeds original amount, count the excess as interest
-                  if (totalPaidForLoan > loan.original_amount) {
-                    const interestCollectedForLoan = Math.min(
-                      totalPaidForLoan - loan.original_amount,
-                      loan.interest_amount
-                    );
-                    totalInterestCollected += interestCollectedForLoan;
-                  }
-                });
-                const totalLoanAmount = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
-                const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
-                return (
-                  <tr
-                    key={customer.id}
-                    className="bg-white hover:bg-gray-50 transition cursor-pointer"
-                    onClick={() => setSelectedCustomer(customer)}
-                  >
-                    <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
-                    <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
-                    <td className="px-4 py-2 text-green-600">
-                      Principal: ₹{totalPrincipalPaid.toLocaleString()}<br />
-                      Interest: ₹{totalInterestCollected.toLocaleString()}<br />
-                      <span className="text-xs text-gray-500">(Total: ₹{(totalPrincipalPaid + totalInterestCollected).toLocaleString()})</span>
-                    </td>
-                    <td className="px-4 py-2 text-cyan-600">
-                      {customerSubscriptions.length > 0 ? (
-                        customerSubscriptions.map(sub => (
-                          <div key={sub.id} className="mb-1">
-                            <span className="font-semibold">₹{sub.amount.toLocaleString()}</span>{' '}
-                            <span className="text-xs text-gray-500">({sub.year})</span>
-                          </div>
-                        ))
-                      ) : (
-                        <span className="text-xs text-gray-400">None</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2 flex gap-2">
-                      <motion.button
-                        onClick={e => {
-                          e.stopPropagation();
-                          const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
-                          const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
-                          setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {}, subscription: customerSubscriptions[0] || {} } });
-                        }}
-                        className="p-2 rounded-full hover:bg-blue-500/10 transition-colors flex-shrink-0"
-                        aria-label={`Edit ${customer.name}`}
-                        whileHover={{ scale: 1.2 }}
-                        whileTap={{ scale: 0.9 }}
-                      >
-                        <span className="text-blue-600 font-bold">Edit</span>
-                      </motion.button>
-                      <motion.button
-                        onClick={e => {
-                          e.stopPropagation();
-                          handleDeleteCustomer(customer);
-                        }}
-                        className="p-2 rounded-full hover:bg-red-500/10 transition-colors flex-shrink-0"
-                        aria-label={`Delete ${customer.name}`}
-                        whileHover={{ scale: 1.2 }}
-                        whileTap={{ scale: 0.9 }}
-                      >
-                        <Trash2Icon className="w-5 h-5 text-red-500" />
-                      </motion.button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <GlassCard className="!p-2 sm:!p-4">
+          {/* Responsive: table on desktop, cards on mobile */}
+          <div className="hidden sm:block">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead>
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Total Loan Amount</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Subscriptions</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAndSortedCustomers.map(customer => {
+                  const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
+                  let totalPrincipalPaid = 0;
+                  let totalInterestCollected = 0;
+                  customerLoans.forEach(loan => {
+                    const loanInstallments = installments
+                      .filter(i => i.loan_id === loan.id)
+                      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                    const totalPaidForLoan = loanInstallments.reduce((sum, inst) => sum + inst.amount, 0);
+                    const principalPaidForLoan = Math.min(totalPaidForLoan, loan.original_amount);
+                    totalPrincipalPaid += principalPaidForLoan;
+                    if (totalPaidForLoan > loan.original_amount) {
+                      const interestCollectedForLoan = Math.min(
+                        totalPaidForLoan - loan.original_amount,
+                        loan.interest_amount
+                      );
+                      totalInterestCollected += interestCollectedForLoan;
+                    }
+                  });
+                  const totalLoanAmount = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+                  const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
+                  return (
+                    <tr
+                      key={customer.id}
+                      className="bg-white hover:bg-gray-50 transition cursor-pointer"
+                      onClick={() => setSelectedCustomer(customer)}
+                    >
+                      <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
+                      <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
+                      <td className="px-4 py-2 text-green-600">
+                        Principal: ₹{totalPrincipalPaid.toLocaleString()}<br />
+                        Interest: ₹{totalInterestCollected.toLocaleString()}<br />
+                        <span className="text-xs text-gray-500">(Total: ₹{(totalPrincipalPaid + totalInterestCollected).toLocaleString()})</span>
+                      </td>
+                      <td className="px-4 py-2 text-cyan-600">
+                        {customerSubscriptions.length > 0 ? (
+                          customerSubscriptions.map(sub => (
+                            <div key={sub.id} className="mb-1">
+                              <span className="font-semibold">₹{sub.amount.toLocaleString()}</span>{' '}
+                              <span className="text-xs text-gray-500">({sub.year})</span>
+                            </div>
+                          ))
+                        ) : (
+                          <span className="text-xs text-gray-400">None</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 flex gap-2">
+                        <motion.button
+                          onClick={e => {
+                            e.stopPropagation();
+                            const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
+                            const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
+                            setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {}, subscription: customerSubscriptions[0] || {} } });
+                          }}
+                          className="p-2 rounded-full hover:bg-blue-500/10 transition-colors flex-shrink-0"
+                          aria-label={`Edit ${customer.name}`}
+                          whileHover={{ scale: 1.2 }}
+                          whileTap={{ scale: 0.9 }}
+                        >
+                          <span className="text-blue-600 font-bold">Edit</span>
+                        </motion.button>
+                        <motion.button
+                          onClick={e => {
+                            e.stopPropagation();
+                            handleDeleteCustomer(customer);
+                          }}
+                          className="p-2 rounded-full hover:bg-red-500/10 transition-colors flex-shrink-0"
+                          aria-label={`Delete ${customer.name}`}
+                          whileHover={{ scale: 1.2 }}
+                          whileTap={{ scale: 0.9 }}
+                        >
+                          <Trash2Icon className="w-5 h-5 text-red-500" />
+                        </motion.button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {/* Card list for mobile */}
+          <div className="sm:hidden space-y-3">
+            {filteredAndSortedCustomers.map(customer => {
+              const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
+              let totalPrincipalPaid = 0;
+              let totalInterestCollected = 0;
+              customerLoans.forEach(loan => {
+                const loanInstallments = installments
+                  .filter(i => i.loan_id === loan.id)
+                  .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                const totalPaidForLoan = loanInstallments.reduce((sum, inst) => sum + inst.amount, 0);
+                const principalPaidForLoan = Math.min(totalPaidForLoan, loan.original_amount);
+                totalPrincipalPaid += principalPaidForLoan;
+                if (totalPaidForLoan > loan.original_amount) {
+                  const interestCollectedForLoan = Math.min(
+                    totalPaidForLoan - loan.original_amount,
+                    loan.interest_amount
+                  );
+                  totalInterestCollected += interestCollectedForLoan;
+                }
+              });
+              const totalLoanAmount = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+              const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
+              return (
+                <div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3 flex flex-col gap-2" onClick={() => setSelectedCustomer(customer)}>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-indigo-700 text-base">{customer.name}</span>
+                    <span className="text-xs text-gray-500">{customer.phone}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-green-600 text-xs">Principal: ₹{totalPrincipalPaid.toLocaleString()}</span>
+                    <span className="text-green-600 text-xs">Interest: ₹{totalInterestCollected.toLocaleString()}</span>
+                    <span className="text-xs text-gray-500">Total: ₹{(totalPrincipalPaid + totalInterestCollected).toLocaleString()}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-cyan-600 text-xs">
+                    {customerSubscriptions.length > 0 ? (
+                      customerSubscriptions.map(sub => (
+                        <span key={sub.id} className="bg-cyan-50 rounded px-2 py-1">₹{sub.amount.toLocaleString()} <span className="text-gray-400">({sub.year})</span></span>
+                      ))
+                    ) : (
+                      <span className="text-gray-400">No subscriptions</span>
+                    )}
+                  </div>
+                  <div className="flex gap-2 mt-1">
+                    <motion.button
+                      onClick={e => {
+                        e.stopPropagation();
+                        const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
+                        const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
+                        setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {}, subscription: customerSubscriptions[0] || {} } });
+                      }}
+                      className="p-2 rounded-full hover:bg-blue-500/10 transition-colors flex-shrink-0"
+                      aria-label={`Edit ${customer.name}`}
+                      whileHover={{ scale: 1.2 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <span className="text-blue-600 font-bold text-xs">Edit</span>
+                    </motion.button>
+                    <motion.button
+                      onClick={e => {
+                        e.stopPropagation();
+                        handleDeleteCustomer(customer);
+                      }}
+                      className="p-2 rounded-full hover:bg-red-500/10 transition-colors flex-shrink-0"
+                      aria-label={`Delete ${customer.name}`}
+                      whileHover={{ scale: 1.2 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <Trash2Icon className="w-5 h-5 text-red-500" />
+                    </motion.button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </GlassCard>
       )}
 

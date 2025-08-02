@@ -65,21 +65,21 @@ const SubscriptionListPage = () => {
 
   return (
     <PageWrapper>
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-4xl font-bold flex items-center gap-4">
-          <HistoryIcon className="w-10 h-10"/>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4 sm:gap-0 px-2 sm:px-0">
+        <h2 className="text-2xl sm:text-4xl font-bold flex items-center gap-3 sm:gap-4">
+          <HistoryIcon className="w-8 h-8 sm:w-10 sm:h-10"/>
           <span>Subscription Details</span>
-          {isRefreshing && <SpinnerIcon className="w-8 h-8 animate-spin text-indigo-500" />}
+          {isRefreshing && <SpinnerIcon className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-indigo-500" />}
         </h2>
         {subscriptions.length > 0 && (
           <motion.button
             onClick={handleExport}
-            className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 transition-colors p-3 rounded-lg font-semibold"
+            className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 transition-colors p-2 sm:p-3 rounded-lg font-semibold w-full sm:w-auto"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
             <FileDownIcon className="w-5 h-5"/>
-            Export to Excel
+            <span className="hidden sm:inline">Export to Excel</span>
           </motion.button>
         )}
       </div>
@@ -89,27 +89,27 @@ const SubscriptionListPage = () => {
           <p className="text-center text-gray-500">No subscriptions recorded yet.</p>
         </GlassCard>
       ) : (
-        <GlassCard className="!p-2">
-          <ul className="divide-y divide-gray-200">
+        <GlassCard className="!p-2 sm:!p-4">
+          <ul className="space-y-4">
             {subscriptions.map(sub => (
-              <li key={sub.id} className="flex flex-row items-center justify-between gap-6 py-6 px-8 bg-white rounded-xl shadow mb-4 border border-gray-100 w-full">
+              <li key={sub.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-6 py-4 px-2 sm:py-6 sm:px-8 bg-white rounded-xl shadow mb-4 border border-gray-100 w-full">
                 <div className="flex flex-col gap-2 flex-1">
-                  <span className="font-bold text-2xl text-indigo-700">{sub.customers?.name ?? 'Unknown Customer'}</span>
-                  <div className="flex flex-wrap gap-4 mt-2">
-                    <span className="bg-gray-100 rounded-lg px-4 py-2 text-base font-medium text-gray-700 shadow-sm">Receipt: <span className="font-bold text-gray-900">{sub.receipt}</span></span>
-                    <span className="bg-cyan-100 rounded-lg px-4 py-2 text-base font-medium text-cyan-800 shadow-sm">Amount: <span className="font-bold">₹{sub.amount.toLocaleString()}</span></span>
-                    <span className="bg-indigo-100 rounded-lg px-4 py-2 text-base font-medium text-indigo-800 shadow-sm">Year: <span className="font-bold">{sub.year}</span></span>
-                    <span className="bg-gray-200 rounded-lg px-4 py-2 text-base font-medium text-gray-700 shadow-sm">Date: <span className="font-bold">{formatDate(sub.date)}</span></span>
+                  <span className="font-bold text-lg sm:text-2xl text-indigo-700 break-words">{sub.customers?.name ?? 'Unknown Customer'}</span>
+                  <div className="flex flex-wrap gap-2 sm:gap-4 mt-2">
+                    <span className="bg-gray-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-gray-700 shadow-sm">Receipt: <span className="font-bold text-gray-900">{sub.receipt}</span></span>
+                    <span className="bg-cyan-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-cyan-800 shadow-sm">Amount: <span className="font-bold">9{sub.amount.toLocaleString()}</span></span>
+                    <span className="bg-indigo-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-indigo-800 shadow-sm">Year: <span className="font-bold">{sub.year}</span></span>
+                    <span className="bg-gray-200 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-gray-700 shadow-sm">Date: <span className="font-bold">{formatDate(sub.date)}</span></span>
                   </div>
                 </div>
                 <motion.button
                   onClick={() => handleDeleteSubscription(sub)}
-                  className="p-3 rounded-full hover:bg-red-500/10 transition-colors ml-4 self-start"
+                  className="p-2 sm:p-3 rounded-full hover:bg-red-500/10 transition-colors ml-0 sm:ml-4 self-start"
                   aria-label={`Delete subscription for ${sub.customers?.name}`}
                   whileHover={{ scale: 1.2 }}
                   whileTap={{ scale: 0.9 }}
                 >
-                  <Trash2Icon className="w-7 h-7 text-red-500" />
+                  <Trash2Icon className="w-6 h-6 sm:w-7 sm:h-7 text-red-500" />
                 </motion.button>
               </li>
             ))}

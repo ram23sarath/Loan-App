@@ -191,11 +191,11 @@ const CustomerListPage = () => {
 
   return (
     <PageWrapper>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-4xl font-bold flex items-center gap-4">
-          <UsersIcon className="w-10 h-10" />
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-4 sm:gap-0 px-2 sm:px-0">
+        <h2 className="text-2xl sm:text-4xl font-bold flex items-center gap-3 sm:gap-4">
+          <UsersIcon className="w-8 h-8 sm:w-10 sm:h-10" />
           <span>All Customers</span>
-          {isRefreshing && <SpinnerIcon className="w-8 h-8 animate-spin text-indigo-500" />}
+          {isRefreshing && <SpinnerIcon className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-indigo-500" />}
         </h2>
         {customers.length > 0 && (
           <motion.button

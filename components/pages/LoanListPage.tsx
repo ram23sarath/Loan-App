@@ -1,4 +1,5 @@
 import React from 'react';
+import LoanTableView from './LoanTableView';
 import { motion } from 'framer-motion';
 import * as XLSX from 'xlsx';
 import { useData } from '../../context/DataContext';
@@ -10,6 +11,7 @@ import { formatDate } from '../../utils/dateFormatter';
 
 const LoanListPage = () => {
     const { customers, loans, installments, deleteLoan, deleteInstallment, deleteCustomer, isRefreshing } = useData();
+    const [tableView, setTableView] = React.useState(true); // Table view is default
 
     // State for managing delete confirmation modals
     const [deleteTarget, setDeleteTarget] = React.useState<LoanWithCustomer | null>(null);
@@ -156,12 +158,20 @@ const LoanListPage = () => {
                             <FileDownIcon className="w-5 h-5"/>
                             <span className="hidden sm:inline">Export</span>
                         </motion.button>
+                        <button
+                          onClick={() => setTableView(v => !v)}
+                          className="ml-0 sm:ml-2 px-3 py-2 rounded-lg border border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold hover:bg-indigo-100 transition-colors"
+                        >
+                          {tableView ? 'Card View' : 'Table View'}
+                        </button>
                     </div>
                 )}
             </div>
 
             {/* Content */}
-            {loans.length === 0 && !isRefreshing ? (
+            {tableView ? (
+                <LoanTableView />
+            ) : loans.length === 0 && !isRefreshing ? (
                 <GlassCard>
                     <p className="text-center text-gray-500">No loans recorded yet.</p>
                 </GlassCard>
@@ -175,7 +185,6 @@ const LoanListPage = () => {
                             const totalRepayable = loan.original_amount + loan.interest_amount;
                             const progressPercentage = totalRepayable > 0 ? (amountPaid / totalRepayable) * 100 : 0;
                             const isPaidOff = amountPaid >= totalRepayable;
-
                             return (
                                 <li key={loan.id} className="py-4 px-2 sm:py-6 sm:px-8 bg-white rounded-xl shadow border border-gray-100 w-full">
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">

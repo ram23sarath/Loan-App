@@ -185,11 +185,18 @@ const LoanListPage = () => {
                             const totalRepayable = loan.original_amount + loan.interest_amount;
                             const progressPercentage = totalRepayable > 0 ? (amountPaid / totalRepayable) * 100 : 0;
                             const isPaidOff = amountPaid >= totalRepayable;
+                            const [expanded, setExpanded] = React.useState(false);
                             return (
                                 <li key={loan.id} className="py-4 px-2 sm:py-6 sm:px-8 bg-white rounded-xl shadow border border-gray-100 w-full">
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
                                         <div className="flex flex-col gap-2 flex-1">
-                                            <span className="font-bold text-lg sm:text-2xl text-indigo-700 break-words">{loan.customers?.name ?? 'Unknown Customer'}</span>
+                                            <button
+                                              className="font-bold text-lg sm:text-2xl text-indigo-700 break-words text-left hover:underline focus:outline-none"
+                                              onClick={() => setExpanded(e => !e)}
+                                              aria-expanded={expanded}
+                                            >
+                                              {loan.customers?.name ?? 'Unknown Customer'}
+                                            </button>
                                             <div className="flex flex-wrap gap-2 sm:gap-4 mt-2">
                                                 <span className="bg-gray-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-gray-700 shadow-sm">Loan: <span className="font-bold text-gray-900">₹{loan.original_amount.toLocaleString()}</span></span>
                                                 <span className="bg-yellow-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-yellow-800 shadow-sm">Interest: <span className="font-bold">₹{loan.interest_amount.toLocaleString()}</span></span>
@@ -197,6 +204,33 @@ const LoanListPage = () => {
                                                 <span className="bg-indigo-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-indigo-800 shadow-sm">Total: <span className="font-bold">₹{totalRepayable.toLocaleString()}</span></span>
                                                 <span className="bg-gray-200 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-gray-700 shadow-sm">Installments: <span className="font-bold">{loanInstallments.length} / {loan.total_instalments}</span></span>
                                             </div>
+                                            {/* Collapsible Installments */}
+                                            {expanded && loanInstallments.length > 0 && (
+                                              <div className="mt-4 border rounded-lg bg-gray-50 p-3">
+                                                <h4 className="font-semibold text-gray-700 mb-2">Installments Paid</h4>
+                                                <ul className="space-y-2">
+                                                  {loanInstallments.map(inst => (
+                                                    <li key={inst.id} className="flex flex-row justify-between items-center bg-white rounded px-3 py-2 border border-gray-200">
+                                                      <div>
+                                                        <span className="font-medium">#{inst.installment_number}</span>
+                                                        <span className="ml-2 text-gray-600">{formatDate(inst.date)}</span>
+                                                        <span className="ml-2 text-green-700 font-semibold">₹{inst.amount.toLocaleString()}</span>
+                                                        {inst.late_fee > 0 && <span className="ml-2 text-orange-500 text-xs">(+₹{inst.late_fee} late)</span>}
+                                                        <span className="ml-2 text-gray-500 text-xs">Receipt: {inst.receipt_number}</span>
+                                                      </div>
+                                                      <motion.button
+                                                        onClick={() => handleDeleteInstallment(inst.id, inst.installment_number)}
+                                                        className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                                                        aria-label={`Delete installment #${inst.installment_number}`}
+                                                        whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}
+                                                      >
+                                                        <Trash2Icon className="w-4 h-4 text-red-500" />
+                                                      </motion.button>
+                                                    </li>
+                                                  ))}
+                                                </ul>
+                                              </div>
+                                            )}
                                         </div>
                                         <div className="flex flex-row sm:flex-col gap-2 sm:gap-4 items-end sm:items-end justify-end">
                                             <motion.button

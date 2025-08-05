@@ -1,12 +1,14 @@
 import React from 'react';
 import { useData } from '../../context/DataContext';
+import { motion } from 'framer-motion';
+import { Trash2Icon } from '../../constants';
 import GlassCard from '../ui/GlassCard';
 import PageWrapper from '../ui/PageWrapper';
 import { formatDate } from '../../utils/dateFormatter';
 import type { LoanWithCustomer } from '../../types';
 
 const LoanTableView: React.FC = () => {
-  const { loans, installments } = useData();
+  const { loans, installments, deleteInstallment } = useData();
   const [filter, setFilter] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('');
 
@@ -32,6 +34,9 @@ const LoanTableView: React.FC = () => {
       </GlassCard>
     );
   }
+
+  const [expandedRow, setExpandedRow] = React.useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = React.useState<{id: string, number: number} | null>(null);
 
   return (
     <GlassCard className="overflow-x-auto">
@@ -76,20 +81,79 @@ const LoanTableView: React.FC = () => {
             const paid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
             const balance = totalRepayable - paid;
             const isPaidOff = paid >= totalRepayable;
+            const isExpanded = expandedRow === loan.id;
             return (
-              <tr key={loan.id} className="even:bg-gray-50">
-                <td className="px-4 py-2 border-b">{loan.customers?.name ?? 'Unknown'}</td>
-                <td className="px-4 py-2 border-b">₹{loan.original_amount.toLocaleString()}</td>
-                <td className="px-4 py-2 border-b">₹{loan.interest_amount.toLocaleString()}</td>
-                <td className="px-4 py-2 border-b">₹{totalRepayable.toLocaleString()}</td>
-                <td className="px-4 py-2 border-b">₹{paid.toLocaleString()}</td>
-                <td className="px-4 py-2 border-b">₹{balance.toLocaleString()}</td>
-                <td className="px-4 py-2 border-b">{loan.check_number || '-'}</td>
-                <td className="px-4 py-2 border-b">{loanInstallments.length}</td>
-                <td className="px-4 py-2 border-b">{loan.total_instalments || '-'}</td>
-                <td className="px-4 py-2 border-b">{loan.payment_date ? formatDate(loan.payment_date) : '-'}</td>
-                <td className={`px-4 py-2 border-b font-semibold ${isPaidOff ? 'text-green-600' : 'text-orange-600'}`}>{isPaidOff ? 'Paid Off' : 'In Progress'}</td>
-              </tr>
+              <React.Fragment key={loan.id}>
+                <tr className="even:bg-gray-50">
+                  <td className="px-4 py-2 border-b">
+                    <button
+                      className="font-bold text-indigo-700 hover:underline focus:outline-none text-left"
+                      onClick={() => setExpandedRow(isExpanded ? null : loan.id)}
+                      aria-expanded={isExpanded}
+                    >
+                      {loan.customers?.name ?? 'Unknown'}
+                    </button>
+                  </td>
+                  <td className="px-4 py-2 border-b">₹{loan.original_amount.toLocaleString()}</td>
+                  <td className="px-4 py-2 border-b">₹{loan.interest_amount.toLocaleString()}</td>
+                  <td className="px-4 py-2 border-b">₹{totalRepayable.toLocaleString()}</td>
+                  <td className="px-4 py-2 border-b">₹{paid.toLocaleString()}</td>
+                  <td className="px-4 py-2 border-b">₹{balance.toLocaleString()}</td>
+                  <td className="px-4 py-2 border-b">{loan.check_number || '-'}</td>
+                  <td className="px-4 py-2 border-b">{loanInstallments.length}</td>
+                  <td className="px-4 py-2 border-b">{loan.total_instalments || '-'}</td>
+                  <td className="px-4 py-2 border-b">{loan.payment_date ? formatDate(loan.payment_date) : '-'}</td>
+                  <td className={`px-4 py-2 border-b font-semibold ${isPaidOff ? 'text-green-600' : 'text-orange-600'}`}>{isPaidOff ? 'Paid Off' : 'In Progress'}</td>
+                </tr>
+                {isExpanded && loanInstallments.length > 0 && (
+                  <tr className="bg-gray-50">
+                    <td colSpan={11} className="px-4 py-2 border-b">
+                      <div className="p-3 border rounded-lg bg-white">
+                        <h4 className="font-semibold text-gray-700 mb-2">Installments Paid</h4>
+                        <ul className="space-y-2">
+                          {loanInstallments.map(inst => (
+                            <li key={inst.id} className="flex flex-row justify-between items-center bg-gray-50 rounded px-3 py-2 border border-gray-200">
+                              <div>
+                                <span className="font-medium">#{inst.installment_number}</span>
+                                <span className="ml-2 text-gray-600">{formatDate(inst.date)}</span>
+                                <span className="ml-2 text-green-700 font-semibold">₹{inst.amount.toLocaleString()}</span>
+                                {inst.late_fee > 0 && <span className="ml-2 text-orange-500 text-xs">(+₹{inst.late_fee} late)</span>}
+                                <span className="ml-2 text-gray-500 text-xs">Receipt: {inst.receipt_number}</span>
+                              </div>
+                              <motion.button
+                                onClick={() => setDeleteTarget({ id: inst.id, number: inst.installment_number })}
+                                className="p-1 rounded-full hover:bg-red-500/10 transition-colors ml-2"
+                                aria-label={`Delete installment #${inst.installment_number}`}
+                                whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}
+                              >
+                                <Trash2Icon className="w-4 h-4 text-red-500" />
+                              </motion.button>
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-2">
+          <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-xs sm:max-w-sm">
+            <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Delete Installment</h3>
+            <p className="mb-4 sm:mb-6 text-sm sm:text-base">Are you sure you want to delete installment #{deleteTarget.number}?</p>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setDeleteTarget(null)} className="px-3 py-2 rounded text-xs sm:text-base bg-gray-200 hover:bg-gray-300">Cancel</button>
+              <button
+                onClick={async () => {
+                  await deleteInstallment(deleteTarget.id);
+                  setDeleteTarget(null);
+                }}
+                className="px-3 py-2 rounded text-xs sm:text-base bg-red-600 text-white hover:bg-red-700"
+              >Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             );
           })}
         </tbody>

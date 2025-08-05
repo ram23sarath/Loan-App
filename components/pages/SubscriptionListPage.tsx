@@ -1,5 +1,6 @@
 
 import React from 'react';
+import SubscriptionTableView from './SubscriptionTableView';
 import { motion } from 'framer-motion';
 import * as XLSX from 'xlsx';
 import { useData } from '../../context/DataContext';
@@ -26,6 +27,7 @@ const itemVariants = {
 
 const SubscriptionListPage = () => {
   const { customers, subscriptions, deleteSubscription, isRefreshing } = useData();
+  const [tableView, setTableView] = React.useState(true); // Table view as default
   
   const handleDeleteSubscription = async (sub: SubscriptionWithCustomer) => {
     if (window.confirm(`Are you sure you want to delete the subscription for ${sub.customers?.name} for the year ${sub.year}?`)) {
@@ -84,7 +86,17 @@ const SubscriptionListPage = () => {
         )}
       </div>
 
-      {subscriptions.length === 0 && !isRefreshing ? (
+      <div className="flex flex-row justify-end mb-4">
+        <button
+          onClick={() => setTableView(v => !v)}
+          className="ml-0 sm:ml-2 px-3 py-2 rounded-lg border border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold hover:bg-indigo-100 transition-colors"
+        >
+          {tableView ? 'Card View' : 'Table View'}
+        </button>
+      </div>
+      {tableView ? (
+        <SubscriptionTableView />
+      ) : subscriptions.length === 0 && !isRefreshing ? (
         <GlassCard>
           <p className="text-center text-gray-500">No subscriptions recorded yet.</p>
         </GlassCard>

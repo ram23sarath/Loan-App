@@ -12,6 +12,10 @@ const LoanTableView: React.FC = () => {
   const [filter, setFilter] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('');
 
+  // Sorting state
+  const [sortField, setSortField] = React.useState('');
+  const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc');
+
   const filteredLoans = loans.filter(loan => {
     const customerName = loan.customers?.name?.toLowerCase() || '';
     const checkNumber = (loan.check_number || '').toLowerCase();
@@ -27,6 +31,77 @@ const LoanTableView: React.FC = () => {
     return matchesText && matchesStatus;
   });
 
+  const sortedLoans = React.useMemo(() => {
+    if (!sortField) return filteredLoans;
+    return [...filteredLoans].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+      switch (sortField) {
+        case 'customer':
+          aValue = a.customers?.name || '';
+          bValue = b.customers?.name || '';
+          break;
+        case 'loan_amount':
+          aValue = a.original_amount;
+          bValue = b.original_amount;
+          break;
+        case 'interest':
+          aValue = a.interest_amount;
+          bValue = b.interest_amount;
+          break;
+        case 'total_repayable':
+          aValue = a.original_amount + a.interest_amount;
+          bValue = b.original_amount + b.interest_amount;
+          break;
+        case 'paid':
+          aValue = installments.filter(inst => inst.loan_id === a.id).reduce((acc, inst) => acc + inst.amount, 0);
+          bValue = installments.filter(inst => inst.loan_id === b.id).reduce((acc, inst) => acc + inst.amount, 0);
+          break;
+        case 'balance':
+          aValue = (a.original_amount + a.interest_amount) - installments.filter(inst => inst.loan_id === a.id).reduce((acc, inst) => acc + inst.amount, 0);
+          bValue = (b.original_amount + b.interest_amount) - installments.filter(inst => inst.loan_id === b.id).reduce((acc, inst) => acc + inst.amount, 0);
+          break;
+        case 'check_number':
+          aValue = a.check_number || '';
+          bValue = b.check_number || '';
+          break;
+        case 'installments':
+          aValue = installments.filter(inst => inst.loan_id === a.id).length;
+          bValue = installments.filter(inst => inst.loan_id === b.id).length;
+          break;
+        case 'total_installments':
+          aValue = a.total_instalments;
+          bValue = b.total_instalments;
+          break;
+        case 'payment_date':
+          aValue = a.payment_date;
+          bValue = b.payment_date;
+          break;
+        case 'status':
+          aValue = (() => {
+            const totalRepayable = a.original_amount + a.interest_amount;
+            const paid = installments.filter(inst => inst.loan_id === a.id).reduce((acc, inst) => acc + inst.amount, 0);
+            return paid >= totalRepayable ? 'Paid Off' : 'In Progress';
+          })();
+          bValue = (() => {
+            const totalRepayable = b.original_amount + b.interest_amount;
+            const paid = installments.filter(inst => inst.loan_id === b.id).reduce((acc, inst) => acc + inst.amount, 0);
+            return paid >= totalRepayable ? 'Paid Off' : 'In Progress';
+          })();
+          break;
+        default:
+          aValue = '';
+          bValue = '';
+      }
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      return sortDirection === 'asc'
+        ? String(aValue).localeCompare(String(bValue))
+        : String(bValue).localeCompare(String(aValue));
+    });
+  }, [filteredLoans, sortField, sortDirection, installments]);
+
   if (loans.length === 0) {
     return (
       <GlassCard>
@@ -37,6 +112,16 @@ const LoanTableView: React.FC = () => {
 
   const [expandedRow, setExpandedRow] = React.useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<{id: string, number: number} | null>(null);
+
+  // Sorting handler
+  function handleSort(field: string) {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  }
 
   return (
     <GlassCard className="overflow-x-auto">
@@ -61,21 +146,30 @@ const LoanTableView: React.FC = () => {
       <table className="min-w-full border-collapse">
         <thead>
           <tr className="bg-gray-100/70">
-            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Customer</th>
-            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Loan Amount</th>
-            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Interest</th>
-            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Total Repayable</th>
-            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Paid</th>
-            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Balance</th>
-            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Check Number</th>
-            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Installment #</th>
-            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Total Installments</th>
-            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Payment Date</th>
-            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Status</th>
+            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer" onClick={() => handleSort('customer')}>Customer</th>
+            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer" onClick={() => handleSort('loan_amount')}>Loan Amount</th>
+            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer" onClick={() => handleSort('interest')}>Interest</th>
+            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer" onClick={() => handleSort('total_repayable')}>Total Repayable</th>
+            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer" onClick={() => handleSort('paid')}>Paid</th>
+            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer" onClick={() => handleSort('balance')}>Balance</th>
+            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer" onClick={() => handleSort('check_number')}>Check Number</th>
+            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer" onClick={() => handleSort('installments')}>Installment #</th>
+            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer" onClick={() => handleSort('total_installments')}>Total Installments</th>
+            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer" onClick={() => handleSort('payment_date')}>Payment Date</th>
+            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer" onClick={() => handleSort('status')}>Status</th>
           </tr>
         </thead>
         <tbody>
-          {filteredLoans.map((loan: LoanWithCustomer) => {
+          {sortedLoans.map((loan: LoanWithCustomer) => {
+  // Sorting handler
+  function handleSort(field: string) {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  }
             const loanInstallments = installments.filter(inst => inst.loan_id === loan.id);
             const totalRepayable = loan.original_amount + loan.interest_amount;
             const paid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);

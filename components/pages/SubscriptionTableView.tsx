@@ -8,6 +8,10 @@ const SubscriptionTableView: React.FC = () => {
   const { subscriptions } = useData();
   const [filter, setFilter] = React.useState('');
 
+  // Sorting state
+  const [sortField, setSortField] = React.useState('');
+  const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc');
+
   const filteredSubscriptions = subscriptions.filter(sub => {
     const customerName = sub.customers?.name?.toLowerCase() || '';
     const receipt = (sub.receipt || '').toLowerCase();
@@ -17,12 +21,61 @@ const SubscriptionTableView: React.FC = () => {
     );
   });
 
+  const sortedSubscriptions = React.useMemo(() => {
+    if (!sortField) return filteredSubscriptions;
+    return [...filteredSubscriptions].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+      switch (sortField) {
+        case 'customer':
+          aValue = a.customers?.name || '';
+          bValue = b.customers?.name || '';
+          break;
+        case 'amount':
+          aValue = a.amount;
+          bValue = b.amount;
+          break;
+        case 'year':
+          aValue = a.year;
+          bValue = b.year;
+          break;
+        case 'date':
+          aValue = a.date;
+          bValue = b.date;
+          break;
+        case 'receipt':
+          aValue = a.receipt || '';
+          bValue = b.receipt || '';
+          break;
+        default:
+          aValue = '';
+          bValue = '';
+      }
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      return sortDirection === 'asc'
+        ? String(aValue).localeCompare(String(bValue))
+        : String(bValue).localeCompare(String(aValue));
+    });
+  }, [filteredSubscriptions, sortField, sortDirection]);
+
   if (subscriptions.length === 0) {
     return (
       <GlassCard>
         <p className="text-center text-gray-500">No subscriptions recorded yet.</p>
       </GlassCard>
     );
+  }
+
+  // Sorting handler
+  function handleSort(field: string) {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
   }
 
   return (
@@ -39,16 +92,25 @@ const SubscriptionTableView: React.FC = () => {
       <table className="min-w-full border-collapse">
         <thead>
           <tr className="bg-gray-100">
-            <th className="px-4 py-2 border-b text-left">Customer</th>
-            <th className="px-4 py-2 border-b text-left">Amount</th>
-            <th className="px-4 py-2 border-b text-left">Year</th>
-            <th className="px-4 py-2 border-b text-left">Date</th>
-            <th className="px-4 py-2 border-b text-left">Receipt</th>
+            <th className="px-4 py-2 border-b text-left cursor-pointer" onClick={() => handleSort('customer')}>Customer</th>
+            <th className="px-4 py-2 border-b text-left cursor-pointer" onClick={() => handleSort('amount')}>Amount</th>
+            <th className="px-4 py-2 border-b text-left cursor-pointer" onClick={() => handleSort('year')}>Year</th>
+            <th className="px-4 py-2 border-b text-left cursor-pointer" onClick={() => handleSort('date')}>Date</th>
+            <th className="px-4 py-2 border-b text-left cursor-pointer" onClick={() => handleSort('receipt')}>Receipt</th>
             <th className="px-4 py-2 border-b text-left">Send</th>
           </tr>
         </thead>
         <tbody>
-          {filteredSubscriptions.map(sub => {
+          {sortedSubscriptions.map(sub => {
+  // Sorting handler
+  function handleSort(field: string) {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  }
             const customer = sub.customers;
             let message = '';
             let whatsappUrl = '#';

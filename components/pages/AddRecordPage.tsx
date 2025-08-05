@@ -14,6 +14,7 @@ type LoanInputs = {
   totalRepayableAmount: number;
   payment_date: string;
   total_instalments: number;
+  check_number?: string;
 };
 
 type SubscriptionInputs = Omit<NewSubscription, 'customer_id'>;
@@ -106,6 +107,7 @@ const AddRecordPage = () => {
       interest_amount,
       payment_date: data.payment_date,
       total_instalments: data.total_instalments,
+      check_number: data.check_number || null,
     };
 
     try {
@@ -405,6 +407,9 @@ const AddRecordPage = () => {
                         <div>
                             <input {...loanForm.register('total_instalments', {required: 'Total instalments is required', valueAsNumber: true, min: {value: 1, message: 'Must be at least 1'}})} type="number" placeholder="Total Instalments" className={inputStyles} disabled={isSubmittingLoan}/>
                              {loanForm.formState.errors.total_instalments && <p className="text-red-600 text-sm mt-1">{loanForm.formState.errors.total_instalments.message}</p>}
+                        </div>
+                        <div className="md:col-span-2">
+                            <input {...loanForm.register('check_number')} type="text" placeholder="Check Number (optional)" className={inputStyles} disabled={isSubmittingLoan}/>
                         </div>
                     </div>
                     <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-bold py-2 px-4 rounded-lg" disabled={isSubmittingLoan}>

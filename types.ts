@@ -14,6 +14,7 @@ export type Loan = {
   interest_amount: number;
   payment_date: string;
   total_instalments: number;
+  check_number?: string | null;
   created_at: string;
 };
 
@@ -86,6 +87,7 @@ export type Database = {
           interest_amount: number
           payment_date: string
           total_instalments: number
+          check_number?: string | null
           created_at: string
         }
         Insert: {
@@ -94,12 +96,14 @@ export type Database = {
           interest_amount: number
           payment_date: string
           total_instalments: number
+          check_number?: string | null
         }
         Update: {
           original_amount?: number
           interest_amount?: number
           payment_date?: string
           total_instalments?: number
+          check_number?: string | null
         }
         Relationships: [
           {

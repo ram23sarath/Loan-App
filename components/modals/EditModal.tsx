@@ -87,7 +87,18 @@ const EditModal: React.FC<EditModalProps> = ({ type, data, onSave, onClose }) =>
                 <h3 className="text-lg font-semibold mb-2 text-center text-purple-700">Subscription Details</h3>
                 <div>
                   <label className="block text-sm font-medium mb-1">Amount</label>
-                  <input name="amount" data-section="subscription" type="number" value={form.subscription.amount || ''} onChange={handleCombinedChange} className="w-full border border-gray-300 rounded px-3 py-2" />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 select-none font-sans" style={{fontFamily: 'Segoe UI Symbol, Arial Unicode MS, sans-serif'}}>&#8377;</span>
+                    <input
+                      name="amount"
+                      data-section="subscription"
+                      type="number"
+                      value={form.subscription.amount || ''}
+                      onChange={handleCombinedChange}
+                      className="w-full border border-gray-300 rounded px-3 py-2 pl-7"
+                      style={{fontFamily: 'inherit'}}
+                    />
+                  </div>
                 </div>
                 <div className="mt-3">
                   <label className="block text-sm font-medium mb-1">Year</label>

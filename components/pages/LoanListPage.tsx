@@ -231,7 +231,10 @@ const LoanListPage = () => {
                                                                 )}
                                                             </div>
                                                             <ul className="space-y-2">
-                                                                {loanInstallments.map(inst => (
+                                                                {loanInstallments
+                                                                  .slice() // copy array
+                                                                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                                                  .map(inst => (
                                                                     <li key={inst.id} className="flex flex-row justify-between items-center bg-white rounded px-3 py-2 border border-gray-200">
                                                                         <div>
                                                                             <span className="font-medium">#{inst.installment_number}</span>

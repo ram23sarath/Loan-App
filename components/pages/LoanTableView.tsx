@@ -170,7 +170,9 @@ const LoanTableView: React.FC = () => {
       setSortDirection('asc');
     }
   }
-            const loanInstallments = installments.filter(inst => inst.loan_id === loan.id);
+            const loanInstallments = installments
+              .filter(inst => inst.loan_id === loan.id)
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             const totalRepayable = loan.original_amount + loan.interest_amount;
             const paid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
             const balance = totalRepayable - paid;

@@ -97,7 +97,6 @@ const SubscriptionListPage = () => {
                   <span className="font-bold text-lg sm:text-2xl text-indigo-700 break-words">{sub.customers?.name ?? 'Unknown Customer'}</span>
                   <div className="flex flex-wrap gap-2 sm:gap-4 mt-2">
                     <span className="bg-gray-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-gray-700 shadow-sm">Receipt: <span className="font-bold text-gray-900">{sub.receipt}</span></span>
-                    <span className="bg-cyan-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-cyan-800 shadow-sm">Amount: <span className="font-bold">9{sub.amount.toLocaleString()}</span></span>
                     <span className="bg-cyan-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-cyan-800 shadow-sm">Amount: <span className="font-bold">₹{sub.amount.toLocaleString()}</span></span>
                     <span className="bg-indigo-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-indigo-800 shadow-sm">Year: <span className="font-bold">{sub.year}</span></span>
                     <span className="bg-gray-200 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-gray-700 shadow-sm">Date: <span className="font-bold">{formatDate(sub.date)}</span></span>

@@ -81,11 +81,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (customersError) throw customersError;
       setCustomers((customersData as unknown as Customer[]) || []);
 
-      const { data: loansData, error: loansError } = await supabase.from('loans').select('*, customers(name)');
+      const { data: loansData, error: loansError } = await supabase.from('loans').select('*, customers(name, phone)');
       if (loansError) throw loansError;
       setLoans((loansData as unknown as LoanWithCustomer[]) || []);
 
-      const { data: subscriptionsData, error: subscriptionsError } = await supabase.from('subscriptions').select('*, customers(name)');
+      const { data: subscriptionsData, error: subscriptionsError } = await supabase.from('subscriptions').select('*, customers(name, phone)');
       if (subscriptionsError) throw subscriptionsError;
       setSubscriptions((subscriptionsData as unknown as SubscriptionWithCustomer[]) || []);
       

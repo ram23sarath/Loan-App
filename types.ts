@@ -41,11 +41,11 @@ export type Installment = {
 
 // Types for application state that include joined data
 export type LoanWithCustomer = Loan & {
-  customers: { name: string } | null;
+  customers: { name: string; phone: string } | null;
 };
 
 export type SubscriptionWithCustomer = Subscription & {
-  customers: { name: string } | null;
+  customers: { name: string; phone: string } | null;
 };
 
 // Supabase Database definition

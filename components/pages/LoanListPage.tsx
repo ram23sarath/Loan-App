@@ -18,7 +18,7 @@ const LoanListPage = () => {
     const [deleteInstallmentTarget, setDeleteInstallmentTarget] = React.useState<{id: string, number: number} | null>(null);
     const [deleteCustomerTarget, setDeleteCustomerTarget] = React.useState<{id: string, name: string} | null>(null);
 
-    // FIX: State for expanded cards is moved to the top level to follow the Rules of Hooks.
+    // State for expanded cards, managed at the top level to follow the Rules of Hooks.
     const [expandedLoans, setExpandedLoans] = React.useState<Record<string, boolean>>({});
 
     const toggleLoanExpansion = (loanId: string) => {
@@ -178,7 +178,7 @@ const LoanListPage = () => {
                 )}
             </div>
 
-            {/* FIX: Content rendering logic is restructured for clarity and correctness */}
+            {/* Content rendering logic */}
             {tableView ? (
                 <LoanTableView />
             ) : (
@@ -193,8 +193,8 @@ const LoanListPage = () => {
                                     const totalRepayable = loan.original_amount + loan.interest_amount;
                                     const progressPercentage = totalRepayable > 0 ? (amountPaid / totalRepayable) * 100 : 0;
                                     const isPaidOff = amountPaid >= totalRepayable;
-                                    // FIX: 'expanded' state is now derived from the component-level state
                                     const expanded = !!expandedLoans[loan.id];
+                                    const customer = customers.find(c => c.id === loan.customer_id);
                                     
                                     return (
                                         <li key={loan.id} className="py-4 px-2 sm:py-6 sm:px-8 bg-white rounded-xl shadow border border-gray-100 w-full">
@@ -202,7 +202,6 @@ const LoanListPage = () => {
                                                 <div className="flex flex-col gap-2 flex-1">
                                                     <button
                                                         className="font-bold text-lg sm:text-2xl text-indigo-700 break-words text-left hover:underline focus:outline-none"
-                                                        // FIX: Use the new handler to toggle expansion state
                                                         onClick={() => toggleLoanExpansion(loan.id)}
                                                         aria-expanded={expanded}
                                                     >
@@ -218,7 +217,19 @@ const LoanListPage = () => {
                                                     {/* Collapsible Installments */}
                                                     {expanded && loanInstallments.length > 0 && (
                                                         <div className="mt-4 border rounded-lg bg-gray-50 p-3">
-                                                            <h4 className="font-semibold text-gray-700 mb-2">Installments Paid</h4>
+                                                            <div className="flex justify-between items-center mb-2">
+                                                                <h4 className="font-semibold text-gray-700">Installments Paid</h4>
+                                                                {customer && latestInstallment && (
+                                                                    <motion.button
+                                                                        onClick={() => handleSendWhatsApp(loan, latestInstallment)}
+                                                                        className="p-2 rounded-full hover:bg-green-500/10 transition-colors flex items-center gap-2"
+                                                                        aria-label="Send Latest Transaction on WhatsApp"
+                                                                        whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                                                                    >
+                                                                        <WhatsAppIcon className="w-5 h-5 text-green-500" />
+                                                                    </motion.button>
+                                                                )}
+                                                            </div>
                                                             <ul className="space-y-2">
                                                                 {loanInstallments.map(inst => (
                                                                     <li key={inst.id} className="flex flex-row justify-between items-center bg-white rounded px-3 py-2 border border-gray-200">
@@ -244,14 +255,6 @@ const LoanListPage = () => {
                                                     )}
                                                 </div>
                                                 <div className="flex flex-row sm:flex-col gap-2 sm:gap-4 items-end sm:items-end justify-end">
-                                                    <motion.button
-                                                        onClick={() => handleSendWhatsApp(loan, latestInstallment)}
-                                                        className="p-2 sm:p-3 rounded-full hover:bg-green-500/10 transition-colors"
-                                                        aria-label="Send on WhatsApp"
-                                                        whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}
-                                                    >
-                                                        <WhatsAppIcon className="w-6 h-6 sm:w-7 sm:h-7 text-green-500" />
-                                                    </motion.button>
                                                     <motion.button
                                                         onClick={() => handleDeleteLoan(loan)}
                                                         className="p-2 sm:p-3 rounded-full hover:bg-red-500/10 transition-colors"
@@ -296,7 +299,7 @@ const LoanListPage = () => {
                 </>
             )}
 
-            {/* Modals for Deletion Confirmation (No changes needed here) */}
+            {/* Modals for Deletion Confirmation */}
             {deleteTarget && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-2">
                     <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-xs sm:max-w-sm">

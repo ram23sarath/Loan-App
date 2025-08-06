@@ -18,8 +18,6 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   if (!session) {
-    // Redirect them to the /login page, but save the current location they were
-    // trying to go to so we can send them along after they log in.
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

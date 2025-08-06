@@ -49,16 +49,52 @@ const SubscriptionListPage = () => {
       const whatsappUrl = `https://wa.me/${customer.phone}?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank');
   };
-
+    
   const handleExport = () => {
-    const dataToExport = subscriptions.map(sub => ({
-      'Customer Name': sub.customers?.name ?? 'N/A',
-      'Amount': sub.amount,
-      'Year': sub.year,
-      'Date': formatDate(sub.date),
-      'Receipt': sub.receipt,
-    }));
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    // Prepare subscription data as arrays
+    const allRows = [
+      ['Customer Name', 'Amount', 'Year', 'Date', 'Receipt'],
+      ...subscriptions.map(sub => [
+        sub.customers?.name ?? 'N/A',
+        sub.amount,
+        sub.year,
+        formatDate(sub.date),
+        sub.receipt,
+      ])
+    ];
+
+    // Create worksheet from array of arrays
+    const worksheet = XLSX.utils.aoa_to_sheet(allRows);
+
+    // Set fixed column widths (no auto-fit) - simple and consistent
+    worksheet['!cols'] = [
+      { wch: 20 }, // Customer Name
+      { wch: 12 }, // Amount
+      { wch: 8 },  // Year
+      { wch: 12 }, // Date
+      { wch: 12 }  // Receipt
+    ];
+
+    // Style the column header row (row 0)
+    for (let col = 0; col < 5; col++) {
+      const headerCell = XLSX.utils.encode_cell({ r: 0, c: col });
+      if (worksheet[headerCell]) {
+        if (!worksheet[headerCell].s) {
+          worksheet[headerCell].s = {};
+        }
+        worksheet[headerCell].s.font = {
+          bold: true
+        };
+        worksheet[headerCell].s.alignment = {
+          horizontal: 'center',
+          vertical: 'center'
+        };
+        worksheet[headerCell].s.fill = {
+          fgColor: { rgb: "F0F0F0" } // Light gray background
+        };
+      }
+    }
+
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Subscriptions');
     XLSX.writeFile(workbook, 'Subscription_List.xlsx');
@@ -93,7 +129,6 @@ const SubscriptionListPage = () => {
         </div>
       </div>
 
-      {/* FIX: Restructured the conditional rendering logic for clarity and correctness */}
       {tableView ? (
         <SubscriptionTableView />
       ) : (

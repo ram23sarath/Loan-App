@@ -348,7 +348,7 @@ const AddRecordPage = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label className="block text-sm font-medium mb-1">Payment Date</label>
-                            <input {...installmentForm.register('date', {required: "Date is required"})} type="date" className={inputStyles} disabled={isSubmittingInstallment}/>
+                            <input {...installmentForm.register('date', {required: "Date is required"})} type="date" className={inputStyles} disabled={isSubmittingInstallment} min="1980-01-01" max="2050-12-31"/>
                             {installmentForm.formState.errors.date && <p className="text-red-600 text-sm mt-1">{installmentForm.formState.errors.date.message}</p>}
                         </div>
                         <div>
@@ -401,7 +401,7 @@ const AddRecordPage = () => {
                              {loanForm.formState.errors.totalRepayableAmount && <p className="text-red-600 text-sm mt-1">{loanForm.formState.errors.totalRepayableAmount.message}</p>}
                         </div>
                         <div>
-                            <input {...loanForm.register('payment_date', {required: 'Payment date is required'})} type="date" className={inputStyles} disabled={isSubmittingLoan}/>
+                            <input {...loanForm.register('payment_date', {required: 'Payment date is required'})} type="date" className={inputStyles} disabled={isSubmittingLoan} min="1980-01-01" max="2050-12-31"/>
                             {loanForm.formState.errors.payment_date && <p className="text-red-600 text-sm mt-1">{loanForm.formState.errors.payment_date.message}</p>}
                         </div>
                         <div>
@@ -437,7 +437,7 @@ const AddRecordPage = () => {
                       </div>
                     </div>
                     <div>
-                      <input {...subscriptionForm.register('date', {required: 'Date is required'})} type="date" className={inputStyles} disabled={isSubmittingSubscription}/>
+                      <input {...subscriptionForm.register('date', {required: 'Date is required'})} type="date" className={inputStyles} disabled={isSubmittingSubscription} min="1980-01-01" max="2050-12-31"/>
                       {subscriptionForm.formState.errors.date && <p className="text-red-600 text-sm mt-1">{subscriptionForm.formState.errors.date.message}</p>}
                     </div>
                     <div>

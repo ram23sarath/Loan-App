@@ -78,7 +78,7 @@ const EditModal: React.FC<EditModalProps> = ({ type, data, onSave, onClose }) =>
               </div>
               <div className="mt-3">
                 <label className="block text-sm font-medium mb-1">Payment Date</label>
-                <input name="payment_date" data-section="loan" type="date" value={form.loan?.payment_date ? form.loan.payment_date.slice(0,10) : ''} onChange={handleCombinedChange} className="w-full border border-gray-300 rounded px-3 py-2" />
+                <input name="payment_date" data-section="loan" type="date" value={form.loan?.payment_date ? form.loan.payment_date.slice(0,10) : ''} onChange={handleCombinedChange} className="w-full border border-gray-300 rounded px-3 py-2" min="1980-01-01" max="2050-12-31" />
               </div>
             </div>
             {/* Subscription Section */}
@@ -106,7 +106,7 @@ const EditModal: React.FC<EditModalProps> = ({ type, data, onSave, onClose }) =>
                 </div>
                 <div className="mt-3">
                   <label className="block text-sm font-medium mb-1">Date</label>
-                  <input name="date" data-section="subscription" type="date" value={form.subscription.date ? form.subscription.date.slice(0,10) : ''} onChange={handleCombinedChange} className="w-full border border-gray-300 rounded px-3 py-2" />
+                  <input name="date" data-section="subscription" type="date" value={form.subscription.date ? form.subscription.date.slice(0,10) : ''} onChange={handleCombinedChange} className="w-full border border-gray-300 rounded px-3 py-2" min="1980-01-01" max="2050-12-31" />
                 </div>
                 <div className="mt-3">
                   <label className="block text-sm font-medium mb-1">Receipt</label>
@@ -154,7 +154,7 @@ const EditModal: React.FC<EditModalProps> = ({ type, data, onSave, onClose }) =>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Payment Date</label>
-              <input name="payment_date" type="date" value={form.payment_date ? form.payment_date.slice(0,10) : ''} onChange={handleChange} className="w-full border border-gray-300 rounded px-3 py-2" />
+              <input name="payment_date" type="date" value={form.payment_date ? form.payment_date.slice(0,10) : ''} onChange={handleChange} className="w-full border border-gray-300 rounded px-3 py-2" min="1980-01-01" max="2050-12-31" />
             </div>
             <button type="submit" className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded">Save</button>
           </form>
@@ -171,7 +171,7 @@ const EditModal: React.FC<EditModalProps> = ({ type, data, onSave, onClose }) =>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Date</label>
-              <input name="date" type="date" value={form.date ? form.date.slice(0,10) : ''} onChange={handleChange} className="w-full border border-gray-300 rounded px-3 py-2" />
+              <input name="date" type="date" value={form.date ? form.date.slice(0,10) : ''} onChange={handleChange} className="w-full border border-gray-300 rounded px-3 py-2" min="1980-01-01" max="2050-12-31" />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Receipt</label>

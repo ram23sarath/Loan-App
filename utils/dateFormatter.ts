@@ -22,10 +22,6 @@ export const formatDate = (dateString: string, formatType: 'display' | 'whatsapp
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = date.getFullYear();
 
-  if (formatType === 'whatsapp') {
-    return `${day}/${month}/${String(year).slice(-2)}`;
-  }
-
-  // Default to 'display' format
+  // Always use full year for uniformity
   return `${day}/${month}/${year}`;
 };

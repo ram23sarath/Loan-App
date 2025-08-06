@@ -297,7 +297,15 @@ const LoanTableView: React.FC = () => {
             >
               <div>
                 <label className="block text-sm font-medium mb-1">Date</label>
-                <input type="date" className="border rounded px-2 py-1 w-full" value={editForm.date} onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))} required />
+                <input
+                  type="date"
+                  className="border rounded px-2 py-1 w-full"
+                  value={editForm.date}
+                  onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))}
+                  required
+                  min="1980-01-01"
+                  max="2050-12-31"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Amount</label>

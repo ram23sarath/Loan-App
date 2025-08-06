@@ -141,19 +141,42 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }
 
   useEffect(() => {
+    let isMounted = true;
     setLoading(true);
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setLoading(false); // Only set loading to false once after the initial auth check.
 
-      if (_event === 'SIGNED_IN' || _event === 'INITIAL_SESSION') {
-        if(session) fetchData();
-      } else if (_event === 'SIGNED_OUT') {
-        clearData();
+    // 1. Check for existing session on mount (for hard refresh/deep link)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
+      setSession(session);
+      if (session) {
+        fetchData().finally(() => {
+          if (isMounted) setLoading(false);
+        });
+      } else {
+        setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    // 2. Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (_event === 'SIGNED_IN' || _event === 'INITIAL_SESSION') {
+        if (session) {
+          setLoading(true);
+          fetchData().finally(() => {
+            if (isMounted) setLoading(false);
+          });
+        }
+      } else if (_event === 'SIGNED_OUT') {
+        clearData();
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, [fetchData]);
 
   const signInWithPassword = async (email: string, pass: string) => {

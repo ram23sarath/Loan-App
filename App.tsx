@@ -7,6 +7,7 @@ import AddCustomerPage from './components/pages/AddCustomerPage';
 import AddRecordPage from './components/pages/AddRecordPage';
 import CustomerListPage from './components/pages/CustomerListPage';
 import LoanListPage from './components/pages/LoanListPage';
+import LoanDetailPage from './components/pages/LoanDetailPage';
 import SubscriptionListPage from './components/pages/SubscriptionListPage';
 import LoginPage from './components/pages/LoginPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -22,6 +23,7 @@ const AnimatedRoutes = () => {
         <Route path="/add-record" element={<AddRecordPage />} />
         <Route path="/customers" element={<CustomerListPage />} />
         <Route path="/loans" element={<LoanListPage />} />
+        <Route path="/loans/:id" element={<LoanDetailPage />} />
         <Route path="/subscriptions" element={<SubscriptionListPage />} />
       </Routes>
     </AnimatePresence>

@@ -3,32 +3,24 @@ import { supabase } from '../src/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import type { Customer, Loan, Subscription, Installment, NewCustomer, NewLoan, NewSubscription, NewInstallment, LoanWithCustomer, SubscriptionWithCustomer } from '../types';
 
-
 // Centralized error parser
 const parseSupabaseError = (error: any, context: string): string => {
-    console.error(`Error ${context}:`, error);
-
-    if (error && typeof error === 'object' && 'message' in error) {
-        const supabaseError = error as { message: string; details?: string; hint?: string; code?: string };
-        
-        if (supabaseError.message.includes('Invalid login credentials')) {
-            return 'Invalid email or password. Please try again.';
-        }
-        
-        if (supabaseError.code === '23505') {
-            return `Failed to add record: A record with a similar unique value (e.g., phone number or receipt) already exists.`;
-        }
-        
-        if (supabaseError.message.includes('permission denied')) {
-            return `Database Connection Successful, but Permission Denied.\n\nThis is likely a Row Level Security (RLS) issue. Please check your Supabase dashboard to ensure RLS policies allow the current user to perform this action.`;
-        }
-
-        return `Database Error: ${supabaseError.message}`;
+  console.error(`Error ${context}:`, error);
+  if (error && typeof error === 'object' && 'message' in error) {
+    const supabaseError = error as { message: string; details?: string; hint?: string; code?: string };
+    if (supabaseError.message.includes('Invalid login credentials')) {
+      return 'Invalid email or password. Please try again.';
     }
-    
-    return `An unknown database error occurred while ${context}. The operation may not have completed successfully.`;
+    if (supabaseError.code === '23505') {
+      return `Failed to add record: A record with a similar unique value (e.g., phone number or receipt) already exists.`;
+    }
+    if (supabaseError.message.includes('permission denied')) {
+      return `Database Connection Successful, but Permission Denied.\n\nThis is likely a Row Level Security (RLS) issue. Please check your Supabase dashboard to ensure RLS policies allow the current user to perform this action.`;
+    }
+    return `Database Error: ${supabaseError.message}`;
+  }
+  return `An unknown database error occurred while ${context}. The operation may not have completed successfully.`;
 };
-
 
 interface DataContextType {
   session: Session | null;
@@ -47,21 +39,14 @@ interface DataContextType {
   addSubscription: (subscription: NewSubscription) => Promise<Subscription>;
   updateSubscription: (subscriptionId: string, updates: Partial<Subscription>) => Promise<Subscription>;
   addInstallment: (installment: NewInstallment) => Promise<Installment>;
+  updateInstallment: (installmentId: string, updates: Partial<Installment>) => Promise<Installment>;
   deleteCustomer: (customerId: string) => Promise<void>;
   deleteLoan: (loanId: string) => Promise<void>;
   deleteSubscription: (subscriptionId: string) => Promise<void>;
   deleteInstallment: (installmentId: string) => Promise<void>;
 }
-  const updateCustomer = async (customerId: string, updates: Partial<Customer>): Promise<Customer> => {
-    try {
-      const { data, error } = await supabase.from('customers').update(updates).eq('id', customerId).select().single();
-      if (error || !data) throw error;
-      await fetchData();
-      return data as Customer;
-    } catch (error) {
-      throw new Error(parseSupabaseError(error, `updating customer ${customerId}`));
-    }
-  };
+
+// FIX: Removed the incorrect standalone updateInstallment and updateCustomer functions from here.
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
@@ -94,7 +79,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       setInstallments((installmentsData as unknown as Installment[]) || []);
 
     } catch (error: any) {
-       alert(parseSupabaseError(error, 'fetching data'));
+      alert(parseSupabaseError(error, 'fetching data'));
     } finally {
       setIsRefreshing(false);
     }
@@ -133,18 +118,29 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
+  // FIX: Moved the updateInstallment function inside the DataProvider component.
+  const updateInstallment = async (installmentId: string, updates: Partial<Installment>): Promise<Installment> => {
+    try {
+      const { data, error } = await supabase.from('installments').update(updates).eq('id', installmentId).select().single();
+      if (error || !data) throw error;
+      await fetchData(); // This now works correctly!
+      return data as Installment;
+    } catch (error) {
+      throw new Error(parseSupabaseError(error, `updating installment ${installmentId}`));
+    }
+  };
+
   const clearData = () => {
-      setCustomers([]);
-      setLoans([]);
-      setSubscriptions([]);
-      setInstallments([]);
+    setCustomers([]);
+    setLoans([]);
+    setSubscriptions([]);
+    setInstallments([]);
   }
 
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
 
-    // 1. Check for existing session on mount (for hard refresh/deep link)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!isMounted) return;
       setSession(session);
@@ -157,7 +153,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
     });
 
-    // 2. Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (_event === 'SIGNED_IN' || _event === 'INITIAL_SESSION') {
@@ -181,10 +176,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const signInWithPassword = async (email: string, pass: string) => {
     try {
-        const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-        if (error) throw error;
+      const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+      if (error) throw error;
     } catch (error) {
-        throw new Error(parseSupabaseError(error, 'signing in'));
+      throw new Error(parseSupabaseError(error, 'signing in'));
     }
   };
 
@@ -192,23 +187,17 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      // Clear Supabase session from browser storage to prevent auto-restore
-      localStorage.removeItem('supabase.auth.token');
-      // Remove all keys starting with sb- (Supabase v2)
       Object.keys(localStorage).forEach(key => {
         if (key.startsWith('sb-')) localStorage.removeItem(key);
       });
-      sessionStorage.removeItem('supabase.auth.token');
       Object.keys(sessionStorage).forEach(key => {
         if (key.startsWith('sb-')) sessionStorage.removeItem(key);
       });
-      // The onAuthStateChange listener will handle clearing data
     } catch(error) {
-        throw new Error(parseSupabaseError(error, 'signing out'));
+      throw new Error(parseSupabaseError(error, 'signing out'));
     }
   };
 
-  // Remove user_id from customer creation
   const addCustomer = async (customerData: Omit<NewCustomer, 'user_id'>): Promise<Customer> => {
     try {
       const { data, error } = await supabase.from('customers').insert([customerData] as any).select().single();
@@ -234,11 +223,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const addSubscription = async (subscriptionData: NewSubscription): Promise<Subscription> => {
     try {
       const { data, error } = await supabase.from('subscriptions').insert([subscriptionData] as any).select().single();
-       if (error || !data) throw error;
+      if (error || !data) throw error;
       await fetchData();
       return data as Subscription;
     } catch(error) {
-       throw new Error(parseSupabaseError(error, 'adding subscription'));
+      throw new Error(parseSupabaseError(error, 'adding subscription'));
     }
   };
   
@@ -279,7 +268,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
       await fetchData();
     } catch(error) {
-       throw new Error(parseSupabaseError(error, `deleting subscription ${subscriptionId}`));
+      throw new Error(parseSupabaseError(error, `deleting subscription ${subscriptionId}`));
     }
   };
   
@@ -289,12 +278,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
       await fetchData();
     } catch(error) {
-       throw new Error(parseSupabaseError(error, `deleting installment ${installmentId}`));
+      throw new Error(parseSupabaseError(error, `deleting installment ${installmentId}`));
     }
   };
 
   return (
-    <DataContext.Provider value={{ session, customers, loans, subscriptions, installments, loading, isRefreshing, signInWithPassword, signOut, addCustomer, updateCustomer, addLoan, updateLoan, addSubscription, updateSubscription, addInstallment, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment }}>
+    <DataContext.Provider value={{ session, customers, loans, subscriptions, installments, loading, isRefreshing, signInWithPassword, signOut, addCustomer, updateCustomer, addLoan, updateLoan, addSubscription, updateSubscription, addInstallment, updateInstallment, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment }}>
       {children}
     </DataContext.Provider>
   );

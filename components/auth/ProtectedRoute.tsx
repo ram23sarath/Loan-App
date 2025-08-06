@@ -1,18 +1,20 @@
 
+
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
+import LoadingSpinner from '../ui/LoadingSpinner';
 
-const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+type ProtectedRouteProps = {
+  children: React.ReactNode;
+};
+
+const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { session, loading } = useData();
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen w-screen bg-gray-100">
-        <p className="text-xl font-semibold text-gray-700">Authenticating...</p>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   if (!session) {

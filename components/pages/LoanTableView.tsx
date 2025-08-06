@@ -112,6 +112,8 @@ const LoanTableView: React.FC = () => {
 
   const [expandedRow, setExpandedRow] = React.useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<{id: string, number: number} | null>(null);
+  const [editTarget, setEditTarget] = React.useState(null);
+  const [editForm, setEditForm] = React.useState({ date: '', amount: '', late_fee: '', receipt_number: '' });
 
   // Sorting handler
   function handleSort(field: string) {
@@ -245,6 +247,22 @@ const LoanTableView: React.FC = () => {
                                       <WhatsAppIcon className="w-4 h-4 text-green-500" />
                                     </motion.button>
                                     <motion.button
+                                      onClick={() => {
+                                        setEditTarget({ ...inst });
+                                        setEditForm({
+                                          date: inst.date,
+                                          amount: inst.amount.toString(),
+                                          late_fee: inst.late_fee?.toString() || '',
+                                          receipt_number: inst.receipt_number || ''
+                                        });
+                                      }}
+                                      className="p-1 rounded-full hover:bg-blue-500/10 transition-colors ml-2"
+                                      aria-label={`Edit installment #${inst.installment_number}`}
+                                      whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}
+                                    >
+                                      <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4 1a1 1 0 01-1.263-1.263l1-4a4 4 0 01.828-1.414z" /></svg>
+                                    </motion.button>
+                                    <motion.button
                                       onClick={() => setDeleteTarget({ id: inst.id, number: inst.installment_number })}
                                       className="p-1 rounded-full hover:bg-red-500/10 transition-colors ml-2"
                                       aria-label={`Delete installment #${inst.installment_number}`}
@@ -255,6 +273,54 @@ const LoanTableView: React.FC = () => {
                                   </div>
                                 </li>
                               );
+      {/* Edit Installment Modal */}
+      {editTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-2">
+          <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-xs sm:max-w-sm">
+            <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Edit Installment</h3>
+            <form
+              onSubmit={async e => {
+                e.preventDefault();
+                // TODO: Replace with your updateInstallment logic from context
+                if (editTarget) {
+                  // You must implement updateInstallment in your DataContext
+                  if (typeof deleteInstallment === 'function' && typeof deleteInstallment.updateInstallment === 'function') {
+                    await deleteInstallment.updateInstallment(editTarget.id, {
+                      date: editForm.date,
+                      amount: Number(editForm.amount),
+                      late_fee: Number(editForm.late_fee) || 0,
+                      receipt_number: editForm.receipt_number
+                    });
+                  }
+                  setEditTarget(null);
+                }
+              }}
+              className="space-y-3"
+            >
+              <div>
+                <label className="block text-sm font-medium mb-1">Date</label>
+                <input type="date" className="border rounded px-2 py-1 w-full" value={editForm.date} onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))} required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Amount</label>
+                <input type="number" className="border rounded px-2 py-1 w-full" value={editForm.amount} onChange={e => setEditForm(f => ({ ...f, amount: e.target.value }))} required min="1" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Late Fee</label>
+                <input type="number" className="border rounded px-2 py-1 w-full" value={editForm.late_fee} onChange={e => setEditForm(f => ({ ...f, late_fee: e.target.value }))} min="0" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Receipt Number</label>
+                <input type="text" className="border rounded px-2 py-1 w-full" value={editForm.receipt_number} onChange={e => setEditForm(f => ({ ...f, receipt_number: e.target.value }))} />
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <button type="button" onClick={() => setEditTarget(null)} className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancel</button>
+                <button type="submit" className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Save</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
                             })}
                           </ul>
                         ) : (

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { FilePlusIcon, HistoryIcon, LandmarkIcon, UserPlusIcon, UsersIcon, LogOutIcon } from '../constants';
+import { FilePlusIcon, HistoryIcon, LandmarkIcon, UserPlusIcon, UsersIcon, LogOutIcon, BookOpenIcon } from '../constants';
 import HamburgerIcon from './ui/HamburgerIcon';
 import { useData } from '../context/DataContext';
 
@@ -11,6 +11,7 @@ const navItems = [
   { path: '/customers', label: 'Customers', icon: UsersIcon },
   { path: '/loans', label: 'Loans', icon: LandmarkIcon },
   { path: '/subscriptions', label: 'Subscriptions', icon: HistoryIcon },
+  { path: '/summary', label: 'Summary', icon: BookOpenIcon },
 ];
 
 const Sidebar = () => {
@@ -89,67 +90,42 @@ const Sidebar = () => {
               <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
           </div>
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-            {navItems.map(item => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={({ isActive }) =>
-                  `flex items-center p-3 rounded-lg transition-colors duration-200 ${isActive ? activeLinkClass : inactiveLinkClass}`
-                }
-                onClick={() => setOpen(false)}
-              >
-                <item.icon className="w-6 h-6 mr-3" />
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
-
-            {/* Summary Section Below Subscriptions */}
-            <div className="mt-6">
-              <div className="rounded-2xl bg-gradient-to-br from-indigo-50/80 to-white/80 border border-indigo-100 shadow p-4 flex flex-col gap-2">
-                <span className="uppercase tracking-widest text-xs font-bold text-indigo-500 mb-1">Summary</span>
-                <div className="grid grid-cols-1 gap-2">
-                  <div className="flex items-center justify-between text-xs font-semibold text-green-700">
-                    <span>Interest Collected</span>
-                    <span className="font-bold">₹{totalInterestCollected.toLocaleString()}</span>
+          <div className="flex-1 flex flex-col min-h-0">
+            <nav className="flex-1 p-4 space-y-2 overflow-y-auto min-h-0">
+              {navItems.map(item => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `flex items-center p-3 rounded-lg transition-colors duration-200 ${isActive ? activeLinkClass : inactiveLinkClass}`
+                  }
+                  onClick={() => setOpen(false)}
+                >
+                  <item.icon className="w-6 h-6 mr-3" />
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+            </nav>
+            <div className="shrink-0">
+              <div className="p-4 border-t border-gray-200 space-y-4">
+                {session?.user && (
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500 truncate" title={session.user.email}>Logged in as:</p>
+                    <p className="text-sm font-semibold text-gray-800 truncate">{session.user.email}</p>
                   </div>
-                  <div className="flex items-center justify-between text-xs font-semibold text-orange-700">
-                    <span>Late Fee Collected</span>
-                    <span className="font-bold">₹{totalLateFeeCollected.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs font-semibold text-cyan-700">
-                    <span>Subscription Collected</span>
-                    <span className="font-bold">₹{totalSubscriptionCollected.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs font-semibold text-indigo-700 border-t border-indigo-100 pt-2 mt-1">
-                    <span>Total Collected</span>
-                    <span className="font-bold">₹{totalAllCollected.toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs font-semibold text-blue-700 border-t border-blue-100 pt-2 mt-1">
-                    <span>Total Loans Given</span>
-                    <span className="font-bold">₹{totalLoansGiven.toLocaleString()}</span>
-                  </div>
-                </div>
+                )}
+                <button
+                  onClick={handleSignOut}
+                  className="w-full flex items-center justify-center p-3 rounded-lg transition-colors duration-200 text-red-600 bg-red-50 hover:bg-red-100 font-semibold"
+                >
+                  <LogOutIcon className="w-5 h-5 mr-2" />
+                  <span>Logout</span>
+                </button>
+              </div>
+              <div className="p-4 border-t border-gray-200 text-center text-xs text-gray-400">
+                <p>&copy; {new Date().getFullYear()} Sleek Solutions</p>
               </div>
             </div>
-          </nav>
-          <div className="p-4 border-t border-gray-200 space-y-4">
-            {session?.user && (
-              <div className="text-center">
-                <p className="text-xs text-gray-500 truncate" title={session.user.email}>Logged in as:</p>
-                <p className="text-sm font-semibold text-gray-800 truncate">{session.user.email}</p>
-              </div>
-            )}
-            <button
-              onClick={handleSignOut}
-              className="w-full flex items-center justify-center p-3 rounded-lg transition-colors duration-200 text-red-600 bg-red-50 hover:bg-red-100 font-semibold"
-            >
-              <LogOutIcon className="w-5 h-5 mr-2" />
-              <span>Logout</span>
-            </button>
-          </div>
-          <div className="p-4 border-t border-gray-200 text-center text-xs text-gray-400">
-            <p>&copy; {new Date().getFullYear()} Sleek Solutions</p>
           </div>
         </aside>
       </div>

@@ -42,6 +42,7 @@ interface DataContextType {
   addInstallment: (installment: NewInstallment) => Promise<Installment>;
   updateInstallment: (installmentId: string, updates: Partial<Installment>) => Promise<Installment>;
   addDataEntry: (entry: NewDataEntry) => Promise<DataEntry>;
+  deleteDataEntry: (id: string) => Promise<void>;
   deleteCustomer: (customerId: string) => Promise<void>;
   deleteLoan: (loanId: string) => Promise<void>;
   deleteSubscription: (subscriptionId: string) => Promise<void>;
@@ -155,6 +156,17 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       return data as DataEntry;
     } catch (error) {
       throw new Error(parseSupabaseError(error, 'adding data entry'));
+    }
+  };
+
+  // Delete Data Entry
+  const deleteDataEntry = async (id: string): Promise<void> => {
+    try {
+      const { error } = await supabase.from('data_entries').delete().eq('id', id);
+      if (error) throw error;
+      await fetchData();
+    } catch (error) {
+      throw new Error(parseSupabaseError(error, 'deleting data entry'));
     }
   };
 
@@ -299,7 +311,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
 
   return (
-    <DataContext.Provider value={{ session, customers, loans, subscriptions, installments, dataEntries, loading, isRefreshing, signInWithPassword, signOut, addCustomer, updateCustomer, addLoan, updateLoan, addSubscription, updateSubscription, addInstallment, updateInstallment, addDataEntry, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment }}>
+    <DataContext.Provider value={{ session, customers, loans, subscriptions, installments, dataEntries, loading, isRefreshing, signInWithPassword, signOut, addCustomer, updateCustomer, addLoan, updateLoan, addSubscription, updateSubscription, addInstallment, updateInstallment, addDataEntry, deleteDataEntry, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment }}>
       {children}
     </DataContext.Provider>
   );

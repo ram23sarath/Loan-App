@@ -25,7 +25,31 @@ const itemVariants = {
 };
 
 const SubscriptionListPage = () => {
-  const { customers, subscriptions, deleteSubscription, isRefreshing } = useData();
+  const { customers, subscriptions, loans, installments, deleteSubscription, isRefreshing } = useData();
+
+  // --- Summary Calculations ---
+  // 1. Total Interest Collected
+  const totalInterestCollected = loans.reduce((acc, loan) => {
+    const loanInstallments = installments.filter(i => i.loan_id === loan.id);
+    const totalPaidForLoan = loanInstallments.reduce((sum, inst) => sum + inst.amount, 0);
+    if (totalPaidForLoan > loan.original_amount) {
+      const interestCollected = Math.min(totalPaidForLoan - loan.original_amount, loan.interest_amount);
+      return acc + interestCollected;
+    }
+    return acc;
+  }, 0);
+
+  // 2. Total Late Fee Collected
+  const totalLateFeeCollected = installments.reduce((acc, inst) => acc + (inst.late_fee || 0), 0);
+
+  // 3. Total Subscription Collected
+  const totalSubscriptionCollected = subscriptions.reduce((acc, sub) => acc + (sub.amount || 0), 0);
+
+  // 4. Sum of above three
+  const totalAllCollected = totalInterestCollected + totalLateFeeCollected + totalSubscriptionCollected;
+
+  // 5. Total Repayable for all customers (Total Loans Given)
+  const totalLoansGiven = loans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
   const [tableView, setTableView] = React.useState(true); // Table view as default
   
   const handleDeleteSubscription = async (sub: SubscriptionWithCustomer) => {
@@ -102,6 +126,8 @@ const SubscriptionListPage = () => {
 
   return (
     <PageWrapper>
+      
+
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4 sm:gap-0 px-2 sm:px-0">
         <h2 className="text-2xl sm:text-4xl font-bold flex items-center gap-3 sm:gap-4">
           <HistoryIcon className="w-8 h-8 sm:w-10 sm:h-10"/>

@@ -1,3 +1,13 @@
+export type DataEntry = {
+  id: string;
+  customer_id: string;
+  date: string;
+  amount: number;
+  receipt_number: string;
+  notes?: string;
+};
+
+export type NewDataEntry = Omit<DataEntry, 'id'>;
 // Base row types matching the database tables
 export type Customer = {
   id: string;
@@ -148,6 +158,39 @@ export type Database = {
           }
         ]
       }
+      data_entries: {
+        Row: {
+          id: string;
+          customer_id: string;
+          date: string;
+          amount: number;
+          receipt_number: string;
+          notes?: string;
+        };
+        Insert: {
+          customer_id: string;
+          date: string;
+          amount: number;
+          receipt_number: string;
+          notes?: string;
+        };
+        Update: {
+          customer_id?: string;
+          date?: string;
+          amount?: number;
+          receipt_number?: string;
+          notes?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "data_entries_customer_id_fkey",
+            columns: ["customer_id"],
+            isOneToOne: false,
+            referencedRelation: "customers",
+            referencedColumns: ["id"]
+          }
+        ];
+      };
       installments: {
         Row: {
           id: string

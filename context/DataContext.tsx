@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { supabase } from '../src/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
-import type { Customer, Loan, Subscription, Installment, NewCustomer, NewLoan, NewSubscription, NewInstallment, LoanWithCustomer, SubscriptionWithCustomer } from '../types';
+import type { Customer, Loan, Subscription, Installment, NewCustomer, NewLoan, NewSubscription, NewInstallment, LoanWithCustomer, SubscriptionWithCustomer, DataEntry, NewDataEntry } from '../types';
 
 // parseSupabaseError and DataContextType interface remain unchanged...
 const parseSupabaseError = (error: any, context: string): string => {
@@ -28,6 +28,7 @@ interface DataContextType {
   loans: LoanWithCustomer[];
   subscriptions: SubscriptionWithCustomer[];
   installments: Installment[];
+  dataEntries: DataEntry[];
   loading: boolean;
   isRefreshing: boolean;
   signInWithPassword: (email: string, pass: string) => Promise<void>;
@@ -40,6 +41,7 @@ interface DataContextType {
   updateSubscription: (subscriptionId: string, updates: Partial<Subscription>) => Promise<Subscription>;
   addInstallment: (installment: NewInstallment) => Promise<Installment>;
   updateInstallment: (installmentId: string, updates: Partial<Installment>) => Promise<Installment>;
+  addDataEntry: (entry: NewDataEntry) => Promise<DataEntry>;
   deleteCustomer: (customerId: string) => Promise<void>;
   deleteLoan: (loanId: string) => Promise<void>;
   deleteSubscription: (subscriptionId: string) => Promise<void>;
@@ -57,6 +59,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [installments, setInstallments] = useState<Installment[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [dataEntries, setDataEntries] = useState<DataEntry[]>([]);
 
   const fetchData = useCallback(async () => {
     setIsRefreshing(true);
@@ -74,9 +77,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (subscriptionsError) throw subscriptionsError;
       setSubscriptions((subscriptionsData as unknown as SubscriptionWithCustomer[]) || []);
       
+
       const { data: installmentsData, error: installmentsError } = await supabase.from('installments').select('*');
       if (installmentsError) throw installmentsError;
       setInstallments((installmentsData as unknown as Installment[]) || []);
+
+      // Fetch data entries
+      const { data: dataEntriesData, error: dataEntriesError } = await supabase.from('data_entries').select('*');
+      if (dataEntriesError) throw dataEntriesError;
+      setDataEntries((dataEntriesData as DataEntry[]) || []);
 
     } catch (error: any) {
       alert(parseSupabaseError(error, 'fetching data'));
@@ -135,7 +144,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setLoans([]);
     setSubscriptions([]);
     setInstallments([]);
+    setDataEntries([]);
   }
+  // Add Data Entry
+  const addDataEntry = async (entry: NewDataEntry): Promise<DataEntry> => {
+    try {
+      const { data, error } = await supabase.from('data_entries').insert([entry]).select().single();
+      if (error || !data) throw error;
+      await fetchData();
+      return data as DataEntry;
+    } catch (error) {
+      throw new Error(parseSupabaseError(error, 'adding data entry'));
+    }
+  };
 
   // FIX: This useEffect hook is updated to prevent the race condition.
   useEffect(() => {
@@ -278,7 +299,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
 
   return (
-    <DataContext.Provider value={{ session, customers, loans, subscriptions, installments, loading, isRefreshing, signInWithPassword, signOut, addCustomer, updateCustomer, addLoan, updateLoan, addSubscription, updateSubscription, addInstallment, updateInstallment, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment }}>
+    <DataContext.Provider value={{ session, customers, loans, subscriptions, installments, dataEntries, loading, isRefreshing, signInWithPassword, signOut, addCustomer, updateCustomer, addLoan, updateLoan, addSubscription, updateSubscription, addInstallment, updateInstallment, addDataEntry, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment }}>
       {children}
     </DataContext.Provider>
   );

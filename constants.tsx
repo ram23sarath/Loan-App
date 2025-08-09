@@ -1,3 +1,17 @@
+// BookOpenIcon for summary (Heroicons outline)
+export const BookOpenIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="M2.25 6.75C2.25 5.507 3.257 4.5 4.5 4.5h5.25v15H4.5a2.25 2.25 0 01-2.25-2.25v-12zM21.75 6.75C21.75 5.507 20.743 4.5 19.5 4.5h-5.25v15h5.25a2.25 2.25 0 002.25-2.25v-12z" />
+  </svg>
+);
 
 import React from 'react';
 

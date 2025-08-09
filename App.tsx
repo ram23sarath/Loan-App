@@ -9,6 +9,7 @@ import CustomerListPage from './components/pages/CustomerListPage';
 import LoanListPage from './components/pages/LoanListPage';
 import LoanDetailPage from './components/pages/LoanDetailPage';
 import SubscriptionListPage from './components/pages/SubscriptionListPage';
+import SummaryPage from './components/pages/SummaryPage';
 import LoginPage from './components/pages/LoginPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
@@ -18,13 +19,14 @@ const AnimatedRoutes = () => {
   const location = useLocation();
   return (
     <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
+      <Routes location={location}>
         <Route path="/" element={<AddCustomerPage />} />
         <Route path="/add-record" element={<AddRecordPage />} />
         <Route path="/customers" element={<CustomerListPage />} />
         <Route path="/loans" element={<LoanListPage />} />
         <Route path="/loans/:id" element={<LoanDetailPage />} />
         <Route path="/subscriptions" element={<SubscriptionListPage />} />
+        <Route path="/summary" element={<SummaryPage />} />
       </Routes>
     </AnimatePresence>
   );

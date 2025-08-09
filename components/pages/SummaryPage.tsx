@@ -36,51 +36,29 @@ const SummaryPage = () => {
   ];
 
   return (
-    <>
-      {/* Added a style block to define the fade-in animation */}
-      <style>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .card-animate {
-          opacity: 0; /* Start hidden */
-          animation: fadeInUp 0.5s ease-out forwards;
-        }
-      `}</style>
-
-      <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-indigo-200 via-white to-blue-100 p-4">
-        <div className="w-full max-w-5xl mx-auto p-8 rounded-3xl bg-white/90 border border-indigo-200 shadow-2xl flex flex-col gap-10 items-center justify-center min-h-[80vh]">
-          <div className="flex justify-center w-full mb-4">
-            <h2 className="uppercase tracking-widest text-3xl font-extrabold text-indigo-700 text-center drop-shadow-lg">Summary Dashboard</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 gap-6 w-full max-w-md mx-auto">
-            {/* Mapped over the cards to render them with staggered animations */}
-            {summaryCards.map((card, index) => (
-              <div
-                key={card.label}
-                className={`card-animate flex items-center justify-between px-6 py-4 rounded-2xl bg-${card.color}-50 border border-${card.color}-100 shadow ${card.isSummary ? 'mt-2' : ''}`}
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <span className={`text-base font-medium text-${card.color}-700`}>{card.label}</span>
-                <span className={`text-2xl font-bold text-${card.color}-700`}>₹{card.value.toLocaleString()}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="text-center text-xs text-gray-400 mt-4">
-            Updated as of {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
-          </div>
+    <div className="w-full max-w-7xl mx-auto my-8">
+      <div className="bg-white rounded-xl shadow-md flex flex-col gap-8 p-6 border border-gray-200/80">
+        <div className="flex justify-between items-center mb-2">
+          <h2 className="text-2xl font-bold text-indigo-700 uppercase tracking-widest">Summary Dashboard</h2>
+        </div>
+        <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          {summaryCards.map((card) => (
+            <div
+              key={card.label}
+              className={`flex flex-col items-center justify-center px-6 py-6 rounded-2xl bg-${card.color}-50 border border-${card.color}-100 shadow-sm ${card.isSummary ? 'ring-2 ring-indigo-200' : ''}`}
+            >
+              <span className={`text-base font-medium text-${card.color}-700 mb-2`}>{card.label}</span>
+              <span className={`text-2xl font-bold text-${card.color}-700`}>
+                ₹{card.value.toLocaleString()}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="text-center text-xs text-gray-400 mt-2">
+          Updated as of {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
         </div>
       </div>
-    </>
+    </div>
   );
 };
 

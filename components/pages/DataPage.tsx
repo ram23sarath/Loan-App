@@ -86,9 +86,9 @@ const DataPage = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto my-8">
-      <div className="bg-white rounded-xl shadow-md flex flex-col gap-6 p-6 border border-gray-200/80">
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-indigo-700">
+      <div className="bg-white rounded-xl shadow-md flex flex-col gap-8 p-6 border border-gray-200/80">
+        <div className="flex justify-between items-center mb-2">
+          <h2 className="text-2xl font-bold text-indigo-700 uppercase tracking-widest">
             {showTable ? 'All Entries' : 'New Data Entry'}
           </h2>
           <button
@@ -126,7 +126,7 @@ const DataPage = () => {
                         return (
                           <tr
                             key={entry.id}
-                            className={`hover:bg-indigo-50/50 ${isDeleting ? 'opacity-0 -translate-x-10' : 'opacity-100 translate-x-0'}`}
+                            className={`hover:bg-indigo-50/50 transition-colors duration-200 ${isDeleting ? 'opacity-0 -translate-x-10' : 'opacity-100 translate-x-0'}`}
                             style={{ transition: 'opacity 300ms ease-out, transform 300ms ease-out, background-color 200ms' }}
                           >
                             <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{customer ? customer.name : 'Unknown'}</td>
@@ -157,12 +157,9 @@ const DataPage = () => {
               </div>
             </div>
           </div>
-          
           {/* Form View Wrapper */}
           <div className="absolute inset-0 transition-all duration-500" style={{ pointerEvents: !showTable ? 'auto' : 'none', zIndex: !showTable ? 2 : 1 }}>
-            {/* MODIFIED: Added overflow-y-auto to allow scrolling inside the form view */}
             <div className={`transition-all duration-500 w-full h-full overflow-y-auto ${!showTable ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'}`}>
-              {/* MODIFIED: Added padding to the form for better scroll spacing */}
               <form className="flex flex-col gap-5 max-w-2xl mx-auto p-1 pb-8" onSubmit={handleSubmit}>
                 <div className="relative" ref={customerDropdownRef}>
                   <label htmlFor="customer-btn" className={labelBaseStyle}>Name</label>
@@ -259,8 +256,8 @@ const DataPage = () => {
 
         {/* Delete Confirmation Modal */}
         {deleteId && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" style={{ animation: 'fadeIn 200ms ease-out forwards' }}>
-            <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm flex flex-col items-center" style={{ animation: 'scaleIn 200ms ease-out forwards' }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+            <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm flex flex-col items-center">
               <div className="text-lg font-semibold text-gray-800 mb-4">Delete Entry?</div>
               <p className="text-gray-600 mb-6 text-center">Are you sure? This action cannot be undone.</p>
               <div className="flex gap-3 w-full">
@@ -279,7 +276,7 @@ const DataPage = () => {
 
         {/* Toast Message */}
         {showToast && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-indigo-700 text-white px-6 py-3 rounded-lg shadow-lg text-base font-medium" style={{ animation: 'fadeInUp 500ms ease-out forwards' }}>
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-indigo-700 text-white px-6 py-3 rounded-lg shadow-lg text-base font-medium">
             {toastMsg}
           </div>
         )}

@@ -14,7 +14,22 @@ const navItems = [
 ];
 
 const Sidebar = () => {
-  const { session, signOut } = useData();
+  const { session, signOut, loans = [], installments = [], subscriptions = [] } = useData();
+
+  // --- Summary Calculations (same as SubscriptionListPage) ---
+  const totalInterestCollected = loans.reduce((acc, loan) => {
+    const loanInstallments = installments.filter(i => i.loan_id === loan.id);
+    const totalPaidForLoan = loanInstallments.reduce((sum, inst) => sum + inst.amount, 0);
+    if (totalPaidForLoan > loan.original_amount) {
+      const interestCollected = Math.min(totalPaidForLoan - loan.original_amount, loan.interest_amount);
+      return acc + interestCollected;
+    }
+    return acc;
+  }, 0);
+  const totalLateFeeCollected = installments.reduce((acc, inst) => acc + (inst.late_fee || 0), 0);
+  const totalSubscriptionCollected = subscriptions.reduce((acc, sub) => acc + (sub.amount || 0), 0);
+  const totalAllCollected = totalInterestCollected + totalLateFeeCollected + totalSubscriptionCollected;
+  const totalLoansGiven = loans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
   const [open, setOpen] = React.useState(false);
   const activeLinkClass = 'bg-indigo-50 text-indigo-600 font-semibold';
   const inactiveLinkClass = 'text-gray-600 hover:bg-gray-100 hover:text-gray-900';
@@ -88,6 +103,35 @@ const Sidebar = () => {
                 <span>{item.label}</span>
               </NavLink>
             ))}
+
+            {/* Summary Section Below Subscriptions */}
+            <div className="mt-6">
+              <div className="rounded-2xl bg-gradient-to-br from-indigo-50/80 to-white/80 border border-indigo-100 shadow p-4 flex flex-col gap-2">
+                <span className="uppercase tracking-widest text-xs font-bold text-indigo-500 mb-1">Summary</span>
+                <div className="grid grid-cols-1 gap-2">
+                  <div className="flex items-center justify-between text-xs font-semibold text-green-700">
+                    <span>Interest Collected</span>
+                    <span className="font-bold">₹{totalInterestCollected.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs font-semibold text-orange-700">
+                    <span>Late Fee Collected</span>
+                    <span className="font-bold">₹{totalLateFeeCollected.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs font-semibold text-cyan-700">
+                    <span>Subscription Collected</span>
+                    <span className="font-bold">₹{totalSubscriptionCollected.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs font-semibold text-indigo-700 border-t border-indigo-100 pt-2 mt-1">
+                    <span>Total Collected</span>
+                    <span className="font-bold">₹{totalAllCollected.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs font-semibold text-blue-700 border-t border-blue-100 pt-2 mt-1">
+                    <span>Total Loans Given</span>
+                    <span className="font-bold">₹{totalLoansGiven.toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </nav>
           <div className="p-4 border-t border-gray-200 space-y-4">
             {session?.user && (

@@ -46,7 +46,7 @@ const SummaryPage = () => {
               <span className="text-2xl font-bold text-cyan-700">₹{totalSubscriptionCollected.toLocaleString()}</span>
             </div>
             <div className="flex items-center justify-between px-6 py-4 rounded-2xl bg-pink-50 border border-pink-100 shadow">
-              <span className="text-base font-medium text-pink-700">Data Collected</span>
+              <span className="text-base font-medium text-pink-700">Misc Collected</span>
               <span className="text-2xl font-bold text-pink-700">₹{totalDataCollected.toLocaleString()}</span>
             </div>
             <div className="flex items-center justify-between px-6 py-4 rounded-2xl bg-indigo-50 border border-indigo-100 shadow mt-2">

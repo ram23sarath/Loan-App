@@ -318,47 +318,47 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           </GlassCard>
 
           {/* Data Entries Section */}
-          <GlassCard className="w-full">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="flex items-center gap-3 text-2xl font-semibold text-pink-700">Misc Data Entries</h3>
-            </div>
-            {dataEntries.length > 0 ? (
-              <div className="space-y-2">
-                {/* Header */}
-                <div className="grid w-full grid-cols-12 gap-4 px-4 py-2 text-xs font-bold tracking-wider text-pink-700 uppercase bg-pink-50 rounded-lg">
-                  <div className="col-span-2 text-left">Date</div>
-                  <div className="col-span-2 text-center">Type</div>
-                  <div className="col-span-2 text-right">Amount</div>
-                  <div className="col-span-2 text-center">Receipt #</div>
-                  <div className="col-span-4 text-left">Notes</div>
+           <GlassCard className="w-full">
+                <div className="mb-4">
+                <h3 className="flex items-center gap-3 text-2xl font-semibold text-pink-700">Misc Data Entries</h3>
                 </div>
-                {/* Rows */}
-                {dataEntries.map(entry => (
-                  <div
-                    key={entry.id}
-                    className="grid w-full grid-cols-12 gap-4 px-4 py-2 text-sm items-center border-b border-pink-100 last:border-b-0"
-                  >
-                    <div className="col-span-2 text-left text-gray-700">{formatDate(entry.date)}</div>
-                    <div className="col-span-2 text-center">
-                      {entry.type === 'credit' ? (
-                        <span className="inline-block px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">Credit</span>
-                      ) : (
-                        <span className="inline-block px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full">Expenditure</span>
-                      )}
+                {dataEntries.length > 0 ? (
+                <div className="space-y-2">
+                    {/* Header */}
+                    <div className="grid grid-cols-12 gap-4 px-4 py-2 text-xs font-bold tracking-wider text-pink-700 uppercase bg-pink-50 rounded-lg w-full">
+                    <div className="col-span-2 text-left">Date</div>
+                    <div className="col-span-2 text-center">Type</div>
+                    <div className="col-span-2 text-right">Amount</div>
+                    <div className="col-span-2 text-center">Receipt #</div>
+                    <div className="col-span-4 text-left">Notes</div>
                     </div>
-                    <div className={`col-span-2 font-bold text-right ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>
-                      {entry.type === 'credit' ? '+' : '-'}
-                      {formatCurrency(entry.amount)}
+                    {/* Rows */}
+                    {dataEntries.map(entry => (
+                    <div
+                        key={entry.id}
+                        className="grid grid-cols-12 gap-4 px-4 py-2 text-sm items-center border-b border-pink-100 last:border-b-0 w-full"
+                    >
+                        <div className="col-span-2 text-left text-gray-700">{formatDate(entry.date)}</div>
+                        <div className="col-span-2 text-center">
+                        {entry.type === 'credit' ? (
+                            <span className="inline-block px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">Credit</span>
+                        ) : (
+                            <span className="inline-block px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full">Expenditure</span>
+                        )}
+                        </div>
+                        <div className={`col-span-2 font-bold text-right ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>
+                        {entry.type === 'credit' ? '+' : '-'}
+                        {formatCurrency(entry.amount)}
+                        </div>
+                        <div className="col-span-2 text-center text-gray-600">{entry.receipt_number}</div>
+                        <div className="col-span-4 text-left text-gray-600 truncate">{entry.notes || '-'}</div>
                     </div>
-                    <div className="col-span-2 text-center text-gray-600">{entry.receipt_number}</div>
-                    <div className="col-span-4 text-left text-gray-600 truncate">{entry.notes || '-'}</div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500">No data entries for this customer.</p>
-            )}
-          </GlassCard>
+                    ))}
+                </div>
+                ) : (
+                <p className="text-gray-500">No data entries for this customer.</p>
+                )}
+            </GlassCard>
         </div>
       </motion.div>
     </motion.div>

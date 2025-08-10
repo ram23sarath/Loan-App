@@ -20,7 +20,6 @@ const DataPage = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
 
-  // Memoize the filtering logic for better performance
   const filteredEntries = useMemo(() => {
     if (!customerFilter) return dataEntries;
     return dataEntries.filter(entry => {
@@ -29,7 +28,6 @@ const DataPage = () => {
     });
   }, [dataEntries, customers, customerFilter]);
 
-  // Centralize toast timer logic
   useEffect(() => {
     if (showToast) {
       const timer = setTimeout(() => {
@@ -39,7 +37,6 @@ const DataPage = () => {
     }
   }, [showToast]);
 
-  // Click outside handler for the dropdown
   useEffect(() => {
     if (!showCustomerDropdown) return;
     function handleClickOutside(event: MouseEvent) {
@@ -51,7 +48,6 @@ const DataPage = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showCustomerDropdown]);
 
-  // Memoize handleChange to prevent recreation on each render
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm(prevForm => ({ ...prevForm, [e.target.name]: e.target.value }));
   }, []);
@@ -70,7 +66,8 @@ const DataPage = () => {
       setForm({ customerId: '', date: '', amount: '', type: 'credit', receipt: '', notes: '' });
       setToastMsg('Entry added successfully!');
       setShowToast(true);
-      setShowTable(true);
+      // ✨ FIX: This line, which caused the redirect, has been removed.
+      // setShowTable(true);
     } catch (err: any) {
       setToastMsg(err.message || 'Failed to add data entry.');
       setShowToast(true);
@@ -125,7 +122,6 @@ const DataPage = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto my-8">
-      {/* ✨ FIX: The `layout` prop has been removed from this container to prevent the "jiggle" */}
       <div
         className="bg-white rounded-xl shadow-md flex flex-col gap-8 p-6 border border-gray-200/80"
       >
@@ -165,7 +161,7 @@ const DataPage = () => {
                           const customer = customers.find(c => c.id === entry.customer_id);
                           return (
                             <motion.div
-                              layout // The layout prop is needed here for the list items
+                              layout
                               key={entry.id}
                               initial={{ opacity: 0 }}
                               animate={{ opacity: 1 }}

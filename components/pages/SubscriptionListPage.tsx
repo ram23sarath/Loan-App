@@ -25,109 +25,59 @@ const itemVariants = {
 };
 
 const SubscriptionListPage = () => {
-  const { customers, subscriptions, loans, installments, deleteSubscription, isRefreshing } = useData();
+  const { subscriptions, deleteSubscription, isRefreshing } = useData();
 
-  // --- Summary Calculations ---
-  // 1. Total Interest Collected
-  const totalInterestCollected = loans.reduce((acc, loan) => {
-    const loanInstallments = installments.filter(i => i.loan_id === loan.id);
-    const totalPaidForLoan = loanInstallments.reduce((sum, inst) => sum + inst.amount, 0);
-    if (totalPaidForLoan > loan.original_amount) {
-      const interestCollected = Math.min(totalPaidForLoan - loan.original_amount, loan.interest_amount);
-      return acc + interestCollected;
-    }
-    return acc;
-  }, 0);
+  const [tableView, setTableView] = React.useState(true);
+  const [pendingDelete, setPendingDelete] = React.useState<SubscriptionWithCustomer | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
 
-  // 2. Total Late Fee Collected
-  const totalLateFeeCollected = installments.reduce((acc, inst) => acc + (inst.late_fee || 0), 0);
+  const handleDeleteSubscription = (sub: SubscriptionWithCustomer) => {
+    setPendingDelete(sub);
+  };
 
-  // 3. Total Subscription Collected
-  const totalSubscriptionCollected = subscriptions.reduce((acc, sub) => acc + (sub.amount || 0), 0);
-
-  // 4. Sum of above three
-  const totalAllCollected = totalInterestCollected + totalLateFeeCollected + totalSubscriptionCollected;
-
-  // 5. Total Repayable for all customers (Total Loans Given)
-  const totalLoansGiven = loans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
-  const [tableView, setTableView] = React.useState(true); // Table view as default
-  
-  const handleDeleteSubscription = async (sub: SubscriptionWithCustomer) => {
-    if (window.confirm(`Are you sure you want to delete the subscription for ${sub.customers?.name} for the year ${sub.year}?`)) {
-        try {
-            await deleteSubscription(sub.id);
-        } catch (error: any) {
-            alert(error.message);
-        }
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await deleteSubscription(pendingDelete.id);
+      setPendingDelete(null);
+    } catch (error: any) {
+      alert(error.message);
+    } finally {
+      setDeleting(false);
     }
   };
-  
+
   const handleSendWhatsApp = (sub: SubscriptionWithCustomer) => {
-      const customer = customers.find(c => c.id === sub.customer_id);
-      if (!customer) {
-          alert("Could not find customer information.");
-          return;
-      }
+    const message = `Hello ${sub.customers?.name || 'Customer'},\n\nThis is a friendly reminder about your subscription for the year ${sub.year}. The amount is ₹${sub.amount.toLocaleString()}. We appreciate your support!`;
+    const phoneNumber = sub.customers?.phone;
 
-      const message = `Hi ${customer.name}, your subscription of ₹${sub.amount} for the year ${sub.year} has been recorded on ${formatDate(sub.date, 'whatsapp')}. Thank you.`;
-      const whatsappUrl = `https://wa.me/${customer.phone}?text=${encodeURIComponent(message)}`;
+    if (phoneNumber) {
+      const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
       window.open(whatsappUrl, '_blank');
-  };
-    
-  const handleExport = () => {
-    // Prepare subscription data as arrays
-    const allRows = [
-      ['Customer Name', 'Amount', 'Year', 'Date', 'Receipt'],
-      ...subscriptions.map(sub => [
-        sub.customers?.name ?? 'N/A',
-        sub.amount,
-        sub.year,
-        formatDate(sub.date),
-        sub.receipt,
-      ])
-    ];
-
-    // Create worksheet from array of arrays
-    const worksheet = XLSX.utils.aoa_to_sheet(allRows);
-
-    // Set fixed column widths (no auto-fit) - simple and consistent
-    worksheet['!cols'] = [
-      { wch: 20 }, // Customer Name
-      { wch: 12 }, // Amount
-      { wch: 8 },  // Year
-      { wch: 12 }, // Date
-      { wch: 12 }  // Receipt
-    ];
-
-    // Style the column header row (row 0)
-    for (let col = 0; col < 5; col++) {
-      const headerCell = XLSX.utils.encode_cell({ r: 0, c: col });
-      if (worksheet[headerCell]) {
-        if (!worksheet[headerCell].s) {
-          worksheet[headerCell].s = {};
-        }
-        worksheet[headerCell].s.font = {
-          bold: true
-        };
-        worksheet[headerCell].s.alignment = {
-          horizontal: 'center',
-          vertical: 'center'
-        };
-        worksheet[headerCell].s.fill = {
-          fgColor: { rgb: "F0F0F0" } // Light gray background
-        };
-      }
+    } else {
+      alert('Customer phone number not available.');
     }
+  };
 
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Subscriptions');
-    XLSX.writeFile(workbook, 'Subscription_List.xlsx');
+  const handleExport = () => {
+    const subsForExport = subscriptions.map(sub => ({
+      'Customer Name': sub.customers?.name ?? 'Unknown',
+      'Customer Phone': sub.customers?.phone ?? 'N/A',
+      'Year': sub.year,
+      'Amount': sub.amount,
+      'Receipt': sub.receipt,
+      'Date': formatDate(sub.date),
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(subsForExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Subscriptions');
+    XLSX.writeFile(wb, 'Subscriptions_Data.xlsx');
   };
 
   return (
     <PageWrapper>
-      
-
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4 sm:gap-0 px-2 sm:px-0">
         <h2 className="text-2xl sm:text-4xl font-bold flex items-center gap-3 sm:gap-4">
           <HistoryIcon className="w-8 h-8 sm:w-10 sm:h-10"/>
@@ -135,84 +85,105 @@ const SubscriptionListPage = () => {
           {isRefreshing && <SpinnerIcon className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-indigo-500" />}
         </h2>
         <div className="flex items-center gap-4">
-            {subscriptions.length > 0 && (
-                <motion.button
-                    onClick={handleExport}
-                    className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 transition-colors p-2 sm:p-3 rounded-lg font-semibold w-auto"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                >
-                    <FileDownIcon className="w-5 h-5"/>
-                    <span className="hidden sm:inline">Export</span>
-                </motion.button>
-            )}
-            <button
-                onClick={() => setTableView(v => !v)}
-                className="px-3 py-2 rounded-lg border border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold hover:bg-indigo-100 transition-colors"
+          {subscriptions.length > 0 && (
+            <motion.button
+              onClick={handleExport}
+              className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 transition-colors p-2 sm:p-3 rounded-lg font-semibold w-auto"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
-                {tableView ? 'Card View' : 'Table View'}
-            </button>
+              <FileDownIcon className="w-5 h-5"/>
+              <span className="hidden sm:inline">Export</span>
+            </motion.button>
+          )}
+          <button
+            onClick={() => setTableView(v => !v)}
+            className="px-3 py-2 rounded-lg border border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold hover:bg-indigo-100 transition-colors"
+          >
+            {tableView ? 'Card View' : 'Table View'}
+          </button>
         </div>
       </div>
 
       {tableView ? (
-        <SubscriptionTableView />
+        <SubscriptionTableView onDelete={handleDeleteSubscription} deletingId={pendingDelete?.id ?? null} />
       ) : (
-        <>
-            {subscriptions.length > 0 ? (
-                <GlassCard className="!p-2 sm:!p-4">
-                    <motion.ul 
-                        className="space-y-4"
-                        variants={containerVariants}
-                        initial="hidden"
-                        animate="visible"
+        subscriptions.length > 0 ? (
+          <GlassCard className="!p-2 sm:!p-4">
+            <motion.ul 
+              className="space-y-4"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              {subscriptions.map(sub => (
+                <motion.li 
+                  key={sub.id} 
+                  variants={itemVariants}
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-6 py-4 px-2 sm:py-6 sm:px-8 bg-white rounded-xl shadow border border-gray-100 w-full"
+                >
+                  <div className="flex flex-col gap-2 flex-1">
+                    <span className="font-bold text-lg sm:text-2xl text-indigo-700 break-words">{sub.customers?.name ?? 'Unknown Customer'}</span>
+                    <div className="flex flex-wrap gap-2 sm:gap-4 mt-2">
+                      <span className="bg-gray-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-gray-700 shadow-sm">Receipt: <span className="font-bold text-gray-900">{sub.receipt}</span></span>
+                      <span className="bg-cyan-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-cyan-800 shadow-sm">Amount: <span className="font-bold">₹{sub.amount.toLocaleString()}</span></span>
+                      <span className="bg-indigo-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-indigo-800 shadow-sm">Year: <span className="font-bold">{sub.year}</span></span>
+                      <span className="bg-gray-200 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-gray-700 shadow-sm">Date: <span className="font-bold">{formatDate(sub.date)}</span></span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 self-start sm:self-center">
+                    <motion.button
+                      onClick={() => handleSendWhatsApp(sub)}
+                      className="p-2 sm:p-3 rounded-full hover:bg-green-500/10 transition-colors"
+                      aria-label="Send on WhatsApp"
+                      whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}
                     >
-                        {subscriptions.map(sub => (
-                            <motion.li 
-                                key={sub.id} 
-                                variants={itemVariants}
-                                className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-6 py-4 px-2 sm:py-6 sm:px-8 bg-white rounded-xl shadow border border-gray-100 w-full"
-                            >
-                                <div className="flex flex-col gap-2 flex-1">
-                                    <span className="font-bold text-lg sm:text-2xl text-indigo-700 break-words">{sub.customers?.name ?? 'Unknown Customer'}</span>
-                                    <div className="flex flex-wrap gap-2 sm:gap-4 mt-2">
-                                        <span className="bg-gray-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-gray-700 shadow-sm">Receipt: <span className="font-bold text-gray-900">{sub.receipt}</span></span>
-                                        <span className="bg-cyan-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-cyan-800 shadow-sm">Amount: <span className="font-bold">₹{sub.amount.toLocaleString()}</span></span>
-                                        <span className="bg-indigo-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-indigo-800 shadow-sm">Year: <span className="font-bold">{sub.year}</span></span>
-                                        <span className="bg-gray-200 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-gray-700 shadow-sm">Date: <span className="font-bold">{formatDate(sub.date)}</span></span>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2 self-start sm:self-center">
-                                     <motion.button
-                                        onClick={() => handleSendWhatsApp(sub)}
-                                        className="p-2 sm:p-3 rounded-full hover:bg-green-500/10 transition-colors"
-                                        aria-label="Send on WhatsApp"
-                                        whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}
-                                    >
-                                        <WhatsAppIcon className="w-6 h-6 sm:w-7 sm:h-7 text-green-500" />
-                                    </motion.button>
-                                    <motion.button
-                                        onClick={() => handleDeleteSubscription(sub)}
-                                        className="p-2 sm:p-3 rounded-full hover:bg-red-500/10 transition-colors"
-                                        aria-label={`Delete subscription for ${sub.customers?.name}`}
-                                        whileHover={{ scale: 1.2 }}
-                                        whileTap={{ scale: 0.9 }}
-                                    >
-                                        <Trash2Icon className="w-6 h-6 sm:w-7 sm:h-7 text-red-500" />
-                                    </motion.button>
-                                </div>
-                            </motion.li>
-                        ))}
-                    </motion.ul>
-                </GlassCard>
-            ) : (
-                !isRefreshing && (
-                    <GlassCard>
-                        <p className="text-center text-gray-500">No subscriptions recorded yet.</p>
-                    </GlassCard>
-                )
-            )}
-        </>
+                      <WhatsAppIcon className="w-6 h-6 sm:w-7 sm:h-7 text-green-500" />
+                    </motion.button>
+                    <motion.button
+                      onClick={() => handleDeleteSubscription(sub)}
+                      className="p-2 sm:p-3 rounded-full hover:bg-red-500/10 transition-colors"
+                      aria-label={`Delete subscription for ${sub.customers?.name}`}
+                      whileHover={{ scale: 1.2 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <Trash2Icon className="w-6 h-6 sm:w-7 sm:h-7 text-red-500" />
+                    </motion.button>
+                  </div>
+                </motion.li>
+              ))}
+            </motion.ul>
+          </GlassCard>
+        ) : (
+          !isRefreshing && (
+            <GlassCard>
+              <p className="text-center text-gray-500">No subscriptions recorded yet.</p>
+            </GlassCard>
+          )
+        )
+      )}
+
+      {/* The Delete confirmation modal is moved here to be a sibling of the other views */}
+      {pendingDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-lg p-6 max-w-sm w-full flex flex-col items-center">
+            <Trash2Icon className="w-10 h-10 text-red-500 mb-2" />
+            <h3 className="text-lg font-bold mb-2 text-center">Delete Subscription?</h3>
+            <p className="text-gray-700 text-center mb-4">Are you sure you want to delete the subscription for <span className="font-semibold">{pendingDelete.customers?.name}</span> ({pendingDelete.year})?</p>
+            <div className="flex gap-4 w-full justify-center">
+              <button
+                onClick={() => setPendingDelete(null)}
+                className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold"
+                disabled={deleting}
+              >Cancel</button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold"
+                disabled={deleting}
+              >{deleting ? 'Deleting...' : 'Delete'}</button>
+            </div>
+          </div>
+        </div>
       )}
     </PageWrapper>
   );

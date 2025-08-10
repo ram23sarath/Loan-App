@@ -1,18 +1,73 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../../context/DataContext';
-import { Trash2Icon, WhatsAppIcon } from '../../constants';
+import { Trash2Icon, WhatsAppIcon, LandmarkIcon, SpinnerIcon } from '../../constants';
 import GlassCard from '../ui/GlassCard';
 import { formatDate } from '../../utils/dateFormatter';
-import type { LoanWithCustomer, Installment } from '../../types'; // Assuming Installment type exists
+import type { LoanWithCustomer, Installment } from '../../types';
+
+// Animation variants for the table body to orchestrate the stagger effect
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      // A small delay between each row animating in
+      staggerChildren: 0.05,
+    },
+  },
+};
+
+// Animation variants for each individual table row
+const itemVariants = {
+  // Start state: slightly lower and invisible
+  hidden: { y: 20, opacity: 0 },
+  // Animate to: original position and fully visible
+  visible: {
+    y: 0,
+    opacity: 1,
+  },
+  // Exit state (for filtering): move up and fade out
+  exit: { y: -20, opacity: 0 },
+};
+
+const modalBackdropVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
+};
+
+const modalContentVariants = {
+  hidden: { scale: 0.9, opacity: 0 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    transition: { type: 'spring', stiffness: 200, damping: 20 },
+  },
+  exit: { scale: 0.9, opacity: 0 },
+};
 
 const LoanTableView: React.FC = () => {
-  const { loans, installments, deleteInstallment, updateInstallment } = useData();
+  const { loans, installments, deleteInstallment, updateInstallment, isRefreshing } = useData();
   const [filter, setFilter] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState('');
   const [sortField, setSortField] = React.useState('');
   const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc');
 
+  // --- Data Calculations ---
+  const totalInterestCollected = loans.reduce((acc, loan) => {
+    const loanInstallments = installments.filter(i => i.loan_id === loan.id);
+    const totalPaidForLoan = loanInstallments.reduce((sum, inst) => sum + inst.amount, 0);
+    if (totalPaidForLoan > loan.original_amount) {
+      const interestCollected = Math.min(
+        totalPaidForLoan - loan.original_amount,
+        loan.interest_amount
+      );
+      return acc + interestCollected;
+    }
+    return acc;
+  }, 0);
+
+  const totalLateFeeCollected = installments.reduce((acc, inst) => acc + (inst.late_fee || 0), 0);
   const filteredLoans = loans.filter(loan => {
     const customerName = loan.customers?.name?.toLowerCase() || '';
     const checkNumber = (loan.check_number || '').toLowerCase();
@@ -99,17 +154,39 @@ const LoanTableView: React.FC = () => {
     });
   }, [filteredLoans, sortField, sortDirection, installments]);
 
-  if (loans.length === 0) {
-    return (
-      <GlassCard>
-        <p className="text-center text-gray-500">No loans recorded yet.</p>
-      </GlassCard>
-    );
-  }
+
+
+  // Header
+  return (
+    <>
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4 sm:gap-0 px-2 sm:px-0">
+        <h2 className="text-2xl sm:text-4xl font-bold flex items-center gap-3 sm:gap-4">
+          <LandmarkIcon className="w-8 h-8 sm:w-10 sm:h-10"/>
+          <span>Loan Details</span>
+          {isRefreshing && <SpinnerIcon className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-indigo-500" />}
+        </h2>
+        {loans.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+            <GlassCard className="!p-3 sm:!p-4 w-full sm:w-auto">
+              <p className="text-xs sm:text-sm text-gray-500">Total Interest Collected</p>
+              <p className="text-xl sm:text-2xl font-bold text-green-600">₹{totalInterestCollected.toLocaleString()}</p>
+            </GlassCard>
+            <GlassCard className="!p-3 sm:!p-4 w-full sm:w-auto">
+              <p className="text-xs sm:text-sm text-gray-500">Total Late Fee Collected</p>
+              <p className="text-xl sm:text-2xl font-bold text-orange-600">₹{totalLateFeeCollected.toLocaleString()}</p>
+            </GlassCard>
+          </div>
+        )}
+      </div>
+      {loans.length === 0 ? (
+        <GlassCard>
+          <p className="text-center text-gray-500">No loans recorded yet.</p>
+        </GlassCard>
+      ) : (
+        // ...existing table code...
 
   const [expandedRow, setExpandedRow] = React.useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<{id: string, number: number} | null>(null);
-  // FIX: Added correct TypeScript type for state
   const [editTarget, setEditTarget] = React.useState<Installment | null>(null);
   const [editForm, setEditForm] = React.useState({ date: '', amount: '', late_fee: '', receipt_number: '' });
 
@@ -158,197 +235,248 @@ const LoanTableView: React.FC = () => {
             <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer" onClick={() => handleSort('status')}>Status</th>
           </tr>
         </thead>
-        <tbody>
-          {sortedLoans.map((loan: LoanWithCustomer) => {
-            // FIX: Removed redundant handleSort function from inside the map
-            const loanInstallments = installments
-              .filter(inst => inst.loan_id === loan.id)
-              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            const totalRepayable = loan.original_amount + loan.interest_amount;
-            const paid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
-            const balance = totalRepayable - paid;
-            const isPaidOff = paid >= totalRepayable;
-            const isExpanded = expandedRow === loan.id;
-            return (
-              <React.Fragment key={loan.id}>
-                <tr className="even:bg-gray-50/50 hover:bg-indigo-50/50 transition-colors">
-                  <td className="px-4 py-2 border-b">
-                    <button
-                      className="font-bold text-indigo-700 hover:underline focus:outline-none text-left"
-                      onClick={() => setExpandedRow(isExpanded ? null : loan.id)}
-                      aria-expanded={isExpanded}
-                    >
-                      {loan.customers?.name ?? 'Unknown'}
-                    </button>
-                  </td>
-                  <td className="px-4 py-2 border-b">₹{loan.original_amount.toLocaleString()}</td>
-                  <td className="px-4 py-2 border-b">₹{loan.interest_amount.toLocaleString()}</td>
-                  <td className="px-4 py-2 border-b">₹{totalRepayable.toLocaleString()}</td>
-                  <td className="px-4 py-2 border-b">₹{paid.toLocaleString()}</td>
-                  <td className="px-4 py-2 border-b">₹{balance.toLocaleString()}</td>
-                  <td className="px-4 py-2 border-b">{loan.check_number || '-'}</td>
-                  <td className="px-4 py-2 border-b">{loanInstallments.length}</td>
-                  <td className="px-4 py-2 border-b">{loan.total_instalments || '-'}</td>
-                  <td className="px-4 py-2 border-b">{loan.payment_date ? formatDate(loan.payment_date) : '-'}</td>
-                  <td className={`px-4 py-2 border-b font-semibold ${isPaidOff ? 'text-green-600' : 'text-orange-600'}`}>{isPaidOff ? 'Paid Off' : 'In Progress'}</td>
-                </tr>
-                {isExpanded && (
-                  <tr className="bg-gray-50/20">
-                    <td colSpan={11} className="px-4 py-2 border-b">
-                      <div className="p-3 border rounded-lg bg-white/80">
-                        <h4 className="font-semibold text-gray-700 mb-2">Installments Paid</h4>
-                        {loanInstallments.length > 0 ? (
-                            <ul className="space-y-2">
-                             {loanInstallments.map(inst => {
-                               const customer = loan.customers;
-                               let message = '';
-                               let whatsappUrl = '#';
-                               let isValidPhone = false;
-                               if (customer && customer.phone && /^\d{10,15}$/.test(customer.phone)) {
-                                 isValidPhone = true;
-                                 message = `Hi ${customer.name}, your installment payment of ₹${inst.amount}`;
-                                 if (inst.late_fee && inst.late_fee > 0) {
-                                   message += ` (including a ₹${inst.late_fee} late fee)`;
-                                 }
-                                 message += ` (Installment #${inst.installment_number}) was received on ${formatDate(inst.date, 'whatsapp')}. Thank you.`;
-                                 whatsappUrl = `https://wa.me/${customer.phone}?text=${encodeURIComponent(message)}`;
-                               }
-                               return (
-                                 <li key={inst.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gray-50 rounded px-3 py-2 border border-gray-200 gap-2">
-                                   <div>
-                                     <span className="font-medium">#{inst.installment_number}</span>
-                                     <span className="ml-2 text-gray-600">{formatDate(inst.date)}</span>
-                                     <span className="ml-2 text-green-700 font-semibold">₹{inst.amount.toLocaleString()}</span>
-                                     {inst.late_fee > 0 && <span className="ml-2 text-orange-500 text-xs">(+₹{inst.late_fee} late)</span>}
-                                     <span className="ml-2 text-gray-500 text-xs">Receipt: {inst.receipt_number}</span>
-                                   </div>
-                                   <div className="flex items-center gap-2">
-                                     <motion.button
-                                       onClick={() => isValidPhone && window.open(whatsappUrl, '_blank')}
-                                       className="p-1 rounded-full hover:bg-green-500/10 transition-colors"
-                                       aria-label={`Send installment #${inst.installment_number} on WhatsApp`}
-                                       whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}
-                                       disabled={!isValidPhone}
-                                     >
-                                       <WhatsAppIcon className="w-4 h-4 text-green-500" />
-                                     </motion.button>
-                                     <motion.button
-                                       onClick={() => {
-                                         setEditTarget(inst); // <-- Set the specific installment to edit
-                                         setEditForm({
-                                           date: inst.date,
-                                           amount: inst.amount.toString(),
-                                           late_fee: inst.late_fee?.toString() || '',
-                                           receipt_number: inst.receipt_number || ''
-                                         });
-                                       }}
-                                       className="p-1 rounded-full hover:bg-blue-500/10 transition-colors ml-2"
-                                       aria-label={`Edit installment #${inst.installment_number}`}
-                                       whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}
-                                     >
-                                       <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4 1a1 1 0 01-1.263-1.263l1-4a4 4 0 01.828-1.414z" /></svg>
-                                     </motion.button>
-                                     <motion.button
-                                       onClick={() => setDeleteTarget({ id: inst.id, number: inst.installment_number })}
-                                       className="p-1 rounded-full hover:bg-red-500/10 transition-colors ml-2"
-                                       aria-label={`Delete installment #${inst.installment_number}`}
-                                       whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}
-                                     >
-                                       <Trash2Icon className="w-4 h-4 text-red-500" />
-                                     </motion.button>
-                                   </div>
-                                 </li>
-                               );
-                               // FIX: The edit modal was here, which is unreachable code. It has been moved.
-                             })}
-                           </ul>
-                        ) : (
-                          <p className="text-center text-gray-500 py-4">No installments have been paid for this loan yet.</p>
-                        )}
-                      </div>
+        {/* The tbody now controls the animation for its children (the rows) */}
+        <motion.tbody
+          layout
+          initial="hidden"
+          animate="visible"
+          variants={containerVariants}
+        >
+          <AnimatePresence>
+            {sortedLoans.map((loan: LoanWithCustomer) => {
+              const loanInstallments = installments
+                .filter(inst => inst.loan_id === loan.id)
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+              const totalRepayable = loan.original_amount + loan.interest_amount;
+              const paid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
+              const balance = totalRepayable - paid;
+              const isPaidOff = paid >= totalRepayable;
+              const isExpanded = expandedRow === loan.id;
+              return (
+                // Key is on the motion component for AnimatePresence to work correctly
+                <React.Fragment key={loan.id}>
+                  <motion.tr
+                    layout
+                    variants={itemVariants}
+                    exit="exit" // Animate out when filtering/sorting
+                    className="even:bg-gray-50/50 hover:bg-indigo-50/50 transition-colors"
+                  >
+                    <td className="px-4 py-2 border-b">
+                      <button
+                        className="font-bold text-indigo-700 hover:underline focus:outline-none text-left"
+                        onClick={() => setExpandedRow(isExpanded ? null : loan.id)}
+                        aria-expanded={isExpanded}
+                      >
+                        {loan.customers?.name ?? 'Unknown'}
+                      </button>
                     </td>
-                  </tr>
-                )}
-              </React.Fragment>
-            );
-          })}
-        </tbody>
+                    <td className="px-4 py-2 border-b">₹{loan.original_amount.toLocaleString()}</td>
+                    <td className="px-4 py-2 border-b">₹{loan.interest_amount.toLocaleString()}</td>
+                    <td className="px-4 py-2 border-b">₹{totalRepayable.toLocaleString()}</td>
+                    <td className="px-4 py-2 border-b">₹{paid.toLocaleString()}</td>
+                    <td className="px-4 py-2 border-b">₹{balance.toLocaleString()}</td>
+                    <td className="px-4 py-2 border-b">{loan.check_number || '-'}</td>
+                    <td className="px-4 py-2 border-b">{loanInstallments.length}</td>
+                    <td className="px-4 py-2 border-b">{loan.total_instalments || '-'}</td>
+                    <td className="px-4 py-2 border-b">{loan.payment_date ? formatDate(loan.payment_date) : '-'}</td>
+                    <td className={`px-4 py-2 border-b font-semibold ${isPaidOff ? 'text-green-600' : 'text-orange-600'}`}>{isPaidOff ? 'Paid Off' : 'In Progress'}</td>
+                  </motion.tr>
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.tr
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                        className="bg-gray-50/20"
+                      >
+                        {/* ... expanded row content (unchanged) */}
+                        <td colSpan={11} className="px-4 py-2 border-b">
+                          <motion.div
+                            variants={containerVariants}
+                            initial="hidden"
+                            animate="visible"
+                            className="p-3 border rounded-lg bg-white/80"
+                          >
+                            <h4 className="font-semibold text-gray-700 mb-2">Installments Paid</h4>
+                            {loanInstallments.length > 0 ? (
+                              <motion.ul variants={containerVariants} className="space-y-2">
+                                {loanInstallments.map(inst => {
+                                  const customer = loan.customers;
+                                  let message = '';
+                                  let whatsappUrl = '#';
+                                  let isValidPhone = false;
+                                  if (customer && customer.phone && /^\d{10,15}$/.test(customer.phone)) {
+                                    isValidPhone = true;
+                                    message = `Hi ${customer.name}, your installment payment of ₹${inst.amount}`;
+                                    if (inst.late_fee && inst.late_fee > 0) {
+                                      message += ` (including a ₹${inst.late_fee} late fee)`;
+                                    }
+                                    message += ` (Installment #${inst.installment_number}) was received on ${formatDate(inst.date, 'whatsapp')}. Thank you.`;
+                                    whatsappUrl = `https://wa.me/${customer.phone}?text=${encodeURIComponent(message)}`;
+                                  }
+                                  return (
+                                    <motion.li
+                                      key={inst.id}
+                                      variants={itemVariants}
+                                      className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gray-50 rounded px-3 py-2 border border-gray-200 gap-2"
+                                    >
+                                      <div>
+                                        <span className="font-medium">#{inst.installment_number}</span>
+                                        <span className="ml-2 text-gray-600">{formatDate(inst.date)}</span>
+                                        <span className="ml-2 text-green-700 font-semibold">₹{inst.amount.toLocaleString()}</span>
+                                        {inst.late_fee > 0 && <span className="ml-2 text-orange-500 text-xs">(+₹{inst.late_fee} late)</span>}
+                                        <span className="ml-2 text-gray-500 text-xs">Receipt: {inst.receipt_number}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <motion.button
+                                          onClick={() => isValidPhone && window.open(whatsappUrl, '_blank')}
+                                          className="p-1 rounded-full hover:bg-green-500/10 transition-colors"
+                                          aria-label={`Send installment #${inst.installment_number} on WhatsApp`}
+                                          whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}
+                                          disabled={!isValidPhone}
+                                        >
+                                          <WhatsAppIcon className="w-4 h-4 text-green-500" />
+                                        </motion.button>
+                                        <motion.button
+                                          onClick={() => {
+                                            setEditTarget(inst);
+                                            setEditForm({
+                                              date: inst.date,
+                                              amount: inst.amount.toString(),
+                                              late_fee: inst.late_fee?.toString() || '',
+                                              receipt_number: inst.receipt_number || ''
+                                            });
+                                          }}
+                                          className="p-1 rounded-full hover:bg-blue-500/10 transition-colors ml-2"
+                                          aria-label={`Edit installment #${inst.installment_number}`}
+                                          whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}
+                                        >
+                                          <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4 1a1 1 0 01-1.263-1.263l1-4a4 4 0 01.828-1.414z" /></svg>
+                                        </motion.button>
+                                        <motion.button
+                                          onClick={() => setDeleteTarget({ id: inst.id, number: inst.installment_number })}
+                                          className="p-1 rounded-full hover:bg-red-500/10 transition-colors ml-2"
+                                          aria-label={`Delete installment #${inst.installment_number}`}
+                                          whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}
+                                        >
+                                          <Trash2Icon className="w-4 h-4 text-red-500" />
+                                        </motion.button>
+                                      </div>
+                                    </motion.li>
+                                  );
+                                })}
+                              </motion.ul>
+                            ) : (
+                              <p className="text-center text-gray-500 py-4">No installments have been paid for this loan yet.</p>
+                            )}
+                          </motion.div>
+                        </td>
+                      </motion.tr>
+                    )}
+                  </AnimatePresence>
+                </React.Fragment>
+              );
+            })}
+          </AnimatePresence>
+        </motion.tbody>
       </table>
-      
-      {/* FIX: Edit modal moved here, to the component's main render output */}
-      {editTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-2">
-          <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-xs sm:max-w-sm">
-            <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Edit Installment #{editTarget.installment_number}</h3>
-            <form
-              onSubmit={async e => {
-                e.preventDefault();
-                if (editTarget) {
-                  await updateInstallment(editTarget.id, {
-                    date: editForm.date,
-                    amount: Number(editForm.amount),
-                    late_fee: Number(editForm.late_fee) || 0,
-                    receipt_number: editForm.receipt_number
-                  });
-                  setEditTarget(null);
-                }
-              }}
-              className="space-y-3"
-            >
-              <div>
-                <label className="block text-sm font-medium mb-1">Date</label>
-                <input
-                  type="date"
-                  className="border rounded px-2 py-1 w-full"
-                  value={editForm.date}
-                  onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))}
-                  required
-                  min="1980-01-01"
-                  max="2050-12-31"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Amount</label>
-                <input type="number" className="border rounded px-2 py-1 w-full" value={editForm.amount} onChange={e => setEditForm(f => ({ ...f, amount: e.target.value }))} required min="1" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Late Fee</label>
-                <input type="number" className="border rounded px-2 py-1 w-full" value={editForm.late_fee} onChange={e => setEditForm(f => ({ ...f, late_fee: e.target.value }))} min="0" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Receipt Number</label>
-                <input type="text" className="border rounded px-2 py-1 w-full" value={editForm.receipt_number} onChange={e => setEditForm(f => ({ ...f, receipt_number: e.target.value }))} />
-              </div>
-              <div className="flex justify-end gap-2 mt-4">
-                <button type="button" onClick={() => setEditTarget(null)} className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancel</button>
-                <button type="submit" className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Save</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
-      {/* Delete confirmation modal (correctly placed) */}
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-2">
-          <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-xs sm:max-w-sm">
-            <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Delete Installment</h3>
-            <p className="mb-4 sm:mb-6 text-sm sm:text-base">Are you sure you want to delete installment #{deleteTarget.number}?</p>
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setDeleteTarget(null)} className="px-3 py-2 rounded text-xs sm:text-base bg-gray-200 hover:bg-gray-300">Cancel</button>
-              <button
-                onClick={async () => {
-                  if(deleteTarget) {
-                    await deleteInstallment(deleteTarget.id);
-                    setDeleteTarget(null);
+      {/* ... (All existing modal logic remains unchanged) */}
+      <AnimatePresence>
+        {editTarget && (
+          <motion.div
+            variants={modalBackdropVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-2"
+          >
+            <motion.div
+              variants={modalContentVariants}
+              className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-xs sm:max-w-sm"
+            >
+              <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Edit Installment #{editTarget.installment_number}</h3>
+              <form
+                onSubmit={async e => {
+                  e.preventDefault();
+                  if (editTarget) {
+                    await updateInstallment(editTarget.id, {
+                      date: editForm.date,
+                      amount: Number(editForm.amount),
+                      late_fee: Number(editForm.late_fee) || 0,
+                      receipt_number: editForm.receipt_number
+                    });
+                    setEditTarget(null);
                   }
                 }}
-                className="px-3 py-2 rounded text-xs sm:text-base bg-red-600 text-white hover:bg-red-700"
-              >Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
+                className="space-y-3"
+              >
+                <div>
+                  <label className="block text-sm font-medium mb-1">Date</label>
+                  <input
+                    type="date"
+                    className="border rounded px-2 py-1 w-full"
+                    value={editForm.date}
+                    onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))}
+                    required
+                    min="1980-01-01"
+                    max="2050-12-31"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Amount</label>
+                  <input type="number" className="border rounded px-2 py-1 w-full" value={editForm.amount} onChange={e => setEditForm(f => ({ ...f, amount: e.target.value }))} required min="1" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Late Fee</label>
+                  <input type="number" className="border rounded px-2 py-1 w-full" value={editForm.late_fee} onChange={e => setEditForm(f => ({ ...f, late_fee: e.target.value }))} min="0" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Receipt Number</label>
+                  <input type="text" className="border rounded px-2 py-1 w-full" value={editForm.receipt_number} onChange={e => setEditForm(f => ({ ...f, receipt_number: e.target.value }))} />
+                </div>
+                <div className="flex justify-end gap-2 mt-4">
+                  <button type="button" onClick={() => setEditTarget(null)} className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancel</button>
+                  <button type="submit" className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Save</button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {deleteTarget && (
+          <motion.div
+            variants={modalBackdropVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-2"
+          >
+            <motion.div
+              variants={modalContentVariants}
+              className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-xs sm:max-w-sm"
+            >
+              <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">Delete Installment</h3>
+              <p className="mb-4 sm:mb-6 text-sm sm:text-base">Are you sure you want to delete installment #{deleteTarget.number}?</p>
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setDeleteTarget(null)} className="px-3 py-2 rounded text-xs sm:text-base bg-gray-200 hover:bg-gray-300">Cancel</button>
+                <button
+                  onClick={async () => {
+                    if(deleteTarget) {
+                      await deleteInstallment(deleteTarget.id);
+                      setDeleteTarget(null);
+                    }
+                  }}
+                  className="px-3 py-2 rounded text-xs sm:text-base bg-red-600 text-white hover:bg-red-700"
+                >Delete</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </GlassCard>
   );
 };

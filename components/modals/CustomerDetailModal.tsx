@@ -1,5 +1,5 @@
-import React from 'react';
-import { motion, Variants } from 'framer-motion';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, Variants, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
 import type { Customer, LoanWithCustomer, SubscriptionWithCustomer, Installment, DataEntry } from '../../types';
 import GlassCard from '../ui/GlassCard';
@@ -33,6 +33,28 @@ const modalVariants: Variants = {
 
 const formatCurrency = (amount: number) => `₹${amount.toLocaleString()}`;
 
+// Define variants for the note's expansion
+const noteVariants: Variants = {
+  collapsed: { 
+    height: 'auto',
+    opacity: 1,
+    overflow: 'hidden',
+    transition: {
+      height: { duration: 0.3, ease: 'easeInOut' },
+      opacity: { duration: 0.2, ease: 'easeOut' },
+    }
+  },
+  expanded: { 
+    height: 'auto',
+    opacity: 1,
+    overflow: 'visible',
+    transition: {
+      height: { duration: 0.3, ease: 'easeInOut' },
+      opacity: { duration: 0.2, ease: 'easeIn' },
+    }
+  },
+};
+
 const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   customer,
   loans,
@@ -46,6 +68,22 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   onEditLoan,
   onEditSubscription,
 }) => {
+  const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
+  const noteRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+
+  const handleNoteClick = (id: string) => {
+    setExpandedNoteId(expandedNoteId === id ? null : id);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (expandedNoteId && noteRefs.current[expandedNoteId] && !noteRefs.current[expandedNoteId]?.contains(event.target as Node)) {
+        setExpandedNoteId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [expandedNoteId]);
 
   const handleDeleteLoan = async (loan: LoanWithCustomer) => {
     if (window.confirm(`Are you sure you want to delete the loan from ${formatDate(loan.payment_date)}? This will also delete all its installments.`)) {
@@ -318,47 +356,62 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           </GlassCard>
 
           {/* Data Entries Section */}
-           <GlassCard className="w-full">
-                <div className="mb-4">
-                <h3 className="flex items-center gap-3 text-2xl font-semibold text-pink-700">Misc Data Entries</h3>
+          <GlassCard className="w-full">
+            <div className="mb-4">
+              <h3 className="flex items-center gap-3 text-2xl font-semibold text-pink-700">Misc Data Entries</h3>
+            </div>
+            {dataEntries.length > 0 ? (
+              <div className="space-y-2">
+                {/* Header */}
+                <div className="grid grid-cols-12 gap-4 px-4 py-2 text-xs font-bold tracking-wider text-pink-700 uppercase bg-pink-50 rounded-lg w-full">
+                  <div className="col-span-2 text-left">Date</div>
+                  <div className="col-span-2 text-center">Type</div>
+                  <div className="col-span-2 text-right">Amount</div>
+                  <div className="col-span-2 text-center">Receipt #</div>
+                  <div className="col-span-4 text-left">Notes</div>
                 </div>
-                {dataEntries.length > 0 ? (
-                <div className="space-y-2">
-                    {/* Header */}
-                    <div className="grid grid-cols-12 gap-4 px-4 py-2 text-xs font-bold tracking-wider text-pink-700 uppercase bg-pink-50 rounded-lg w-full">
-                    <div className="col-span-2 text-left">Date</div>
-                    <div className="col-span-2 text-center">Type</div>
-                    <div className="col-span-2 text-right">Amount</div>
-                    <div className="col-span-2 text-center">Receipt #</div>
-                    <div className="col-span-4 text-left">Notes</div>
+                {/* Rows */}
+                {dataEntries.map(entry => (
+                  <div
+                    key={entry.id}
+                    className="grid grid-cols-12 gap-4 px-4 py-2 text-sm items-start border-b border-pink-100 last:border-b-0 w-full"
+                  >
+                    <div className="col-span-2 text-left text-gray-700">{formatDate(entry.date)}</div>
+                    <div className="col-span-2 text-center">
+                      {entry.type === 'credit' ? (
+                        <span className="inline-block px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">Credit</span>
+                      ) : (
+                        <span className="inline-block px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full">Expenditure</span>
+                      )}
                     </div>
-                    {/* Rows */}
-                    {dataEntries.map(entry => (
-                    <div
-                        key={entry.id}
-                        className="grid grid-cols-12 gap-4 px-4 py-2 text-sm items-center border-b border-pink-100 last:border-b-0 w-full"
-                    >
-                        <div className="col-span-2 text-left text-gray-700">{formatDate(entry.date)}</div>
-                        <div className="col-span-2 text-center">
-                        {entry.type === 'credit' ? (
-                            <span className="inline-block px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">Credit</span>
-                        ) : (
-                            <span className="inline-block px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full">Expenditure</span>
-                        )}
-                        </div>
-                        <div className={`col-span-2 font-bold text-right ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>
-                        {entry.type === 'credit' ? '+' : '-'}
-                        {formatCurrency(entry.amount)}
-                        </div>
-                        <div className="col-span-2 text-center text-gray-600">{entry.receipt_number}</div>
-                        <div className="col-span-4 text-left text-gray-600 truncate">{entry.notes || '-'}</div>
+                    <div className={`col-span-2 font-bold text-right ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>
+                      {entry.type === 'credit' ? '+' : '-'}
+                      {formatCurrency(entry.amount)}
                     </div>
-                    ))}
-                </div>
-                ) : (
-                <p className="text-gray-500">No data entries for this customer.</p>
-                )}
-            </GlassCard>
+                    <div className="col-span-2 text-center text-gray-600">{entry.receipt_number}</div>
+                    <div className="col-span-4 text-left text-gray-600">
+                      <div
+                        ref={(el) => (noteRefs.current[entry.id] = el)}
+                        onClick={() => handleNoteClick(entry.id)}
+                        className="cursor-pointer"
+                      >
+                        <motion.p
+                          initial="collapsed"
+                          animate={expandedNoteId === entry.id ? 'expanded' : 'collapsed'}
+                          variants={noteVariants}
+                          className={expandedNoteId !== entry.id ? 'truncate' : ''}
+                        >
+                          {entry.notes || '-'}
+                        </motion.p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500">No data entries for this customer.</p>
+            )}
+          </GlassCard>
         </div>
       </motion.div>
     </motion.div>

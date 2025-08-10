@@ -21,6 +21,10 @@ const DataPage = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
+  
+  // New state to manage the expanded note in the table
+  const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
+  const notesRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   const filteredCustomers = useMemo(() => {
     return customers.filter(c => c.name.toLowerCase().includes(customerFilter.toLowerCase()));
@@ -52,6 +56,17 @@ const DataPage = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showCustomerDropdown]);
+
+  // Effect for collapsing the note on outside click
+  useEffect(() => {
+    const handleClickOutsideNotes = (event: MouseEvent) => {
+      if (expandedNoteId && notesRefs.current[expandedNoteId] && !notesRefs.current[expandedNoteId]?.contains(event.target as Node)) {
+        setExpandedNoteId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutsideNotes);
+    return () => document.removeEventListener('mousedown', handleClickOutsideNotes);
+  }, [expandedNoteId]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm(prevForm => ({ ...prevForm, [e.target.name]: e.target.value }));
@@ -94,6 +109,11 @@ const DataPage = () => {
         setDeleteId(null);
       }
     }
+  };
+
+  // Function to toggle the expanded note
+  const handleNoteClick = (id: string) => {
+    setExpandedNoteId(expandedNoteId === id ? null : id);
   };
 
   const inputBaseStyle = "w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-shadow";
@@ -160,6 +180,7 @@ const DataPage = () => {
                       ) : (
                         filteredEntries.map(entry => {
                           const customer = customers.find(c => c.id === entry.customer_id);
+                          const isExpanded = expandedNoteId === entry.id;
                           return (
                             <motion.div
                               layout
@@ -184,13 +205,14 @@ const DataPage = () => {
                               </div>
                               <div className={`col-span-2 font-bold ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>{entry.type === 'credit' ? '+' : '-'}₹{entry.amount.toLocaleString()}</div>
                               <div className="col-span-1 text-gray-600">{entry.receipt_number}</div>
-                              <div className="col-span-3 text-gray-600 relative group">
-                                <p className="truncate">{entry.notes || '-'}</p>
-                                {entry.notes && (
-                                  <div className="absolute left-0 top-full mt-2 w-max max-w-lg z-50 p-2 text-xs bg-white border border-gray-200 rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                                    {entry.notes}
-                                  </div>
-                                )}
+                              <div
+                                ref={(el) => (notesRefs.current[entry.id] = el)}
+                                className="col-span-3 text-gray-600 cursor-pointer"
+                                onClick={() => handleNoteClick(entry.id)}
+                              >
+                                <div className={!isExpanded ? 'truncate' : ''}>
+                                  {entry.notes || '-'}
+                                </div>
                               </div>
                               <div className="col-span-1 flex justify-center">
                                 <motion.button

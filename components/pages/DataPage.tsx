@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../../context/DataContext';
 
 const DataPage = () => {
@@ -10,7 +11,7 @@ const DataPage = () => {
     customerId: '',
     date: '',
     amount: '',
-    type: 'credit', // 'credit' or 'expenditure'
+    type: 'credit',
     receipt: '',
     notes: '',
   });
@@ -18,7 +19,6 @@ const DataPage = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
-  const [deletingRowId, setDeletingRowId] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -36,11 +36,14 @@ const DataPage = () => {
         notes: form.notes,
       });
       setForm({ customerId: '', date: '', amount: '', type: 'credit', receipt: '', notes: '' });
+      setToastMsg('Entry added successfully!');
+      setShowToast(true);
       setShowTable(true);
     } catch (err: any) {
       setToastMsg(err.message || 'Failed to add data entry.');
       setShowToast(true);
-      setTimeout(() => setShowToast(false), 5000);
+    } finally {
+      setTimeout(() => setShowToast(false), 3000);
     }
   };
 
@@ -56,15 +59,18 @@ const DataPage = () => {
 
   const confirmDelete = async () => {
     if (deleteId) {
-      setDeletingRowId(deleteId);
-      setDeleteId(null);
-      setTimeout(async () => {
+      try {
         await deleteDataEntry(deleteId);
         setToastMsg('Entry deleted successfully.');
         setShowToast(true);
-        setDeletingRowId(null);
-        setTimeout(() => setShowToast(false), 5000);
-      }, 350);
+        setTimeout(() => setShowToast(false), 3000);
+      } catch (err: any) {
+        setToastMsg(err.message || 'Failed to delete entry.');
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+      } finally {
+        setDeleteId(null);
+      }
     }
   };
 
@@ -76,17 +82,42 @@ const DataPage = () => {
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showCustomerDropdown]);
 
   const inputBaseStyle = "w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-shadow";
   const labelBaseStyle = "block mb-2 text-sm font-medium text-gray-700";
 
+  const viewVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
+    exit: { opacity: 0, y: -20, transition: { duration: 0.3, ease: 'easeIn' } },
+  };
+
+  const modalVariants = {
+    hidden: { scale: 0.9, opacity: 0 },
+    visible: { scale: 1, opacity: 1 },
+    exit: { scale: 0.95, opacity: 0 },
+  };
+  
+  const toastVariants = {
+    hidden: { opacity: 0, x: "100%" },
+    visible: { opacity: 1, x: 0, transition: { type: "spring", stiffness: 150, damping: 20 } },
+    exit: { opacity: 0, x: "100%", transition: { ease: "easeIn", duration: 0.4 } },
+  };
+
+  const dropdownVariants = {
+    hidden: { opacity: 0, y: -10 },
+    visible: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -10 },
+  };
+
   return (
     <div className="w-full max-w-7xl mx-auto my-8">
-      <div className="bg-white rounded-xl shadow-md flex flex-col gap-8 p-6 border border-gray-200/80">
+      <motion.div
+        layout
+        className="bg-white rounded-xl shadow-md flex flex-col gap-8 p-6 border border-gray-200/80"
+      >
         <div className="flex justify-between items-center mb-2">
           <h2 className="text-2xl font-bold text-indigo-700 uppercase tracking-widest">
             {showTable ? 'All Entries' : 'New Data Entry'}
@@ -99,165 +130,148 @@ const DataPage = () => {
           </button>
         </div>
 
-        <div className="w-full min-h-[500px] relative overflow-hidden">
-          {/* Table View Wrapper */}
-          <div className="absolute inset-0 transition-all duration-500" style={{ pointerEvents: showTable ? 'auto' : 'none', zIndex: showTable ? 2 : 1 }}>
-            <div className={`transition-all duration-500 w-full h-full ${showTable ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-8 pointer-events-none'}`}>
-              <div className="w-full h-full overflow-x-auto border border-gray-200 rounded-lg">
-                <table className="min-w-full w-full text-sm">
-                  <thead className="bg-indigo-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-indigo-700 uppercase tracking-wider">Name</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-indigo-700 uppercase tracking-wider">Date</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-indigo-700 uppercase tracking-wider">Type</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-indigo-700 uppercase tracking-wider">Amount</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-indigo-700 uppercase tracking-wider">Receipt #</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-indigo-700 uppercase tracking-wider">Notes</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-bold text-red-600 uppercase tracking-wider">Delete</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredEntries.length === 0 ? (
-                      <tr><td colSpan={7} className="text-center text-gray-500 py-16 text-base">No data entries found.</td></tr>
-                    ) : (
-                      filteredEntries.map(entry => {
-                        const customer = customers.find(c => c.id === entry.customer_id);
-                        const isDeleting = deletingRowId === entry.id;
-                        return (
-                          <tr
-                            key={entry.id}
-                            className={`hover:bg-indigo-50/50 transition-colors duration-200 ${isDeleting ? 'opacity-0 -translate-x-10' : 'opacity-100 translate-x-0'}`}
-                            style={{ transition: 'opacity 300ms ease-out, transform 300ms ease-out, background-color 200ms' }}
-                          >
-                            <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{customer ? customer.name : 'Unknown'}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-gray-600">{entry.date}</td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {entry.type === 'credit' ? (
-                                <span className="inline-block px-3 py-1 rounded-full bg-green-100 text-green-800 font-semibold text-xs">Credit</span>
-                              ) : (
-                                <span className="inline-block px-3 py-1 rounded-full bg-red-100 text-red-800 font-semibold text-xs">Expenditure</span>
-                              )}
-                            </td>
-                            <td className={`px-6 py-4 whitespace-nowrap font-bold ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>{entry.type === 'credit' ? '+' : '-'}₹{entry.amount.toLocaleString()}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-gray-600">{entry.receipt_number}</td>
-                            <td className="px-6 py-4 text-gray-600 max-w-xs truncate">{entry.notes || '-'}</td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <button
-                                className="text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded px-3 py-1 border border-red-200 font-semibold"
-                                type="button"
-                                onClick={() => handleDeleteClick(entry.id)}
-                              >Delete</button>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-          {/* Form View Wrapper */}
-          <div className="absolute inset-0 transition-all duration-500" style={{ pointerEvents: !showTable ? 'auto' : 'none', zIndex: !showTable ? 2 : 1 }}>
-            <div className={`transition-all duration-500 w-full h-full overflow-y-auto ${!showTable ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'}`}>
-              <form className="flex flex-col gap-5 max-w-2xl mx-auto p-1 pb-8" onSubmit={handleSubmit}>
-                <div className="relative" ref={customerDropdownRef}>
-                  <label htmlFor="customer-btn" className={labelBaseStyle}>Name</label>
-                  <button
-                    id="customer-btn"
-                    type="button"
-                    className={`${inputBaseStyle} flex justify-between items-center text-left bg-white`}
-                    onClick={() => setShowCustomerDropdown(v => !v)}
-                  >
-                    {form.customerId ? (customers.find(c => c.id === form.customerId)?.name || 'Select Customer') : 'Select Customer'}
-                    <svg className="w-4 h-4 ml-2 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
-                  </button>
-                  {showCustomerDropdown && (
-                    <div className="absolute top-full left-0 z-20 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-52 overflow-y-auto mt-1">
-                      <div className="p-2 sticky top-0 bg-white z-10">
-                        <input
-                          type="text"
-                          placeholder="Search customer..."
-                          value={customerFilter}
-                          onChange={e => setCustomerFilter(e.target.value)}
-                          className="mb-2 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 text-sm w-full"
-                          autoFocus
-                        />
-                        <button
-                          type="button"
-                          className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 p-2"
-                          onClick={() => { setShowCustomerDropdown(false); }}
-                          aria-label="Close"
-                        >
-                          ×
-                        </button>
-                      </div>
-                      {customers.filter((c) => c.name.toLowerCase().includes(customerFilter.toLowerCase())).length === 0 ? (
-                        <div className="p-2 text-gray-400 text-sm">No customers found.</div>
-                      ) : (
-                        customers.filter((c) => c.name.toLowerCase().includes(customerFilter.toLowerCase())).map((c) => (
-                          <div
-                            key={c.id}
-                            className={`p-2 cursor-pointer hover:bg-indigo-100 text-sm ${form.customerId === c.id ? 'bg-indigo-50 font-semibold' : ''}`}
-                            onClick={() => {
-                              setForm({ ...form, customerId: c.id });
-                              setShowCustomerDropdown(false);
-                              setCustomerFilter('');
-                            }}
-                          >
-                            {c.name}
-                          </div>
-                        ))
-                      )}
-                      {customerFilter && (
-                        <div className="p-2 text-xs text-indigo-600 cursor-pointer hover:underline sticky bottom-0 bg-white" onClick={() => { setCustomerFilter(''); }}>
-                          Clear filter
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  <select name="customerId" value={form.customerId} onChange={handleChange} className="hidden" required><option value="">Select Customer</option>{customers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}</select>
-                </div>
-                <div>
-                  <label htmlFor="date" className={labelBaseStyle}>Date</label>
-                  <input type="date" id="date" name="date" value={form.date} onChange={handleChange} className={inputBaseStyle} required/>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                  <div className="md:col-span-3">
-                    <label htmlFor="amount" className={labelBaseStyle}>Amount</label>
-                    <input type="number" id="amount" name="amount" value={form.amount} onChange={handleChange} className={inputBaseStyle} required min="0" placeholder="e.g. 5000" />
+        <div className="w-full min-h-[500px] relative">
+          <AnimatePresence mode="wait">
+            {showTable ? (
+              <motion.div
+                key="table"
+                variants={viewVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+              >
+                <div className="w-full border border-gray-200 rounded-lg overflow-hidden">
+                  <div className="grid grid-cols-12 gap-4 bg-indigo-50 px-6 py-3 text-left text-xs font-bold text-indigo-700 uppercase tracking-wider">
+                    <div className="col-span-2">Name</div>
+                    <div className="col-span-2">Date</div>
+                    <div className="col-span-1">Type</div>
+                    <div className="col-span-2">Amount</div>
+                    <div className="col-span-1">Receipt #</div>
+                    <div className="col-span-3">Notes</div>
+                    <div className="col-span-1 text-red-600">Delete</div>
                   </div>
-                  <div className="md:col-span-2">
-                    <label htmlFor="type" className={labelBaseStyle}>Type</label>
-                    <select id="type" name="type" value={form.type} onChange={handleChange} className={`${inputBaseStyle} bg-white`} required>
-                      <option value="credit">Credit</option>
-                      <option value="expenditure">Expenditure</option>
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="receipt" className={labelBaseStyle}>Receipt Number <span className="text-gray-400 font-normal">(Optional)</span></label>
-                  <input type="text" id="receipt" name="receipt" value={form.receipt} onChange={handleChange} className={inputBaseStyle} />
-                </div>
-                <div>
-                  <label htmlFor="notes" className={labelBaseStyle}>Notes <span className="text-gray-400 font-normal">(Optional)</span></label>
-                  <textarea id="notes" name="notes" value={form.notes} onChange={handleChange} className={`${inputBaseStyle} min-h-[100px]`} rows={3} placeholder="Enter any notes..."/>
-                </div>
-                <button
-                  type="submit"
-                  className="w-full mt-4 bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition-colors duration-300 focus:outline-none focus:ring-4 focus:ring-indigo-300"
-                >
-                  Submit Entry
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
 
-        {/* Delete Confirmation Modal */}
+                  <div className="bg-white">
+                    <AnimatePresence>
+                      {filteredEntries.length === 0 ? (
+                        <div className="text-center text-gray-500 py-16 text-base">No data entries found.</div>
+                      ) : (
+                        filteredEntries.map(entry => {
+                          const customer = customers.find(c => c.id === entry.customer_id);
+                          return (
+                            <motion.div
+                              layout
+                              key={entry.id}
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0, height: 0, padding: 0, margin: 0, transition: { duration: 0.3 } }}
+                              transition={{
+                                layout: { type: 'spring', stiffness: 400, damping: 40 },
+                                opacity: { duration: 0.2 },
+                              }}
+                              className="grid grid-cols-12 gap-4 items-center px-6 py-3 border-b border-gray-200 last:border-b-0 hover:bg-indigo-50/50 text-sm"
+                            >
+                              <div className="col-span-2 font-medium text-gray-900">{customer ? customer.name : 'Unknown'}</div>
+                              <div className="col-span-2 text-gray-600">{entry.date}</div>
+                              <div className="col-span-1">
+                                {entry.type === 'credit' ? (
+                                  <span className="inline-block px-3 py-1 rounded-full bg-green-100 text-green-800 font-semibold text-xs">Credit</span>
+                                ) : (
+                                  <span className="inline-block px-3 py-1 rounded-full bg-red-100 text-red-800 font-semibold text-xs">Expenditure</span>
+                                )}
+                              </div>
+                              <div className={`col-span-2 font-bold ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>{entry.type === 'credit' ? '+' : '-'}₹{entry.amount.toLocaleString()}</div>
+                              <div className="col-span-1 text-gray-600">{entry.receipt_number}</div>
+                              <div className="col-span-3 text-gray-600 truncate">{entry.notes || '-'}</div>
+                              <div className="col-span-1">
+                                <button
+                                  className="text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded px-3 py-1 border border-red-200 font-semibold"
+                                  type="button"
+                                  onClick={() => handleDeleteClick(entry.id)}
+                                >Delete</button>
+                              </div>
+                            </motion.div>
+                          );
+                        })
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div key="form" variants={viewVariants} initial="hidden" animate="visible" exit="exit" className="w-full h-full">
+                <form className="flex flex-col gap-5 max-w-2xl mx-auto p-1 pb-8" onSubmit={handleSubmit}>
+                  <div className="relative" ref={customerDropdownRef}>
+                    <label htmlFor="customer-btn" className={labelBaseStyle}>Name</label>
+                    <button
+                      id="customer-btn"
+                      type="button"
+                      className={`${inputBaseStyle} flex justify-between items-center text-left bg-white`}
+                      onClick={() => setShowCustomerDropdown(v => !v)}
+                    >
+                      {form.customerId ? (customers.find(c => c.id === form.customerId)?.name || 'Select Customer') : 'Select Customer'}
+                      <svg className="w-4 h-4 ml-2 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                    </button>
+                    <AnimatePresence>
+                      {showCustomerDropdown && (
+                        <motion.div
+                          variants={dropdownVariants}
+                          initial="hidden"
+                          animate="visible"
+                          exit="exit"
+                          className="absolute top-full left-0 z-20 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-52 overflow-y-auto mt-1"
+                        >
+                          <div className="p-2 sticky top-0 bg-white z-10">
+                            <input type="text" placeholder="Search customer..." value={customerFilter} onChange={e => setCustomerFilter(e.target.value)} className="mb-2 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 text-sm w-full" autoFocus />
+                            <button type="button" className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 p-2" onClick={() => { setShowCustomerDropdown(false); }} aria-label="Close">×</button>
+                          </div>
+                          {customers.filter((c) => c.name.toLowerCase().includes(customerFilter.toLowerCase())).length === 0 ? (
+                            <div className="p-2 text-gray-400 text-sm">No customers found.</div>
+                          ) : (
+                            customers.filter((c) => c.name.toLowerCase().includes(customerFilter.toLowerCase())).map((c) => (
+                            <div key={c.id} className={`p-2 cursor-pointer hover:bg-indigo-100 text-sm ${form.customerId === c.id ? 'bg-indigo-50 font-semibold' : ''}`} onClick={() => { setForm({ ...form, customerId: c.id }); setShowCustomerDropdown(false); setCustomerFilter(''); }}>
+                              {c.name}
+                            </div>
+                            ))
+                          )}
+                          {customerFilter && (
+                            <div className="p-2 text-xs text-indigo-600 cursor-pointer hover:underline sticky bottom-0 bg-white" onClick={() => { setCustomerFilter(''); }}>
+                              Clear filter
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    <select name="customerId" value={form.customerId} onChange={handleChange} className="hidden" required><option value="">Select Customer</option>{customers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}</select>
+                  </div>
+                  <div><label htmlFor="date" className={labelBaseStyle}>Date</label><input type="date" id="date" name="date" value={form.date} onChange={handleChange} className={inputBaseStyle} required/></div>
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4"><div className="md:col-span-3"><label htmlFor="amount" className={labelBaseStyle}>Amount</label><input type="number" id="amount" name="amount" value={form.amount} onChange={handleChange} className={inputBaseStyle} required min="0" placeholder="e.g. 5000" /></div><div className="md:col-span-2"><label htmlFor="type" className={labelBaseStyle}>Type</label><select id="type" name="type" value={form.type} onChange={handleChange} className={`${inputBaseStyle} bg-white`} required><option value="credit">Credit</option><option value="expenditure">Expenditure</option></select></div></div>
+                  <div><label htmlFor="receipt" className={labelBaseStyle}>Receipt Number <span className="text-gray-400 font-normal">(Optional)</span></label><input type="text" id="receipt" name="receipt" value={form.receipt} onChange={handleChange} className={inputBaseStyle} /></div>
+                  <div><label htmlFor="notes" className={labelBaseStyle}>Notes <span className="text-gray-400 font-normal">(Optional)</span></label><textarea id="notes" name="notes" value={form.notes} onChange={handleChange} className={`${inputBaseStyle} min-h-[100px]`} rows={3} placeholder="Enter any notes..."/></div>
+                  <button type="submit" className="w-full mt-4 bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition-colors duration-300 focus:outline-none focus:ring-4 focus:ring-indigo-300">Submit Entry</button>
+                </form>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </motion.div>
+
+      {/* ✨ FIX: The full JSX for the modal and toast is restored below */}
+      <AnimatePresence>
         {deleteId && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-            <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm flex flex-col items-center">
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm flex flex-col items-center"
+            >
               <div className="text-lg font-semibold text-gray-800 mb-4">Delete Entry?</div>
               <p className="text-gray-600 mb-6 text-center">Are you sure? This action cannot be undone.</p>
               <div className="flex gap-3 w-full">
@@ -270,16 +284,25 @@ const DataPage = () => {
                   onClick={confirmDelete}
                 >Delete</button>
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         )}
+      </AnimatePresence>
 
-        {/* Toast Message */}
-        {showToast && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-indigo-700 text-white px-6 py-3 rounded-lg shadow-lg text-base font-medium">
-            {toastMsg}
-          </div>
-        )}
+      <div className="fixed top-4 right-4 z-50">
+        <AnimatePresence>
+          {showToast && (
+            <motion.div
+              variants={toastVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="bg-indigo-700 text-white px-6 py-3 rounded-lg shadow-lg text-base font-medium"
+            >
+              {toastMsg}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

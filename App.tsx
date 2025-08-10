@@ -24,9 +24,9 @@ const AnimatedRoutes = () => {
         <Route path="/" element={<AddCustomerPage />} />
         <Route path="/add-record" element={<AddRecordPage />} />
         <Route path="/customers" element={<CustomerListPage />} />
-        <Route path="/loans" element={<LoanListPage />} />
+  <Route path="/loans" element={<LoanListPage />} />
         <Route path="/loans/:id" element={<LoanDetailPage />} />
-        <Route path="/subscriptions" element={<SubscriptionListPage />} />
+  <Route path="/subscriptions" element={<SubscriptionListPage />} />
         <Route path="/summary" element={<SummaryPage />} />
         <Route path="/data" element={<DataPage />} />
       </Routes>

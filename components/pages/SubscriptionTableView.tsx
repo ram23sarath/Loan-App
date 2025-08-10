@@ -2,9 +2,15 @@ import React from 'react';
 import { useData } from '../../context/DataContext';
 import GlassCard from '../ui/GlassCard';
 import { formatDate } from '../../utils/dateFormatter';
-import { WhatsAppIcon } from '../../constants';
+import { WhatsAppIcon, Trash2Icon } from '../../constants';
 
-const SubscriptionTableView: React.FC = () => {
+// Add props for delete
+interface SubscriptionTableViewProps {
+  onDelete: (sub: any) => void;
+  deletingId?: string | null;
+}
+
+const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({ onDelete, deletingId }) => {
   const { subscriptions } = useData();
   const [filter, setFilter] = React.useState('');
 
@@ -98,19 +104,11 @@ const SubscriptionTableView: React.FC = () => {
             <th className="px-4 py-2 border-b text-left cursor-pointer" onClick={() => handleSort('date')}>Date</th>
             <th className="px-4 py-2 border-b text-left cursor-pointer" onClick={() => handleSort('receipt')}>Receipt</th>
             <th className="px-4 py-2 border-b text-left">Send</th>
+            <th className="px-4 py-2 border-b text-left">Delete</th>
           </tr>
         </thead>
         <tbody>
           {sortedSubscriptions.map(sub => {
-  // Sorting handler
-  function handleSort(field: string) {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  }
             const customer = sub.customers;
             let message = '';
             let whatsappUrl = '#';
@@ -135,6 +133,16 @@ const SubscriptionTableView: React.FC = () => {
                     disabled={!isValidPhone}
                   >
                     <WhatsAppIcon className="w-5 h-5 text-green-500" />
+                  </button>
+                </td>
+                <td className="px-4 py-2 border-b">
+                  <button
+                    onClick={() => onDelete(sub)}
+                    className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                    aria-label={`Delete subscription for ${customer?.name}`}
+                    disabled={deletingId === sub.id}
+                  >
+                    <Trash2Icon className="w-5 h-5 text-red-500" />
                   </button>
                 </td>
               </tr>

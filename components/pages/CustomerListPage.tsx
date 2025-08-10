@@ -10,7 +10,7 @@ import EditModal from '../modals/EditModal';
 import type { Customer } from '../../types';
 
 const CustomerListPage = () => {
-  const { customers, loans, subscriptions, installments, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, isRefreshing, signOut, updateCustomer, updateLoan, updateSubscription } = useData();
+  const { customers, loans, subscriptions, installments, dataEntries, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, isRefreshing, signOut, updateCustomer, updateLoan, updateSubscription } = useData();
   const [deleteCustomerTarget, setDeleteCustomerTarget] = React.useState<{id: string, name: string} | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState('date-desc');
@@ -431,6 +431,7 @@ const CustomerListPage = () => {
             loans={loans.filter(l => l.customer_id === selectedCustomer.id)}
             subscriptions={subscriptions.filter(s => s.customer_id === selectedCustomer.id)}
             installments={installments}
+            dataEntries={dataEntries}
             onClose={() => setSelectedCustomer(null)}
             deleteLoan={deleteLoan}
             deleteSubscription={deleteSubscription}

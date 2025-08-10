@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../../context/DataContext';
+import { Trash2Icon } from '../../constants';
+import { formatDate } from '../../utils/dateFormatter';
 
 const DataPage = () => {
   const { customers = [], dataEntries = [], addDataEntry, deleteDataEntry } = useData();
@@ -20,8 +22,11 @@ const DataPage = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
 
+  const filteredCustomers = useMemo(() => {
+    return customers.filter(c => c.name.toLowerCase().includes(customerFilter.toLowerCase()));
+  }, [customers, customerFilter]);
+
   const filteredEntries = useMemo(() => {
-    if (!customerFilter) return dataEntries;
     return dataEntries.filter(entry => {
       const customer = customers.find(c => c.id === entry.customer_id);
       return customer && customer.name.toLowerCase().includes(customerFilter.toLowerCase());
@@ -66,8 +71,6 @@ const DataPage = () => {
       setForm({ customerId: '', date: '', amount: '', type: 'credit', receipt: '', notes: '' });
       setToastMsg('Entry added successfully!');
       setShowToast(true);
-      // ✨ FIX: This line, which caused the redirect, has been removed.
-      // setShowTable(true);
     } catch (err: any) {
       setToastMsg(err.message || 'Failed to add data entry.');
       setShowToast(true);
@@ -107,7 +110,7 @@ const DataPage = () => {
     visible: { scale: 1, opacity: 1 },
     exit: { scale: 0.95, opacity: 0 },
   };
-  
+
   const toastVariants = {
     hidden: { opacity: 0, x: "100%" },
     visible: { opacity: 1, x: 0, transition: { type: "spring", stiffness: 150, damping: 20 } },
@@ -122,9 +125,7 @@ const DataPage = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto my-8">
-      <div
-        className="bg-white rounded-xl shadow-md flex flex-col gap-8 p-6 border border-gray-200/80"
-      >
+      <div className="bg-white rounded-xl shadow-md flex flex-col gap-8 p-6 border border-gray-200/80">
         <div className="flex justify-between items-center mb-2">
           <h2 className="text-2xl font-bold text-indigo-700 uppercase tracking-widest">
             {showTable ? 'All Entries' : 'New Data Entry'}
@@ -142,7 +143,7 @@ const DataPage = () => {
           <AnimatePresence mode="wait">
             {showTable ? (
               <motion.div key="table" variants={viewVariants} initial="hidden" animate="visible" exit="exit">
-                <div className="w-full border border-gray-200 rounded-lg overflow-hidden">
+                <div className="w-full border border-gray-200 rounded-lg">
                   <div className="grid grid-cols-12 gap-4 bg-indigo-50 px-6 py-3 text-left text-xs font-bold text-indigo-700 uppercase tracking-wider">
                     <div className="col-span-2">Name</div>
                     <div className="col-span-2">Date</div>
@@ -173,7 +174,7 @@ const DataPage = () => {
                               className="grid grid-cols-12 gap-4 items-center px-6 py-3 border-b border-gray-200 last:border-b-0 hover:bg-indigo-50/50 text-sm"
                             >
                               <div className="col-span-2 font-medium text-gray-900">{customer ? customer.name : 'Unknown'}</div>
-                              <div className="col-span-2 text-gray-600">{entry.date}</div>
+                              <div className="col-span-2 text-gray-600">{formatDate(entry.date)}</div>
                               <div className="col-span-1">
                                 {entry.type === 'credit' ? (
                                   <span className="inline-block px-3 py-1 rounded-full bg-green-100 text-green-800 font-semibold text-xs">Credit</span>
@@ -183,13 +184,24 @@ const DataPage = () => {
                               </div>
                               <div className={`col-span-2 font-bold ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>{entry.type === 'credit' ? '+' : '-'}₹{entry.amount.toLocaleString()}</div>
                               <div className="col-span-1 text-gray-600">{entry.receipt_number}</div>
-                              <div className="col-span-3 text-gray-600 truncate">{entry.notes || '-'}</div>
-                              <div className="col-span-1">
-                                <button
+                              <div className="col-span-3 text-gray-600 relative group">
+                                <p className="truncate">{entry.notes || '-'}</p>
+                                {entry.notes && (
+                                  <div className="absolute left-0 top-full mt-2 w-max max-w-lg z-50 p-2 text-xs bg-white border border-gray-200 rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                                    {entry.notes}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="col-span-1 flex justify-center">
+                                <motion.button
                                   type="button"
-                                  className="text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded px-3 py-1 border border-red-200 font-semibold"
+                                  className="p-2 transition-colors duration-200 rounded-full text-red-600 hover:bg-red-100"
                                   onClick={() => handleDeleteClick(entry.id)}
-                                >Delete</button>
+                                  whileHover={{ scale: 1.1 }}
+                                  whileTap={{ scale: 0.9 }}
+                                >
+                                  <Trash2Icon className="w-5 h-5" />
+                                </motion.button>
                               </div>
                             </motion.div>
                           );
@@ -216,23 +228,17 @@ const DataPage = () => {
                     <AnimatePresence>
                       {showCustomerDropdown && (
                         <motion.div variants={dropdownVariants} initial="hidden" animate="visible" exit="exit" className="absolute top-full left-0 z-20 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-52 overflow-y-auto mt-1">
-                          <div className="p-2 sticky top-0 bg-white z-10">
-                            <input type="text" placeholder="Search customer..." value={customerFilter} onChange={e => setCustomerFilter(e.target.value)} className="mb-2 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 text-sm w-full" autoFocus />
-                            <button type="button" className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 p-2" onClick={() => { setShowCustomerDropdown(false); }} aria-label="Close">×</button>
+                          <div className="p-2 sticky top-0 bg-white z-10 border-b border-gray-200">
+                            <input type="text" placeholder="Search customer..." value={customerFilter} onChange={e => setCustomerFilter(e.target.value)} className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 text-sm w-full" autoFocus />
                           </div>
-                          {customers.filter((c) => c.name.toLowerCase().includes(customerFilter.toLowerCase())).length === 0 ? (
+                          {filteredCustomers.length === 0 ? (
                             <div className="p-2 text-gray-400 text-sm">No customers found.</div>
                           ) : (
-                            customers.filter((c) => c.name.toLowerCase().includes(customerFilter.toLowerCase())).map((c) => (
+                            filteredCustomers.map((c) => (
                               <div key={c.id} className={`p-2 cursor-pointer hover:bg-indigo-100 text-sm ${form.customerId === c.id ? 'bg-indigo-50 font-semibold' : ''}`} onClick={() => { setForm({ ...form, customerId: c.id }); setShowCustomerDropdown(false); setCustomerFilter(''); }}>
                                 {c.name}
                               </div>
                             ))
-                          )}
-                          {customerFilter && (
-                            <div className="p-2 text-xs text-indigo-600 cursor-pointer hover:underline sticky bottom-0 bg-white" onClick={() => { setCustomerFilter(''); }}>
-                              Clear filter
-                            </div>
                           )}
                         </motion.div>
                       )}

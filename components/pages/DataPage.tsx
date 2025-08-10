@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../../context/DataContext';
 
@@ -20,9 +20,41 @@ const DataPage = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  // Memoize the filtering logic for better performance
+  const filteredEntries = useMemo(() => {
+    if (!customerFilter) return dataEntries;
+    return dataEntries.filter(entry => {
+      const customer = customers.find(c => c.id === entry.customer_id);
+      return customer && customer.name.toLowerCase().includes(customerFilter.toLowerCase());
+    });
+  }, [dataEntries, customers, customerFilter]);
+
+  // Centralize toast timer logic
+  useEffect(() => {
+    if (showToast) {
+      const timer = setTimeout(() => {
+        setShowToast(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showToast]);
+
+  // Click outside handler for the dropdown
+  useEffect(() => {
+    if (!showCustomerDropdown) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target as Node)) {
+        setShowCustomerDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showCustomerDropdown]);
+
+  // Memoize handleChange to prevent recreation on each render
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setForm(prevForm => ({ ...prevForm, [e.target.name]: e.target.value }));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,16 +74,8 @@ const DataPage = () => {
     } catch (err: any) {
       setToastMsg(err.message || 'Failed to add data entry.');
       setShowToast(true);
-    } finally {
-      setTimeout(() => setShowToast(false), 3000);
     }
   };
-
-  const filteredEntries = dataEntries.filter(entry => {
-    if (!customerFilter) return true;
-    const customer = customers.find(c => c.id === entry.customer_id);
-    return customer && customer.name.toLowerCase().includes(customerFilter.toLowerCase());
-  });
 
   const handleDeleteClick = (id: string) => {
     setDeleteId(id);
@@ -63,27 +87,14 @@ const DataPage = () => {
         await deleteDataEntry(deleteId);
         setToastMsg('Entry deleted successfully.');
         setShowToast(true);
-        setTimeout(() => setShowToast(false), 3000);
       } catch (err: any) {
         setToastMsg(err.message || 'Failed to delete entry.');
         setShowToast(true);
-        setTimeout(() => setShowToast(false), 3000);
       } finally {
         setDeleteId(null);
       }
     }
   };
-
-  useEffect(() => {
-    if (!showCustomerDropdown) return;
-    function handleClickOutside(event: MouseEvent) {
-      if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target as Node)) {
-        setShowCustomerDropdown(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showCustomerDropdown]);
 
   const inputBaseStyle = "w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-shadow";
   const labelBaseStyle = "block mb-2 text-sm font-medium text-gray-700";
@@ -114,8 +125,8 @@ const DataPage = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto my-8">
-      <motion.div
-        layout
+      {/* ✨ FIX: The `layout` prop has been removed from this container to prevent the "jiggle" */}
+      <div
         className="bg-white rounded-xl shadow-md flex flex-col gap-8 p-6 border border-gray-200/80"
       >
         <div className="flex justify-between items-center mb-2">
@@ -123,6 +134,7 @@ const DataPage = () => {
             {showTable ? 'All Entries' : 'New Data Entry'}
           </h2>
           <button
+            type="button"
             className="ml-auto px-4 py-2 rounded-lg bg-indigo-100 text-indigo-700 font-semibold hover:bg-indigo-200 transition-colors duration-200"
             onClick={() => setShowTable(v => !v)}
           >
@@ -133,13 +145,7 @@ const DataPage = () => {
         <div className="w-full min-h-[500px] relative">
           <AnimatePresence mode="wait">
             {showTable ? (
-              <motion.div
-                key="table"
-                variants={viewVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-              >
+              <motion.div key="table" variants={viewVariants} initial="hidden" animate="visible" exit="exit">
                 <div className="w-full border border-gray-200 rounded-lg overflow-hidden">
                   <div className="grid grid-cols-12 gap-4 bg-indigo-50 px-6 py-3 text-left text-xs font-bold text-indigo-700 uppercase tracking-wider">
                     <div className="col-span-2">Name</div>
@@ -150,7 +156,6 @@ const DataPage = () => {
                     <div className="col-span-3">Notes</div>
                     <div className="col-span-1 text-red-600">Delete</div>
                   </div>
-
                   <div className="bg-white">
                     <AnimatePresence>
                       {filteredEntries.length === 0 ? (
@@ -160,7 +165,7 @@ const DataPage = () => {
                           const customer = customers.find(c => c.id === entry.customer_id);
                           return (
                             <motion.div
-                              layout
+                              layout // The layout prop is needed here for the list items
                               key={entry.id}
                               initial={{ opacity: 0 }}
                               animate={{ opacity: 1 }}
@@ -185,8 +190,8 @@ const DataPage = () => {
                               <div className="col-span-3 text-gray-600 truncate">{entry.notes || '-'}</div>
                               <div className="col-span-1">
                                 <button
-                                  className="text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded px-3 py-1 border border-red-200 font-semibold"
                                   type="button"
+                                  className="text-xs text-red-600 bg-red-50 hover:bg-red-100 rounded px-3 py-1 border border-red-200 font-semibold"
                                   onClick={() => handleDeleteClick(entry.id)}
                                 >Delete</button>
                               </div>
@@ -214,13 +219,7 @@ const DataPage = () => {
                     </button>
                     <AnimatePresence>
                       {showCustomerDropdown && (
-                        <motion.div
-                          variants={dropdownVariants}
-                          initial="hidden"
-                          animate="visible"
-                          exit="exit"
-                          className="absolute top-full left-0 z-20 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-52 overflow-y-auto mt-1"
-                        >
+                        <motion.div variants={dropdownVariants} initial="hidden" animate="visible" exit="exit" className="absolute top-full left-0 z-20 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-52 overflow-y-auto mt-1">
                           <div className="p-2 sticky top-0 bg-white z-10">
                             <input type="text" placeholder="Search customer..." value={customerFilter} onChange={e => setCustomerFilter(e.target.value)} className="mb-2 p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 text-sm w-full" autoFocus />
                             <button type="button" className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 p-2" onClick={() => { setShowCustomerDropdown(false); }} aria-label="Close">×</button>
@@ -229,9 +228,9 @@ const DataPage = () => {
                             <div className="p-2 text-gray-400 text-sm">No customers found.</div>
                           ) : (
                             customers.filter((c) => c.name.toLowerCase().includes(customerFilter.toLowerCase())).map((c) => (
-                            <div key={c.id} className={`p-2 cursor-pointer hover:bg-indigo-100 text-sm ${form.customerId === c.id ? 'bg-indigo-50 font-semibold' : ''}`} onClick={() => { setForm({ ...form, customerId: c.id }); setShowCustomerDropdown(false); setCustomerFilter(''); }}>
-                              {c.name}
-                            </div>
+                              <div key={c.id} className={`p-2 cursor-pointer hover:bg-indigo-100 text-sm ${form.customerId === c.id ? 'bg-indigo-50 font-semibold' : ''}`} onClick={() => { setForm({ ...form, customerId: c.id }); setShowCustomerDropdown(false); setCustomerFilter(''); }}>
+                                {c.name}
+                              </div>
                             ))
                           )}
                           {customerFilter && (
@@ -244,45 +243,48 @@ const DataPage = () => {
                     </AnimatePresence>
                     <select name="customerId" value={form.customerId} onChange={handleChange} className="hidden" required><option value="">Select Customer</option>{customers.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}</select>
                   </div>
-                  <div><label htmlFor="date" className={labelBaseStyle}>Date</label><input type="date" id="date" name="date" value={form.date} onChange={handleChange} className={inputBaseStyle} required/></div>
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4"><div className="md:col-span-3"><label htmlFor="amount" className={labelBaseStyle}>Amount</label><input type="number" id="amount" name="amount" value={form.amount} onChange={handleChange} className={inputBaseStyle} required min="0" placeholder="e.g. 5000" /></div><div className="md:col-span-2"><label htmlFor="type" className={labelBaseStyle}>Type</label><select id="type" name="type" value={form.type} onChange={handleChange} className={`${inputBaseStyle} bg-white`} required><option value="credit">Credit</option><option value="expenditure">Expenditure</option></select></div></div>
-                  <div><label htmlFor="receipt" className={labelBaseStyle}>Receipt Number <span className="text-gray-400 font-normal">(Optional)</span></label><input type="text" id="receipt" name="receipt" value={form.receipt} onChange={handleChange} className={inputBaseStyle} /></div>
-                  <div><label htmlFor="notes" className={labelBaseStyle}>Notes <span className="text-gray-400 font-normal">(Optional)</span></label><textarea id="notes" name="notes" value={form.notes} onChange={handleChange} className={`${inputBaseStyle} min-h-[100px]`} rows={3} placeholder="Enter any notes..."/></div>
+                  <div>
+                    <label htmlFor="date" className={labelBaseStyle}>Date</label>
+                    <input type="date" id="date" name="date" value={form.date} onChange={handleChange} className={inputBaseStyle} required />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                    <div className="md:col-span-3">
+                      <label htmlFor="amount" className={labelBaseStyle}>Amount</label>
+                      <input type="number" id="amount" name="amount" value={form.amount} onChange={handleChange} className={inputBaseStyle} required min="0" placeholder="e.g. 5000" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label htmlFor="type" className={labelBaseStyle}>Type</label>
+                      <select id="type" name="type" value={form.type} onChange={handleChange} className={`${inputBaseStyle} bg-white`} required>
+                        <option value="credit">Credit</option>
+                        <option value="expenditure">Expenditure</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor="receipt" className={labelBaseStyle}>Receipt Number <span className="text-gray-400 font-normal">(Optional)</span></label>
+                    <input type="text" id="receipt" name="receipt" value={form.receipt} onChange={handleChange} className={inputBaseStyle} />
+                  </div>
+                  <div>
+                    <label htmlFor="notes" className={labelBaseStyle}>Notes <span className="text-gray-400 font-normal">(Optional)</span></label>
+                    <textarea id="notes" name="notes" value={form.notes} onChange={handleChange} className={`${inputBaseStyle} min-h-[100px]`} rows={3} placeholder="Enter any notes..." />
+                  </div>
                   <button type="submit" className="w-full mt-4 bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition-colors duration-300 focus:outline-none focus:ring-4 focus:ring-indigo-300">Submit Entry</button>
                 </form>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
-      </motion.div>
+      </div>
 
-      {/* ✨ FIX: The full JSX for the modal and toast is restored below */}
       <AnimatePresence>
         {deleteId && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              variants={modalVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm flex flex-col items-center"
-            >
-              <div className="text-lg font-semibold text-gray-800 mb-4">Delete Entry?</div>
+          <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div role="dialog" aria-modal="true" aria-labelledby="delete-modal-title" variants={modalVariants} initial="hidden" animate="visible" exit="exit" className="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm flex flex-col items-center">
+              <div id="delete-modal-title" className="text-lg font-semibold text-gray-800 mb-4">Delete Entry?</div>
               <p className="text-gray-600 mb-6 text-center">Are you sure? This action cannot be undone.</p>
               <div className="flex gap-3 w-full">
-                <button
-                  className="flex-1 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition"
-                  onClick={() => setDeleteId(null)}
-                >Cancel</button>
-                <button
-                  className="flex-1 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition"
-                  onClick={confirmDelete}
-                >Delete</button>
+                <button type="button" className="flex-1 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition" onClick={() => setDeleteId(null)}>Cancel</button>
+                <button type="button" className="flex-1 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition" onClick={confirmDelete}>Delete</button>
               </div>
             </motion.div>
           </motion.div>
@@ -292,13 +294,7 @@ const DataPage = () => {
       <div className="fixed top-4 right-4 z-50">
         <AnimatePresence>
           {showToast && (
-            <motion.div
-              variants={toastVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="bg-indigo-700 text-white px-6 py-3 rounded-lg shadow-lg text-base font-medium"
-            >
+            <motion.div variants={toastVariants} initial="hidden" animate="visible" exit="exit" className="bg-indigo-700 text-white px-6 py-3 rounded-lg shadow-lg text-base font-medium">
               {toastMsg}
             </motion.div>
           )}

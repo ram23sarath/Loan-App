@@ -103,6 +103,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({ onDelete,
             <th className="px-4 py-2 border-b text-left cursor-pointer" onClick={() => handleSort('year')}>Year</th>
             <th className="px-4 py-2 border-b text-left cursor-pointer" onClick={() => handleSort('date')}>Date</th>
             <th className="px-4 py-2 border-b text-left cursor-pointer" onClick={() => handleSort('receipt')}>Receipt</th>
+            <th className="px-4 py-2 border-b text-left cursor-pointer" onClick={() => handleSort('late_fee')}>Late Fee</th>
             <th className="px-4 py-2 border-b text-left">Send</th>
             <th className="px-4 py-2 border-b text-left">Delete</th>
           </tr>
@@ -115,7 +116,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({ onDelete,
             let isValidPhone = false;
             if (customer && customer.phone && /^\d{10,15}$/.test(customer.phone)) {
               isValidPhone = true;
-              message = `Hi ${customer.name}, your subscription payment of ₹${sub.amount} for the year ${sub.year} was received on ${formatDate(sub.date, 'whatsapp')}. Receipt: ${sub.receipt || '-'} Thank you.`;
+              message = `Hi ${customer.name}, your subscription payment of ₹${sub.amount} for the year ${sub.year} was received on ${formatDate(sub.date, 'whatsapp')}. Receipt: ${sub.receipt || '-'}${sub.late_fee && sub.late_fee > 0 ? ` (including a late fee of ₹${sub.late_fee})` : ''} Thank you.`;
               whatsappUrl = `https://wa.me/${customer.phone}?text=${encodeURIComponent(message)}`;
             }
             return (
@@ -125,6 +126,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({ onDelete,
                 <td className="px-4 py-2 border-b">{sub.year}</td>
                 <td className="px-4 py-2 border-b">{sub.date ? formatDate(sub.date) : '-'}</td>
                 <td className="px-4 py-2 border-b">{sub.receipt || '-'}</td>
+                <td className="px-4 py-2 border-b">{typeof sub.late_fee === 'number' && sub.late_fee > 0 ? `₹${sub.late_fee}` : '-'}</td>
                 <td className="px-4 py-2 border-b">
                   <button
                     onClick={() => isValidPhone && window.open(whatsappUrl, '_blank')}

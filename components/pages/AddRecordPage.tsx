@@ -436,13 +436,29 @@ const AddRecordPage = () => {
                         {subscriptionForm.formState.errors.year && <p className="text-red-600 text-sm mt-1">{subscriptionForm.formState.errors.year.message}</p>}
                       </div>
                     </div>
-                    <div>
-                      <input {...subscriptionForm.register('date', {required: 'Date is required'})} type="date" className={inputStyles} disabled={isSubmittingSubscription} min="1980-01-01" max="2050-12-31"/>
-                      {subscriptionForm.formState.errors.date && <p className="text-red-600 text-sm mt-1">{subscriptionForm.formState.errors.date.message}</p>}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <input {...subscriptionForm.register('date', {required: 'Date is required'})} type="date" className={inputStyles} disabled={isSubmittingSubscription} min="1980-01-01" max="2050-12-31"/>
+                        {subscriptionForm.formState.errors.date && <p className="text-red-600 text-sm mt-1">{subscriptionForm.formState.errors.date.message}</p>}
+                      </div>
+                      <div>
+                        <input {...subscriptionForm.register('receipt', {required: 'Receipt is required'})} type="text" placeholder="Receipt" className={inputStyles} disabled={isSubmittingSubscription}/>
+                        {subscriptionForm.formState.errors.receipt && <p className="text-red-600 text-sm mt-1">{subscriptionForm.formState.errors.receipt.message}</p>}
+                      </div>
                     </div>
                     <div>
-                      <input {...subscriptionForm.register('receipt', {required: 'Receipt is required'})} type="text" placeholder="Receipt" className={inputStyles} disabled={isSubmittingSubscription}/>
-                      {subscriptionForm.formState.errors.receipt && <p className="text-red-600 text-sm mt-1">{subscriptionForm.formState.errors.receipt.message}</p>}
+                      <label className="block text-sm font-medium mb-1">Late Fee (Optional)</label>
+                      <input 
+                        type="number"
+                        {...subscriptionForm.register('late_fee', {
+                          valueAsNumber: true,
+                          min: { value: 0, message: 'Late fee cannot be negative.' }
+                        })}
+                        placeholder="e.g., 10"
+                        className={inputStyles}
+                        disabled={isSubmittingSubscription}
+                      />
+                      {subscriptionForm.formState.errors.late_fee && <p className="text-red-600 text-sm mt-1">{subscriptionForm.formState.errors.late_fee.message}</p>}
                     </div>
                     <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-bold py-2 px-4 rounded-lg" disabled={isSubmittingSubscription}>
                       {isSubmittingSubscription ? 'Saving...' : 'Submit Subscription'}

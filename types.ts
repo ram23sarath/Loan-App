@@ -35,7 +35,17 @@ export type Subscription = {
   year: number;
   date: string;
   receipt: string;
+  late_fee?: number | null;
   created_at: string;
+};
+
+// For react-hook-form SubscriptionInputs
+export type SubscriptionInputs = {
+  amount: number;
+  year: number;
+  date: string;
+  receipt: string;
+  late_fee?: number | null;
 };
 
 export type Installment = {

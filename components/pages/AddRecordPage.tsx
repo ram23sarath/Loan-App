@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Toast from '../ui/Toast';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,7 +18,7 @@ type LoanInputs = {
   check_number?: string;
 };
 
-type SubscriptionInputs = Omit<NewSubscription, 'customer_id'>;
+type SubscriptionInputs = Omit<NewSubscription, 'customer_id'> & { late_fee?: number | null };
 type InstallmentInputs = Omit<NewInstallment, 'loan_id' | 'customer_id'>;
 
 interface LastTransactionInfo {
@@ -43,6 +44,7 @@ const AddRecordPage = () => {
   const [activeLoan, setActiveLoan] = useState<LoanWithCustomer | null>(null);
   const [paidInstallmentNumbers, setPaidInstallmentNumbers] = useState<Set<number>>(new Set());
   const [showSuccess, setShowSuccess] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
   const [lastTransactionInfo, setLastTransactionInfo] = useState<LastTransactionInfo | null>(null);
 
   const loanForm = useForm<LoanInputs>();
@@ -122,9 +124,9 @@ const AddRecordPage = () => {
         loanForm.reset({ payment_date: getTodayDateString() });
         setAction(null);
         setShowSuccess('Loan recorded successfully!');
-    } catch (error: any) {
-        alert(error.message);
-    }
+  } catch (error: any) {
+    setToast({ show: true, message: error.message || 'An error occurred.' });
+  }
   };
   
   const handleSubscriptionSubmit: SubmitHandler<SubscriptionInputs> = async (data) => {
@@ -149,9 +151,9 @@ const AddRecordPage = () => {
         } else {
           setAction(null);
         }
-    } catch (error: any) {
-        alert(error.message);
-    }
+  } catch (error: any) {
+    setToast({ show: true, message: error.message || 'An error occurred.' });
+  }
   };
 
   const handleInstallmentSubmit: SubmitHandler<InstallmentInputs> = async (data) => {
@@ -199,9 +201,9 @@ const AddRecordPage = () => {
         
         installmentForm.reset();
         setShowSuccess(`Installment #${data.installment_number} recorded!`);
-    } catch (error: any) {
-        alert(error.message);
-    }
+  } catch (error: any) {
+    setToast({ show: true, message: error.message || 'An error occurred.' });
+  }
   };
   
   const formVariants = {
@@ -248,6 +250,7 @@ const AddRecordPage = () => {
 
   return (
     <PageWrapper>
+      <Toast show={toast.show} message={toast.message} onClose={() => setToast({ show: false, message: '' })} type="error" />
       <div className="flex items-center justify-center min-h-[60vh] px-2 sm:px-0">
         <GlassCard className="w-full max-w-xs sm:max-w-2xl !p-4 sm:!p-8 mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-4 sm:mb-6">Record an Action</h2>

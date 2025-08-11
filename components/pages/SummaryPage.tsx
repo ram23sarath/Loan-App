@@ -15,7 +15,8 @@ const SummaryPage = () => {
     }
     return acc;
   }, 0);
-  const totalLateFeeCollected = installments.reduce((acc, inst) => acc + (inst.late_fee || 0), 0);
+  const totalLateFeeCollected = installments.reduce((acc, inst) => acc + (inst.late_fee || 0), 0)
+    + subscriptions.reduce((acc, sub) => acc + (sub.late_fee || 0), 0);
   const totalSubscriptionCollected = subscriptions.reduce((acc, sub) => acc + (sub.amount || 0), 0);
   const totalDataCollected = dataEntries.reduce((acc, entry) => {
     if (entry.type === 'expenditure') {

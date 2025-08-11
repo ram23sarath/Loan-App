@@ -1,6 +1,5 @@
-
-
 import React, { useState } from 'react';
+import Toast from '../ui/Toast';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -18,17 +17,36 @@ const AddCustomerPage = () => {
   const navigate = useNavigate();
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormInputs>();
 
+  const [toast, setToast] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
+  const [shakeButton, setShakeButton] = useState(false);
+
   const onSubmit: SubmitHandler<FormInputs> = async (data) => {
     try {
       const newCustomer = await addCustomer(data);
       navigate('/add-record', { state: { newCustomerId: newCustomer.id } });
     } catch (error: any) {
-      alert(error.message);
+      if (error.message && error.message.toLowerCase().includes('already exists')) {
+        // Trigger the wiggle animation
+        setShakeButton(true);
+        setTimeout(() => setShakeButton(false), 500);
+
+        // Also, show the toast message
+        setToast({ show: true, message: error.message });
+      } else {
+        // For all other errors, just show the toast
+        setToast({ show: true, message: error.message || 'An error occurred.' });
+      }
     }
+  };
+
+  const wiggleAnimation = {
+    x: [0, -10, 10, -10, 10, 0],
+    transition: { duration: 0.4 }
   };
 
   return (
     <PageWrapper>
+      <Toast show={toast.show} message={toast.message} onClose={() => setToast({ show: false, message: '' })} type="error" />
       <div className="flex items-center justify-center min-h-[60vh] px-2 sm:px-0">
         <GlassCard className="w-full max-w-xs sm:max-w-md !p-4 sm:!p-8" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
           <h2 className="text-2xl sm:text-3xl font-bold text-center mb-4 sm:mb-6">Onboard New Customer</h2>
@@ -51,7 +69,7 @@ const AddCustomerPage = () => {
                 id="phone"
                 type="tel"
                 maxLength={10}
-                {...register('phone', { 
+                {...register('phone', {
                   required: 'Phone number is required',
                   pattern: {
                     value: /^\d{10}$/,
@@ -70,6 +88,7 @@ const AddCustomerPage = () => {
               type="submit"
               disabled={isSubmitting}
               className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 transition-colors duration-300 text-white font-bold py-2 sm:py-3 px-3 sm:px-4 rounded-lg text-sm sm:text-base"
+              animate={shakeButton ? wiggleAnimation : {}}
             >
               {isSubmitting ? 'Saving...' : 'Add Customer & Proceed'}
             </motion.button>

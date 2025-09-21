@@ -1,3 +1,15 @@
+  // Ping Supabase every 4 days to keep connection active
+  useEffect(() => {
+    const pingSupabase = async () => {
+      try {
+        await supabase.from('customers').select('id').limit(1);
+      } catch (e) {
+        // Optionally log or handle error
+      }
+    };
+    const interval = setInterval(pingSupabase, 4 * 24 * 60 * 60 * 1000); // 4 days in ms
+    return () => clearInterval(interval);
+  }, []);
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { supabase } from '../src/lib/supabase';
 import type { Session } from '@supabase/supabase-js';

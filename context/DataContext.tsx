@@ -62,6 +62,30 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [dataEntries, setDataEntries] = useState<DataEntry[]>([]);
 
+  // Auto logout after 30 minutes of inactivity
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    const resetTimer = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        signOut();
+      }, 30 * 60 * 1000); // 30 minutes
+    };
+    // Listen for user activity
+    window.addEventListener('mousemove', resetTimer);
+    window.addEventListener('keydown', resetTimer);
+    window.addEventListener('click', resetTimer);
+    window.addEventListener('scroll', resetTimer);
+    resetTimer();
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener('mousemove', resetTimer);
+      window.removeEventListener('keydown', resetTimer);
+      window.removeEventListener('click', resetTimer);
+      window.removeEventListener('scroll', resetTimer);
+    };
+  }, [session]);
+
   const fetchData = useCallback(async () => {
     setIsRefreshing(true);
     try {

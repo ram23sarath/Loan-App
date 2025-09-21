@@ -14,7 +14,7 @@ export default async (req) => {
 
   try {
     const { data, error } = await supabase
-      .from('your_table_name') // IMPORTANT: Replace with a real table name
+      .from('customers') // Use a real table name
       .select('id')
       .limit(1);
 

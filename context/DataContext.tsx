@@ -1,15 +1,3 @@
-  // Ping Supabase every 4 days to keep connection active
-  useEffect(() => {
-    const pingSupabase = async () => {
-      try {
-        await supabase.from('customers').select('id').limit(1);
-      } catch (e) {
-        // Optionally log or handle error
-      }
-    };
-    const interval = setInterval(pingSupabase, 4 * 24 * 60 * 60 * 1000); // 4 days in ms
-    return () => clearInterval(interval);
-  }, []);
 import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
 import { supabase } from '../src/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
@@ -73,30 +61,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [dataEntries, setDataEntries] = useState<DataEntry[]>([]);
-
-  // Auto logout after 30 minutes of inactivity
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    const resetTimer = () => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => {
-        signOut();
-      }, 30 * 60 * 1000); // 30 minutes
-    };
-    // Listen for user activity
-    window.addEventListener('mousemove', resetTimer);
-    window.addEventListener('keydown', resetTimer);
-    window.addEventListener('click', resetTimer);
-    window.addEventListener('scroll', resetTimer);
-    resetTimer();
-    return () => {
-      if (timer) clearTimeout(timer);
-      window.removeEventListener('mousemove', resetTimer);
-      window.removeEventListener('keydown', resetTimer);
-      window.removeEventListener('click', resetTimer);
-      window.removeEventListener('scroll', resetTimer);
-    };
-  }, [session]);
 
   const fetchData = useCallback(async () => {
     setIsRefreshing(true);
@@ -256,11 +220,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      // Clear all local/session storage to force logout
-      localStorage.clear();
-      sessionStorage.clear();
-      // Optionally, redirect to login page
-      window.location.href = '/login';
     } catch(error) {
       throw new Error(parseSupabaseError(error, 'signing out'));
     }

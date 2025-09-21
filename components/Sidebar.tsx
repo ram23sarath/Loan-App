@@ -55,14 +55,6 @@ const Sidebar = () => {
   // Responsive sidebar and bottom nav
   return (
     <>
-      {/* Hamburger for mobile */}
-      <button
-        className="fixed top-4 left-4 z-40 bg-white rounded-full shadow-lg p-2 sm:hidden border border-gray-200"
-        onClick={() => setOpen(true)}
-        aria-label="Open menu"
-      >
-        <HamburgerIcon className="w-7 h-7 text-gray-700" />
-      </button>
 
       {/* Bottom nav for mobile: only icons */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 flex justify-around items-center py-2 sm:hidden">

@@ -220,6 +220,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      // Clear all local/session storage to force logout
+      localStorage.clear();
+      sessionStorage.clear();
+      // Optionally, redirect to login page
+      window.location.href = '/login';
     } catch(error) {
       throw new Error(parseSupabaseError(error, 'signing out'));
     }

@@ -13,6 +13,27 @@ const DataPage = () => {
   const [editLoading, setEditLoading] = useState(false);
   const editTextAreaRef = useRef<HTMLTextAreaElement | null>(null);
 
+  // Open the edit modal and try a blur-then-focus sequence to coax iOS Safari
+  // into showing the keyboard reliably when the modal appears.
+  const openEditNote = (id: string, value: string) => {
+    setEditNoteValue(value || '');
+    setEditNoteId(id);
+    // Short timeout to allow the modal to mount, then blur-then-focus
+    setTimeout(() => {
+      try {
+        const el = editTextAreaRef.current;
+        if (el) {
+          el.blur();
+          setTimeout(() => {
+            try { el.focus(); } catch (e) { /* noop */ }
+          }, 80);
+        }
+      } catch (e) {
+        // ignore
+      }
+    }, 120);
+  };
+
   // State for the customer filter/dropdown in the form
   const [customerFilter, setCustomerFilter] = useState('');
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
@@ -187,7 +208,7 @@ const DataPage = () => {
   return (
     <div className="w-full max-w-7xl mx-auto my-8">
       <motion.div layout transition={{ type: 'spring', stiffness: 280, damping: 30 }} className={`bg-white rounded-xl shadow-md flex flex-col gap-6 border border-gray-200/80 w-full mx-auto ${showTable ? 'max-w-full p-3' : 'max-w-2xl p-4'}`}>
-        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-2">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
           <h2 className="text-xl md:text-2xl font-bold text-indigo-700 md:uppercase md:tracking-widest whitespace-normal break-words">
             {showTable ? 'All Entries' : 'New Data Entry'}
           </h2>
@@ -212,7 +233,7 @@ const DataPage = () => {
             {showTable ? (
               <motion.div key="table" variants={viewVariants} initial="hidden" animate="visible" exit="exit">
                 <div className="w-full border border-gray-200 rounded-lg overflow-hidden">
-                  <div className="grid grid-cols-12 gap-4 bg-indigo-50 px-6 py-3 text-left text-xs font-bold text-indigo-700 uppercase tracking-wider">
+                  <div className="hidden md:grid grid-cols-12 gap-4 bg-indigo-50 px-6 py-3 text-left text-xs font-bold text-indigo-700 uppercase tracking-wider">
                     <div className="col-span-2">Name</div>
                     <div className="col-span-2">Date</div>
                     <div className="col-span-1">Type</div>
@@ -259,7 +280,7 @@ const DataPage = () => {
                                     {entry.notes || '-'}
                                   </div>
                                     {entry.notes && (
-                                    <button type="button" className="p-1 rounded-full hover:bg-indigo-100 transition-colors" aria-label="Edit note" onClick={(e) => { e.stopPropagation(); setEditNoteId(entry.id); setEditNoteValue(entry.notes || ''); }}>
+                                    <button type="button" className="p-1 rounded-full hover:bg-indigo-100 transition-colors" aria-label="Edit note" onClick={(e) => { e.stopPropagation(); openEditNote(entry.id, entry.notes || ''); }}>
                                       <PencilIcon className="w-4 h-4 text-indigo-600" />
                                     </button>
                                   )}
@@ -298,13 +319,18 @@ const DataPage = () => {
                                   </div>
                                 </div>
                                 {entry.notes && (
-                                  <div className="mt-3 text-sm text-gray-700">
-                                    <div id={`note-${entry.id}`} className={`cursor-pointer ${!isExpanded ? 'truncate' : ''}`} onClick={() => handleNoteClick(entry.id)} aria-expanded={isExpanded} aria-controls={`edit-note-${entry.id}`}>{entry.notes}</div>
-                                    {isExpanded && (
-                                      <div id={`edit-note-${entry.id}`} className="mt-2 flex items-center gap-3">
-                                        <button type="button" className="text-indigo-600 text-sm font-medium px-2 py-1 bg-indigo-50 rounded" onClick={(e) => { e.stopPropagation(); setEditNoteId(entry.id); setEditNoteValue(entry.notes || ''); }}>Edit</button>
-                                      </div>
-                                    )}
+                                  <div className="mt-3 pt-3 border-t border-gray-200/80">
+                                    <div className="flex justify-between items-start gap-3">
+                                      <p className="flex-1 text-sm text-gray-700 break-words">{entry.notes}</p>
+                                      <button 
+                                        type="button" 
+                                        className="p-2 -mr-2 rounded-full text-indigo-600 hover:bg-indigo-50"
+                                        aria-label="Edit note"
+                                        onClick={(e) => { e.stopPropagation(); openEditNote(entry.id, entry.notes || ''); }}
+                                      >
+                                        <PencilIcon className="w-4 h-4" />
+                                      </button>
+                                    </div>
                                   </div>
                                 )}
                               </motion.div>

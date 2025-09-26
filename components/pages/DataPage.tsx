@@ -175,7 +175,7 @@ const DataPage = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto my-8">
-      <div className="bg-white rounded-xl shadow-md flex flex-col gap-8 p-6 border border-gray-200/80">
+      <motion.div layout transition={{ type: 'spring', stiffness: 280, damping: 30 }} className={`bg-white rounded-xl shadow-md flex flex-col gap-6 border border-gray-200/80 w-full mx-auto ${showTable ? 'max-w-full p-3' : 'max-w-2xl p-4'}`}>
         <div className="flex justify-between items-center mb-2">
           <h2 className="text-2xl font-bold text-indigo-700 uppercase tracking-widest">
             {showTable ? 'All Entries' : 'New Data Entry'}
@@ -194,7 +194,7 @@ const DataPage = () => {
           </button>
         </div>
 
-        <div className="w-full min-h-[500px] relative">
+  <div className={`w-full min-h-[500px] relative ${showTable ? 'px-2' : ''}`}>
           <AnimatePresence mode="wait">
             {showTable ? (
               <motion.div key="table" variants={viewVariants} initial="hidden" animate="visible" exit="exit">
@@ -264,7 +264,7 @@ const DataPage = () => {
               </motion.div>
             ) : (
               <motion.div key="form" variants={viewVariants} initial="hidden" animate="visible" exit="exit" className="w-full h-full">
-                <form className="flex flex-col gap-5 max-w-2xl mx-auto p-1 pb-8" onSubmit={handleSubmit}>
+                <form className="flex flex-col gap-4 w-full p-1 pb-6" onSubmit={handleSubmit}>
                   <div className="relative" ref={customerDropdownRef}>
                     <label htmlFor="customer-btn" className={labelBaseStyle}>Name</label>
                     <button id="customer-btn" type="button" className={`${inputBaseStyle} flex justify-between items-center text-left bg-white`} onClick={() => setShowCustomerDropdown(v => !v)}>
@@ -332,7 +332,7 @@ const DataPage = () => {
             )}
           </AnimatePresence>
         </div>
-      </div>
+      </motion.div>
 
       {/* --- LOGIC FIX --- */}
       {/* Modals are moved here to the top level. They are no longer rendered inside a loop. */}

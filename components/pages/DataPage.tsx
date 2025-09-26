@@ -11,6 +11,7 @@ const DataPage = () => {
   const [editNoteId, setEditNoteId] = useState<string | null>(null);
   const [editNoteValue, setEditNoteValue] = useState('');
   const [editLoading, setEditLoading] = useState(false);
+  const editTextAreaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // State for the customer filter/dropdown in the form
   const [customerFilter, setCustomerFilter] = useState('');
@@ -59,6 +60,16 @@ const DataPage = () => {
       return () => clearTimeout(timer);
     }
   }, [showToast]);
+
+  // Focus the edit textarea after the modal opens. Use a short timeout to improve
+  // reliability on iOS Safari which can ignore immediate focus calls.
+  useEffect(() => {
+    if (!editNoteId) return;
+    const t = setTimeout(() => {
+      try { editTextAreaRef.current?.focus(); } catch (e) { /* ignore */ }
+    }, 80);
+    return () => clearTimeout(t);
+  }, [editNoteId]);
 
   useEffect(() => {
     if (!showCustomerDropdown) return;
@@ -177,13 +188,13 @@ const DataPage = () => {
     <div className="w-full max-w-7xl mx-auto my-8">
       <motion.div layout transition={{ type: 'spring', stiffness: 280, damping: 30 }} className={`bg-white rounded-xl shadow-md flex flex-col gap-6 border border-gray-200/80 w-full mx-auto ${showTable ? 'max-w-full p-3' : 'max-w-2xl p-4'}`}>
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-2">
-          <h2 className="text-xl md:text-2xl font-bold text-indigo-700 md:uppercase md:tracking-widest">
+          <h2 className="text-xl md:text-2xl font-bold text-indigo-700 md:uppercase md:tracking-widest whitespace-normal break-words">
             {showTable ? 'All Entries' : 'New Data Entry'}
           </h2>
           <div className="w-full md:w-auto">
             <button
               type="button"
-              className="w-full md:w-auto px-4 py-2 rounded-lg bg-indigo-100 text-indigo-700 font-semibold hover:bg-indigo-200 transition-colors duration-200 text-center"
+              className="w-full md:w-auto px-4 py-2 rounded-lg bg-indigo-100 text-indigo-700 font-semibold hover:bg-indigo-200 transition-colors duration-200 text-center mt-2 md:mt-0"
               onClick={() => {
                 setShowTable(v => !v);
                 // --- LOGIC FIX ---
@@ -386,6 +397,7 @@ const DataPage = () => {
             <motion.div role="dialog" aria-modal="true" aria-labelledby="edit-note-modal-title" variants={modalVariants} initial="hidden" animate="visible" exit="exit" className="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm flex flex-col items-center">
               <div id="edit-note-modal-title" className="text-lg font-semibold text-gray-800 mb-4">Edit Note</div>
               <textarea
+                ref={editTextAreaRef}
                 className="w-full min-h-[80px] border border-gray-300 rounded-lg p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 value={editNoteValue}
                 onChange={e => setEditNoteValue(e.target.value)}

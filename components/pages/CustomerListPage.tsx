@@ -268,59 +268,68 @@ const CustomerListPage = () => {
               <h3 className="text-xl font-bold mb-4 px-2 text-indigo-800 flex items-center gap-1"><UsersIcon className="w-5 h-5 mr-1"/>Customers with Loans & Subscriptions</h3>
               {/* Desktop Table */}
               <div className="hidden sm:block">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
-                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
-                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Total Loan Amount</th>
-                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Subscriptions</th>
-                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {categorizedCustomers.withBoth.map(customer => {
-                        const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
-                        const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
-                        return (
-                          <tr key={customer.id} className="bg-white hover:bg-indigo-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
-                            <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
-                            <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
-                            <td className="px-4 py-2 text-green-600">
-                                {customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}
-                            </td>
-                            <td className="px-4 py-2 text-cyan-600">
-                                {customerSubscriptions.length} Active
-                            </td>
-                            <td className="px-4 py-2 flex justify-center gap-2">
-                                <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {}, subscription: customerSubscriptions[0] || {} } }); }} className="p-2 rounded-full hover:bg-blue-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><span className="text-blue-600 font-bold">Edit</span></motion.button>
-                                <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
-                            </td>
-                          </tr>
-                        );
-                    })}
-                  </tbody>
-                </table>
+								<table className="min-w-full divide-y divide-gray-200">
+									<thead>
+										<tr>
+											<th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
+											<th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
+											<th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Loans</th>
+											<th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Loan Value</th>
+											<th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Subscriptions</th>
+											<th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">Actions</th>
+										</tr>
+									</thead>
+									<tbody>
+										{categorizedCustomers.withBoth.map(customer => {
+												const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
+												const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
+												const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+												return (
+													<tr key={customer.id} className="bg-white hover:bg-indigo-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
+														<td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
+														<td className="px-4 py-2 text-gray-500">{customer.phone}</td>
+														<td className="px-4 py-2 text-gray-700">{customerLoans.length}</td>
+														<td className="px-4 py-2 text-green-600">{loanValue.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</td>
+														<td className="px-4 py-2 text-cyan-600">{customerSubscriptions.length}</td>
+														<td className="px-4 py-2 flex justify-center gap-2">
+																<motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {}, subscription: customerSubscriptions[0] || {} } }); }} className="p-2 rounded-full hover:bg-blue-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><span className="text-blue-600 font-bold">Edit</span></motion.button>
+																<motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+														</td>
+													</tr>
+												);
+										})}
+									</tbody>
+								</table>
               </div>
               {/* Mobile Cards */}
-              <div className="sm:hidden space-y-3">
-                {categorizedCustomers.withBoth.map(customer => {
-                    const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
-                const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
-                    return (
-                        <div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3 flex flex-col gap-2" onClick={() => setSelectedCustomer(customer)}>
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-indigo-700 text-base">{customer.name}</span>
-                            <span className="text-xs text-gray-500">{customer.phone}</span>
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <span className="text-green-600 text-xs">Loan: {customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span>
-                            <span className="text-cyan-600 text-xs">Subscriptions: {customerSubscriptions.length}</span>
-                          </div>
-                        </div>
-                    );
-                })}
-              </div>
+							<div className="sm:hidden space-y-3">
+								{categorizedCustomers.withBoth.map(customer => {
+										const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
+										const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
+										const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+										return (
+												<div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)}>
+													<div className="grid grid-cols-3 gap-3 items-start">
+														<div className="col-span-2">
+															<div className="text-base font-bold text-indigo-700">{customer.name}</div>
+															<div className="text-xs text-gray-500">{customer.phone}</div>
+															<div className="mt-2 text-sm text-gray-700 space-y-1">
+																<div className="flex justify-between"><span className="text-gray-600">Loans</span><span className="font-semibold">{customerLoans.length}</span></div>
+																<div className="flex justify-between"><span className="text-gray-600">Loan Value</span><span className="font-semibold">{loanValue.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span></div>
+																<div className="flex justify-between"><span className="text-gray-600">Subscriptions</span><span className="font-semibold">{customerSubscriptions.length}</span></div>
+															</div>
+														</div>
+														<div className="flex flex-col items-end justify-between">
+															<div className="flex gap-2">
+																<motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {}, subscription: customerSubscriptions[0] || {} } }); }} className="px-3 py-1 rounded bg-white border border-gray-200 text-blue-600 font-bold text-sm" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
+																<motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+															</div>
+														</div>
+													</div>
+												</div>
+										);
+								})}
+							</div>
             </GlassCard>
           )}
 
@@ -330,52 +339,63 @@ const CustomerListPage = () => {
               <h3 className="text-xl font-bold mb-4 px-2 text-blue-800 flex items-center gap-1"><UsersIcon className="w-5 h-5 mr-1"/>Customers with Only Loans</h3>
                {/* Desktop Table */}
               <div className="hidden sm:block">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
-                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
-                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Total Loan Amount</th>
-                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {categorizedCustomers.withOnlyLoans.map(customer => {
-                        const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
-                        return (
-                          <tr key={customer.id} className="bg-white hover:bg-blue-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
-                            <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
-                            <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
-                            <td className="px-4 py-2 text-green-600">
-                                {customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}
-                            </td>
-                            <td className="px-4 py-2 flex justify-center gap-2">
-                                <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {} } }); }} className="p-2 rounded-full hover:bg-blue-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><span className="text-blue-600 font-bold">Edit</span></motion.button>
-                                <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
-                            </td>
-                          </tr>
-                        );
-                    })}
-                  </tbody>
-                </table>
+								<table className="min-w-full divide-y divide-gray-200">
+									<thead>
+										<tr>
+											<th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
+											<th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
+											<th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Loans</th>
+											<th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Loan Value</th>
+											<th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">Actions</th>
+										</tr>
+									</thead>
+									<tbody>
+										{categorizedCustomers.withOnlyLoans.map(customer => {
+												const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
+												const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+												return (
+													<tr key={customer.id} className="bg-white hover:bg-blue-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
+														<td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
+														<td className="px-4 py-2 text-gray-500">{customer.phone}</td>
+														<td className="px-4 py-2 text-gray-700">{customerLoans.length}</td>
+														<td className="px-4 py-2 text-green-600">{loanValue.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</td>
+														<td className="px-4 py-2 flex justify-center gap-2">
+																<motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {} } }); }} className="p-2 rounded-full hover:bg-blue-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><span className="text-blue-600 font-bold">Edit</span></motion.button>
+																<motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+														</td>
+													</tr>
+												);
+										})}
+									</tbody>
+								</table>
               </div>
               {/* Mobile Cards */}
-              <div className="sm:hidden space-y-3">
-                {categorizedCustomers.withOnlyLoans.map(customer => {
-                    const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
-                    return (
-                        <div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3 flex flex-col gap-2" onClick={() => setSelectedCustomer(customer)}>
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-indigo-700 text-base">{customer.name}</span>
-                  _         <span className="text-xs text-gray-500">{customer.phone}</span>
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <span className="text-green-600 text-xs">Loan: {customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span>
-                          </div>
-                        </div>
-                    );
-                })}
-              </div>
+							<div className="sm:hidden space-y-3">
+								{categorizedCustomers.withOnlyLoans.map(customer => {
+										const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
+										const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+										return (
+												<div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)}>
+													<div className="grid grid-cols-3 gap-3 items-start">
+														<div className="col-span-2">
+															<div className="text-base font-bold text-indigo-700">{customer.name}</div>
+															<div className="text-xs text-gray-500">{customer.phone}</div>
+															<div className="mt-2 text-sm text-gray-700">
+																<div className="flex justify-between"><span className="text-gray-600">Loans</span><span className="font-semibold">{customerLoans.length}</span></div>
+																<div className="flex justify-between"><span className="text-gray-600">Loan Value</span><span className="font-semibold">{loanValue.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span></div>
+															</div>
+														</div>
+														<div className="flex flex-col items-end justify-between">
+															<div className="flex gap-2">
+																<motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {} } }); }} className="px-3 py-1 rounded bg-white border border-gray-200 text-blue-600 font-bold text-sm" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
+																<motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+															</div>
+														</div>
+													</div>
+												</div>
+										);
+								})}
+							</div>
             </GlassCard>
           )}
 
@@ -385,52 +405,63 @@ const CustomerListPage = () => {
               <h3 className="text-xl font-bold mb-4 px-2 text-cyan-800 flex items-center gap-1"><UsersIcon className="w-5 h-5 mr-1"/>Customers with Only Subscriptions</h3>
               {/* Desktop Table */}
               <div className="hidden sm:block">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
-                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
-                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Total Subscription Value</th>
-                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {categorizedCustomers.withOnlySubscriptions.map(customer => {
-                        const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
-                        return (
-                          <tr key={customer.id} className="bg-white hover:bg-cyan-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
-                            <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
-                            <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
-                            <td className="px-4 py-2 text-cyan-600">
-                                {customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}
-                            </td>
-                            <td className="px-4 py-2 flex justify-center gap-2">
-                                <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, subscription: customerSubscriptions[0] || {} } }); }} className="p-2 rounded-full hover:bg-blue-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><span className="text-blue-600 font-bold">Edit</span></motion.button>
-                                <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
-                            </td>
-                          </tr>
-                        );
-                    })}
-                  </tbody>
-                </table>
+								<table className="min-w-full divide-y divide-gray-200">
+									<thead>
+										<tr>
+											<th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
+											<th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
+											<th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Subscriptions</th>
+											<th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Total Value</th>
+											<th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">Actions</th>
+										</tr>
+									</thead>
+									<tbody>
+										{categorizedCustomers.withOnlySubscriptions.map(customer => {
+												const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
+												const subValue = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
+												return (
+													<tr key={customer.id} className="bg-white hover:bg-cyan-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
+														<td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
+														<td className="px-4 py-2 text-gray-500">{customer.phone}</td>
+														<td className="px-4 py-2 text-cyan-600">{customerSubscriptions.length}</td>
+														<td className="px-4 py-2 text-cyan-600">{subValue.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</td>
+														<td className="px-4 py-2 flex justify-center gap-2">
+																<motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, subscription: customerSubscriptions[0] || {} } }); }} className="p-2 rounded-full hover:bg-blue-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><span className="text-blue-600 font-bold">Edit</span></motion.button>
+																<motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+														</td>
+													</tr>
+												);
+										})}
+									</tbody>
+								</table>
               </div>
                {/* Mobile Cards */}
-              <div className="sm:hidden space-y-3">
-                {categorizedCustomers.withOnlySubscriptions.map(customer => {
-                    const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
-                    return (
-                        <div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3 flex flex-col gap-2" onClick={() => setSelectedCustomer(customer)}>
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-indigo-700 text-base">{customer.name}</span>
-                            <span className="text-xs text-gray-500">{customer.phone}</span>
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <span className="text-cyan-600 text-xs">Subscriptions: {customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span>
-                          </div>
-                        </div>
-                    );
-                })}
-              </div>
+							<div className="sm:hidden space-y-3">
+								{categorizedCustomers.withOnlySubscriptions.map(customer => {
+										const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
+										const subValue = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
+										return (
+												<div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)}>
+													<div className="grid grid-cols-3 gap-3 items-start">
+														<div className="col-span-2">
+															<div className="text-base font-bold text-indigo-700">{customer.name}</div>
+															<div className="text-xs text-gray-500">{customer.phone}</div>
+															<div className="mt-2 text-sm text-gray-700">
+																<div className="flex justify-between"><span className="text-gray-600">Subscriptions</span><span className="font-semibold">{customerSubscriptions.length}</span></div>
+																<div className="flex justify-between"><span className="text-gray-600">Total Value</span><span className="font-semibold">{subValue.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}</span></div>
+															</div>
+														</div>
+														<div className="flex flex-col items-end justify-between">
+															<div className="flex gap-2">
+																<motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, subscription: customerSubscriptions[0] || {} } }); }} className="px-3 py-1 rounded bg-white border border-gray-200 text-blue-600 font-bold text-sm" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
+																<motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+															</div>
+														</div>
+													</div>
+												</div>
+										);
+								})}
+							</div>
             </GlassCard>
           )}
         </div>

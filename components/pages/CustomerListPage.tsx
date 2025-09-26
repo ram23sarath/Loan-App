@@ -11,7 +11,8 @@ import type { Customer } from '../../types';
 
 const CustomerListPage = () => {
   const { customers, loans, subscriptions, installments, dataEntries, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, isRefreshing, signOut, updateCustomer, updateLoan, updateSubscription } = useData();
-  const [deleteCustomerTarget, setDeleteCustomerTarget] = React.useState<{id: string, name: string} | null>(null);
+	const [deleteCustomerTarget, setDeleteCustomerTarget] = React.useState<{id: string, name: string} | null>(null);
+	const [deleteCounts, setDeleteCounts] = React.useState<{ dataEntries: number; loans: number; installments: number; subscriptions: number } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOption, setSortOption] = useState('date-desc');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -40,15 +41,25 @@ const CustomerListPage = () => {
     };
   }, [signOut]);
 
-  const handleDeleteCustomer = (customer) => {
-    setDeleteCustomerTarget({ id: customer.id, name: customer.name });
-  };
+	const handleDeleteCustomer = (customer) => {
+		// Compute dependent counts to show in the confirmation modal
+		const cid = customer.id;
+		const dataEntriesCount = dataEntries.filter(d => d.customer_id === cid).length;
+		const customerLoans = loans.filter(l => l.customer_id === cid);
+		const loansCount = customerLoans.length;
+		const loanIds = customerLoans.map(l => l.id);
+		const installmentsCount = installments.filter(i => loanIds.includes(i.loan_id)).length;
+		const subscriptionsCount = subscriptions.filter(s => s.customer_id === cid).length;
+		setDeleteCounts({ dataEntries: dataEntriesCount, loans: loansCount, installments: installmentsCount, subscriptions: subscriptionsCount });
+		setDeleteCustomerTarget({ id: customer.id, name: customer.name });
+	};
 
   const confirmDeleteCustomer = async () => {
     if (deleteCustomerTarget) {
       try {
         await deleteCustomer(deleteCustomerTarget.id);
-        setDeleteCustomerTarget(null);
+				setDeleteCustomerTarget(null);
+				setDeleteCounts(null);
       } catch (error: any) {
         alert(error.message);
       }
@@ -56,7 +67,8 @@ const CustomerListPage = () => {
   };
 
   const cancelDeleteCustomer = () => {
-    setDeleteCustomerTarget(null);
+		setDeleteCustomerTarget(null);
+		setDeleteCounts(null);
   };
 
   const handleComprehensiveExport = () => {
@@ -490,18 +502,25 @@ const CustomerListPage = () => {
           onClose={() => setEditModal(null)}
         />
       )}
-      {deleteCustomerTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
-            <h3 className="text-lg font-bold mb-4">Delete Customer</h3>
-            <p className="mb-6">Are you sure you want to delete <span className="font-semibold">{deleteCustomerTarget.name}</span>? This will also delete all associated loans, subscriptions, and installments.</p>
-            <div className="flex justify-end gap-2">
-              <button onClick={cancelDeleteCustomer} className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancel</button>
-              <button onClick={confirmDeleteCustomer} className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
+			{deleteCustomerTarget && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+					<div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+						<h3 className="text-lg font-bold mb-4">Confirm Deletion</h3>
+						<p className="mb-4">You're about to delete <span className="font-semibold">{deleteCustomerTarget.name}</span>. The following related records will be removed:</p>
+						<ul className="mb-4 list-disc list-inside text-sm text-gray-700">
+							<li>Data entries: <span className="font-semibold">{deleteCounts?.dataEntries ?? 0}</span></li>
+							<li>Loans: <span className="font-semibold">{deleteCounts?.loans ?? 0}</span></li>
+							<li>Installments (for loans above): <span className="font-semibold">{deleteCounts?.installments ?? 0}</span></li>
+							<li>Subscriptions: <span className="font-semibold">{deleteCounts?.subscriptions ?? 0}</span></li>
+						</ul>
+						<p className="text-sm text-red-600 mb-4">This action is irreversible. Please ensure you have a backup if needed.</p>
+						<div className="flex justify-end gap-2">
+							<button onClick={cancelDeleteCustomer} className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancel</button>
+							<button onClick={confirmDeleteCustomer} className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Delete</button>
+						</div>
+					</div>
+				</div>
+			)}
     </PageWrapper>
   );
 };

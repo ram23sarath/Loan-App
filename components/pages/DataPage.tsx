@@ -180,21 +180,23 @@ const DataPage = () => {
           <h2 className="text-2xl font-bold text-indigo-700 uppercase tracking-widest">
             {showTable ? 'All Entries' : 'New Data Entry'}
           </h2>
-          <button
-            type="button"
-            className="ml-auto px-4 py-2 rounded-lg bg-indigo-100 text-indigo-700 font-semibold hover:bg-indigo-200 transition-colors duration-200"
-            onClick={() => {
-              setShowTable(v => !v);
-              // --- LOGIC FIX ---
-              // Reset the filter when toggling views to prevent confusion.
-              setCustomerFilter('');
-            }}
-          >
-            {showTable ? 'Add Data Entry' : 'View All Entries'}
-          </button>
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-2">
+            <button
+              type="button"
+              className="px-4 py-2 rounded-lg bg-indigo-100 text-indigo-700 font-semibold hover:bg-indigo-200 transition-colors duration-200"
+              onClick={() => {
+                setShowTable(v => !v);
+                // --- LOGIC FIX ---
+                // Reset the filter when toggling views to prevent confusion.
+                setCustomerFilter('');
+              }}
+            >
+              {showTable ? 'Add Data Entry' : 'View All Entries'}
+            </button>
+          </div>
         </div>
 
-  <div className={`w-full min-h-[500px] relative ${showTable ? 'px-2' : ''}`}>
+  <div className={`w-full min-h-[300px] md:min-h-[500px] relative ${showTable ? 'px-2' : ''}`}>
           <AnimatePresence mode="wait">
             {showTable ? (
               <motion.div key="table" variants={viewVariants} initial="hidden" animate="visible" exit="exit">
@@ -218,43 +220,84 @@ const DataPage = () => {
                           const customerName = customerMap.get(entry.customer_id) || 'Unknown';
                           const isExpanded = expandedNoteId === entry.id;
                           return (
-                            <motion.div
-                              layout
-                              key={entry.id}
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              exit={{ opacity: 0, height: 0, padding: 0, margin: 0, transition: { duration: 0.3 } }}
-                              transition={{ layout: { type: 'spring', stiffness: 400, damping: 40 }, opacity: { duration: 0.2 } }}
-                              className="grid grid-cols-12 gap-4 items-center px-6 py-3 border-b border-gray-200 last:border-b-0 hover:bg-indigo-50/50 text-sm"
-                            >
-                              <div className="col-span-2 font-medium text-gray-900">{customerName}</div>
-                              <div className="col-span-2 text-gray-600">{formatDate(entry.date)}</div>
-                              <div className="col-span-1">
-                                {entry.type === 'credit' ? (
-                                  <span className="inline-block px-3 py-1 rounded-full bg-green-100 text-green-800 font-semibold text-xs">Credit</span>
-                                ) : (
-                                  <span className="inline-block px-3 py-1 rounded-full bg-red-100 text-red-800 font-semibold text-xs">Expenditure</span>
-                                )}
-                              </div>
-                              <div className="col-span-2 text-gray-600">{entry.subtype || '-'}</div>
-                              <div className={`col-span-1 font-bold ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>{entry.type === 'credit' ? '+' : '-'}₹{entry.amount.toLocaleString()}</div>
-                              <div className="col-span-1 text-gray-600">{entry.receipt_number || '-'}</div>
-                              <div ref={(el) => (notesRefs.current[entry.id] = el)} className="col-span-2 text-gray-600 flex items-center gap-2">
-                                <div className={`flex-1 cursor-pointer ${!isExpanded ? 'truncate' : ''}`} onClick={() => handleNoteClick(entry.id)}>
-                                  {entry.notes || '-'}
+                            <React.Fragment key={entry.id}>
+                              {/* Desktop row (hidden on small screens) */}
+                              <motion.div
+                                layout
+                                key={`desktop-${entry.id}`}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0, height: 0, padding: 0, margin: 0, transition: { duration: 0.3 } }}
+                                transition={{ layout: { type: 'spring', stiffness: 400, damping: 40 }, opacity: { duration: 0.2 } }}
+                                className="hidden md:grid grid-cols-12 gap-4 items-center px-6 py-3 border-b border-gray-200 last:border-b-0 hover:bg-indigo-50/50 text-sm"
+                              >
+                                <div className="col-span-2 font-medium text-gray-900">{customerName}</div>
+                                <div className="col-span-2 text-gray-600">{formatDate(entry.date)}</div>
+                                <div className="col-span-1">
+                                  {entry.type === 'credit' ? (
+                                    <span className="inline-block px-3 py-1 rounded-full bg-green-100 text-green-800 font-semibold text-xs">Credit</span>
+                                  ) : (
+                                    <span className="inline-block px-3 py-1 rounded-full bg-red-100 text-red-800 font-semibold text-xs">Expenditure</span>
+                                  )}
+                                </div>
+                                <div className="col-span-2 text-gray-600">{entry.subtype || '-'}</div>
+                                <div className={`col-span-1 font-bold ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>{entry.type === 'credit' ? '+' : '-'}₹{entry.amount.toLocaleString()}</div>
+                                <div className="col-span-1 text-gray-600">{entry.receipt_number || '-'}</div>
+                                <div ref={(el) => (notesRefs.current[entry.id] = el)} className="col-span-2 text-gray-600 flex items-center gap-2">
+                                  <div className={`flex-1 cursor-pointer ${!isExpanded ? 'truncate' : ''}`} onClick={() => handleNoteClick(entry.id)}>
+                                    {entry.notes || '-'}
+                                  </div>
+                                  {entry.notes && (
+                                    <button type="button" className="p-1 rounded-full hover:bg-indigo-100 transition-colors" aria-label="Edit note" onClick={() => { setEditNoteId(entry.id); setEditNoteValue(entry.notes || ''); }}>
+                                      <PencilIcon className="w-4 h-4 text-indigo-600" />
+                                    </button>
+                                  )}
+                                </div>
+                                <div className="col-span-1 flex justify-center">
+                                  <motion.button type="button" className="p-2 transition-colors duration-200 rounded-full text-red-600 hover:bg-red-100" onClick={() => handleDeleteClick(entry.id)} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                                    <Trash2Icon className="w-5 h-5" />
+                                  </motion.button>
+                                </div>
+                              </motion.div>
+
+                              {/* Mobile card (visible on small screens) */}
+                              <motion.div
+                                layout
+                                key={`mobile-${entry.id}`}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0, height: 0, padding: 0, margin: 0, transition: { duration: 0.2 } }}
+                                transition={{ opacity: { duration: 0.15 } }}
+                                className="md:hidden px-4 py-3 border-b last:border-b-0 hover:bg-indigo-50/30"
+                              >
+                                <div className="flex justify-between items-start gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-semibold text-gray-900 truncate">{customerName}</div>
+                                    <div className="text-sm text-gray-600 truncate">{entry.subtype || entry.type}</div>
+                                  </div>
+                                  <div className={`ml-2 text-right font-bold ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>{entry.type === 'credit' ? '+' : '-'}₹{entry.amount.toLocaleString()}</div>
+                                </div>
+                                <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+                                  <div>{formatDate(entry.date)}</div>
+                                  <div className="flex items-center gap-2">
+                                    {entry.receipt_number && <div className="px-2 py-0.5 bg-gray-100 rounded text-xs">#{entry.receipt_number}</div>}
+                                    <motion.button type="button" className="p-1 rounded-full text-red-600 hover:bg-red-100" onClick={() => handleDeleteClick(entry.id)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                      <Trash2Icon className="w-4 h-4" />
+                                    </motion.button>
+                                  </div>
                                 </div>
                                 {entry.notes && (
-                                  <button type="button" className="p-1 rounded-full hover:bg-indigo-100 transition-colors" aria-label="Edit note" onClick={() => { setEditNoteId(entry.id); setEditNoteValue(entry.notes || ''); }}>
-                                    <PencilIcon className="w-4 h-4 text-indigo-600" />
-                                  </button>
+                                  <div className="mt-2 text-sm text-gray-700">
+                                    <div className={`cursor-pointer ${!isExpanded ? 'truncate' : ''}`} onClick={() => handleNoteClick(entry.id)}>{entry.notes}</div>
+                                    {isExpanded && (
+                                      <div className="mt-2 flex items-center gap-2">
+                                        <button type="button" className="text-indigo-600 text-sm font-medium" onClick={() => { setEditNoteId(entry.id); setEditNoteValue(entry.notes || ''); }}>Edit</button>
+                                      </div>
+                                    )}
+                                  </div>
                                 )}
-                              </div>
-                              <div className="col-span-1 flex justify-center">
-                                <motion.button type="button" className="p-2 transition-colors duration-200 rounded-full text-red-600 hover:bg-red-100" onClick={() => handleDeleteClick(entry.id)} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                                  <Trash2Icon className="w-5 h-5" />
-                                </motion.button>
-                              </div>
-                            </motion.div>
+                              </motion.div>
+                            </React.Fragment>
                           );
                         })
                       )}

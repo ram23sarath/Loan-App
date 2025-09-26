@@ -27,7 +27,7 @@ const itemVariants = {
 const SubscriptionListPage = () => {
   const { subscriptions, deleteSubscription, isRefreshing } = useData();
 
-  const [tableView, setTableView] = React.useState(true);
+  // always use table view for subscriptions
   const [pendingDelete, setPendingDelete] = React.useState<SubscriptionWithCustomer | null>(null);
   const [deleting, setDeleting] = React.useState(false);
 
@@ -96,72 +96,10 @@ const SubscriptionListPage = () => {
               <span className="hidden sm:inline">Export</span>
             </motion.button>
           )}
-          <button
-            onClick={() => setTableView(v => !v)}
-            className="px-3 py-2 rounded-lg border border-indigo-300 bg-indigo-50 text-indigo-700 font-semibold hover:bg-indigo-100 transition-colors"
-          >
-            {tableView ? 'Card View' : 'Table View'}
-          </button>
         </div>
       </div>
 
-      {tableView ? (
-        <SubscriptionTableView onDelete={handleDeleteSubscription} deletingId={pendingDelete?.id ?? null} />
-      ) : (
-        subscriptions.length > 0 ? (
-          <GlassCard className="!p-2 sm:!p-4">
-            <motion.ul 
-              className="space-y-4"
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-            >
-              {subscriptions.map(sub => (
-                <motion.li 
-                  key={sub.id} 
-                  variants={itemVariants}
-                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-6 py-4 px-2 sm:py-6 sm:px-8 bg-white rounded-xl shadow border border-gray-100 w-full"
-                >
-                  <div className="flex flex-col gap-2 flex-1">
-                    <span className="font-bold text-lg sm:text-2xl text-indigo-700 break-words">{sub.customers?.name ?? 'Unknown Customer'}</span>
-                    <div className="flex flex-wrap gap-2 sm:gap-4 mt-2">
-                      <span className="bg-gray-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-gray-700 shadow-sm">Receipt: <span className="font-bold text-gray-900">{sub.receipt}</span></span>
-                      <span className="bg-cyan-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-cyan-800 shadow-sm">Amount: <span className="font-bold">₹{sub.amount.toLocaleString()}</span></span>
-                      <span className="bg-indigo-100 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-indigo-800 shadow-sm">Year: <span className="font-bold">{sub.year}</span></span>
-                      <span className="bg-gray-200 rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base font-medium text-gray-700 shadow-sm">Date: <span className="font-bold">{formatDate(sub.date)}</span></span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 self-start sm:self-center">
-                    <motion.button
-                      onClick={() => handleSendWhatsApp(sub)}
-                      className="p-2 sm:p-3 rounded-full hover:bg-green-500/10 transition-colors"
-                      aria-label="Send on WhatsApp"
-                      whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}
-                    >
-                      <WhatsAppIcon className="w-6 h-6 sm:w-7 sm:h-7 text-green-500" />
-                    </motion.button>
-                    <motion.button
-                      onClick={() => handleDeleteSubscription(sub)}
-                      className="p-2 sm:p-3 rounded-full hover:bg-red-500/10 transition-colors"
-                      aria-label={`Delete subscription for ${sub.customers?.name}`}
-                      whileHover={{ scale: 1.2 }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <Trash2Icon className="w-6 h-6 sm:w-7 sm:h-7 text-red-500" />
-                    </motion.button>
-                  </div>
-                </motion.li>
-              ))}
-            </motion.ul>
-          </GlassCard>
-        ) : (
-          !isRefreshing && (
-            <GlassCard>
-              <p className="text-center text-gray-500">No subscriptions recorded yet.</p>
-            </GlassCard>
-          )
-        )
-      )}
+      <SubscriptionTableView onDelete={handleDeleteSubscription} deletingId={pendingDelete?.id ?? null} />
 
       {/* The Delete confirmation modal is moved here to be a sibling of the other views */}
       {pendingDelete && (

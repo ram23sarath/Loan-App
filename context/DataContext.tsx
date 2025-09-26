@@ -159,6 +159,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Update Data Entry
+  const updateDataEntry = async (id: string, updates: Partial<DataEntry>): Promise<DataEntry> => {
+    try {
+      const { data, error } = await supabase.from('data_entries').update(updates).eq('id', id).select().single();
+      if (error || !data) throw error;
+      await fetchData();
+      return data as DataEntry;
+    } catch (error) {
+      throw new Error(parseSupabaseError(error, 'updating data entry'));
+    }
+  };
+
   // Delete Data Entry
   const deleteDataEntry = async (id: string): Promise<void> => {
     try {

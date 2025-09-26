@@ -176,14 +176,14 @@ const DataPage = () => {
   return (
     <div className="w-full max-w-7xl mx-auto my-8">
       <motion.div layout transition={{ type: 'spring', stiffness: 280, damping: 30 }} className={`bg-white rounded-xl shadow-md flex flex-col gap-6 border border-gray-200/80 w-full mx-auto ${showTable ? 'max-w-full p-3' : 'max-w-2xl p-4'}`}>
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-2xl font-bold text-indigo-700 uppercase tracking-widest">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-2">
+          <h2 className="text-xl md:text-2xl font-bold text-indigo-700 uppercase tracking-widest">
             {showTable ? 'All Entries' : 'New Data Entry'}
           </h2>
-          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-2">
+          <div className="w-full md:w-auto">
             <button
               type="button"
-              className="px-4 py-2 rounded-lg bg-indigo-100 text-indigo-700 font-semibold hover:bg-indigo-200 transition-colors duration-200"
+              className="w-full md:w-auto px-4 py-2 rounded-lg bg-indigo-100 text-indigo-700 font-semibold hover:bg-indigo-200 transition-colors duration-200 text-center"
               onClick={() => {
                 setShowTable(v => !v);
                 // --- LOGIC FIX ---
@@ -268,30 +268,30 @@ const DataPage = () => {
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0, height: 0, padding: 0, margin: 0, transition: { duration: 0.2 } }}
                                 transition={{ opacity: { duration: 0.15 } }}
-                                className="md:hidden px-4 py-3 border-b last:border-b-0 hover:bg-indigo-50/30"
+                                className="md:hidden px-4 py-4 border-b last:border-b-0 hover:bg-indigo-50/30"
                               >
-                                <div className="flex justify-between items-start gap-2">
+                                <div className="flex justify-between items-start gap-3">
                                   <div className="flex-1 min-w-0">
                                     <div className="font-semibold text-gray-900 truncate">{customerName}</div>
                                     <div className="text-sm text-gray-600 truncate">{entry.subtype || entry.type}</div>
                                   </div>
-                                  <div className={`ml-2 text-right font-bold ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>{entry.type === 'credit' ? '+' : '-'}₹{entry.amount.toLocaleString()}</div>
+                                  <div className={`ml-2 text-right font-bold text-base ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>{entry.type === 'credit' ? '+' : '-'}₹{entry.amount.toLocaleString()}</div>
                                 </div>
                                 <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
                                   <div>{formatDate(entry.date)}</div>
-                                  <div className="flex items-center gap-2">
-                                    {entry.receipt_number && <div className="px-2 py-0.5 bg-gray-100 rounded text-xs">#{entry.receipt_number}</div>}
-                                    <motion.button type="button" className="p-1 rounded-full text-red-600 hover:bg-red-100" onClick={() => handleDeleteClick(entry.id)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                      <Trash2Icon className="w-4 h-4" />
+                                  <div className="flex items-center gap-3">
+                                    {entry.receipt_number && <div className="px-2 py-1 bg-gray-100 rounded text-xs">#{entry.receipt_number}</div>}
+                                    <motion.button aria-label="Delete entry" type="button" className="p-2 rounded-md text-red-600 hover:bg-red-50" onClick={() => handleDeleteClick(entry.id)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                      <Trash2Icon className="w-5 h-5" />
                                     </motion.button>
                                   </div>
                                 </div>
                                 {entry.notes && (
-                                  <div className="mt-2 text-sm text-gray-700">
-                                    <div className={`cursor-pointer ${!isExpanded ? 'truncate' : ''}`} onClick={() => handleNoteClick(entry.id)}>{entry.notes}</div>
+                                  <div className="mt-3 text-sm text-gray-700">
+                                    <div id={`note-${entry.id}`} className={`cursor-pointer ${!isExpanded ? 'truncate' : ''}`} onClick={() => handleNoteClick(entry.id)} aria-expanded={isExpanded} aria-controls={`edit-note-${entry.id}`}>{entry.notes}</div>
                                     {isExpanded && (
-                                      <div className="mt-2 flex items-center gap-2">
-                                        <button type="button" className="text-indigo-600 text-sm font-medium" onClick={() => { setEditNoteId(entry.id); setEditNoteValue(entry.notes || ''); }}>Edit</button>
+                                      <div id={`edit-note-${entry.id}`} className="mt-2 flex items-center gap-3">
+                                        <button type="button" className="text-indigo-600 text-sm font-medium px-2 py-1 bg-indigo-50 rounded" onClick={() => { setEditNoteId(entry.id); setEditNoteValue(entry.notes || ''); }}>Edit</button>
                                       </div>
                                     )}
                                   </div>

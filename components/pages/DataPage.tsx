@@ -84,7 +84,18 @@ const DataPage = () => {
 
   // --- HANDLERS ---
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setForm(prevForm => ({ ...prevForm, [e.target.name]: e.target.value }));
+    const { name, value } = e.target as HTMLInputElement & HTMLSelectElement & HTMLTextAreaElement;
+    setForm(prevForm => {
+      // If the user switches the type to credit, ensure we don't keep a Subscription subtype (Subscription should be hidden for credits)
+      if (name === 'type') {
+        const newType = value;
+        if (newType === 'credit' && prevForm.subtype === 'Subscription') {
+          return { ...prevForm, type: newType, subtype: '' };
+        }
+        return { ...prevForm, type: newType };
+      }
+      return { ...prevForm, [name]: value };
+    });
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -295,7 +306,8 @@ const DataPage = () => {
                       <label htmlFor="subtype" className={labelBaseStyle}>Subtype</label>
                       <select id="subtype" name="subtype" value={form.subtype} onChange={handleChange} className={`${inputBaseStyle} bg-white`}>
                         <option value="">None</option>
-                        <option value="Subscription">Subscription</option>
+                        {/* Show Subscription only when type is NOT credit (hidden for credit entries) */}
+                        {form.type !== 'credit' && <option value="Subscription">Subscription</option>}
                         <option value="Retirement Gift">Retirement Gift</option>
                         <option value="Death Fund">Death Fund</option>
                         <option value="Misc Expense">Misc Expense</option>

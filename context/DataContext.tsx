@@ -39,6 +39,7 @@ interface DataContextType {
   updateLoan: (loanId: string, updates: Partial<Loan>) => Promise<Loan>;
   addSubscription: (subscription: NewSubscription) => Promise<Subscription>;
   updateSubscription: (subscriptionId: string, updates: Partial<Subscription>) => Promise<Subscription>;
+  adjustSubscriptionForMisc: (customerId: string, amount: number, date?: string) => Promise<void>;
   addInstallment: (installment: NewInstallment) => Promise<Installment>;
   updateInstallment: (installmentId: string, updates: Partial<Installment>) => Promise<Installment>;
   addDataEntry: (entry: NewDataEntry) => Promise<DataEntry>;
@@ -128,6 +129,37 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       throw new Error(parseSupabaseError(error, `updating subscription ${subscriptionId}`));
     }
   };
+
+  // Adjust subscription balance when a misc entry of subtype 'Subscription' is recorded
+  const adjustSubscriptionForMisc = async (customerId: string, amount: number, date?: string): Promise<void> => {
+    try {
+      // find the most recent subscription for this customer
+      const { data: subs, error: subsError } = await supabase.from('subscriptions').select('*').eq('customer_id', customerId).order('date', { ascending: false }).limit(1);
+      if (subsError) throw subsError;
+      if (subs && subs.length > 0) {
+        const sub = subs[0] as Subscription;
+        const newAmount = Number(sub.amount) - Number(amount);
+        const { data, error } = await supabase.from('subscriptions').update({ amount: newAmount }).eq('id', sub.id).select().single();
+        if (error) throw error;
+      } else {
+        // no subscription exists - create a negative subscription entry to represent the deduction
+        const now = date || new Date().toISOString().slice(0,10);
+        const year = new Date(now).getFullYear();
+        const newSub = {
+          customer_id: customerId,
+          amount: -Math.abs(Number(amount)),
+          year,
+          date: now,
+          receipt: 'misc-subscription-adjustment',
+        };
+        const { data, error } = await supabase.from('subscriptions').insert([newSub]).select().single();
+        if (error) throw error;
+      }
+      await fetchData();
+    } catch (error) {
+      throw new Error(parseSupabaseError(error, `adjusting subscription for misc entry for customer ${customerId}`));
+    }
+  };
   
   const updateInstallment = async (installmentId: string, updates: Partial<Installment>): Promise<Installment> => {
     try {
@@ -152,6 +184,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { data, error } = await supabase.from('data_entries').insert([entry]).select().single();
       if (error || !data) throw error;
+      // If this misc data entry represents a subscription adjustment, update subscriptions accordingly
+      try {
+        if ((entry as any).subtype === 'Subscription') {
+          await adjustSubscriptionForMisc(entry.customer_id, Number(entry.amount), entry.date);
+        }
+      } catch (err) {
+        // Log but don't fail the main insert; adjustment failure should be visible in console
+        console.error('Failed to adjust subscription for misc entry:', err);
+      }
+
       await fetchData();
       return data as DataEntry;
     } catch (error) {
@@ -323,7 +365,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
 
   return (
-    <DataContext.Provider value={{ session, customers, loans, subscriptions, installments, dataEntries, loading, isRefreshing, signInWithPassword, signOut, addCustomer, updateCustomer, addLoan, updateLoan, addSubscription, updateSubscription, addInstallment, updateInstallment, addDataEntry, deleteDataEntry, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment }}>
+    <DataContext.Provider value={{ session, customers, loans, subscriptions, installments, dataEntries, loading, isRefreshing, signInWithPassword, signOut, addCustomer, updateCustomer, addLoan, updateLoan, addSubscription, updateSubscription, addInstallment, updateInstallment, addDataEntry, updateDataEntry, deleteDataEntry, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, adjustSubscriptionForMisc }}>
       {children}
     </DataContext.Provider>
   );

@@ -5,6 +5,7 @@ export type DataEntry = {
   amount: number;
   receipt_number: string;
   notes?: string;
+  subtype?: string | null;
 };
 
 export type NewDataEntry = Omit<DataEntry, 'id'>;
@@ -176,6 +177,7 @@ export type Database = {
           amount: number;
           receipt_number: string;
           notes?: string;
+          subtype?: string | null;
         };
         Insert: {
           customer_id: string;
@@ -183,6 +185,7 @@ export type Database = {
           amount: number;
           receipt_number: string;
           notes?: string;
+          subtype?: string | null;
         };
         Update: {
           customer_id?: string;
@@ -190,6 +193,7 @@ export type Database = {
           amount?: number;
           receipt_number?: string;
           notes?: string;
+          subtype?: string | null;
         };
         Relationships: [
           {

@@ -177,7 +177,7 @@ const DataPage = () => {
     <div className="w-full max-w-7xl mx-auto my-8">
       <motion.div layout transition={{ type: 'spring', stiffness: 280, damping: 30 }} className={`bg-white rounded-xl shadow-md flex flex-col gap-6 border border-gray-200/80 w-full mx-auto ${showTable ? 'max-w-full p-3' : 'max-w-2xl p-4'}`}>
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-2">
-          <h2 className="text-xl md:text-2xl font-bold text-indigo-700 uppercase tracking-widest">
+          <h2 className="text-xl md:text-2xl font-bold text-indigo-700 md:uppercase md:tracking-widest">
             {showTable ? 'All Entries' : 'New Data Entry'}
           </h2>
           <div className="w-full md:w-auto">
@@ -247,17 +247,17 @@ const DataPage = () => {
                                   <div className={`flex-1 cursor-pointer ${!isExpanded ? 'truncate' : ''}`} onClick={() => handleNoteClick(entry.id)}>
                                     {entry.notes || '-'}
                                   </div>
-                                  {entry.notes && (
-                                    <button type="button" className="p-1 rounded-full hover:bg-indigo-100 transition-colors" aria-label="Edit note" onClick={() => { setEditNoteId(entry.id); setEditNoteValue(entry.notes || ''); }}>
+                                    {entry.notes && (
+                                    <button type="button" className="p-1 rounded-full hover:bg-indigo-100 transition-colors" aria-label="Edit note" onClick={(e) => { e.stopPropagation(); setEditNoteId(entry.id); setEditNoteValue(entry.notes || ''); }}>
                                       <PencilIcon className="w-4 h-4 text-indigo-600" />
                                     </button>
                                   )}
                                 </div>
                                 <div className="col-span-1 flex justify-center">
-                                  <motion.button type="button" className="p-2 transition-colors duration-200 rounded-full text-red-600 hover:bg-red-100" onClick={() => handleDeleteClick(entry.id)} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                                    <Trash2Icon className="w-5 h-5" />
-                                  </motion.button>
-                                </div>
+                                <motion.button type="button" className="p-2 transition-colors duration-200 rounded-full text-red-600 hover:bg-red-100" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                                  <Trash2Icon className="w-5 h-5" />
+                                </motion.button>
+                              </div>
                               </motion.div>
 
                               {/* Mobile card (visible on small screens) */}
@@ -281,7 +281,7 @@ const DataPage = () => {
                                   <div>{formatDate(entry.date)}</div>
                                   <div className="flex items-center gap-3">
                                     {entry.receipt_number && <div className="px-2 py-1 bg-gray-100 rounded text-xs">#{entry.receipt_number}</div>}
-                                    <motion.button aria-label="Delete entry" type="button" className="p-2 rounded-md text-red-600 hover:bg-red-50" onClick={() => handleDeleteClick(entry.id)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                    <motion.button aria-label="Delete entry" type="button" className="p-2 rounded-md text-red-600 hover:bg-red-50" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                                       <Trash2Icon className="w-5 h-5" />
                                     </motion.button>
                                   </div>
@@ -291,7 +291,7 @@ const DataPage = () => {
                                     <div id={`note-${entry.id}`} className={`cursor-pointer ${!isExpanded ? 'truncate' : ''}`} onClick={() => handleNoteClick(entry.id)} aria-expanded={isExpanded} aria-controls={`edit-note-${entry.id}`}>{entry.notes}</div>
                                     {isExpanded && (
                                       <div id={`edit-note-${entry.id}`} className="mt-2 flex items-center gap-3">
-                                        <button type="button" className="text-indigo-600 text-sm font-medium px-2 py-1 bg-indigo-50 rounded" onClick={() => { setEditNoteId(entry.id); setEditNoteValue(entry.notes || ''); }}>Edit</button>
+                                        <button type="button" className="text-indigo-600 text-sm font-medium px-2 py-1 bg-indigo-50 rounded" onClick={(e) => { e.stopPropagation(); setEditNoteId(entry.id); setEditNoteValue(entry.notes || ''); }}>Edit</button>
                                       </div>
                                     )}
                                   </div>

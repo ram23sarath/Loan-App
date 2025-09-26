@@ -325,8 +325,29 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const deleteCustomer = async (customerId: string): Promise<void> => {
     try {
-      const { error } = await supabase.from('customers').delete().eq('id', customerId);
-      if (error) throw error;
+      // Delete dependent data_entries
+      const { error: delDataErr } = await supabase.from('data_entries').delete().eq('customer_id', customerId);
+      if (delDataErr) throw delDataErr;
+
+      // Delete loans and their installments
+      const { data: loansForCustomer, error: loansFetchError } = await supabase.from('loans').select('id').eq('customer_id', customerId);
+      if (loansFetchError) throw loansFetchError;
+      const loanIds = (loansForCustomer || []).map((l: any) => l.id);
+      if (loanIds.length > 0) {
+        const { error: delInstallErr } = await supabase.from('installments').delete().in('loan_id', loanIds);
+        if (delInstallErr) throw delInstallErr;
+        const { error: delLoanErr } = await supabase.from('loans').delete().in('id', loanIds);
+        if (delLoanErr) throw delLoanErr;
+      }
+
+      // Delete subscriptions
+      const { error: delSubErr } = await supabase.from('subscriptions').delete().eq('customer_id', customerId);
+      if (delSubErr) throw delSubErr;
+
+      // Finally delete the customer
+      const { error: delCustErr } = await supabase.from('customers').delete().eq('id', customerId);
+      if (delCustErr) throw delCustErr;
+
       await fetchData();
     } catch (error) {
       throw new Error(parseSupabaseError(error, `deleting customer ${customerId}`));

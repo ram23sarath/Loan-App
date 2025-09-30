@@ -44,7 +44,8 @@ const SummaryPage = () => {
     }
   });
   const totalAllCollected = totalInterestCollected + totalLateFeeCollected + totalSubscriptionCollected + totalDataCollected;
-  const totalLoansGiven = loans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+  // Show only principal amount disbursed (original_amount) — do not include interest here
+  const totalLoansGiven = loans.reduce((acc, loan) => acc + (loan.original_amount || 0), 0);
 
   // New: calculate total principal recovered (payments applied to principal, excluding interest)
   const totalPrincipalRecovered = loans.reduce((acc, loan) => {

@@ -7,30 +7,35 @@ import { formatDate } from '../../utils/dateFormatter';
 const DataPage = () => {
   const { customers = [], dataEntries = [], addDataEntry, deleteDataEntry, updateDataEntry } = useData();
 
-  // State for the edit modal
-  const [editNoteId, setEditNoteId] = useState<string | null>(null);
-  const [editNoteValue, setEditNoteValue] = useState('');
-  const [editLoading, setEditLoading] = useState(false);
-  const editTextAreaRef = useRef<HTMLTextAreaElement | null>(null);
+  // State for the edit modal (full entry edit)
+  const [editEntryId, setEditEntryId] = useState<string | null>(null);
+  const [editEntryForm, setEditEntryForm] = useState({
+    customerId: '',
+    date: '',
+    amount: '',
+    type: 'credit',
+    subtype: '',
+    receipt: '',
+    notes: '',
+  });
+  const [editEntryLoading, setEditEntryLoading] = useState(false);
 
-  // Open the edit modal and try a blur-then-focus sequence to coax iOS Safari
-  // into showing the keyboard reliably when the modal appears.
-  const openEditNote = (id: string, value: string) => {
-    setEditNoteValue(value || '');
-    setEditNoteId(id);
-    // Short timeout to allow the modal to mount, then blur-then-focus
+  // Open the edit modal for a full data entry
+  const openEditEntry = (entry: any) => {
+    setEditEntryForm({
+      customerId: entry.customer_id || '',
+      date: entry.date || '',
+      amount: entry.amount?.toString() || '',
+      type: entry.type || 'credit',
+      subtype: entry.subtype || '',
+      receipt: entry.receipt_number || '',
+      notes: entry.notes || '',
+    });
+    setEditEntryId(entry.id);
+    // small timeout for focus stability on mobile
     setTimeout(() => {
-      try {
-        const el = editTextAreaRef.current;
-        if (el) {
-          el.blur();
-          setTimeout(() => {
-            try { el.focus(); } catch (e) { /* noop */ }
-          }, 80);
-        }
-      } catch (e) {
-        // ignore
-      }
+      const el = document.querySelector<HTMLInputElement>('#edit-amount');
+      try { el?.focus(); } catch (e) { /* ignore */ }
     }, 120);
   };
 
@@ -82,15 +87,14 @@ const DataPage = () => {
     }
   }, [showToast]);
 
-  // Focus the edit textarea after the modal opens. Use a short timeout to improve
-  // reliability on iOS Safari which can ignore immediate focus calls.
+  // Focus the edit amount input after the modal opens.
   useEffect(() => {
-    if (!editNoteId) return;
+    if (!editEntryId) return;
     const t = setTimeout(() => {
-      try { editTextAreaRef.current?.focus(); } catch (e) { /* ignore */ }
+      try { document.querySelector<HTMLInputElement>('#edit-amount')?.focus(); } catch (e) { /* ignore */ }
     }, 80);
     return () => clearTimeout(t);
-  }, [editNoteId]);
+  }, [editEntryId]);
 
   useEffect(() => {
     if (!showCustomerDropdown) return;
@@ -177,19 +181,28 @@ const DataPage = () => {
     }
   };
 
-  const handleUpdateNote = async () => {
-    if (!editNoteId) return;
-    setEditLoading(true);
+  // Save full entry edits
+  const handleSaveEditEntry = async () => {
+    if (!editEntryId) return;
+    setEditEntryLoading(true);
     try {
-      await updateDataEntry(editNoteId, { notes: editNoteValue });
-      setEditNoteId(null);
-      setToastMsg('Note updated successfully.');
+      await updateDataEntry(editEntryId, {
+        customer_id: editEntryForm.customerId,
+        date: editEntryForm.date,
+        amount: Number(editEntryForm.amount),
+        type: editEntryForm.type,
+        subtype: editEntryForm.subtype || null,
+        receipt_number: editEntryForm.receipt,
+        notes: editEntryForm.notes,
+      });
+      setEditEntryId(null);
+      setToastMsg('Entry updated successfully.');
       setShowToast(true);
-    } catch (err) {
-      setToastMsg('Failed to update note.');
+    } catch (err: any) {
+      setToastMsg(err?.message || 'Failed to update entry.');
       setShowToast(true);
     } finally {
-      setEditLoading(false);
+      setEditEntryLoading(false);
     }
   };
 
@@ -279,11 +292,9 @@ const DataPage = () => {
                                   <div className={`flex-1 cursor-pointer ${!isExpanded ? 'truncate' : ''}`} onClick={() => handleNoteClick(entry.id)}>
                                     {entry.notes || '-'}
                                   </div>
-                                    {entry.notes && (
-                                    <button type="button" className="p-1 rounded-full hover:bg-indigo-100 transition-colors" aria-label="Edit note" onClick={(e) => { e.stopPropagation(); openEditNote(entry.id, entry.notes || ''); }}>
+                                    <button type="button" className="p-1 rounded-full hover:bg-indigo-100 transition-colors" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
                                       <PencilIcon className="w-4 h-4 text-indigo-600" />
                                     </button>
-                                  )}
                                 </div>
                                 <div className="col-span-1 flex justify-center">
                                 <motion.button type="button" className="p-2 transition-colors duration-200 rounded-full text-red-600 hover:bg-red-100" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
@@ -322,14 +333,9 @@ const DataPage = () => {
                                   <div className="mt-3 pt-3 border-t border-gray-200/80">
                                     <div className="flex justify-between items-start gap-3">
                                       <p className="flex-1 text-sm text-gray-700 break-words">{entry.notes}</p>
-                                      <button 
-                                        type="button" 
-                                        className="p-2 -mr-2 rounded-full text-indigo-600 hover:bg-indigo-50"
-                                        aria-label="Edit note"
-                                        onClick={(e) => { e.stopPropagation(); openEditNote(entry.id, entry.notes || ''); }}
-                                      >
-                                        <PencilIcon className="w-4 h-4" />
-                                      </button>
+                                        <button type="button" className="p-2 -mr-2 rounded-full text-indigo-600 hover:bg-indigo-50" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
+                                          <PencilIcon className="w-4 h-4" />
+                                        </button>
                                     </div>
                                   </div>
                                 )}
@@ -418,22 +424,49 @@ const DataPage = () => {
       {/* Modals are moved here to the top level. They are no longer rendered inside a loop. */}
       {/* This fixes both the performance issue and the broken table layout. */}
       <AnimatePresence>
-        {editNoteId && (
+        {editEntryId && (
           <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <motion.div role="dialog" aria-modal="true" aria-labelledby="edit-note-modal-title" variants={modalVariants} initial="hidden" animate="visible" exit="exit" className="bg-white rounded-xl shadow-lg p-6 w-full max-w-sm flex flex-col items-center">
-              <div id="edit-note-modal-title" className="text-lg font-semibold text-gray-800 mb-4">Edit Note</div>
-              <textarea
-                ref={editTextAreaRef}
-                className="w-full min-h-[80px] border border-gray-300 rounded-lg p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                value={editNoteValue}
-                onChange={e => setEditNoteValue(e.target.value)}
-                disabled={editLoading}
-                autoFocus
-              />
-              <div className="flex gap-3 w-full">
-                <button type="button" className="flex-1 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition" onClick={() => setEditNoteId(null)} disabled={editLoading}>Cancel</button>
-                <button type="button" className="flex-1 py-2 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition" onClick={handleUpdateNote} disabled={editLoading}>
-                  {editLoading ? 'Saving...' : 'Save'}
+            <motion.div role="dialog" aria-modal="true" aria-labelledby="edit-entry-modal-title" variants={modalVariants} initial="hidden" animate="visible" exit="exit" className="bg-white rounded-xl shadow-lg p-4 w-full max-w-sm max-h-[90vh] overflow-y-auto mx-4">
+              <div id="edit-entry-modal-title" className="text-lg font-semibold text-gray-800 mb-4">Edit Entry</div>
+              <div className="grid grid-cols-1 gap-3">
+                <label className={labelBaseStyle}>Customer</label>
+                <select name="customerId" value={editEntryForm.customerId} onChange={e => setEditEntryForm(prev => ({ ...prev, customerId: e.target.value }))} className={inputBaseStyle}>
+                  <option value="">Select Customer</option>
+                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+
+                <label className={labelBaseStyle}>Date</label>
+                <input type="date" name="date" value={editEntryForm.date} onChange={e => setEditEntryForm(prev => ({ ...prev, date: e.target.value }))} className={inputBaseStyle} />
+
+                <label className={labelBaseStyle}>Type</label>
+                <select name="type" value={editEntryForm.type} onChange={e => setEditEntryForm(prev => ({ ...prev, type: e.target.value }))} className={inputBaseStyle}>
+                  <option value="credit">Credit</option>
+                  <option value="expenditure">Expenditure</option>
+                </select>
+
+                <label className={labelBaseStyle}>Subtype</label>
+                <select name="subtype" value={editEntryForm.subtype} onChange={e => setEditEntryForm(prev => ({ ...prev, subtype: e.target.value }))} className={inputBaseStyle}>
+                  <option value="">None</option>
+                  {editEntryForm.type !== 'credit' && <option value="Subscription">Subscription</option>}
+                  <option value="Retirement Gift">Retirement Gift</option>
+                  <option value="Death Fund">Death Fund</option>
+                  <option value="Misc Expense">Misc Expense</option>
+                </select>
+
+                <label className={labelBaseStyle}>Amount</label>
+                <input id="edit-amount" type="number" name="amount" value={editEntryForm.amount} onChange={e => setEditEntryForm(prev => ({ ...prev, amount: e.target.value }))} className={inputBaseStyle} />
+
+                <label className={labelBaseStyle}>Receipt Number</label>
+                <input type="text" name="receipt" value={editEntryForm.receipt} onChange={e => setEditEntryForm(prev => ({ ...prev, receipt: e.target.value }))} className={inputBaseStyle} />
+
+                <label className={labelBaseStyle}>Notes</label>
+                <textarea name="notes" value={editEntryForm.notes} onChange={e => setEditEntryForm(prev => ({ ...prev, notes: e.target.value }))} className={`${inputBaseStyle} min-h-[80px]`} />
+              </div>
+
+              <div className="flex gap-3 mt-4">
+                <button type="button" className="flex-1 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition" onClick={() => setEditEntryId(null)} disabled={editEntryLoading}>Cancel</button>
+                <button type="button" className="flex-1 py-2 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition" onClick={handleSaveEditEntry} disabled={editEntryLoading}>
+                  {editEntryLoading ? 'Saving...' : 'Save'}
                 </button>
               </div>
             </motion.div>

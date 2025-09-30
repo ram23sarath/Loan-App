@@ -65,6 +65,9 @@ const SummaryPage = () => {
     return acc + principalRecovered;
   }, 0);
 
+  // Loan Balance = Total Loans Given - Loan Recovery (Principal)
+  const loanBalance = totalLoansGiven - totalPrincipalRecovered;
+
   // No tab state — Loan Recovery will be displayed as its own heading below Total Collected
 
   const collectedBreakdownCards = [
@@ -195,6 +198,29 @@ const SummaryPage = () => {
                 <div className="flex items-center justify-between px-3 py-1 rounded-md bg-cyan-25/30">
                   <div className="text-sm font-medium text-cyan-700">Balance</div>
                   <div className={`text-sm font-bold ${subscriptionBalance < 0 ? 'text-red-600' : 'text-cyan-800'}`}>₹{subscriptionBalance.toLocaleString()}</div>
+                </div>
+              </div>
+            </div>
+            {/* Loan Balance box: Total Loans Given - Loan Recovery (Principal) = Loan Balance */}
+            <div className="w-full mt-4">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-blue-50 border border-blue-200">
+                <div>
+                  <div className="text-sm font-medium text-blue-700">Loan Balance</div>
+                  <div className="text-xs text-gray-500">Total Loans Given - Loan Recovery (Principal) = Balance</div>
+                </div>
+              </div>
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-blue-25/30">
+                  <div className="text-sm text-gray-700">Total Loans Given</div>
+                  <div className="text-sm font-medium text-blue-700">₹{totalLoansGiven.toLocaleString()}</div>
+                </div>
+                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-blue-25/30">
+                  <div className="text-sm text-gray-700">Loan Recovery (Principal)</div>
+                  <div className="text-sm font-medium text-blue-700">₹{totalPrincipalRecovered.toLocaleString()}</div>
+                </div>
+                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-blue-25/30">
+                  <div className="text-sm font-medium text-blue-700">Balance</div>
+                  <div className={`text-sm font-bold ${loanBalance < 0 ? 'text-red-600' : 'text-blue-800'}`}>₹{loanBalance.toLocaleString()}</div>
                 </div>
               </div>
             </div>

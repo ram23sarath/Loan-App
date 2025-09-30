@@ -18,6 +18,15 @@ const SummaryPage = () => {
   const totalLateFeeCollected = installments.reduce((acc, inst) => acc + (inst.late_fee || 0), 0)
     + subscriptions.reduce((acc, sub) => acc + (sub.late_fee || 0), 0);
   const totalSubscriptionCollected = subscriptions.reduce((acc, sub) => acc + (sub.amount || 0), 0);
+  // Calculate Subscription Return from dataEntries (expenditure entries with subtype 'Subscription Return')
+  const subscriptionReturnTotal = dataEntries.reduce((acc, entry) => {
+    if (entry.type === 'expenditure' && entry.subtype === 'Subscription Return') {
+      return acc + (entry.amount || 0);
+    }
+    return acc;
+  }, 0);
+  // Balance = Subscriptions - Subscription Return
+  const subscriptionBalance = totalSubscriptionCollected - subscriptionReturnTotal;
   const totalDataCollected = dataEntries.reduce((acc, entry) => {
     if (entry.type === 'expenditure') {
       return acc - (entry.amount || 0);
@@ -157,6 +166,29 @@ const SummaryPage = () => {
                 </motion.div>
               ))}
             </motion.div>
+            {/* Subscriptions Balance box: shows Subscriptions, Subscription Return and Balance */}
+            <div className="w-full mt-4">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-cyan-50 border border-cyan-200">
+                <div>
+                  <div className="text-sm font-medium text-cyan-700">Subscriptions Balance</div>
+                  <div className="text-xs text-gray-500">Subscriptions - Subscription Return = Balance</div>
+                </div>
+              </div>
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-cyan-25/30">
+                  <div className="text-sm text-gray-700">Subscriptions</div>
+                  <div className="text-sm font-medium text-cyan-700">₹{totalSubscriptionCollected.toLocaleString()}</div>
+                </div>
+                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-cyan-25/30">
+                  <div className="text-sm text-gray-700">Subscription Return</div>
+                  <div className="text-sm font-medium text-cyan-700">₹{subscriptionReturnTotal.toLocaleString()}</div>
+                </div>
+                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-cyan-25/30">
+                  <div className="text-sm font-medium text-cyan-700">Balance</div>
+                  <div className={`text-sm font-bold ${subscriptionBalance < 0 ? 'text-red-600' : 'text-cyan-800'}`}>₹{subscriptionBalance.toLocaleString()}</div>
+                </div>
+              </div>
+            </div>
           </motion.div>
 
           {/* Section 2: Expenses */}

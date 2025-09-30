@@ -10,7 +10,7 @@ const DatabaseIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <path d="M4 12v6c0 1.657 3.582 3 8 3s8-1.343 8-3v-6" />
   </svg>
 );
-import HamburgerIcon from './ui/HamburgerIcon';
+// Hamburger removed — using bottom nav for mobile
 import { useData } from '../context/DataContext';
 
 const navItems = [
@@ -40,7 +40,6 @@ const Sidebar = () => {
   const totalSubscriptionCollected = subscriptions.reduce((acc, sub) => acc + (sub.amount || 0), 0);
   const totalAllCollected = totalInterestCollected + totalLateFeeCollected + totalSubscriptionCollected;
   const totalLoansGiven = loans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
-  const [open, setOpen] = React.useState(false);
   const activeLinkClass = 'bg-indigo-50 text-indigo-600 font-semibold';
   const inactiveLinkClass = 'text-gray-600 hover:bg-gray-100 hover:text-gray-900';
 
@@ -55,15 +54,6 @@ const Sidebar = () => {
   // Responsive sidebar and bottom nav
   return (
     <>
-      {/* Hamburger for mobile */}
-      <button
-        className="fixed top-4 left-4 z-40 bg-white rounded-full shadow-lg p-2 sm:hidden border border-gray-200"
-        onClick={() => setOpen(true)}
-        aria-label="Open menu"
-      >
-        <HamburgerIcon className="w-7 h-7 text-gray-700" />
-      </button>
-
       {/* Bottom nav for mobile: only icons */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 flex justify-around items-center py-2 sm:hidden">
         {navItems.map(item => (
@@ -80,64 +70,48 @@ const Sidebar = () => {
         ))}
       </nav>
 
-      {/* Overlay drawer for mobile (full menu) */}
-      <div
-        className={`fixed inset-0 z-50 transition-all duration-300 sm:static sm:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'} sm:relative sm:w-64`}
-        style={{ pointerEvents: open ? 'auto' : 'none' }}
-      >
-        {/* Backdrop for mobile */}
-        {open && (
-          <div className="fixed inset-0 bg-black bg-opacity-30 z-40" onClick={() => setOpen(false)} />
-        )}
-        <aside className={`w-64 h-screen p-4 flex-shrink-0 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col z-50 relative ${open ? '' : 'sm:block hidden'}`}
-          style={{ pointerEvents: 'auto' }}
-        >
-          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-800">Loan Management</h1>
-            {/* Close button for mobile */}
-            <button className="sm:hidden p-1 ml-2" onClick={() => setOpen(false)} aria-label="Close menu">
-              <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-          </div>
-          <div className="flex-1 flex flex-col min-h-0">
-            <nav className="flex-1 p-4 space-y-2 overflow-y-auto min-h-0">
-              {navItems.map(item => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  className={({ isActive }) =>
-                    `flex items-center p-3 rounded-lg transition-colors duration-200 ${isActive ? activeLinkClass : inactiveLinkClass}`
-                  }
-                  onClick={() => setOpen(false)}
-                >
-                  <item.icon className="w-6 h-6 mr-3" />
-                  <span>{item.label}</span>
-                </NavLink>
-              ))}
-            </nav>
-            <div className="shrink-0">
-              <div className="p-4 border-t border-gray-200 space-y-4">
-                {session?.user && (
-                  <div className="text-center">
-                    <p className="text-xs text-gray-500 truncate" title={session.user.email}>Logged in as:</p>
-                    <p className="text-sm font-semibold text-gray-800 truncate">{session.user.email}</p>
-                  </div>
-                )}
-                <button
-                  onClick={handleSignOut}
-                  className="w-full flex items-center justify-center p-3 rounded-lg transition-colors duration-200 text-red-600 bg-red-50 hover:bg-red-100 font-semibold"
-                >
-                  <LogOutIcon className="w-5 h-5 mr-2" />
-                  <span>Logout</span>
-                </button>
-              </div>
-              <div className="p-4 border-t border-gray-200 text-center text-xs text-gray-400">
-                <p>&copy; {new Date().getFullYear()} Sleek Solutions</p>
-              </div>
+      {/* Desktop sidebar (hidden on small screens) */}
+      <aside className={`w-64 h-screen p-4 flex-shrink-0 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col sm:block hidden`}>
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-800">Loan Management</h1>
+        </div>
+        <div className="flex-1 flex flex-col min-h-0">
+          <nav className="flex-1 p-4 space-y-2 overflow-y-auto min-h-0">
+            {navItems.map(item => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  `flex items-center p-3 rounded-lg transition-colors duration-200 ${isActive ? activeLinkClass : inactiveLinkClass}`
+                }
+              >
+                <item.icon className="w-6 h-6 mr-3" />
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </nav>
+          <div className="shrink-0">
+            <div className="p-4 border-t border-gray-200 space-y-4">
+              {session?.user && (
+                <div className="text-center">
+                  <p className="text-xs text-gray-500 truncate" title={session.user.email}>Logged in as:</p>
+                  <p className="text-sm font-semibold text-gray-800 truncate">{session.user.email}</p>
+                </div>
+              )}
+              <button
+                onClick={handleSignOut}
+                className="w-full flex items-center justify-center p-3 rounded-lg transition-colors duration-200 text-red-600 bg-red-50 hover:bg-red-100 font-semibold"
+              >
+                <LogOutIcon className="w-5 h-5 mr-2" />
+                <span>Logout</span>
+              </button>
+            </div>
+            <div className="p-4 border-t border-gray-200 text-center text-xs text-gray-400">
+              <p>&copy; {new Date().getFullYear()} Sleek Solutions</p>
             </div>
           </div>
-        </aside>
-      </div>
+        </div>
+      </aside>
     </>
   );
 };

@@ -62,7 +62,8 @@ const SummaryPage = () => {
     { label: 'Interest', value: totalInterestCollected, color: 'green' },
     { label: 'Late Fees', value: totalLateFeeCollected, color: 'orange' },
     { label: 'Subscriptions', value: totalSubscriptionCollected, color: 'cyan' },
-    { label: 'Misc Expenses', value: totalDataCollected, color: 'pink' },
+    // MODIFICATION: Use Math.abs() to ensure the value is always positive for display.
+    { label: 'Misc Expenses', value: Math.abs(totalDataCollected), color: 'pink' },
   ];
 
   // Split out the Misc card so we can render it in the right-side box while keeping

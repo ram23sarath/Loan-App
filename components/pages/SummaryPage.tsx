@@ -24,8 +24,38 @@ const SummaryPage = () => {
     }
     return acc + (entry.amount || 0);
   }, 0);
+  // New: calculate Expenses from specific subtypes recorded in New Data Entry
+  const expenseSubtypes = ['Subscription', 'Retirement Gift', 'Death Fund', 'Misc Expense'];
+  const totalExpenses = dataEntries.reduce((acc, entry) => {
+    // Consider only entries that are expenditures and match the requested subtypes
+    if (entry.type === 'expenditure' && entry.subtype && expenseSubtypes.includes(entry.subtype)) {
+      return acc + (entry.amount || 0);
+    }
+    return acc;
+  }, 0);
+  // Calculate per-subtype totals so we can show breakdown under Expenses
+  const expenseTotalsBySubtype: Record<string, number> = expenseSubtypes.reduce((acc, subtype) => {
+    acc[subtype] = 0;
+    return acc;
+  }, {} as Record<string, number>);
+  dataEntries.forEach(entry => {
+    if (entry.type === 'expenditure' && entry.subtype && expenseSubtypes.includes(entry.subtype)) {
+      expenseTotalsBySubtype[entry.subtype!] = (expenseTotalsBySubtype[entry.subtype!] || 0) + (entry.amount || 0);
+    }
+  });
   const totalAllCollected = totalInterestCollected + totalLateFeeCollected + totalSubscriptionCollected + totalDataCollected;
   const totalLoansGiven = loans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+
+  // New: calculate total principal recovered (payments applied to principal, excluding interest)
+  const totalPrincipalRecovered = loans.reduce((acc, loan) => {
+    const loanInstallments = installments.filter(i => i.loan_id === loan.id);
+    const totalPaidForLoan = loanInstallments.reduce((sum, inst) => sum + (inst.amount || 0), 0);
+    // Payments are applied to principal first; principal recovered is min(totalPaid, original_amount)
+    const principalRecovered = Math.min(totalPaidForLoan, loan.original_amount || 0);
+    return acc + principalRecovered;
+  }, 0);
+
+  // No tab state — Loan Recovery will be displayed as its own heading below Total Collected
 
   const collectedBreakdownCards = [
     { label: 'Interest', value: totalInterestCollected, color: 'green' },
@@ -33,6 +63,11 @@ const SummaryPage = () => {
     { label: 'Subscriptions', value: totalSubscriptionCollected, color: 'cyan' },
     { label: 'Misc Income', value: totalDataCollected, color: 'pink' },
   ];
+
+  // Split out the Misc card so we can render it in the right-side box while keeping
+  // the rest of the breakdown on the left. Calculations remain unchanged.
+  const miscCard = collectedBreakdownCards.find(c => c.label === 'Misc Income');
+  const leftCards = collectedBreakdownCards.filter(c => c.label !== 'Misc Income');
 
   // --- Animation Variants (No changes here) ---
   const mainContainerVariants = {
@@ -82,26 +117,28 @@ const SummaryPage = () => {
           initial="hidden"
           animate="visible"
         >
-          {/* Section 1: Collected Funds */}
+          {/* Section 1: Collected Funds / Loan Recovery Tab */}
           <motion.div
             className="lg:col-span-3 bg-indigo-50/50 border border-indigo-100 rounded-2xl p-6 flex flex-col gap-6 shadow-sm"
             variants={mainCardVariants}
           >
             <div className="flex flex-col items-center">
               <span className="text-base font-medium text-indigo-800 uppercase tracking-wider">Total Collected</span>
-              <span className="text-4xl font-bold text-indigo-700 mt-1">
-                ₹{totalAllCollected.toLocaleString()}
-              </span>
+              <span className="text-4xl font-bold text-indigo-700 mt-1">₹{totalAllCollected.toLocaleString()}</span>
+            </div>
+
+            <div className="flex flex-col items-center mt-4">
+              <span className="text-sm font-medium text-indigo-800 uppercase tracking-wider">Loan Recovery (Principal)</span>
+              <span className="text-lg font-bold text-indigo-700 mt-1">₹{totalPrincipalRecovered.toLocaleString()}</span>
             </div>
 
             <motion.div
               className="w-full grid grid-cols-2 gap-4"
               variants={breakdownContainerVariants}
             >
-              {collectedBreakdownCards.map((card) => (
+              {leftCards.map((card) => (
                 <motion.div
                   key={card.label}
-                  // ✨ UPDATED: Added background color and adjusted text color for better visual distinction
                   className={`flex flex-col items-center justify-center p-4 rounded-xl bg-${card.color}-50 border border-${card.color}-200`}
                   variants={breakdownCardVariants}
                 >
@@ -123,6 +160,35 @@ const SummaryPage = () => {
             <span className="text-4xl font-bold text-blue-700 mt-1">
               ₹{totalLoansGiven.toLocaleString()}
             </span>
+            {/* Render the Misc Income card in the right-side box (visual move only). */}
+            {miscCard && (
+              <div className="w-full mt-6">
+                <div className={`flex items-center justify-between p-4 rounded-lg bg-${miscCard.color}-50 border border-${miscCard.color}-200`}>
+                  <div>
+                    <div className={`text-sm font-medium text-${miscCard.color}-700`}>{miscCard.label}</div>
+                    <div className={`text-lg font-bold text-${miscCard.color}-800 mt-1`}>₹{miscCard.value.toLocaleString()}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* Expenses box (calculated from selected misc entry subtypes) */}
+            <div className="w-full mt-4">
+              <div className={`flex items-center justify-between p-4 rounded-lg bg-red-50 border border-red-200`}>
+                <div>
+                  <div className={`text-sm font-medium text-red-700`}>Expenses</div>
+                  <div className={`text-lg font-bold text-red-800 mt-1`}>₹{totalExpenses.toLocaleString()}</div>
+                </div>
+              </div>
+              {/* Per-subtype breakdown */}
+              <div className="mt-3 space-y-2">
+                {Object.entries(expenseTotalsBySubtype).map(([subtype, amt]) => (
+                  <div key={subtype} className="flex items-center justify-between px-3 py-1 rounded-md bg-red-25/30">
+                    <div className="text-sm text-gray-700">{subtype}</div>
+                    <div className="text-sm font-medium text-red-700">₹{(amt || 0).toLocaleString()}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </motion.div>
         </motion.div>
 

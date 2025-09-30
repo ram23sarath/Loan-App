@@ -185,25 +185,29 @@ const CustomerListPage = () => {
       );
     }
 
-    // Categorize customers
-    const withOnlyLoans: Customer[] = [];
-    const withOnlySubscriptions: Customer[] = [];
-    const withBoth: Customer[] = [];
+	// Categorize customers
+	const withOnlyLoans: Customer[] = [];
+	const withOnlySubscriptions: Customer[] = [];
+	const withBoth: Customer[] = [];
+	const withNeither: Customer[] = [];
 
     processedCustomers.forEach(customer => {
       const hasLoans = loans.some(l => l.customer_id === customer.id);
       const hasSubscriptions = subscriptions.some(s => s.customer_id === customer.id);
 
-      if (hasLoans && hasSubscriptions) {
+			if (hasLoans && hasSubscriptions) {
         withBoth.push(customer);
-      } else if (hasLoans) {
+			} else if (hasLoans) {
         withOnlyLoans.push(customer);
-      } else if (hasSubscriptions) {
+			} else if (hasSubscriptions) {
         withOnlySubscriptions.push(customer);
+			} else {
+				// Customers without loans or subscriptions should still be visible
+				withNeither.push(customer);
       }
     });
 
-    return { withOnlyLoans, withOnlySubscriptions, withBoth };
+		return { withOnlyLoans, withOnlySubscriptions, withBoth, withNeither };
   }, [customers, loans, subscriptions, searchTerm, sortOption]);
 
   return (
@@ -250,11 +254,62 @@ const CustomerListPage = () => {
           </div>
         </GlassCard>
       )}
+
+					{/* Section: Customers with No Loans or Subscriptions */}
+					{categorizedCustomers.withNeither && categorizedCustomers.withNeither.length > 0 && (
+						<GlassCard className="!p-2 sm:!p-4 bg-gray-50 border-gray-200">
+							<h3 className="text-xl font-bold mb-4 px-2 text-gray-800 flex items-center gap-1"><UsersIcon className="w-5 h-5 mr-1"/>Customers with No Records</h3>
+							{/* Desktop Table */}
+							<div className="hidden sm:block">
+								<table className="min-w-full divide-y divide-gray-200">
+									<thead>
+										<tr>
+											<th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
+											<th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
+											<th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">Actions</th>
+										</tr>
+									</thead>
+									<tbody>
+										{categorizedCustomers.withNeither.map(customer => (
+											<tr key={customer.id} className="bg-white hover:bg-gray-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
+												<td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
+												<td className="px-4 py-2 text-gray-500">{customer.phone}</td>
+												<td className="px-4 py-2 flex justify-center gap-2">
+													<motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer } }); }} className="p-2 rounded-full hover:bg-blue-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><span className="text-blue-600 font-bold">Edit</span></motion.button>
+													<motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+												</td>
+											</tr>
+										))}
+									</tbody>
+								</table>
+							</div>
+							{/* Mobile Cards */}
+							<div className="sm:hidden space-y-3">
+								{categorizedCustomers.withNeither.map(customer => (
+									<div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)}>
+										<div className="grid grid-cols-3 gap-3 items-start">
+											<div className="col-span-2">
+												<div className="text-base font-bold text-indigo-700">{customer.name}</div>
+												<div className="text-xs text-gray-500">{customer.phone}</div>
+											</div>
+											<div className="flex flex-col items-end justify-between">
+												<div className="flex gap-2">
+													<motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer } }); }} className="px-3 py-1 rounded bg-white border border-gray-200 text-blue-600 font-bold text-sm" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
+													<motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+												</div>
+											</div>
+										</div>
+									</div>
+								))}
+							</div>
+						</GlassCard>
+					)}
       
-      {categorizedCustomers.withBoth.length === 0 &&
-       categorizedCustomers.withOnlyLoans.length === 0 &&
-       categorizedCustomers.withOnlySubscriptions.length === 0 &&
-       !isRefreshing ? (
+  {categorizedCustomers.withBoth.length === 0 &&
+	  categorizedCustomers.withOnlyLoans.length === 0 &&
+	  categorizedCustomers.withOnlySubscriptions.length === 0 &&
+	  categorizedCustomers.withNeither.length === 0 &&
+	  !isRefreshing ? (
         <GlassCard>
           <p className="text-center text-gray-500">
             {searchTerm ? 'No customers match your search.' : 'No customers found. Add one to get started!'}

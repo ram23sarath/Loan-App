@@ -62,14 +62,10 @@ const SummaryPage = () => {
     { label: 'Interest', value: totalInterestCollected, color: 'green' },
     { label: 'Late Fees', value: totalLateFeeCollected, color: 'orange' },
     { label: 'Subscriptions', value: totalSubscriptionCollected, color: 'cyan' },
-    // MODIFICATION: Use Math.abs() to ensure the value is always positive for display.
-    { label: 'Misc Expenses', value: Math.abs(totalDataCollected), color: 'pink' },
   ];
 
-  // Split out the Misc card so we can render it in the right-side box while keeping
-  // the rest of the breakdown on the left. Calculations remain unchanged.
-  const miscCard = collectedBreakdownCards.find(c => c.label === 'Misc Expenses');
-  const leftCards = collectedBreakdownCards.filter(c => c.label !== 'Misc Expenses');
+  // Keep all collected breakdown cards in leftCards (no Misc Expenses redundant card)
+  const leftCards = collectedBreakdownCards;
 
   // --- Animation Variants (No changes here) ---
   const mainContainerVariants = {
@@ -180,17 +176,7 @@ const SummaryPage = () => {
               <span className="text-base font-medium text-blue-800 uppercase tracking-wider">Total Loans Given</span>
               <span className="text-4xl font-bold text-blue-700 mt-1">₹{totalLoansGiven.toLocaleString()}</span>
             </div>
-            {/* Render the Misc Income card in the right-side box (visual move only). */}
-            {miscCard && (
-              <div className="w-full mt-6">
-                <div className={`flex items-center justify-between p-4 rounded-lg bg-${miscCard.color}-50 border border-${miscCard.color}-200`}>
-                  <div>
-                    <div className={`text-sm font-medium text-${miscCard.color}-700`}>{miscCard.label}</div>
-                    <div className={`text-lg font-bold text-${miscCard.color}-800 mt-1`}>₹{miscCard.value.toLocaleString()}</div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Previously showed a separate 'Misc Expenses' card here; removed because subtype breakdown already covers expenses. */}
             {/* Expenses box (calculated from selected misc entry subtypes) */}
             <div className="w-full mt-4">
               <div className={`flex items-center justify-between p-4 rounded-lg bg-red-50 border border-red-200`}>

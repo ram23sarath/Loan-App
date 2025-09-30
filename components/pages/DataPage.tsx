@@ -125,7 +125,7 @@ const DataPage = () => {
       // If the user switches the type to credit, ensure we don't keep a Subscription subtype (Subscription should be hidden for credits)
       if (name === 'type') {
         const newType = value;
-        if (newType === 'credit' && prevForm.subtype === 'Subscription') {
+        if (newType === 'credit' && prevForm.subtype === 'Subscription Return') {
           return { ...prevForm, type: newType, subtype: '' };
         }
         return { ...prevForm, type: newType };
@@ -393,7 +393,7 @@ const DataPage = () => {
                       <select id="subtype" name="subtype" value={form.subtype} onChange={handleChange} className={`${inputBaseStyle} bg-white`}>
                         <option value="">None</option>
                         {/* Show Subscription only when type is NOT credit (hidden for credit entries) */}
-                        {form.type !== 'credit' && <option value="Subscription">Subscription</option>}
+                        {form.type !== 'credit' && <option value="Subscription Return">Subscription Return</option>}
                         <option value="Retirement Gift">Retirement Gift</option>
                         <option value="Death Fund">Death Fund</option>
                         <option value="Misc Expense">Misc Expense</option>
@@ -447,7 +447,7 @@ const DataPage = () => {
                 <label className={labelBaseStyle}>Subtype</label>
                 <select name="subtype" value={editEntryForm.subtype} onChange={e => setEditEntryForm(prev => ({ ...prev, subtype: e.target.value }))} className={inputBaseStyle}>
                   <option value="">None</option>
-                  {editEntryForm.type !== 'credit' && <option value="Subscription">Subscription</option>}
+                  {editEntryForm.type !== 'credit' && <option value="Subscription Return">Subscription Return</option>}
                   <option value="Retirement Gift">Retirement Gift</option>
                   <option value="Death Fund">Death Fund</option>
                   <option value="Misc Expense">Misc Expense</option>

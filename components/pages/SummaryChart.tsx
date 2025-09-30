@@ -22,7 +22,7 @@ interface SummaryChartProps {
 
 const SummaryChart: React.FC<SummaryChartProps> = ({ interest, lateFee, subscription, total, loansGiven }) => {
   const data = {
-    labels: ['Interest', 'Late Fee', 'Subscription', 'Total Collected', 'Loans Given'],
+  labels: ['Interest', 'Late Fee', 'Subscription Return', 'Total Collected', 'Loans Given'],
     datasets: [
       {
         label: 'Amount (₹)',

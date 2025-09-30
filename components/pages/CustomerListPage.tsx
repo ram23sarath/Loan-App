@@ -469,19 +469,19 @@ const CustomerListPage = () => {
 
       <AnimatePresence>
         {selectedCustomer && (
-          <CustomerDetailModal
-            customer={selectedCustomer}
-            loans={loans.filter(l => l.customer_id === selectedCustomer.id)}
-            subscriptions={subscriptions.filter(s => s.customer_id === selectedCustomer.id)}
-            installments={installments}
-            dataEntries={dataEntries}
-            onClose={() => setSelectedCustomer(null)}
-            deleteLoan={deleteLoan}
-            deleteSubscription={deleteSubscription}
-            deleteInstallment={deleteInstallment}
-            onEditLoan={(loan) => setEditModal({ type: 'loan', data: loan })}
-            onEditSubscription={(sub) => setEditModal({ type: 'subscription', data: sub })}
-          />
+	  <CustomerDetailModal
+		  customer={selectedCustomer}
+		  loans={loans.filter(l => l.customer_id === selectedCustomer.id)}
+		  subscriptions={subscriptions.filter(s => s.customer_id === selectedCustomer.id)}
+		  installments={installments}
+		  dataEntries={dataEntries.filter(d => d.customer_id === selectedCustomer.id)}
+		  onClose={() => setSelectedCustomer(null)}
+		  deleteLoan={deleteLoan}
+		  deleteSubscription={deleteSubscription}
+		  deleteInstallment={deleteInstallment}
+		  onEditLoan={(loan) => setEditModal({ type: 'loan', data: loan })}
+		  onEditSubscription={(sub) => setEditModal({ type: 'subscription', data: sub })}
+	  />
         )}
       </AnimatePresence>
       {editModal && (

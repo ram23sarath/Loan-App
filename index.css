@@ -2,3 +2,69 @@
 @keyframes modalIn { from { opacity: 0; transform: scale(0.95);} to { opacity: 1; transform: scale(1);} }
 .animate-fade-in { animation: fadeIn 0.3s ease; }
 .animate-modal-in { animation: modalIn 0.3s cubic-bezier(0.4,0,0.2,1) forwards; }
+
+/* Print styles */
+@media print {
+    /* --- CORRECTED SECTION --- */
+    /* Reset root and layout containers to prevent cropping */
+    html, body, main, #app, #root, .content-wrapper, .flex, .h-screen, .h-full, .overflow-hidden {
+        width: auto !important;
+        height: auto !important;
+        min-height: 0 !important;
+        position: static !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+    }
+    /* Ensure any fixed-height sections are flexible in print */
+    .h-screen, .h-full, .min-h-0 { height: auto !important; min-height: 0 !important; }
+
+    /* Page size and margins to reduce browser clipping (A4) */
+    @page { size: A4 portrait; margin: 10mm; }
+    /* --- END CORRECTION --- */
+
+    .no-print { display: none !important; }
+    .printable-summary { width: 100% !important; max-width: 100% !important; margin: 0 !important; }
+    
+    /* Improve contrast for printing */
+    body { background: #fff !important; color: #000 !important; }
+    
+    /* Remove shadows and rounded corners for clean print */
+    .shadow-sm, .shadow-md { box-shadow: none !important; }
+    .rounded-xl, .rounded-2xl, .rounded-lg, .rounded-md { border-radius: 0 !important; }
+    
+    /* Hide navigation sidebars for printing */
+    aside, nav.fixed, .fixed { display: none !important; }
+    
+    /* Ensure main content uses full width and no cropping */
+    .printable-summary, .printable-summary * { overflow: visible !important; max-height: none !important; }
+    
+    /* Avoid page breaks within summary cards */
+    .printable-summary .rounded-xl, .printable-summary .rounded-2xl, .printable-summary .rounded-lg { page-break-inside: avoid; }
+    
+    /* Ensure grid and panels expand - remove fixed heights that may crop content */
+    .printable-summary .grid, .printable-summary .w-full, .printable-summary .lg\:col-span-2, .printable-summary .lg\:col-span-3 {
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+    }
+    
+    /* Allow columns to stack vertically on print to avoid horizontal cropping */
+    .printable-summary .grid { grid-template-columns: 1fr !important; }
+    
+    /* Make breakdown containers fully visible */
+    .printable-summary .overflow-y-auto, .printable-summary .overflow-hidden { overflow: visible !important; }
+    
+    /* Allow page breaks between major sections */
+    .printable-summary > div, .printable-summary .bg-white { page-break-after: avoid; page-break-inside: avoid; }
+        /* Force page sizing and remove browser margins that can crop content */
+        @page { size: A4 portrait; margin: 12mm; }
+        html, body { width: auto !important; height: auto !important; }
+        /* Remove any max-width container constraints that could crop horizontally */
+        .max-w-7xl { max-width: none !important; width: auto !important; }
+        .container, .mx-auto { margin-left: 0 !important; margin-right: 0 !important; }
+        /* Remove transforms/positioning that may be used for animations and cause clipping */
+        .printable-summary * { transform: none !important; position: static !important; }
+        /* Ensure box-sizing doesn't cause unexpected overflow */
+        .printable-summary, .printable-summary * { box-sizing: border-box !important; }
+}

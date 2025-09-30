@@ -62,13 +62,13 @@ const SummaryPage = () => {
     { label: 'Interest', value: totalInterestCollected, color: 'green' },
     { label: 'Late Fees', value: totalLateFeeCollected, color: 'orange' },
     { label: 'Subscriptions', value: totalSubscriptionCollected, color: 'cyan' },
-    { label: 'Misc Income', value: totalDataCollected, color: 'pink' },
+    { label: 'Misc Expenses', value: totalDataCollected, color: 'pink' },
   ];
 
   // Split out the Misc card so we can render it in the right-side box while keeping
   // the rest of the breakdown on the left. Calculations remain unchanged.
-  const miscCard = collectedBreakdownCards.find(c => c.label === 'Misc Income');
-  const leftCards = collectedBreakdownCards.filter(c => c.label !== 'Misc Income');
+  const miscCard = collectedBreakdownCards.find(c => c.label === 'Misc Expenses');
+  const leftCards = collectedBreakdownCards.filter(c => c.label !== 'Misc Expenses');
 
   // --- Animation Variants (No changes here) ---
   const mainContainerVariants = {
@@ -118,11 +118,21 @@ const SummaryPage = () => {
           initial="hidden"
           animate="visible"
         >
-          {/* Section 1: Collected Funds / Loan Recovery Tab */}
+          {/* Section 1: Income */}
           <motion.div
-            className="lg:col-span-3 bg-indigo-50/50 border border-indigo-100 rounded-2xl p-6 flex flex-col gap-6 shadow-sm"
+            className="lg:col-span-3 bg-white/60 border border-indigo-100 rounded-2xl p-5 flex flex-col gap-4 shadow-sm"
             variants={mainCardVariants}
           >
+            <div className="w-full flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 font-bold">₹</div>
+                <div>
+                  <div className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Income</div>
+                  <div className="text-xs text-gray-400">Collections & recoveries</div>
+                </div>
+              </div>
+            </div>
+
             <div className="flex flex-col items-center">
               <span className="text-base font-medium text-indigo-800 uppercase tracking-wider">Total Collected</span>
               <span className="text-4xl font-bold text-indigo-700 mt-1">₹{totalAllCollected.toLocaleString()}</span>
@@ -152,15 +162,23 @@ const SummaryPage = () => {
             </motion.div>
           </motion.div>
 
-          {/* Section 2: Total Loans Given */}
+          {/* Section 2: Expenses */}
           <motion.div
-            className="lg:col-span-2 bg-blue-50/50 border border-blue-100 rounded-2xl p-6 flex flex-col items-center justify-center shadow-sm"
+            className="lg:col-span-2 bg-white/60 border border-red-100 rounded-2xl p-5 flex flex-col items-center justify-center shadow-sm"
             variants={mainCardVariants}
           >
-            <span className="text-base font-medium text-blue-800 uppercase tracking-wider">Total Loans Given</span>
-            <span className="text-4xl font-bold text-blue-700 mt-1">
-              ₹{totalLoansGiven.toLocaleString()}
-            </span>
+            <div className="w-full flex items-center gap-3 mb-3">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-red-100 text-red-700 font-bold">-</div>
+              <div className="text-sm">
+                <div className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Expenses</div>
+                <div className="text-xs text-gray-400">Outgoing & disbursed principal</div>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center">
+              <span className="text-base font-medium text-blue-800 uppercase tracking-wider">Total Loans Given</span>
+              <span className="text-4xl font-bold text-blue-700 mt-1">₹{totalLoansGiven.toLocaleString()}</span>
+            </div>
             {/* Render the Misc Income card in the right-side box (visual move only). */}
             {miscCard && (
               <div className="w-full mt-6">

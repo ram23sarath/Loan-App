@@ -25,7 +25,7 @@ const SummaryPage = () => {
     return acc + (entry.amount || 0);
   }, 0);
   // New: calculate Expenses from specific subtypes recorded in New Data Entry
-  const expenseSubtypes = ['Subscription', 'Retirement Gift', 'Death Fund', 'Misc Expense'];
+  const expenseSubtypes = ['Subscription Return', 'Retirement Gift', 'Death Fund', 'Misc Expense'];
   const totalExpenses = dataEntries.reduce((acc, entry) => {
     // Consider only entries that are expenditures and match the requested subtypes
     if (entry.type === 'expenditure' && entry.subtype && expenseSubtypes.includes(entry.subtype)) {

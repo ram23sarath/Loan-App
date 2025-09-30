@@ -130,7 +130,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Adjust subscription balance when a misc entry of subtype 'Subscription' is recorded
+  // Adjust subscription balance when a misc entry of subtype 'Subscription Return' is recorded
   const adjustSubscriptionForMisc = async (customerId: string, amount: number, date?: string): Promise<void> => {
     try {
       // find the most recent subscription for this customer
@@ -186,7 +186,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (error || !data) throw error;
       // If this misc data entry represents a subscription adjustment, update subscriptions accordingly
       try {
-        if ((entry as any).subtype === 'Subscription') {
+        if ((entry as any).subtype === 'Subscription Return') {
           await adjustSubscriptionForMisc(entry.customer_id, Number(entry.amount), entry.date);
         }
       } catch (err) {

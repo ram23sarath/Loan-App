@@ -31,6 +31,9 @@ interface DataContextType {
   dataEntries: DataEntry[];
   loading: boolean;
   isRefreshing: boolean;
+  // When a user is tied to a customer record, they should have read-only scoped access
+  isScopedCustomer: boolean;
+  scopedCustomerId: string | null;
   signInWithPassword: (email: string, pass: string) => Promise<void>;
   signOut: () => Promise<void>;
   addCustomer: (customer: Omit<NewCustomer, 'user_id'>) => Promise<Customer>;
@@ -62,42 +65,78 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [dataEntries, setDataEntries] = useState<DataEntry[]>([]);
+  const [isScopedCustomer, setIsScopedCustomer] = useState(false);
+  const [scopedCustomerId, setScopedCustomerId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      // All supabase fetch calls are correct and unchanged...
-      const { data: customersData, error: customersError } = await supabase.from('customers').select('*').order('created_at', { ascending: false });
-      if (customersError) throw customersError;
-      setCustomers((customersData as unknown as Customer[]) || []);
+      // If the user is scoped to a customer, fetch only that customer's related data
+      if (isScopedCustomer && scopedCustomerId) {
+        // Customers: only the scoped customer
+        const { data: customerData, error: custErr } = await supabase.from('customers').select('*').eq('id', scopedCustomerId).limit(1);
+        if (custErr) throw custErr;
+        setCustomers((customerData as unknown as Customer[]) || []);
 
-      const { data: loansData, error: loansError } = await supabase.from('loans').select('*, customers(name, phone)');
-      if (loansError) throw loansError;
-      setLoans((loansData as unknown as LoanWithCustomer[]) || []);
+        // Loans for this customer
+        const { data: loansData, error: loansError } = await supabase.from('loans').select('*, customers(name, phone)').eq('customer_id', scopedCustomerId);
+        if (loansError) throw loansError;
+        const loansArr = (loansData as unknown as LoanWithCustomer[]) || [];
+        setLoans(loansArr);
 
-      const { data: subscriptionsData, error: subscriptionsError } = await supabase.from('subscriptions').select('*, customers(name, phone)');
-      if (subscriptionsError) throw subscriptionsError;
-      setSubscriptions((subscriptionsData as unknown as SubscriptionWithCustomer[]) || []);
-      
+        // Subscriptions for this customer
+        const { data: subscriptionsData, error: subscriptionsError } = await supabase.from('subscriptions').select('*, customers(name, phone)').eq('customer_id', scopedCustomerId);
+        if (subscriptionsError) throw subscriptionsError;
+        setSubscriptions((subscriptionsData as unknown as SubscriptionWithCustomer[]) || []);
 
-      const { data: installmentsData, error: installmentsError } = await supabase.from('installments').select('*');
-      if (installmentsError) throw installmentsError;
-      setInstallments((installmentsData as unknown as Installment[]) || []);
+        // Installments: fetch installments for loans owned by this customer (by loan_id)
+        const loanIds = loansArr.map(l => l.id);
+        if (loanIds.length > 0) {
+          const { data: installmentsData, error: installmentsError } = await supabase.from('installments').select('*').in('loan_id', loanIds);
+          if (installmentsError) throw installmentsError;
+          setInstallments((installmentsData as Installment[]) || []);
+        } else {
+          setInstallments([]);
+        }
 
-      // Fetch data entries
-      const { data: dataEntriesData, error: dataEntriesError } = await supabase.from('data_entries').select('*');
-      if (dataEntriesError) throw dataEntriesError;
-      setDataEntries((dataEntriesData as DataEntry[]) || []);
+        // Data entries for this customer
+        const { data: dataEntriesData, error: dataEntriesError } = await supabase.from('data_entries').select('*').eq('customer_id', scopedCustomerId);
+        if (dataEntriesError) throw dataEntriesError;
+        setDataEntries((dataEntriesData as DataEntry[]) || []);
+      } else {
+        // Full fetch for admin/users with no scoped customer
+        const { data: customersData, error: customersError } = await supabase.from('customers').select('*').order('created_at', { ascending: false });
+        if (customersError) throw customersError;
+        setCustomers((customersData as unknown as Customer[]) || []);
+
+        const { data: loansData, error: loansError } = await supabase.from('loans').select('*, customers(name, phone)');
+        if (loansError) throw loansError;
+        setLoans((loansData as unknown as LoanWithCustomer[]) || []);
+
+        const { data: subscriptionsData, error: subscriptionsError } = await supabase.from('subscriptions').select('*, customers(name, phone)');
+        if (subscriptionsError) throw subscriptionsError;
+        setSubscriptions((subscriptionsData as unknown as SubscriptionWithCustomer[]) || []);
+
+        const { data: installmentsData, error: installmentsError } = await supabase.from('installments').select('*');
+        if (installmentsError) throw installmentsError;
+        setInstallments((installmentsData as unknown as Installment[]) || []);
+
+        // Fetch data entries
+        const { data: dataEntriesData, error: dataEntriesError } = await supabase.from('data_entries').select('*');
+        if (dataEntriesError) throw dataEntriesError;
+        setDataEntries((dataEntriesData as DataEntry[]) || []);
+      }
 
     } catch (error: any) {
       alert(parseSupabaseError(error, 'fetching data'));
     } finally {
       setIsRefreshing(false);
     }
-  }, []);
+  }, [isScopedCustomer, scopedCustomerId]);
 
   // All data mutation functions are correct and unchanged...
   const updateCustomer = async (customerId: string, updates: Partial<Customer>): Promise<Customer> => {
+    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot perform updates');
     try {
       const { data, error } = await supabase.from('customers').update(updates).eq('id', customerId).select().single();
       if (error || !data) throw error;
@@ -109,6 +148,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateLoan = async (loanId: string, updates: Partial<Loan>): Promise<Loan> => {
+    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot perform updates');
     try {
       const { data, error } = await supabase.from('loans').update(updates).eq('id', loanId).select().single();
       if (error || !data) throw error;
@@ -120,6 +160,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateSubscription = async (subscriptionId: string, updates: Partial<Subscription>): Promise<Subscription> => {
+    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot perform updates');
     try {
       const { data, error } = await supabase.from('subscriptions').update(updates).eq('id', subscriptionId).select().single();
       if (error || !data) throw error;
@@ -132,6 +173,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   // Adjust subscription balance when a misc entry of subtype 'Subscription Return' is recorded
   const adjustSubscriptionForMisc = async (customerId: string, amount: number, date?: string): Promise<void> => {
+    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot perform subscription adjustments');
     try {
       // find the most recent subscription for this customer
       const { data: subs, error: subsError } = await supabase.from('subscriptions').select('*').eq('customer_id', customerId).order('date', { ascending: false }).limit(1);
@@ -162,6 +204,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const updateInstallment = async (installmentId: string, updates: Partial<Installment>): Promise<Installment> => {
+    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot perform updates');
     try {
       const { data, error } = await supabase.from('installments').update(updates).eq('id', installmentId).select().single();
       if (error || !data) throw error;
@@ -181,6 +224,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }
   // Add Data Entry
   const addDataEntry = async (entry: NewDataEntry): Promise<DataEntry> => {
+    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot add data entries');
     try {
       const { data, error } = await supabase.from('data_entries').insert([entry]).select().single();
       if (error || !data) throw error;
@@ -203,6 +247,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   // Update Data Entry
   const updateDataEntry = async (id: string, updates: Partial<DataEntry>): Promise<DataEntry> => {
+    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot update data entries');
     try {
       const { data, error } = await supabase.from('data_entries').update(updates).eq('id', id).select().single();
       if (error || !data) throw error;
@@ -215,6 +260,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   // Delete Data Entry
   const deleteDataEntry = async (id: string): Promise<void> => {
+    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot delete data entries');
     try {
       const { error } = await supabase.from('data_entries').delete().eq('id', id);
       if (error) throw error;
@@ -233,8 +279,23 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
 
-      // 2. If a session exists, fetch the associated data.
-      if (session) {
+      // 2. If a session exists, determine whether the auth user is mapped to a customer (scoped user)
+      if (session && session.user && session.user.id) {
+        try {
+          const { data: matchedCustomers, error } = await supabase.from('customers').select('id').eq('user_id', session.user.id).limit(1);
+          if (!error && matchedCustomers && matchedCustomers.length > 0) {
+            setIsScopedCustomer(true);
+            setScopedCustomerId(matchedCustomers[0].id);
+          } else {
+            setIsScopedCustomer(false);
+            setScopedCustomerId(null);
+          }
+        } catch (err) {
+          console.error('Error checking scoped customer', err);
+          setIsScopedCustomer(false);
+          setScopedCustomerId(null);
+        }
+        // Fetch data (scoped or full) after setting flags
         await fetchData();
       }
 
@@ -258,7 +319,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchData]); // This dependency is stable, so the effect runs only once.
+  }, [fetchData]);
 
   // All other functions are correct and unchanged...
   const signInWithPassword = async (email: string, pass: string) => {
@@ -280,6 +341,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addCustomer = async (customerData: Omit<NewCustomer, 'user_id'>): Promise<Customer> => {
+    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot add customers');
     try {
       const { data, error } = await supabase.from('customers').insert([customerData] as any).select().single();
       if (error || !data) throw error;
@@ -291,6 +353,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addLoan = async (loanData: NewLoan): Promise<Loan> => {
+    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot add loans');
     try {
       const { data, error } = await supabase.from('loans').insert([loanData] as any).select().single();
       if (error || !data) throw error;
@@ -302,6 +365,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addSubscription = async (subscriptionData: NewSubscription): Promise<Subscription> => {
+    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot add subscriptions');
     try {
       const { data, error } = await supabase.from('subscriptions').insert([subscriptionData] as any).select().single();
       if (error || !data) throw error;
@@ -313,6 +377,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const addInstallment = async (installmentData: NewInstallment): Promise<Installment> => {
+    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot add installments');
     try {
       const { data, error } = await supabase.from('installments').insert([installmentData] as any).select().single();
       if (error || !data) throw error;
@@ -324,6 +389,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const deleteCustomer = async (customerId: string): Promise<void> => {
+    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot delete customers');
     try {
       // Delete dependent data_entries
       const { error: delDataErr } = await supabase.from('data_entries').delete().eq('customer_id', customerId);
@@ -355,6 +421,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const deleteLoan = async (loanId: string): Promise<void> => {
+    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot delete loans');
     try {
       const { error } = await supabase.from('loans').delete().eq('id', loanId);
       if (error) throw error;
@@ -365,6 +432,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const deleteSubscription = async (subscriptionId: string): Promise<void> => {
+    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot delete subscriptions');
     try {
       const { error } = await supabase.from('subscriptions').delete().eq('id', subscriptionId);
       if (error) throw error;
@@ -375,6 +443,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
   
   const deleteInstallment = async (installmentId: string): Promise<void> => {
+    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot delete installments');
     try {
       const { data, error } = await supabase.from('installments').delete().eq('id', installmentId);
       if (error) throw error;
@@ -386,7 +455,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
 
   return (
-    <DataContext.Provider value={{ session, customers, loans, subscriptions, installments, dataEntries, loading, isRefreshing, signInWithPassword, signOut, addCustomer, updateCustomer, addLoan, updateLoan, addSubscription, updateSubscription, addInstallment, updateInstallment, addDataEntry, updateDataEntry, deleteDataEntry, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, adjustSubscriptionForMisc }}>
+    <DataContext.Provider value={{ session, customers, loans, subscriptions, installments, dataEntries, loading, isRefreshing, isScopedCustomer, scopedCustomerId, signInWithPassword, signOut, addCustomer, updateCustomer, addLoan, updateLoan, addSubscription, updateSubscription, addInstallment, updateInstallment, addDataEntry, updateDataEntry, deleteDataEntry, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, adjustSubscriptionForMisc }}>
       {children}
     </DataContext.Provider>
   );

@@ -30,10 +30,12 @@ const SummaryPage = () => {
     dataEntries.forEach(e => pushDate(e.date));
 
     if (allDates.length === 0) {
-      // fallback: provide a small range around current FY
-      return [defaultFYStart, defaultFYStart - 1, defaultFYStart + 1].sort((a,b) => b-a);
+      // fallback: provide a small range around current FY, but don't go earlier than 2013
+      const fallback = [defaultFYStart + 1, defaultFYStart, defaultFYStart - 1].map(y => Math.max(y, 2013));
+      return Array.from(new Set(fallback)).sort((a,b) => b-a);
     }
-    const minYear = Math.min(...allDates.map(d => getFYStartYearForDate(d)));
+    const rawMinYear = Math.min(...allDates.map(d => getFYStartYearForDate(d)));
+    const minYear = Math.max(2013, rawMinYear);
     const maxYear = Math.max(...allDates.map(d => getFYStartYearForDate(d)));
     const opts: number[] = [];
     for (let y = maxYear; y >= minYear; y--) opts.push(y);
@@ -155,9 +157,9 @@ const SummaryPage = () => {
   // No tab state — Loan Recovery will be displayed as its own heading below Total Collected
 
   const collectedBreakdownCards = [
-    { label: 'Interest', value: fyInterestCollected, color: 'green' },
-    { label: 'Late Fees', value: fyLateFees, color: 'orange' },
-    { label: 'Subscriptions', value: fySubscriptionCollected, color: 'cyan' },
+    { label: 'Interest', value: totalInterestCollected, color: 'green' },
+    { label: 'Late Fees', value: totalLateFeeCollected, color: 'orange' },
+    { label: 'Subscriptions', value: totalSubscriptionCollected, color: 'cyan' },
   ];
 
   // Keep all collected breakdown cards in leftCards (no Misc Expenses redundant card)
@@ -202,7 +204,12 @@ const SummaryPage = () => {
     <div className="w-full max-w-7xl mx-auto my-8 printable-summary">
       <div className="bg-white rounded-xl shadow-md flex flex-col gap-8 p-6 border border-gray-200/80">
         <div className="flex justify-between items-center mb-2">
-          <h2 className="text-2xl font-bold text-indigo-700 uppercase tracking-widest">Summary Dashboard</h2>
+          <div className="flex items-baseline gap-3">
+            <h2 className="text-2xl font-bold text-indigo-700 uppercase tracking-widest">Summary Dashboard</h2>
+            <span className="text-xs text-gray-500">(FY {fyLabel(selectedFYStart)})</span>
+            {/* Print-focused label to ensure visibility in printed reports */}
+            <span className="text-xs text-gray-700 ml-2 print-only">FY {fyLabel(selectedFYStart)}</span>
+          </div>
           <div className="flex items-center gap-2 no-print">
             <button
               onClick={() => window.print()}
@@ -236,13 +243,13 @@ const SummaryPage = () => {
             </div>
 
             <div className="flex flex-col items-center">
-              <span className="text-base font-medium text-indigo-800 uppercase tracking-wider">Total Collected (FY {fyLabel(selectedFYStart)})</span>
-              <span className="text-4xl font-bold text-indigo-700 mt-1">₹{(fySubscriptionCollected + fyLateFees + fyInterestCollected + fyPrincipalRecovered).toLocaleString()}</span>
+              <span className="text-base font-medium text-indigo-800 uppercase tracking-wider">Total Collected</span>
+              <span className="text-4xl font-bold text-indigo-700 mt-1">₹{totalAllCollected.toLocaleString()}</span>
             </div>
 
             <div className="flex flex-col items-center mt-4">
-              <span className="text-sm font-medium text-indigo-800 uppercase tracking-wider">Loan Recovery (Principal) (FY {fyLabel(selectedFYStart)})</span>
-              <span className="text-lg font-bold text-indigo-700 mt-1">₹{fyPrincipalRecovered.toLocaleString()}</span>
+              <span className="text-sm font-medium text-indigo-800 uppercase tracking-wider">Loan Recovery (Principal)</span>
+              <span className="text-lg font-bold text-indigo-700 mt-1">₹{totalPrincipalRecovered.toLocaleString()}</span>
             </div>
 
             <motion.div
@@ -272,16 +279,16 @@ const SummaryPage = () => {
               </div>
               <div className="mt-3 space-y-2">
                 <div className="flex items-center justify-between px-3 py-1 rounded-md bg-cyan-25/30">
-                  <div className="text-sm text-gray-700">Subscriptions (FY)</div>
-                  <div className="text-sm font-medium text-cyan-700">₹{fySubscriptionCollected.toLocaleString()}</div>
+                  <div className="text-sm text-gray-700">Subscriptions</div>
+                  <div className="text-sm font-medium text-cyan-700">₹{totalSubscriptionCollected.toLocaleString()}</div>
                 </div>
                 <div className="flex items-center justify-between px-3 py-1 rounded-md bg-cyan-25/30">
-                  <div className="text-sm text-gray-700">Subscription Return (FY)</div>
-                  <div className="text-sm font-medium text-cyan-700">₹{fySubscriptionReturn.toLocaleString()}</div>
+                  <div className="text-sm text-gray-700">Subscription Return</div>
+                  <div className="text-sm font-medium text-cyan-700">₹{subscriptionReturnTotal.toLocaleString()}</div>
                 </div>
                 <div className="flex items-center justify-between px-3 py-1 rounded-md bg-cyan-25/30">
-                  <div className="text-sm font-medium text-cyan-700">Balance (FY)</div>
-                  <div className={`text-sm font-bold ${(fySubscriptionCollected - fySubscriptionReturn) < 0 ? 'text-red-600' : 'text-cyan-800'}`}>₹{(fySubscriptionCollected - fySubscriptionReturn).toLocaleString()}</div>
+                  <div className="text-sm font-medium text-cyan-700">Balance</div>
+                  <div className={`text-sm font-bold ${subscriptionBalance < 0 ? 'text-red-600' : 'text-cyan-800'}`}>₹{subscriptionBalance.toLocaleString()}</div>
                 </div>
               </div>
             </div>
@@ -365,7 +372,7 @@ const SummaryPage = () => {
             </div>
           </div>
 
-          <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="p-4 rounded-xl bg-cyan-50 border border-cyan-200 flex flex-col items-start">
               <div className="text-xs text-gray-600">Subscriptions (FY)</div>
               <div className="text-xl font-bold text-cyan-800 mt-2">₹{fySubscriptionCollected.toLocaleString()}</div>
@@ -379,8 +386,12 @@ const SummaryPage = () => {
               <div className="text-xl font-bold text-orange-800 mt-2">₹{fyLateFees.toLocaleString()}</div>
             </div>
             <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 flex flex-col items-start">
-              <div className="text-xs text-gray-600">Loans Collected (Principal) (FY)</div>
+              <div className="text-xs text-gray-600">Loan Recovery (Principal) (FY)</div>
               <div className="text-xl font-bold text-blue-800 mt-2">₹{fyPrincipalRecovered.toLocaleString()}</div>
+            </div>
+            <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200 flex flex-col items-start">
+              <div className="text-xs text-gray-600">Total (FY)</div>
+              <div className="text-xl font-bold text-indigo-800 mt-2">₹{(fySubscriptionCollected + fyInterestCollected + fyLateFees + fyPrincipalRecovered).toLocaleString()}</div>
             </div>
           </div>
         </div>

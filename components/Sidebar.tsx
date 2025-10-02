@@ -55,7 +55,7 @@ const Sidebar = () => {
   return (
     <>
       {/* Bottom nav for mobile: only icons */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 flex justify-around items-center py-2 sm:hidden">
+  <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 flex justify-around items-center py-2 sm:hidden">
         {navItems.map(item => (
           <NavLink
             key={item.path}

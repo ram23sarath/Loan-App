@@ -76,3 +76,8 @@
     .print-only { display: inline !important; }
     .hide-on-print { display: none !important; }
 }
+
+/* Hide certain UI elements (like a hamburger or bottom nav) for small devices in landscape orientation */
+@media (max-width: 640px) and (orientation: landscape) {
+    .hide-in-mobile-landscape { display: none !important; }
+}

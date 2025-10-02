@@ -193,11 +193,12 @@ const SummaryPage = () => {
       setBreakdownItems(items);
     } else if (type === 'principal') {
       // Principal recovered in FY: list installments with their amounts and attribute to principal up to loan.original_amount
+      // For the 'source' column, display only the installment number (e.g., "#3") as requested.
       const items: any[] = [];
       loans.forEach(loan => {
         const insts = installments.filter(i => i.loan_id === loan.id && within(i.date));
         insts.forEach(inst => {
-          items.push({ id: inst.id, date: inst.date, amount: inst.amount, receipt: inst.receipt_number, source: `Installment for Loan ${loan.id}`, customer: loan.customers?.name || '' });
+          items.push({ id: inst.id, date: inst.date, amount: inst.amount, receipt: inst.receipt_number, source: inst.installment_number ? `#${inst.installment_number}` : `Installment for Loan ${loan.id}`, customer: loan.customers?.name || '', extra: { installment_number: inst.installment_number } });
         });
       });
       setBreakdownItems(items);
@@ -421,10 +422,10 @@ const SummaryPage = () => {
         <div className="w-full mt-6 bg-gray-50 rounded-lg p-4 border border-gray-100">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <div className="text-sm font-semibold text-gray-700 uppercase">Financial Year</div>
+              <div className="text-sm font-semibold text-gray-700 uppercase">Financial Year Summary — FY {fyLabel(selectedFYStart)}</div>
               <div className="text-xs text-gray-400">Select a fiscal year (Apr - Mar) to visualize collections</div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 no-print">
               <select value={selectedFYStart} onChange={(e) => setSelectedFYStart(Number(e.target.value))} className="px-3 py-2 rounded border bg-white">
                 {fyOptions.map(y => (
                   <option key={y} value={y}>{fyLabel(y)}</option>

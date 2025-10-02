@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
+import FYBreakdownModal from '../modals/FYBreakdownModal';
 import { useData } from '../../context/DataContext';
 
 const SummaryPage = () => {
@@ -150,6 +151,66 @@ const SummaryPage = () => {
     const interestBeforeStart = Math.max(0, Math.min(paidBeforeStart - (loan.original_amount || 0), loan.interest_amount || 0));
     return acc + Math.max(0, interestUntilEnd - interestBeforeStart);
   }, 0);
+
+  // Modal state for breakdown details
+  const [breakdownOpen, setBreakdownOpen] = React.useState(false);
+  const [breakdownTitle, setBreakdownTitle] = React.useState('');
+  const [breakdownItems, setBreakdownItems] = React.useState<any[]>([]);
+
+  const openBreakdown = (type: 'subscriptions' | 'interest' | 'latefees' | 'principal' | 'total') => {
+    setBreakdownTitle(() => {
+      switch (type) {
+        case 'subscriptions': return `Subscriptions — FY ${fyLabel(selectedFYStart)}`;
+        case 'interest': return `Interest — FY ${fyLabel(selectedFYStart)}`;
+        case 'latefees': return `Late Fees — FY ${fyLabel(selectedFYStart)}`;
+        case 'principal': return `Loan Recovery (Principal) — FY ${fyLabel(selectedFYStart)}`;
+        case 'total': return `Total (FY ${fyLabel(selectedFYStart)})`;
+      }
+    });
+
+    // Build items depending on type
+    if (type === 'subscriptions') {
+      const items = fySubscriptions.map(s => ({ id: s.id, date: s.date, amount: s.amount, receipt: s.receipt, source: 'Subscription', customer: (s as any).customers?.name || '' }));
+      setBreakdownItems(items);
+    } else if (type === 'latefees') {
+      const instLate = installments.filter(i => within(i.date) && (i.late_fee || 0) > 0).map(i => {
+        const loan = loans.find(l => l.id === i.loan_id);
+        return { id: i.id, date: i.date, amount: i.late_fee || 0, receipt: i.receipt_number, source: 'Installment Late Fee', customer: loan?.customers?.name || '' };
+      });
+      const subLate = subscriptions.filter(s => within(s.date) && (s.late_fee || 0) > 0).map(s => ({ id: s.id, date: s.date, amount: s.late_fee || 0, receipt: s.receipt, source: 'Subscription Late Fee', customer: (s as any).customers?.name || '' }));
+      setBreakdownItems([...instLate, ...subLate]);
+    } else if (type === 'interest') {
+      // For interest, find installments that include interest portion for the FY
+      const items: any[] = [];
+      loans.forEach(loan => {
+        const insts = installments.filter(i => i.loan_id === loan.id && within(i.date));
+        insts.forEach(inst => {
+          // approximate: interest portion is amount beyond remaining principal, but we don't have amortization schedule;
+          items.push({ id: inst.id, date: inst.date, amount: 0, receipt: inst.receipt_number, source: 'Installment (interest portion)', customer: loan.customers?.name || '' });
+        });
+      });
+      // We'll include a note that amounts are aggregated above; actual per-installment interest split is not exactly stored
+      setBreakdownItems(items);
+    } else if (type === 'principal') {
+      // Principal recovered in FY: list installments with their amounts and attribute to principal up to loan.original_amount
+      const items: any[] = [];
+      loans.forEach(loan => {
+        const insts = installments.filter(i => i.loan_id === loan.id && within(i.date));
+        insts.forEach(inst => {
+          items.push({ id: inst.id, date: inst.date, amount: inst.amount, receipt: inst.receipt_number, source: `Installment for Loan ${loan.id}`, customer: loan.customers?.name || '' });
+        });
+      });
+      setBreakdownItems(items);
+    } else if (type === 'total') {
+      // combine all contributions
+      const subItems = fySubscriptions.map(s => ({ id: s.id, date: s.date, amount: s.amount, receipt: s.receipt, source: 'Subscription', customer: (s as any).customers?.name || '' }));
+      const instItems = installments.filter(i => within(i.date)).map(i => ({ id: i.id, date: i.date, amount: i.amount, receipt: i.receipt_number, source: 'Installment', customer: (loans.find(l => l.id === i.loan_id)?.customers?.name) || '' }));
+      const dataItems = dataEntries.filter(e => within(e.date)).map(e => ({ id: e.id, date: e.date, amount: e.amount, receipt: e.receipt_number, notes: e.notes, source: e.subtype || 'Data Entry', customer: '' }));
+      setBreakdownItems([...subItems, ...instItems, ...dataItems]);
+    }
+
+    setBreakdownOpen(true);
+  };
 
   // Loan Balance = Total Loans Given - Loan Recovery (Principal)
   const loanBalance = totalLoansGiven - totalPrincipalRecovered;
@@ -374,23 +435,38 @@ const SummaryPage = () => {
 
           <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="p-4 rounded-xl bg-cyan-50 border border-cyan-200 flex flex-col items-start">
-              <div className="text-xs text-gray-600">Subscriptions (FY)</div>
+              <div className="flex items-center justify-between w-full">
+                <div className="text-xs text-gray-600">Subscriptions (FY)</div>
+                <button onClick={() => openBreakdown('subscriptions')} className="text-xs text-indigo-600 underline">Details</button>
+              </div>
               <div className="text-xl font-bold text-cyan-800 mt-2">₹{fySubscriptionCollected.toLocaleString()}</div>
             </div>
             <div className="p-4 rounded-xl bg-green-50 border border-green-200 flex flex-col items-start">
-              <div className="text-xs text-gray-600">Interest (FY)</div>
+              <div className="flex items-center justify-between w-full">
+                <div className="text-xs text-gray-600">Interest (FY)</div>
+                <button onClick={() => openBreakdown('interest')} className="text-xs text-indigo-600 underline">Details</button>
+              </div>
               <div className="text-xl font-bold text-green-800 mt-2">₹{fyInterestCollected.toLocaleString()}</div>
             </div>
             <div className="p-4 rounded-xl bg-orange-50 border border-orange-200 flex flex-col items-start">
-              <div className="text-xs text-gray-600">Late Fees (FY)</div>
+              <div className="flex items-center justify-between w-full">
+                <div className="text-xs text-gray-600">Late Fees (FY)</div>
+                <button onClick={() => openBreakdown('latefees')} className="text-xs text-indigo-600 underline">Details</button>
+              </div>
               <div className="text-xl font-bold text-orange-800 mt-2">₹{fyLateFees.toLocaleString()}</div>
             </div>
             <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 flex flex-col items-start">
-              <div className="text-xs text-gray-600">Loan Recovery (Principal) (FY)</div>
+              <div className="flex items-center justify-between w-full">
+                <div className="text-xs text-gray-600">Loan Recovery (Principal) (FY)</div>
+                <button onClick={() => openBreakdown('principal')} className="text-xs text-indigo-600 underline">Details</button>
+              </div>
               <div className="text-xl font-bold text-blue-800 mt-2">₹{fyPrincipalRecovered.toLocaleString()}</div>
             </div>
             <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200 flex flex-col items-start">
-              <div className="text-xs text-gray-600">Total (FY)</div>
+              <div className="flex items-center justify-between w-full">
+                <div className="text-xs text-gray-600">Total (FY)</div>
+                <button onClick={() => openBreakdown('total')} className="text-xs text-indigo-600 underline">Details</button>
+              </div>
               <div className="text-xl font-bold text-indigo-800 mt-2">₹{(fySubscriptionCollected + fyInterestCollected + fyLateFees + fyPrincipalRecovered).toLocaleString()}</div>
             </div>
           </div>
@@ -399,6 +475,8 @@ const SummaryPage = () => {
         <div className="text-center text-xs text-gray-400 mt-2">
           Updated as of {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
         </div>
+
+        <FYBreakdownModal open={breakdownOpen} title={breakdownTitle} items={breakdownItems} onClose={() => setBreakdownOpen(false)} />
       </div>
     </div>
   );

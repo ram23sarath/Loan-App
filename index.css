@@ -68,3 +68,11 @@
         /* Ensure box-sizing doesn't cause unexpected overflow */
         .printable-summary, .printable-summary * { box-sizing: border-box !important; }
 }
+
+/* Utility classes for print visibility */
+.print-only { display: none; }
+.hide-on-print { display: initial; }
+@media print {
+    .print-only { display: inline !important; }
+    .hide-on-print { display: none !important; }
+}

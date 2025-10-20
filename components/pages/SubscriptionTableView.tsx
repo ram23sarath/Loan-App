@@ -1,8 +1,8 @@
-import React from 'react';
-import { useData } from '../../context/DataContext';
-import GlassCard from '../ui/GlassCard';
-import { formatDate } from '../../utils/dateFormatter';
-import { WhatsAppIcon, Trash2Icon } from '../../constants';
+import React from "react";
+import { useData } from "../../context/DataContext";
+import GlassCard from "../ui/GlassCard";
+import { formatDate } from "../../utils/dateFormatter";
+import { WhatsAppIcon, Trash2Icon } from "../../constants";
 
 // Add props for delete
 interface SubscriptionTableViewProps {
@@ -10,17 +10,22 @@ interface SubscriptionTableViewProps {
   deletingId?: string | null;
 }
 
-const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({ onDelete, deletingId }) => {
+const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
+  onDelete,
+  deletingId,
+}) => {
   const { subscriptions } = useData();
-  const [filter, setFilter] = React.useState('');
+  const [filter, setFilter] = React.useState("");
 
   // Sorting state
-  const [sortField, setSortField] = React.useState('');
-  const [sortDirection, setSortDirection] = React.useState<'asc' | 'desc'>('asc');
+  const [sortField, setSortField] = React.useState("");
+  const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">(
+    "asc"
+  );
 
-  const filteredSubscriptions = subscriptions.filter(sub => {
-    const customerName = sub.customers?.name?.toLowerCase() || '';
-    const receipt = (sub.receipt || '').toLowerCase();
+  const filteredSubscriptions = subscriptions.filter((sub) => {
+    const customerName = sub.customers?.name?.toLowerCase() || "";
+    const receipt = (sub.receipt || "").toLowerCase();
     return (
       customerName.includes(filter.toLowerCase()) ||
       receipt.includes(filter.toLowerCase())
@@ -32,44 +37,54 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({ onDelete,
     return [...filteredSubscriptions].sort((a, b) => {
       let aValue: any;
       let bValue: any;
+      const compareMaybeNumeric = (x: any, y: any) => {
+        const xs = x == null ? "" : String(x).trim();
+        const ys = y == null ? "" : String(y).trim();
+        const numeric = /^-?\d+(?:\.\d+)?$/;
+        if (numeric.test(xs) && numeric.test(ys)) {
+          return Number(xs) - Number(ys);
+        }
+        return xs.localeCompare(ys);
+      };
       switch (sortField) {
-        case 'customer':
-          aValue = a.customers?.name || '';
-          bValue = b.customers?.name || '';
+        case "customer":
+          aValue = a.customers?.name || "";
+          bValue = b.customers?.name || "";
           break;
-        case 'amount':
+        case "amount":
           aValue = a.amount;
           bValue = b.amount;
           break;
-        case 'year':
+        case "year":
           aValue = a.year;
           bValue = b.year;
           break;
-        case 'date':
+        case "date":
           aValue = a.date;
           bValue = b.date;
           break;
-        case 'receipt':
-          aValue = a.receipt || '';
-          bValue = b.receipt || '';
+        case "receipt":
+          aValue = a.receipt || "";
+          bValue = b.receipt || "";
           break;
         default:
-          aValue = '';
-          bValue = '';
+          aValue = "";
+          bValue = "";
       }
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
       }
-      return sortDirection === 'asc'
-        ? String(aValue).localeCompare(String(bValue))
-        : String(bValue).localeCompare(String(aValue));
+      const cmp = compareMaybeNumeric(aValue, bValue);
+      return sortDirection === "asc" ? cmp : -cmp;
     });
   }, [filteredSubscriptions, sortField, sortDirection]);
 
   if (subscriptions.length === 0) {
     return (
       <GlassCard>
-        <p className="text-center text-gray-500">No subscriptions recorded yet.</p>
+        <p className="text-center text-gray-500">
+          No subscriptions recorded yet.
+        </p>
       </GlassCard>
     );
   }
@@ -77,10 +92,10 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({ onDelete,
   // Sorting handler
   function handleSort(field: string) {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   }
 
@@ -91,45 +106,102 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({ onDelete,
           type="text"
           placeholder="Filter by customer or receipt..."
           value={filter}
-          onChange={e => setFilter(e.target.value)}
+          onChange={(e) => setFilter(e.target.value)}
           className="border border-gray-300 rounded px-3 py-2 w-full sm:w-64"
         />
       </div>
       <table className="min-w-full border-collapse">
         <thead>
           <tr className="bg-gray-100">
-            <th className="px-4 py-2 border-b text-left cursor-pointer" onClick={() => handleSort('customer')}>Customer</th>
-            <th className="px-4 py-2 border-b text-left cursor-pointer" onClick={() => handleSort('amount')}>Amount</th>
-            <th className="px-4 py-2 border-b text-left cursor-pointer" onClick={() => handleSort('year')}>Year</th>
-            <th className="px-4 py-2 border-b text-left cursor-pointer" onClick={() => handleSort('date')}>Date</th>
-            <th className="px-4 py-2 border-b text-left cursor-pointer" onClick={() => handleSort('receipt')}>Receipt</th>
-            <th className="px-4 py-2 border-b text-left cursor-pointer" onClick={() => handleSort('late_fee')}>Late Fee</th>
+            <th
+              className="px-4 py-2 border-b text-left cursor-pointer"
+              onClick={() => handleSort("customer")}
+            >
+              Customer
+            </th>
+            <th
+              className="px-4 py-2 border-b text-left cursor-pointer"
+              onClick={() => handleSort("amount")}
+            >
+              Amount
+            </th>
+            <th
+              className="px-4 py-2 border-b text-left cursor-pointer"
+              onClick={() => handleSort("year")}
+            >
+              Year
+            </th>
+            <th
+              className="px-4 py-2 border-b text-left cursor-pointer"
+              onClick={() => handleSort("date")}
+            >
+              Date
+            </th>
+            <th
+              className="px-4 py-2 border-b text-left cursor-pointer"
+              onClick={() => handleSort("receipt")}
+            >
+              Receipt
+            </th>
+            <th
+              className="px-4 py-2 border-b text-left cursor-pointer"
+              onClick={() => handleSort("late_fee")}
+            >
+              Late Fee
+            </th>
             <th className="px-4 py-2 border-b text-left">Send</th>
             <th className="px-4 py-2 border-b text-left">Delete</th>
           </tr>
         </thead>
         <tbody>
-          {sortedSubscriptions.map(sub => {
+          {sortedSubscriptions.map((sub) => {
             const customer = sub.customers;
-            let message = '';
-            let whatsappUrl = '#';
+            let message = "";
+            let whatsappUrl = "#";
             let isValidPhone = false;
-            if (customer && customer.phone && /^\d{10,15}$/.test(customer.phone)) {
+            if (
+              customer &&
+              customer.phone &&
+              /^\d{10,15}$/.test(customer.phone)
+            ) {
               isValidPhone = true;
-              message = `Hi ${customer.name}, your subscription payment of ₹${sub.amount} for the year ${sub.year} was received on ${formatDate(sub.date, 'whatsapp')}. Receipt: ${sub.receipt || '-'}${sub.late_fee && sub.late_fee > 0 ? ` (including a late fee of ₹${sub.late_fee})` : ''} Thank you.`;
-              whatsappUrl = `https://wa.me/${customer.phone}?text=${encodeURIComponent(message)}`;
+              message = `Hi ${customer.name}, your subscription payment of ₹${
+                sub.amount
+              } for the year ${sub.year} was received on ${formatDate(
+                sub.date,
+                "whatsapp"
+              )}. Receipt: ${sub.receipt || "-"}${
+                sub.late_fee && sub.late_fee > 0
+                  ? ` (including a late fee of ₹${sub.late_fee})`
+                  : ""
+              } Thank you.`;
+              whatsappUrl = `https://wa.me/${
+                customer.phone
+              }?text=${encodeURIComponent(message)}`;
             }
             return (
               <tr key={sub.id} className="even:bg-gray-50">
-                <td className="px-4 py-2 border-b">{customer?.name ?? 'Unknown'}</td>
-                <td className="px-4 py-2 border-b">₹{sub.amount.toLocaleString()}</td>
+                <td className="px-4 py-2 border-b">
+                  {customer?.name ?? "Unknown"}
+                </td>
+                <td className="px-4 py-2 border-b">
+                  ₹{sub.amount.toLocaleString()}
+                </td>
                 <td className="px-4 py-2 border-b">{sub.year}</td>
-                <td className="px-4 py-2 border-b">{sub.date ? formatDate(sub.date) : '-'}</td>
-                <td className="px-4 py-2 border-b">{sub.receipt || '-'}</td>
-                <td className="px-4 py-2 border-b">{typeof sub.late_fee === 'number' && sub.late_fee > 0 ? `₹${sub.late_fee}` : '-'}</td>
+                <td className="px-4 py-2 border-b">
+                  {sub.date ? formatDate(sub.date) : "-"}
+                </td>
+                <td className="px-4 py-2 border-b">{sub.receipt || "-"}</td>
+                <td className="px-4 py-2 border-b">
+                  {typeof sub.late_fee === "number" && sub.late_fee > 0
+                    ? `₹${sub.late_fee}`
+                    : "-"}
+                </td>
                 <td className="px-4 py-2 border-b">
                   <button
-                    onClick={() => isValidPhone && window.open(whatsappUrl, '_blank')}
+                    onClick={() =>
+                      isValidPhone && window.open(whatsappUrl, "_blank")
+                    }
                     className="p-1 rounded-full hover:bg-green-500/10 transition-colors"
                     aria-label={`Send subscription for ${customer?.name} on WhatsApp`}
                     disabled={!isValidPhone}

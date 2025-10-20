@@ -3,6 +3,7 @@ import { useData } from "../../context/DataContext";
 import GlassCard from "../ui/GlassCard";
 import { formatDate } from "../../utils/dateFormatter";
 import { WhatsAppIcon, Trash2Icon } from "../../constants";
+import EditModal from "../modals/EditModal";
 
 // Add props for delete
 interface SubscriptionTableViewProps {
@@ -14,7 +15,10 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
   onDelete,
   deletingId,
 }) => {
-  const { subscriptions } = useData();
+  const { subscriptions, updateSubscription } = useData();
+  const [editSubscriptionTarget, setEditSubscriptionTarget] = React.useState<
+    any | null
+  >(null);
   const [filter, setFilter] = React.useState("");
 
   // Sorting state
@@ -150,7 +154,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
               Late Fee
             </th>
             <th className="px-4 py-2 border-b text-left">Send</th>
-            <th className="px-4 py-2 border-b text-left">Delete</th>
+            <th className="px-4 py-2 border-b text-left">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -210,20 +214,55 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                   </button>
                 </td>
                 <td className="px-4 py-2 border-b">
-                  <button
-                    onClick={() => onDelete(sub)}
-                    className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
-                    aria-label={`Delete subscription for ${customer?.name}`}
-                    disabled={deletingId === sub.id}
-                  >
-                    <Trash2Icon className="w-5 h-5 text-red-500" />
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setEditSubscriptionTarget(sub)}
+                      className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => onDelete(sub)}
+                      className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                      aria-label={`Delete subscription for ${customer?.name}`}
+                      disabled={deletingId === sub.id}
+                    >
+                      <Trash2Icon className="w-5 h-5 text-red-500" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             );
           })}
         </tbody>
       </table>
+
+      {editSubscriptionTarget && (
+        <EditModal
+          type="subscription"
+          data={editSubscriptionTarget}
+          onClose={() => setEditSubscriptionTarget(null)}
+          onSave={async (updated) => {
+            try {
+              const updates: any = {
+                amount: Number(updated.amount),
+                year: Number(updated.year),
+                date: updated.date || null,
+                receipt: updated.receipt || null,
+                late_fee:
+                  updated.late_fee !== undefined && updated.late_fee !== ""
+                    ? Number(updated.late_fee)
+                    : null,
+              };
+              await updateSubscription(editSubscriptionTarget.id, updates);
+            } catch (err: any) {
+              alert(err.message || String(err));
+            } finally {
+              setEditSubscriptionTarget(null);
+            }
+          }}
+        />
+      )}
     </GlassCard>
   );
 };

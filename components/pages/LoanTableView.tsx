@@ -2,41 +2,34 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useData } from "../../context/DataContext";
 import { Trash2Icon, WhatsAppIcon } from "../../constants";
+import { formatCurrencyIN } from "../../utils/numberFormatter";
 import GlassCard from "../ui/GlassCard";
 import { formatDate } from "../../utils/dateFormatter";
 import type { LoanWithCustomer, Installment } from "../../types";
 import EditModal from "../modals/EditModal";
 
-// Animation variants for the table body to orchestrate the stagger effect
+// ... (All animation variants remain unchanged) ...
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      // A small delay between each row animating in
       staggerChildren: 0.05,
     },
   },
 };
-
-// Animation variants for each individual table row
 const itemVariants = {
-  // Start state: slightly lower and invisible
   hidden: { y: 20, opacity: 0 },
-  // Animate to: original position and fully visible
   visible: {
     y: 0,
     opacity: 1,
   },
-  // Exit state (for filtering): move up and fade out
   exit: { y: -20, opacity: 0 },
 };
-
 const modalBackdropVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1 },
 };
-
 const modalContentVariants = {
   hidden: { scale: 0.9, opacity: 0 },
   visible: {
@@ -240,7 +233,10 @@ const LoanTableView: React.FC = () => {
           <option value="In Progress">In Progress</option>
         </select>
       </div>
-      <table className="min-w-full border-collapse">
+
+      {/* --- THIS IS THE FIX --- */}
+      {/* Added `hidden md:table` to hide on mobile and show on desktop */}
+      <table className="min-w-full border-collapse hidden md:table">
         <thead>
           <tr className="bg-gray-100/70">
             <th
@@ -359,19 +355,19 @@ const LoanTableView: React.FC = () => {
                       </button>
                     </td>
                     <td className="px-4 py-2 border-b">
-                      ₹{loan.original_amount.toLocaleString()}
+                      {formatCurrencyIN(loan.original_amount)}
                     </td>
                     <td className="px-4 py-2 border-b">
-                      ₹{loan.interest_amount.toLocaleString()}
+                      {formatCurrencyIN(loan.interest_amount)}
                     </td>
                     <td className="px-4 py-2 border-b">
-                      ₹{totalRepayable.toLocaleString()}
+                      {formatCurrencyIN(totalRepayable)}
                     </td>
                     <td className="px-4 py-2 border-b">
-                      ₹{paid.toLocaleString()}
+                      {formatCurrencyIN(paid)}
                     </td>
                     <td className="px-4 py-2 border-b">
-                      ₹{balance.toLocaleString()}
+                      {formatCurrencyIN(balance)}
                     </td>
                     <td className="px-4 py-2 border-b">
                       {loan.check_number || "-"}
@@ -459,7 +455,7 @@ const LoanTableView: React.FC = () => {
                                             {formatDate(inst.date)}
                                           </span>
                                           <span className="ml-2 text-green-700 font-semibold">
-                                            ₹{inst.amount.toLocaleString()}
+                                            {formatCurrencyIN(inst.amount)}
                                           </span>
                                           {inst.late_fee > 0 && (
                                             <span className="ml-2 text-orange-500 text-xs">
@@ -554,6 +550,169 @@ const LoanTableView: React.FC = () => {
         </motion.tbody>
       </table>
 
+      {/* Mobile stacked cards */}
+      {/* This `md:hidden` class is correct. It hides this view on desktop */}
+      <div className="md:hidden mt-4 space-y-3">
+        {sortedLoans.map((loan) => {
+          const loanInstallments = installments
+            .filter((inst) => inst.loan_id === loan.id)
+            .sort(
+              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+            );
+          const totalRepayable = loan.original_amount + loan.interest_amount;
+          const paid = loanInstallments.reduce(
+            (acc, inst) => acc + inst.amount,
+            0
+          );
+          const balance = totalRepayable - paid;
+          const customer = loan.customers;
+          return (
+            <div
+              key={loan.id}
+              className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-indigo-700 truncate">
+                    {customer?.name ?? "Unknown"}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {loan.source || "-"}
+                  </div>
+                </div>
+                <div className="text-right ml-3">
+                  <div className="text-lg font-bold">
+                    {formatCurrencyIN(loan.original_amount)}
+                  </div>
+                  <div className="text-xs text-gray-500">{loan.year}</div>
+                </div>
+              </div>
+
+              <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-gray-700">
+                <div>
+                  Paid:{" "}
+                  <span className="font-semibold">
+                    {formatCurrencyIN(paid)}
+                  </span>
+                </div>
+                <div>
+                  Balance:{" "}
+                  <span className="font-semibold">
+                    {formatCurrencyIN(balance)}
+                  </span>
+                </div>
+                <div>
+                  Installments:{" "}
+                  <span className="font-semibold">
+                    {loanInstallments.length}
+                  </span>
+                </div>
+                <div>
+                  Receipt:{" "}
+                  <span className="font-semibold">{loan.receipt || "-"}</span>
+                </div>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setEditLoanTarget(loan)}
+                    className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() =>
+                      setExpandedRow(expandedRow === loan.id ? null : loan.id)
+                    }
+                    className="px-3 py-1 rounded bg-gray-100 text-gray-700 text-sm"
+                  >
+                    Details
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      // delete most recent installment or open delete modal
+                      if (loanInstallments.length > 0) {
+                        setDeleteTarget({
+                          id: loanInstallments[0].id,
+                          number: loanInstallments[0].installment_number,
+                        });
+                      }
+                    }}
+                    className="p-2 rounded-md bg-red-50 text-red-600"
+                    aria-label={`Delete latest installment for ${customer?.name}`}
+                  >
+                    <Trash2Icon className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {expandedRow === loan.id && (
+                <div className="mt-3 border-t pt-3">
+                  <h5 className="text-sm font-semibold mb-2">Installments</h5>
+                  <ul className="space-y-2">
+                    {loanInstallments.map((inst) => (
+                      <li
+                        key={inst.id}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="text-sm">
+                          <div>
+                            #{inst.installment_number} • {formatDate(inst.date)}
+                          </div>
+                          <div className="text-green-700 font-semibold">
+                            {formatCurrencyIN(inst.amount)}{" "}
+                            {inst.late_fee > 0 && (
+                              <span className="text-orange-500 text-xs">
+                                (+{formatCurrencyIN(inst.late_fee)} late)
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Receipt: {inst.receipt_number || "-"}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setEditTarget(inst);
+                              setEditForm({
+                                date: inst.date,
+                                amount: inst.amount.toString(),
+                                late_fee: inst.late_fee?.toString() || "",
+                                receipt_number: inst.receipt_number || "",
+                              });
+                            }}
+                            className="p-1 rounded bg-blue-50 text-blue-600"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() =>
+                              setDeleteTarget({
+                                id: inst.id,
+                                number: inst.installment_number,
+                              })
+                            }
+                            className="p-1 rounded bg-red-50 text-red-600"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ... (All modal logic remains unchanged) ... */}
+      
       {/* Loan Edit Modal */}
       {editLoanTarget && (
         <EditModal
@@ -580,7 +739,7 @@ const LoanTableView: React.FC = () => {
         />
       )}
 
-      {/* ... (All existing modal logic remains unchanged) ... */}
+      {/* Installment Edit Modal */}
       <AnimatePresence>
         {editTarget && (
           <motion.div
@@ -692,6 +851,7 @@ const LoanTableView: React.FC = () => {
         )}
       </AnimatePresence>
 
+      {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {deleteTarget && (
           <motion.div

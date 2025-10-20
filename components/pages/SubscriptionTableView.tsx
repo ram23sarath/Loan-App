@@ -3,6 +3,7 @@ import { useData } from "../../context/DataContext";
 import GlassCard from "../ui/GlassCard";
 import { formatDate } from "../../utils/dateFormatter";
 import { WhatsAppIcon, Trash2Icon } from "../../constants";
+import { formatCurrencyIN } from "../../utils/numberFormatter";
 import EditModal from "../modals/EditModal";
 
 // Add props for delete
@@ -114,7 +115,8 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
           className="border border-gray-300 rounded px-3 py-2 w-full sm:w-64"
         />
       </div>
-      <table className="min-w-full border-collapse">
+      {/* Desktop / Tablet table */}
+      <table className="min-w-full border-collapse hidden md:table">
         <thead>
           <tr className="bg-gray-100">
             <th
@@ -236,6 +238,95 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
           })}
         </tbody>
       </table>
+
+      {/* Mobile stacked cards */}
+      <div className="md:hidden space-y-3">
+        {sortedSubscriptions.map((sub) => {
+          const customer = sub.customers;
+          let message = "";
+          let whatsappUrl = "#";
+          let isValidPhone = false;
+          if (
+            customer &&
+            customer.phone &&
+            /^\d{10,15}$/.test(customer.phone)
+          ) {
+            isValidPhone = true;
+            message = `Hi ${
+              customer.name
+            }, your subscription payment of ${formatCurrencyIN(
+              sub.amount
+            )} for the year ${sub.year} was received on ${formatDate(
+              sub.date,
+              "whatsapp"
+            )}. Receipt: ${sub.receipt || "-"}${
+              sub.late_fee && sub.late_fee > 0
+                ? ` (including a late fee of ${formatCurrencyIN(sub.late_fee)})`
+                : ""
+            } Thank you.`;
+            whatsappUrl = `https://wa.me/${
+              customer.phone
+            }?text=${encodeURIComponent(message)}`;
+          }
+
+          return (
+            <div
+              key={sub.id}
+              className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm"
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="text-sm font-semibold text-indigo-700 truncate">
+                    {customer?.name ?? "Unknown"}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {formatDate(sub.date) || "-"}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-bold">
+                    {formatCurrencyIN(sub.amount)}
+                  </div>
+                  <div className="text-xs text-gray-500">{sub.year}</div>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() =>
+                      isValidPhone && window.open(whatsappUrl, "_blank")
+                    }
+                    className="p-2 rounded-md bg-green-50 text-green-600"
+                    disabled={!isValidPhone}
+                    aria-label={`Send subscription for ${customer?.name} on WhatsApp`}
+                  >
+                    <WhatsAppIcon className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setEditSubscriptionTarget(sub)}
+                    className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
+                  >
+                    Edit
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="text-sm text-gray-600">
+                    Receipt: {sub.receipt || "-"}
+                  </div>
+                  <button
+                    onClick={() => onDelete(sub)}
+                    className="p-2 rounded-md bg-red-50 text-red-600"
+                    aria-label={`Delete subscription for ${customer?.name}`}
+                    disabled={deletingId === sub.id}
+                  >
+                    <Trash2Icon className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
       {editSubscriptionTarget && (
         <EditModal

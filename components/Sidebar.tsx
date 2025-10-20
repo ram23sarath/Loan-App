@@ -1,47 +1,86 @@
-
-import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { FilePlusIcon, HistoryIcon, LandmarkIcon, UserPlusIcon, UsersIcon, LogOutIcon, BookOpenIcon } from '../constants';
+import React from "react";
+import { NavLink } from "react-router-dom";
+import {
+  FilePlusIcon,
+  HistoryIcon,
+  LandmarkIcon,
+  UserPlusIcon,
+  UsersIcon,
+  LogOutIcon,
+  BookOpenIcon,
+} from "../constants";
 // Database icon for Data section
 const DatabaseIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" {...props}>
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
     <ellipse cx="12" cy="6" rx="8" ry="3" />
     <path d="M4 6v6c0 1.657 3.582 3 8 3s8-1.343 8-3V6" />
     <path d="M4 12v6c0 1.657 3.582 3 8 3s8-1.343 8-3v-6" />
   </svg>
 );
 // Hamburger removed — using bottom nav for mobile
-import { useData } from '../context/DataContext';
+import { useData } from "../context/DataContext";
+import HamburgerIcon from "./ui/HamburgerIcon";
 
 const navItems = [
-  { path: '/', label: 'Add Customer', icon: UserPlusIcon },
-  { path: '/add-record', label: 'Add Record', icon: FilePlusIcon },
-  { path: '/customers', label: 'Customers', icon: UsersIcon },
-  { path: '/loans', label: 'Loans', icon: LandmarkIcon },
-  { path: '/subscriptions', label: 'Subscriptions', icon: HistoryIcon },
-  { path: '/data', label: 'Misc', icon: DatabaseIcon },
-  { path: '/summary', label: 'Summary', icon: BookOpenIcon },
+  { path: "/", label: "Add Customer", icon: UserPlusIcon },
+  { path: "/add-record", label: "Add Record", icon: FilePlusIcon },
+  { path: "/customers", label: "Customers", icon: UsersIcon },
+  { path: "/loans", label: "Loans", icon: LandmarkIcon },
+  { path: "/subscriptions", label: "Subscriptions", icon: HistoryIcon },
+  { path: "/data", label: "Misc", icon: DatabaseIcon },
+  { path: "/summary", label: "Summary", icon: BookOpenIcon },
 ];
 
 const Sidebar = () => {
-  const { session, signOut, loans = [], installments = [], subscriptions = [] } = useData();
+  const {
+    session,
+    signOut,
+    loans = [],
+    installments = [],
+    subscriptions = [],
+  } = useData();
 
-  // --- Summary Calculations (same as SubscriptionListPage) ---
+  // --- Summary Calculations ---
   const totalInterestCollected = loans.reduce((acc, loan) => {
-    const loanInstallments = installments.filter(i => i.loan_id === loan.id);
-    const totalPaidForLoan = loanInstallments.reduce((sum, inst) => sum + inst.amount, 0);
+    const loanInstallments = installments.filter((i) => i.loan_id === loan.id);
+    const totalPaidForLoan = loanInstallments.reduce(
+      (sum, inst) => sum + inst.amount,
+      0
+    );
     if (totalPaidForLoan > loan.original_amount) {
-      const interestCollected = Math.min(totalPaidForLoan - loan.original_amount, loan.interest_amount);
+      const interestCollected = Math.min(
+        totalPaidForLoan - loan.original_amount,
+        loan.interest_amount
+      );
       return acc + interestCollected;
     }
     return acc;
   }, 0);
-  const totalLateFeeCollected = installments.reduce((acc, inst) => acc + (inst.late_fee || 0), 0);
-  const totalSubscriptionCollected = subscriptions.reduce((acc, sub) => acc + (sub.amount || 0), 0);
-  const totalAllCollected = totalInterestCollected + totalLateFeeCollected + totalSubscriptionCollected;
-  const totalLoansGiven = loans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
-  const activeLinkClass = 'bg-indigo-50 text-indigo-600 font-semibold';
-  const inactiveLinkClass = 'text-gray-600 hover:bg-gray-100 hover:text-gray-900';
+  const totalLateFeeCollected = installments.reduce(
+    (acc, inst) => acc + (inst.late_fee || 0),
+    0
+  );
+  const totalSubscriptionCollected = subscriptions.reduce(
+    (acc, sub) => acc + (sub.amount || 0),
+    0
+  );
+  const totalAllCollected =
+    totalInterestCollected + totalLateFeeCollected + totalSubscriptionCollected;
+  const totalLoansGiven = loans.reduce(
+    (acc, loan) => acc + loan.original_amount + loan.interest_amount,
+    0
+  );
+  const activeLinkClass = "bg-indigo-50 text-indigo-600 font-semibold";
+  const inactiveLinkClass =
+    "text-gray-600 hover:bg-gray-100 hover:text-gray-900";
 
   const handleSignOut = async () => {
     try {
@@ -51,67 +90,171 @@ const Sidebar = () => {
     }
   };
 
+  const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [collapsed, setCollapsed] = React.useState(false);
+
+  const toggleSidebar = () => {
+    try {
+      if (window.innerWidth < 640) {
+        setMobileOpen((v) => !v);
+      } else {
+        setCollapsed((v) => !v);
+      }
+    } catch (e) {
+      // fallback
+      setMobileOpen((v) => !v);
+    }
+  };
+
   // Responsive sidebar and bottom nav
   return (
     <>
-      {/* Bottom nav for mobile: only icons */}
-  <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 flex justify-around items-center py-2 sm:hidden">
-        {navItems.map(item => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              `flex flex-col items-center justify-center px-2 ${isActive ? 'text-indigo-600' : 'text-gray-500'}`
-            }
-            aria-label={item.label}
-          >
-            <item.icon className="w-6 h-6" />
-          </NavLink>
-        ))}
-      </nav>
+      {/* Hamburger button (top-left) - ONLY for mobile drawer */}
+      <button
+        aria-label="Toggle menu"
+        onClick={toggleSidebar}
+        className="fixed top-4 left-4 z-50 p-2 rounded-md bg-white border border-gray-200 shadow sm:hidden"
+      >
+        <HamburgerIcon className="w-6 h-6 text-gray-700" />
+      </button>
+
+      {/* Bottom nav for mobile: only icons (hidden when mobile drawer open) */}
+      {!mobileOpen && (
+        <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 flex justify-around items-center py-2 sm:hidden">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center px-2 ${
+                  isActive ? "text-indigo-600" : "text-gray-500"
+                }`
+              }
+              aria-label={item.label}
+            >
+              <item.icon className="w-6 h-6" />
+            </NavLink>
+          ))}
+        </nav>
+      )}
 
       {/* Desktop sidebar (hidden on small screens) */}
-      <aside className={`w-64 h-screen p-4 flex-shrink-0 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col sm:block hidden`}>
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-800">Loan Management</h1>
+      <aside
+        // --- FIX: Removed `p-4` from this line ---
+        className={`h-screen flex-shrink-0 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col sm:block hidden transition-all duration-300 ${
+          collapsed ? "w-20" : "w-64"
+        }`}
+      >
+        <div
+          className={`p-4 border-b border-gray-200 flex items-center ${
+            collapsed ? "justify-center" : "justify-between"
+          }`}
+        >
+          {!collapsed && (
+            <h1 className="text-2xl font-bold text-gray-800">
+              Loan Management
+            </h1>
+          )}
+          <button
+            aria-label="Collapse menu"
+            onClick={toggleSidebar}
+            className="p-2 rounded-md hover:bg-gray-100"
+          >
+            <HamburgerIcon className="w-5 h-5 text-gray-700" />
+          </button>
         </div>
+
         <div className="flex-1 flex flex-col min-h-0">
           <nav className="flex-1 p-4 space-y-2 overflow-y-auto min-h-0">
-            {navItems.map(item => (
+            {navItems.map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}
                 className={({ isActive }) =>
-                  `flex items-center p-3 rounded-lg transition-colors duration-200 ${isActive ? activeLinkClass : inactiveLinkClass}`
+                  `flex items-center p-3 rounded-lg transition-colors duration-200 ${
+                    isActive ? activeLinkClass : inactiveLinkClass
+                  } ${
+                    collapsed ? "justify-center" : ""
+                  }`
                 }
               >
-                <item.icon className="w-6 h-6 mr-3" />
-                <span>{item.label}</span>
+                <item.icon className={`w-6 h-6 ${collapsed ? "" : "mr-3"}`} />
+                {!collapsed && <span>{item.label}</span>}
               </NavLink>
             ))}
           </nav>
           <div className="shrink-0">
             <div className="p-4 border-t border-gray-200 space-y-4">
-              {session?.user && (
+              {session?.user && !collapsed && (
                 <div className="text-center">
-                  <p className="text-xs text-gray-500 truncate" title={session.user.email}>Logged in as:</p>
-                  <p className="text-sm font-semibold text-gray-800 truncate">{session.user.email}</p>
+                  <p
+                    className="text-xs text-gray-500 truncate"
+                    title={session.user.email}
+                  >
+                    Logged in as:
+                  </p>
+                  <p className="text-sm font-semibold text-gray-800 truncate">
+                    {session.user.email}
+                  </p>
                 </div>
               )}
               <button
                 onClick={handleSignOut}
                 className="w-full flex items-center justify-center p-3 rounded-lg transition-colors duration-200 text-red-600 bg-red-50 hover:bg-red-100 font-semibold"
+                aria-label={collapsed ? "Logout" : undefined}
               >
-                <LogOutIcon className="w-5 h-5 mr-2" />
-                <span>Logout</span>
+                <LogOutIcon className={`w-5 h-5 ${collapsed ? "" : "mr-2"}`} />
+                {!collapsed && <span>Logout</span>}
               </button>
             </div>
-            <div className="p-4 border-t border-gray-200 text-center text-xs text-gray-400">
-              <p>&copy; {new Date().getFullYear()} Sleek Solutions</p>
-            </div>
+            {!collapsed && (
+              <div className="p-4 border-t border-gray-200 text-center text-xs text-gray-400">
+                <p>&copy; {new Date().getFullYear()} Sleek Solutions</p>
+              </div>
+            )}
           </div>
         </div>
       </aside>
+
+      {/* Mobile drawer overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 sm:hidden"
+          onClick={() => setMobileOpen(false)}
+        >
+          <div
+            className="absolute left-0 top-0 bottom-0 w-64 bg-white p-4 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold">Menu</h2>
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="p-1 rounded hover:bg-gray-100"
+              >
+                ✕
+              </button>
+            </div>
+            <nav className="space-y-2">
+              {navItems.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setMobileOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center p-3 rounded-lg ${
+                      isActive ? activeLinkClass : inactiveLinkClass
+                    }`
+                  }
+                >
+                  <item.icon className="w-6 h-6 mr-3" />
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+            </nav>
+          </div>
+        </div>
+      )}
     </>
   );
 };

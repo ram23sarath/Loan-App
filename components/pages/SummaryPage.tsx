@@ -203,11 +203,20 @@ const SummaryPage = () => {
     {} as Record<string, number>
   );
   dataEntries.forEach((e) => {
-    if (e.type === "expenditure" && e.subtype && within(e.date) && fyExpenseSubtypes.includes(e.subtype)) {
-      fyExpensesBySubtype[e.subtype!] = (fyExpensesBySubtype[e.subtype!] || 0) + (e.amount || 0);
+    if (
+      e.type === "expenditure" &&
+      e.subtype &&
+      within(e.date) &&
+      fyExpenseSubtypes.includes(e.subtype)
+    ) {
+      fyExpensesBySubtype[e.subtype!] =
+        (fyExpensesBySubtype[e.subtype!] || 0) + (e.amount || 0);
     }
   });
-  const fyExpensesTotal = Object.values(fyExpensesBySubtype).reduce((a, b) => a + b, 0);
+  const fyExpensesTotal = Object.values(fyExpensesBySubtype).reduce(
+    (a, b) => a + b,
+    0
+  );
 
   // Late fees in FY (installments + subscriptions)
   const fyLateFees =
@@ -803,15 +812,24 @@ const SummaryPage = () => {
             {/* FY Expenses card (deductible) */}
             <div className="p-4 rounded-xl bg-red-50 border border-red-200 flex flex-col items-start">
               <div className="flex items-center justify-between w-full">
-                <div className="text-xs text-gray-600">FY Expenses (selected subtypes)</div>
+                <div className="text-xs text-gray-600">
+                  FY Expenses (selected subtypes)
+                </div>
               </div>
-              <div className="text-xl font-bold text-red-800 mt-2">{formatCurrencyIN(fyExpensesTotal)}</div>
+              <div className="text-xl font-bold text-red-800 mt-2">
+                {formatCurrencyIN(fyExpensesTotal)}
+              </div>
               <div className="mt-2 text-sm text-gray-600">Breakdown:</div>
               <div className="mt-2 space-y-1 w-full">
                 {fyExpenseSubtypes.map((s) => (
-                  <div key={s} className="flex items-center justify-between text-sm">
+                  <div
+                    key={s}
+                    className="flex items-center justify-between text-sm"
+                  >
                     <div className="text-gray-700">{s}</div>
-                    <div className="font-medium text-red-700">{formatCurrencyIN(fyExpensesBySubtype[s] || 0)}</div>
+                    <div className="font-medium text-red-700">
+                      {formatCurrencyIN(fyExpensesBySubtype[s] || 0)}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -823,7 +841,11 @@ const SummaryPage = () => {
               </div>
               <div className="text-xl font-bold text-emerald-800 mt-2">
                 {formatCurrencyIN(
-                  (fySubscriptionCollected + fyInterestCollected + fyLateFees + fyPrincipalRecovered) - fyExpensesTotal
+                  fySubscriptionCollected +
+                    fyInterestCollected +
+                    fyLateFees +
+                    fyPrincipalRecovered -
+                    fyExpensesTotal
                 )}
               </div>
             </div>

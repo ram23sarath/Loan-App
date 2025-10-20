@@ -5,6 +5,7 @@ import { Trash2Icon, WhatsAppIcon } from "../../constants";
 import GlassCard from "../ui/GlassCard";
 import { formatDate } from "../../utils/dateFormatter";
 import type { LoanWithCustomer, Installment } from "../../types";
+import EditModal from "../modals/EditModal";
 
 // Animation variants for the table body to orchestrate the stagger effect
 const containerVariants = {
@@ -47,8 +48,13 @@ const modalContentVariants = {
 };
 
 const LoanTableView: React.FC = () => {
-  const { loans, installments, deleteInstallment, updateInstallment } =
-    useData();
+  const {
+    loans,
+    installments,
+    deleteInstallment,
+    updateInstallment,
+    updateLoan,
+  } = useData();
   const [filter, setFilter] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("");
   const [sortField, setSortField] = React.useState("");
@@ -190,6 +196,8 @@ const LoanTableView: React.FC = () => {
     number: number;
   } | null>(null);
   const [editTarget, setEditTarget] = React.useState<Installment | null>(null);
+  const [editLoanTarget, setEditLoanTarget] =
+    React.useState<LoanWithCustomer | null>(null);
   const [editForm, setEditForm] = React.useState({
     date: "",
     amount: "",
@@ -301,6 +309,9 @@ const LoanTableView: React.FC = () => {
             >
               Status
             </th>
+            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">
+              Actions
+            </th>
           </tr>
         </thead>
         {/* THIS SECTION CONTROLS THE INITIAL ROW-BY-ROW FADE IN */}
@@ -380,6 +391,16 @@ const LoanTableView: React.FC = () => {
                       }`}
                     >
                       {isPaidOff ? "Paid Off" : "In Progress"}
+                    </td>
+                    <td className="px-4 py-2 border-b">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setEditLoanTarget(loan)}
+                          className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
+                        >
+                          Edit
+                        </button>
+                      </div>
                     </td>
                   </motion.tr>
 
@@ -532,6 +553,32 @@ const LoanTableView: React.FC = () => {
           </AnimatePresence>
         </motion.tbody>
       </table>
+
+      {/* Loan Edit Modal */}
+      {editLoanTarget && (
+        <EditModal
+          type="loan"
+          data={editLoanTarget}
+          onClose={() => setEditLoanTarget(null)}
+          onSave={async (updated) => {
+            try {
+              // build updates object - ensure numeric fields are numbers
+              const updates: any = {
+                original_amount: Number(updated.original_amount),
+                interest_amount: Number(updated.interest_amount),
+                check_number: updated.check_number || null,
+                total_instalments: Number(updated.total_instalments) || null,
+                payment_date: updated.payment_date || null,
+              };
+              await updateLoan(editLoanTarget.id, updates);
+            } catch (err: any) {
+              alert(err.message || String(err));
+            } finally {
+              setEditLoanTarget(null);
+            }
+          }}
+        />
+      )}
 
       {/* ... (All existing modal logic remains unchanged) ... */}
       <AnimatePresence>

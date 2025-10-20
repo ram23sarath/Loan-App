@@ -90,26 +90,21 @@ const Sidebar = () => {
     }
   };
 
-  const [mobileOpen, setMobileOpen] = React.useState(false);
+  // --- CHANGED 1: Removed mobileOpen state ---
   const [collapsed, setCollapsed] = React.useState(false);
 
+  // --- CHANGED 2: Simplified toggleSidebar function ---
   const toggleSidebar = () => {
-    try {
-      if (window.innerWidth < 640) {
-        setMobileOpen((v) => !v);
-      } else {
-        setCollapsed((v) => !v);
-      }
-    } catch (e) {
-      // fallback
-      setMobileOpen((v) => !v);
-    }
+    // This function now only controls the desktop collapsed state
+    setCollapsed((v) => !v);
   };
 
   // Responsive sidebar and bottom nav
   return (
     <>
-      {/* Hamburger button (top-left) - ONLY for mobile drawer */}
+      {/* --- CHANGED 3: Mobile hamburger button removed --- */}
+      {/* The button below was removed, as requested */}
+      {/*
       <button
         aria-label="Toggle menu"
         onClick={toggleSidebar}
@@ -117,30 +112,28 @@ const Sidebar = () => {
       >
         <HamburgerIcon className="w-6 h-6 text-gray-700" />
       </button>
+      */}
 
-      {/* Bottom nav for mobile: only icons (hidden when mobile drawer open) */}
-      {!mobileOpen && (
-        <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 flex justify-around items-center py-2 sm:hidden">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `flex flex-col items-center justify-center px-2 ${
-                  isActive ? "text-indigo-600" : "text-gray-500"
-                }`
-              }
-              aria-label={item.label}
-            >
-              <item.icon className="w-6 h-6" />
-            </NavLink>
-          ))}
-        </nav>
-      )}
+      {/* --- CHANGED 4: Bottom nav is now always visible on mobile --- */}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 flex justify-around items-center py-2 sm:hidden">
+        {navItems.map((item) => (
+          <NavLink
+            key={item.path}
+            to={item.path}
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center px-2 ${
+                isActive ? "text-indigo-600" : "text-gray-500"
+              }`
+            }
+            aria-label={item.label}
+          >
+            <item.icon className="w-6 h-6" />
+          </NavLink>
+        ))}
+      </nav>
 
       {/* Desktop sidebar (hidden on small screens) */}
       <aside
-        // --- FIX: Removed `p-4` from this line ---
         className={`h-screen flex-shrink-0 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col sm:block hidden transition-all duration-300 ${
           collapsed ? "w-20" : "w-64"
         }`}
@@ -216,7 +209,8 @@ const Sidebar = () => {
         </div>
       </aside>
 
-      {/* Mobile drawer overlay */}
+      {/* --- CHANGED 5: Mobile drawer overlay removed --- */}
+      {/*
       {mobileOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/40 sm:hidden"
@@ -255,6 +249,7 @@ const Sidebar = () => {
           </div>
         </div>
       )}
+      */}
     </>
   );
 };

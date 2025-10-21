@@ -90,14 +90,28 @@ const Sidebar = () => {
     }
   };
 
-  // --- CHANGED 1: Removed mobileOpen state ---
-  const [collapsed, setCollapsed] = React.useState(false);
+  // Sidebar collapsed by default; users can expand via hover or toggle.
+  const [collapsed, setCollapsed] = React.useState(true);
+  const collapseTimer = React.useRef<number | null>(null);
 
-  // --- CHANGED 2: Simplified toggleSidebar function ---
-  const toggleSidebar = () => {
-    // This function now only controls the desktop collapsed state
-    setCollapsed((v) => !v);
+  const clearCollapseTimer = () => {
+    if (collapseTimer.current) {
+      clearTimeout(collapseTimer.current as unknown as number);
+      collapseTimer.current = null;
+    }
   };
+
+  const startCollapseTimer = (ms = 3000) => {
+    clearCollapseTimer();
+    collapseTimer.current = window.setTimeout(() => {
+      setCollapsed(true);
+      collapseTimer.current = null;
+    }, ms) as unknown as number;
+  };
+
+  React.useEffect(() => {
+    return () => clearCollapseTimer();
+  }, []);
 
   // Responsive sidebar and bottom nav
   return (
@@ -134,6 +148,15 @@ const Sidebar = () => {
 
       {/* Desktop sidebar (hidden on small screens) */}
       <aside
+        onMouseEnter={() => {
+          // expand on hover
+          setCollapsed(false);
+          clearCollapseTimer();
+        }}
+        onMouseLeave={() => {
+          // start auto-collapse timer
+          startCollapseTimer(3000);
+        }}
         className={`h-screen flex-shrink-0 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col sm:block hidden transition-all duration-300 ${
           collapsed ? "w-20" : "w-64"
         }`}
@@ -149,8 +172,11 @@ const Sidebar = () => {
             </h1>
           )}
           <button
-            aria-label="Collapse menu"
-            onClick={toggleSidebar}
+            aria-label={collapsed ? "Expand menu" : "Collapse menu"}
+            onClick={() => {
+              setCollapsed(!collapsed);
+              clearCollapseTimer();
+            }}
             className="p-2 rounded-md hover:bg-gray-100"
           >
             <HamburgerIcon className="w-5 h-5 text-gray-700" />
@@ -166,9 +192,7 @@ const Sidebar = () => {
                 className={({ isActive }) =>
                   `flex items-center p-3 rounded-lg transition-colors duration-200 ${
                     isActive ? activeLinkClass : inactiveLinkClass
-                  } ${
-                    collapsed ? "justify-center" : ""
-                  }`
+                  } ${collapsed ? "justify-center" : ""}`
                 }
               >
                 <item.icon className={`w-6 h-6 ${collapsed ? "" : "mr-3"}`} />

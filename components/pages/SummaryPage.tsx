@@ -747,7 +747,7 @@ const SummaryPage = () => {
         <div className="w-full mt-6 bg-gray-50 rounded-lg p-4 border border-gray-100">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <div className="text-sm font-semibold text-gray-700 uppercase">
+              <div className="text-2xl font-bold text-gray-700 uppercase">
                 Financial Year Summary — FY {fyLabel(selectedFYStart)}
               </div>
               <div className="text-xs text-gray-400">
@@ -758,7 +758,8 @@ const SummaryPage = () => {
               <select
                 value={selectedFYStart}
                 onChange={(e) => setSelectedFYStart(Number(e.target.value))}
-                className="px-3 py-2 rounded border bg-white"
+                className="px-5 py-2 rounded border bg-white text-base"
+                style={{ minWidth: 150 }}
               >
                 {fyOptions.map((y) => (
                   <option key={y} value={y}>

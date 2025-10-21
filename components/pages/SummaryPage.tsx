@@ -517,13 +517,6 @@ const SummaryPage = () => {
             <h2 className="text-2xl font-bold text-indigo-700 uppercase tracking-widest">
               Summary Dashboard
             </h2>
-            <span className="text-xs text-gray-500">
-              (FY {fyLabel(selectedFYStart)})
-            </span>
-            {/* Print-focused label to ensure visibility in printed reports */}
-            <span className="text-xs text-gray-700 ml-2 print-only">
-              FY {fyLabel(selectedFYStart)}
-            </span>
           </div>
           <div className="flex items-center gap-2 no-print">
             <button
@@ -537,14 +530,14 @@ const SummaryPage = () => {
         </div>
 
         <motion.div
-          className="w-full grid grid-cols-1 lg:grid-cols-5 gap-6"
+          className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6 auto-rows-fr items-stretch"
           variants={mainContainerVariants}
           initial="hidden"
           animate="visible"
         >
           {/* Section 1: Income */}
           <motion.div
-            className="lg:col-span-3 bg-white/60 border border-indigo-100 rounded-2xl p-5 flex flex-col gap-4 shadow-sm"
+            className="lg:col-span-1 bg-white/60 border border-indigo-100 rounded-2xl p-5 flex flex-col gap-4 shadow-sm h-full"
             variants={mainCardVariants}
           >
             <div className="w-full flex items-center justify-between">
@@ -690,7 +683,7 @@ const SummaryPage = () => {
 
           {/* Section 2: Expenses */}
           <motion.div
-            className="lg:col-span-2 bg-white/60 border border-red-100 rounded-2xl p-5 flex flex-col items-center justify-center shadow-sm"
+            className="lg:col-span-1 bg-white/60 border border-red-100 rounded-2xl p-5 flex flex-col gap-4 shadow-sm h-full"
             variants={mainCardVariants}
           >
             <div className="w-full flex items-center gap-3 mb-3">

@@ -157,9 +157,12 @@ const Sidebar = () => {
           // start auto-collapse timer
           startCollapseTimer(3000);
         }}
-        className={`h-screen flex-shrink-0 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col sm:block hidden transition-all duration-300 ${
-          collapsed ? "w-20" : "w-64"
-        }`}
+        // Use an explicit width transition (avoid transition-all jitter)
+        style={{
+          width: collapsed ? 80 : 256,
+          transition: "width 260ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+        }}
+        className={`h-screen flex-shrink-0 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col sm:block hidden`}
       >
         <div
           className={`p-4 border-b border-gray-200 flex items-center ${
@@ -190,13 +193,39 @@ const Sidebar = () => {
                 key={item.path}
                 to={item.path}
                 className={({ isActive }) =>
-                  `flex items-center p-3 rounded-lg transition-colors duration-200 ${
+                  `group flex items-center p-3 rounded-lg transition-colors duration-200 ${
                     isActive ? activeLinkClass : inactiveLinkClass
-                  } ${collapsed ? "justify-center" : ""}`
+                  }`
                 }
               >
-                <item.icon className={`w-6 h-6 ${collapsed ? "" : "mr-3"}`} />
-                {!collapsed && <span>{item.label}</span>}
+                <div className="relative flex items-center w-full">
+                  <item.icon className={`w-6 h-6 text-current`} />
+
+                  {/* label container - animate maxWidth & opacity to avoid reflow jitter */}
+                  <span
+                    className="inline-block overflow-hidden whitespace-nowrap transition-all duration-200 ease-in-out"
+                    style={{
+                      maxWidth: collapsed ? 0 : 160,
+                      opacity: collapsed ? 0 : 1,
+                      transform: collapsed
+                        ? "translateX(-6px)"
+                        : "translateX(0)",
+                      marginLeft: collapsed ? 0 : 12,
+                    }}
+                    aria-hidden={collapsed}
+                  >
+                    {item.label}
+                  </span>
+
+                  {/* simple tooltip shown only when collapsed */}
+                  {collapsed && (
+                    <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 pointer-events-none hidden group-hover:block">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
+                        {item.label}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </NavLink>
             ))}
           </nav>

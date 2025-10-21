@@ -274,6 +274,9 @@ const SummaryPage = () => {
   const [breakdownOpen, setBreakdownOpen] = React.useState(false);
   const [breakdownTitle, setBreakdownTitle] = React.useState("");
   const [breakdownItems, setBreakdownItems] = React.useState<any[]>([]);
+  const [breakdownSummary, setBreakdownSummary] = React.useState<
+    { label: string; value: number }[]
+  >([]);
 
   const openBreakdown = (
     type: "subscriptions" | "interest" | "latefees" | "principal" | "total"
@@ -351,28 +354,70 @@ const SummaryPage = () => {
       // We'll include a note that amounts are aggregated above; actual per-installment interest split is not exactly stored
       setBreakdownItems(items);
     } else if (type === "principal") {
-      // Principal recovered in FY: list installments with their amounts and attribute to principal up to loan.original_amount
-      // For the 'source' column, display only the installment number (e.g., "#3") as requested.
-      const items: any[] = [];
-      loans.forEach((loan) => {
-        const insts = installments.filter(
-          (i) => i.loan_id === loan.id && within(i.date)
-        );
-        insts.forEach((inst) => {
-          items.push({
-            id: inst.id,
-            date: inst.date,
-            amount: inst.amount,
-            receipt: inst.receipt_number,
-            source: inst.installment_number
-              ? `#${inst.installment_number}`
-              : `Installment for Loan ${loan.id}`,
+      // Show per-loan rows (customer + loan details) instead of individual installments.
+      // For each loan, compute principal recovered during FY and include it as a note.
+      const items = loans
+        .map((loan) => {
+          const insts = installments.filter((i) => i.loan_id === loan.id);
+          const instsInFY = insts.filter((i) => within(i.date));
+          const paidUntilEnd = insts
+            .filter((i) => new Date(i.date) <= fyEnd)
+            .reduce((sum, i) => sum + (i.amount || 0), 0);
+          const paidBeforeStart = insts
+            .filter((i) => new Date(i.date) < fyStart)
+            .reduce((sum, i) => sum + (i.amount || 0), 0);
+          const principalUntilEnd = Math.min(
+            paidUntilEnd,
+            loan.original_amount || 0
+          );
+          const principalBeforeStart = Math.min(
+            paidBeforeStart,
+            loan.original_amount || 0
+          );
+          const principalDuringFY = Math.max(
+            0,
+            principalUntilEnd - principalBeforeStart
+          );
+
+          const remainingAfterFY = Math.max(
+            0,
+            (loan.original_amount || 0) - principalUntilEnd
+          );
+
+          // Representative date: latest installment date within FY if present, otherwise null
+          const latestInFY = instsInFY.length
+            ? instsInFY.reduce((a, b) =>
+                new Date(a.date) > new Date(b.date) ? a : b
+              ).date
+            : null;
+
+          return {
+            id: loan.id,
+            date: latestInFY, // ensure date shown relates to FY
+            amount: loan.original_amount || 0,
+            receipt: loan.receipt || null,
             customer: loan.customers?.name || "",
-            extra: { installment_number: inst.installment_number },
-          });
-        });
-      });
+            notes: `Principal recovered (FY): ${formatCurrencyIN(
+              principalDuringFY
+            )}`,
+            remaining: remainingAfterFY,
+            _principalDuringFY: principalDuringFY,
+          };
+        })
+        .filter((it) => (it as any)._principalDuringFY > 0);
+
       setBreakdownItems(items);
+      // compute FY Total Loans Given: loans disbursed within the FY (payment_date in range)
+      const fyLoansGiven = loans
+        .filter((l) => within(l.payment_date))
+        .reduce((acc, l) => acc + (l.original_amount || 0), 0);
+      const fyPrincipal = fyPrincipalRecovered; // already computed for FY
+      const fyBalance = fyLoansGiven - fyPrincipal;
+      setBreakdownSummary([
+        { label: "Total Loans Given", value: fyLoansGiven },
+        { label: "Loan Recovery (Principal)", value: fyPrincipal },
+        { label: "Balance", value: fyBalance },
+      ]);
     } else if (type === "total") {
       // combine all contributions
       const subItems = fySubscriptions.map((s) => ({
@@ -865,6 +910,7 @@ const SummaryPage = () => {
           open={breakdownOpen}
           title={breakdownTitle}
           items={breakdownItems}
+          summary={breakdownSummary}
           onClose={() => setBreakdownOpen(false)}
         />
       </div>

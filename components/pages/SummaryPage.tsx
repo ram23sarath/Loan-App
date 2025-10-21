@@ -605,10 +605,10 @@ const SummaryPage = () => {
               <div className="flex items-center justify-between p-4 rounded-lg bg-blue-50 border border-blue-200">
                 <div>
                   <div className="text-sm font-medium text-blue-700">
-                    Loan Balance
+                    Total Loans Given
                   </div>
-                  <div className="text-xs text-gray-500">
-                    Total Loans Given - Loan Recovery (Principal) = Balance
+                  <div className="text-sm font-medium text-blue-700">
+                    {formatCurrencyIN(totalLoansGiven)}
                   </div>
                 </div>
               </div>
@@ -616,7 +616,7 @@ const SummaryPage = () => {
                 <div className="flex items-center justify-between px-3 py-1 rounded-md bg-blue-25/30">
                   <div className="text-sm text-gray-700">Total Loans Given</div>
                   <div className="text-sm font-medium text-blue-700">
-                    ₹{totalLoansGiven.toLocaleString()}
+                    {formatCurrencyIN(totalLoansGiven)}
                   </div>
                 </div>
                 <div className="flex items-center justify-between px-3 py-1 rounded-md bg-blue-25/30">
@@ -624,7 +624,7 @@ const SummaryPage = () => {
                     Loan Recovery (Principal)
                   </div>
                   <div className="text-sm font-medium text-blue-700">
-                    ₹{totalPrincipalRecovered.toLocaleString()}
+                    {formatCurrencyIN(totalPrincipalRecovered)}
                   </div>
                 </div>
                 <div className="flex items-center justify-between px-3 py-1 rounded-md bg-blue-25/30">
@@ -636,7 +636,7 @@ const SummaryPage = () => {
                       loanBalance < 0 ? "text-red-600" : "text-blue-800"
                     }`}
                   >
-                    ₹{loanBalance.toLocaleString()}
+                    {formatCurrencyIN(loanBalance)}
                   </div>
                 </div>
               </div>

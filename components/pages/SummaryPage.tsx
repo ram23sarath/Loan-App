@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import FYBreakdownModal from "../modals/FYBreakdownModal";
 import { useData } from "../../context/DataContext";
 import { formatCurrencyIN } from "../../utils/numberFormatter";
+import { formatDate } from "../../utils/dateFormatter";
 
 const SummaryPage = () => {
   const {
@@ -934,12 +935,7 @@ const SummaryPage = () => {
         </div>
 
         <div className="text-center text-xs text-gray-400 mt-2">
-          Updated as of{" "}
-          {new Date().toLocaleDateString("en-IN", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })}
+          Updated as of {formatDate(new Date().toISOString().slice(0, 10))}
         </div>
 
         <FYBreakdownModal

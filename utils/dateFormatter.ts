@@ -23,5 +23,5 @@ export const formatDate = (dateString: string, formatType: 'display' | 'whatsapp
   const year = date.getFullYear();
 
   // Always use full year for uniformity
-  return `${day}/${month}/${year}`;
+  return `${day}-${month}-${year}`;
 };

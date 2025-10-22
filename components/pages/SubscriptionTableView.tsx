@@ -3,6 +3,7 @@ import { useData } from "../../context/DataContext";
 import GlassCard from "../ui/GlassCard";
 import { formatDate } from "../../utils/dateFormatter";
 import { WhatsAppIcon, Trash2Icon } from "../../constants";
+import { openWhatsApp } from "../../utils/whatsapp";
 import { formatCurrencyIN } from "../../utils/numberFormatter";
 import EditModal from "../modals/EditModal";
 
@@ -180,7 +181,9 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                 sub.late_fee && sub.late_fee > 0
                   ? ` (including a late fee of ₹${sub.late_fee})`
                   : ""
-              } Thank you.`;
+              }`;
+              // Append signature
+              message += " Thank You, I J Reddy.";
               whatsappUrl = `https://wa.me/${
                 customer.phone
               }?text=${encodeURIComponent(message)}`;
@@ -206,7 +209,10 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                 <td className="px-4 py-2 border-b">
                   <button
                     onClick={() =>
-                      isValidPhone && window.open(whatsappUrl, "_blank")
+                      isValidPhone &&
+                      openWhatsApp(customer?.phone, message, {
+                        cooldownMs: 1200,
+                      })
                     }
                     className="p-1 rounded-full hover:bg-green-500/10 transition-colors"
                     aria-label={`Send subscription for ${customer?.name} on WhatsApp`}
@@ -263,7 +269,9 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
               sub.late_fee && sub.late_fee > 0
                 ? ` (including a late fee of ${formatCurrencyIN(sub.late_fee)})`
                 : ""
-            } Thank you.`;
+            }`;
+            // Append signature
+            message += " Thank You, I J Reddy.";
             whatsappUrl = `https://wa.me/${
               customer.phone
             }?text=${encodeURIComponent(message)}`;
@@ -294,7 +302,10 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() =>
-                      isValidPhone && window.open(whatsappUrl, "_blank")
+                      isValidPhone &&
+                      openWhatsApp(customer?.phone, message, {
+                        cooldownMs: 1200,
+                      })
                     }
                     className="p-2 rounded-md bg-green-50 text-green-600"
                     disabled={!isValidPhone}

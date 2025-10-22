@@ -2,6 +2,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useData } from "../../context/DataContext";
 import { Trash2Icon, WhatsAppIcon } from "../../constants";
+import { openWhatsApp } from "../../utils/whatsapp";
 import { formatCurrencyIN } from "../../utils/numberFormatter";
 import GlassCard from "../ui/GlassCard";
 import { formatDate } from "../../utils/dateFormatter";
@@ -438,9 +439,18 @@ const LoanTableView: React.FC = () => {
                                         inst.date,
                                         "whatsapp"
                                       )}. Thank you.`;
-                                      whatsappUrl = `https://wa.me/${
-                                        customer.phone
-                                      }?text=${encodeURIComponent(message)}`;
+                                      // Append signature
+                                      message += " Thank You, I J Reddy.";
+                                      // build wa.me URL and ensure proper encoding
+                                      try {
+                                        whatsappUrl = `https://wa.me/${
+                                          customer.phone
+                                        }?text=${encodeURIComponent(message)}`;
+                                      } catch (err) {
+                                        whatsappUrl = `https://api.whatsapp.com/send?phone=${
+                                          customer.phone
+                                        }&text=${encodeURIComponent(message)}`;
+                                      }
                                     }
                                     return (
                                       <li
@@ -470,7 +480,11 @@ const LoanTableView: React.FC = () => {
                                           <motion.button
                                             onClick={() =>
                                               isValidPhone &&
-                                              window.open(whatsappUrl, "_blank")
+                                              openWhatsApp(
+                                                customer?.phone,
+                                                message,
+                                                { cooldownMs: 1200 }
+                                              )
                                             }
                                             className="p-1 rounded-full hover:bg-green-500/10 transition-colors"
                                             aria-label={`Send installment #${inst.installment_number} on WhatsApp`}
@@ -712,7 +726,7 @@ const LoanTableView: React.FC = () => {
       </div>
 
       {/* ... (All modal logic remains unchanged) ... */}
-      
+
       {/* Loan Edit Modal */}
       {editLoanTarget && (
         <EditModal

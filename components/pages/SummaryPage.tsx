@@ -244,6 +244,13 @@ const SummaryPage = () => {
     return acc + Math.max(0, principalUntilEnd - principalBeforeStart);
   }, 0);
 
+  // FY Loans Given: sum of original_amount for loans disbursed (payment_date) within the selected FY
+  const fyLoansGiven = loans
+    .filter((l) => within(l.payment_date))
+    .reduce((acc, l) => acc + (l.original_amount || 0), 0);
+
+  const fyLoanBalance = fyLoansGiven - fyPrincipalRecovered;
+
   // Interest collected during FY: for each loan, compute interest collected up to end and before start, take difference
   const fyInterestCollected = loans.reduce((acc, loan) => {
     const instsForLoan = installments.filter((i) => i.loan_id === loan.id);
@@ -827,6 +834,41 @@ const SummaryPage = () => {
               </div>
               <div className="text-xl font-bold text-blue-800 mt-2">
                 {formatCurrencyIN(fyPrincipalRecovered)}
+              </div>
+            </div>
+            {/* FY Loans Given vs Recovery Balance */}
+            <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 flex flex-col items-start">
+              <div className="flex items-center justify-between w-full">
+                <div className="text-xs text-gray-600">Loans Given (FY)</div>
+                <div className="text-xs text-gray-600">Balance (FY)</div>
+              </div>
+              <div className="mt-2 w-full">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-700">Total Loans Given</div>
+                  <div className="text-sm font-medium text-blue-700">
+                    {formatCurrencyIN(fyLoansGiven)}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                  <div className="text-sm text-gray-700">
+                    Loan Recovery (Principal)
+                  </div>
+                  <div className="text-sm font-medium text-blue-700">
+                    {formatCurrencyIN(fyPrincipalRecovered)}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between mt-2">
+                  <div className="text-sm font-medium text-blue-700">
+                    Balance
+                  </div>
+                  <div
+                    className={`text-sm font-bold ${
+                      fyLoanBalance < 0 ? "text-red-600" : "text-blue-800"
+                    }`}
+                  >
+                    {formatCurrencyIN(fyLoanBalance)}
+                  </div>
+                </div>
               </div>
             </div>
             <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200 flex flex-col items-start">

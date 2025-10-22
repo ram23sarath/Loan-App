@@ -1,6 +1,7 @@
 import React from "react";
 import { XIcon } from "../../constants";
 import { formatCurrencyIN } from "../../utils/numberFormatter";
+import { formatDate } from "../../utils/dateFormatter";
 
 type Item = {
   id?: string;
@@ -97,9 +98,7 @@ const FYBreakdownModal: React.FC<Props> = ({
                 className="grid grid-cols-12 gap-4 px-2 py-3 items-start border-b last:border-b-0"
               >
                 <div className="col-span-3 text-sm text-gray-700">
-                  {it.date
-                    ? new Date(it.date).toLocaleDateString("en-IN")
-                    : "-"}
+                  {it.date ? formatDate(it.date) : "-"}
                 </div>
                 <div className="col-span-3 text-sm text-gray-700">
                   {(it as any).customer || "-"}

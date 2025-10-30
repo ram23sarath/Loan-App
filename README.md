@@ -2,6 +2,8 @@
 
 A visually stunning and highly functional loan management application featuring a sophisticated glassmorphism design and engaging animations to enhance user experience.
 
+git add . && git commit -m "Descriptive summary of changes" && git push origin main
+
 ---
 
 ## ✨ Features

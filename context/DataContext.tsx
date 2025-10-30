@@ -222,6 +222,59 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setInstallments([]);
     setDataEntries([]);
   }
+
+  // Clear client-side caches and storage that may persist after session expiry.
+  // This addresses cases where stale data (e.g. truncated dates) remains visible
+  // after an inactivity logout. We remove Supabase-related keys and reset
+  // sessionStorage/localStorage where appropriate.
+  const clearClientCache = () => {
+    try {
+      // Reset in-memory React state
+      clearData();
+
+      if (typeof window === 'undefined') return;
+
+      // Clear sessionStorage fully (session-scoped)
+      try {
+        window.sessionStorage.clear();
+      } catch (err) {
+        // ignore
+      }
+
+      // Remove Supabase and app-specific keys from localStorage to avoid stale cached session/data.
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < window.localStorage.length; i++) {
+          const key = window.localStorage.key(i);
+          if (!key) continue;
+          const lower = key.toLowerCase();
+          // Supabase auth/storage keys often contain 'supabase', 'sb-' or 'gotrue' or 'auth'
+          if (
+            lower.includes('supabase') ||
+            lower.startsWith('sb-') ||
+            lower.includes('gotrue') ||
+            lower.includes('auth') && lower.includes('token')
+          ) {
+            keysToRemove.push(key);
+          }
+        }
+        for (const k of keysToRemove) {
+          try {
+            window.localStorage.removeItem(k);
+          } catch (e) {
+            // ignore individual key removal failures
+          }
+        }
+      } catch (err) {
+        // ignore
+      }
+
+      // If the app uses any other caches (IndexedDB, service worker caches) consider clearing here.
+    } catch (err) {
+      // best-effort; do not throw
+      console.error('Error clearing client cache', err);
+    }
+  }
   // Add Data Entry
   const addDataEntry = async (entry: NewDataEntry): Promise<DataEntry> => {
     if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot add data entries');
@@ -312,7 +365,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         fetchData();
       } else if (_event === 'SIGNED_OUT') {
         setSession(null);
-        clearData();
+        // Clear both React state and any client-side persisted caches so the UI doesn't show stale data
+        clearClientCache();
       }
     });
 
@@ -335,6 +389,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      // Ensure local caches are cleared after sign out (explicit or due to inactivity)
+      clearClientCache();
     } catch(error) {
       throw new Error(parseSupabaseError(error, 'signing out'));
     }

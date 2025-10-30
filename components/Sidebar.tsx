@@ -92,6 +92,32 @@ const Sidebar = () => {
 
   // Sidebar collapsed by default; users can expand via hover or toggle.
   const [collapsed, setCollapsed] = React.useState(true);
+  // Publish sidebar width as a CSS variable so the main content can shift accordingly.
+  // We only apply the offset on desktop (sm and up). On small screens we keep it 0.
+  React.useEffect(() => {
+    const applyVar = () => {
+      if (typeof window === 'undefined') return;
+      const isDesktop = window.matchMedia('(min-width: 640px)').matches;
+      const sidebarWidth = collapsed ? 80 : 256; // matches the inline style width
+      const leftOffset = 16; // left-4 (Tailwind) -> 16px
+      const gap = 16; // extra gap between sidebar and content
+      const total = isDesktop ? `${sidebarWidth + leftOffset + gap}px` : '0px';
+      try {
+        document.documentElement.style.setProperty('--sidebar-offset', total);
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    applyVar();
+    window.addEventListener('resize', applyVar);
+    return () => {
+      window.removeEventListener('resize', applyVar);
+      try {
+        document.documentElement.style.setProperty('--sidebar-offset', '0px');
+      } catch (e) {}
+    };
+  }, [collapsed]);
   const collapseTimer = React.useRef<number | null>(null);
 
   const clearCollapseTimer = () => {

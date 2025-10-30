@@ -71,7 +71,11 @@ const App = () => (
           <ProtectedRoute>
             <div className="flex w-full h-screen overflow-hidden">
               <Sidebar />
-              <main className="flex-1 h-full overflow-y-auto">
+              <main
+                className="flex-1 h-full overflow-y-auto"
+                // Use the CSS variable set by Sidebar to offset content when sidebar is visible on desktop.
+                style={{ paddingLeft: 'var(--sidebar-offset, 0px)' }}
+              >
                 <AnimatedRoutes />
               </main>
             </div>

@@ -162,7 +162,8 @@ const Sidebar = () => {
           width: collapsed ? 80 : 256,
           transition: "width 260ms cubic-bezier(0.2, 0.8, 0.2, 1)",
         }}
-        className={`h-screen flex-shrink-0 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col sm:block hidden`}
+        // Floating on the left for desktop: fixed with top/bottom offsets so it appears to "float"
+        className={`fixed left-4 top-4 bottom-4 z-40 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col hidden sm:flex`}
       >
         <div
           className={`p-4 border-b border-gray-200 flex items-center ${

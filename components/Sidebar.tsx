@@ -144,6 +144,14 @@ const Sidebar = () => {
             <item.icon className="w-6 h-6" />
           </NavLink>
         ))}
+        {/* Logout button for mobile view */}
+        <button
+          onClick={handleSignOut}
+          aria-label="Logout"
+          className="flex flex-col items-center justify-center px-2 text-red-600 hover:bg-red-50 rounded-md"
+        >
+          <LogOutIcon className="w-6 h-6" />
+        </button>
       </nav>
 
       {/* Desktop sidebar (hidden on small screens) */}

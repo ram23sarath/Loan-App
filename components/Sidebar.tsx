@@ -8,6 +8,7 @@ import {
   UsersIcon,
   LogOutIcon,
   BookOpenIcon,
+  StarIcon,
 } from "../constants";
 // Database icon for Data section
 const DatabaseIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -34,7 +35,7 @@ const navItems = [
   { path: "/add-record", label: "Add Record", icon: FilePlusIcon },
   { path: "/customers", label: "Customers", icon: UsersIcon },
   { path: "/loans", label: "Loans", icon: LandmarkIcon },
-  { path: "/loan-seniority", label: "Loan Seniority", icon: HistoryIcon },
+  { path: "/loan-seniority", label: "Loan Seniority", icon: StarIcon },
   { path: "/subscriptions", label: "Subscriptions", icon: HistoryIcon },
   { path: "/data", label: "Misc", icon: DatabaseIcon },
   { path: "/summary", label: "Summary", icon: BookOpenIcon },

@@ -169,6 +169,31 @@ export type Database = {
           }
         ]
       }
+      loan_seniority: {
+        Row: {
+          id: string;
+          user_id: string;
+          customer_id: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          customer_id: string;
+        };
+        Update: {
+          user_id?: string;
+          customer_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "loan_seniority_customer_id_fkey";
+            columns: ["customer_id"];
+            isOneToOne: false;
+            referencedRelation: "customers";
+            referencedColumns: ["id"];
+          }
+        ];
+      }
       data_entries: {
         Row: {
           id: string;

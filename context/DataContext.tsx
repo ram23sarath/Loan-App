@@ -51,6 +51,11 @@ interface DataContextType {
   deleteLoan: (loanId: string) => Promise<void>;
   deleteSubscription: (subscriptionId: string) => Promise<void>;
   deleteInstallment: (installmentId: string) => Promise<void>;
+  // Loan seniority list persisted per user
+  seniorityList: Array<any>;
+  fetchSeniorityList: () => Promise<void>;
+  addToSeniority: (customerId: string) => Promise<void>;
+  removeFromSeniority: (id: string) => Promise<void>;
 }
 
 
@@ -62,6 +67,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [loans, setLoans] = useState<LoanWithCustomer[]>([]);
   const [subscriptions, setSubscriptions] = useState<SubscriptionWithCustomer[]>([]);
   const [installments, setInstallments] = useState<Installment[]>([]);
+  const [seniorityList, setSeniorityList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [dataEntries, setDataEntries] = useState<DataEntry[]>([]);
@@ -133,6 +139,50 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       setIsRefreshing(false);
     }
   }, [isScopedCustomer, scopedCustomerId]);
+
+  // Fetch the loan seniority list for the current user
+  const fetchSeniorityList = useCallback(async () => {
+    try {
+      if (!session || !session.user || !session.user.id) {
+        setSeniorityList([]);
+        return;
+      }
+      const { data, error } = await supabase
+        .from('loan_seniority')
+        .select('*, customers(name, phone)')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setSeniorityList((data as any[]) || []);
+    } catch (err: any) {
+      console.error('Failed to fetch loan seniority list', err);
+      // don't throw to avoid breaking other flows
+    }
+  }, [session]);
+
+  const addToSeniority = async (customerId: string) => {
+    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot modify seniority list');
+    try {
+      if (!session || !session.user) throw new Error('Not authenticated');
+      const payload = { user_id: session.user.id, customer_id: customerId };
+      const { data, error } = await supabase.from('loan_seniority').insert([payload]).select().single();
+      if (error || !data) throw error;
+      await fetchSeniorityList();
+    } catch (err: any) {
+      throw new Error(parseSupabaseError(err, `adding customer ${customerId} to seniority list`));
+    }
+  };
+
+  const removeFromSeniority = async (id: string) => {
+    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot modify seniority list');
+    try {
+      const { error } = await supabase.from('loan_seniority').delete().eq('id', id);
+      if (error) throw error;
+      await fetchSeniorityList();
+    } catch (err: any) {
+      throw new Error(parseSupabaseError(err, `removing seniority item ${id}`));
+    }
+  };
 
   // All data mutation functions are correct and unchanged...
   const updateCustomer = async (customerId: string, updates: Partial<Customer>): Promise<Customer> => {
@@ -350,6 +400,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         }
         // Fetch data (scoped or full) after setting flags
         await fetchData();
+        // fetch user's seniority list as well
+        await fetchSeniorityList();
       }
 
       // 3. Only set loading to false AFTER all data is fetched.
@@ -363,6 +415,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (_event === 'SIGNED_IN') {
         setSession(session);
         fetchData();
+          fetchSeniorityList();
       } else if (_event === 'SIGNED_OUT') {
         setSession(null);
         // Clear both React state and any client-side persisted caches so the UI doesn't show stale data
@@ -511,7 +564,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
 
   return (
-    <DataContext.Provider value={{ session, customers, loans, subscriptions, installments, dataEntries, loading, isRefreshing, isScopedCustomer, scopedCustomerId, signInWithPassword, signOut, addCustomer, updateCustomer, addLoan, updateLoan, addSubscription, updateSubscription, addInstallment, updateInstallment, addDataEntry, updateDataEntry, deleteDataEntry, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, adjustSubscriptionForMisc }}>
+    <DataContext.Provider value={{ session, customers, loans, subscriptions, installments, dataEntries, loading, isRefreshing, isScopedCustomer, scopedCustomerId, signInWithPassword, signOut, addCustomer, updateCustomer, addLoan, updateLoan, addSubscription, updateSubscription, addInstallment, updateInstallment, addDataEntry, updateDataEntry, deleteDataEntry, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, adjustSubscriptionForMisc, seniorityList, fetchSeniorityList, addToSeniority, removeFromSeniority }}>
       {children}
     </DataContext.Provider>
   );

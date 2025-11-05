@@ -6,7 +6,7 @@ import { useData } from '../../context/DataContext';
 import type { Customer } from '../../types';
 
 const LoanSeniorityPage = () => {
-  const { customers, seniorityList, fetchSeniorityList, addToSeniority, removeFromSeniority } = useData();
+  const { customers, loans, subscriptions, seniorityList, fetchSeniorityList, addToSeniority, removeFromSeniority } = useData();
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -15,9 +15,26 @@ const LoanSeniorityPage = () => {
 
   const filtered = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
-    if (!term) return customers.slice(0, 10);
-    return customers.filter(c => c.name.toLowerCase().includes(term) || c.phone.includes(term));
-  }, [customers, searchTerm]);
+
+    // Build a set of customer IDs already in the seniority list to exclude them from suggestions
+    const existingIds = new Set<string>((seniorityList || []).map((e: any) => e.customer_id));
+
+    // Customers that have no loans and no subscriptions
+    const withoutLoansOrSubs = customers.filter(c => {
+      if (existingIds.has(c.id)) return false;
+      const hasLoan = loans.some(l => l.customer_id === c.id);
+      const hasSub = subscriptions.some(s => s.customer_id === c.id);
+      return !hasLoan && !hasSub;
+    });
+
+    // If no search term, show a short list of customers without loans/subscriptions (excluding already-added)
+    if (!term) return withoutLoansOrSubs.slice(0, 10);
+
+    // Otherwise, search across the whole customers list (name or phone) but exclude already-added customers
+    return customers
+      .filter(c => !existingIds.has(c.id))
+      .filter(c => c.name.toLowerCase().includes(term) || String(c.phone).toLowerCase().includes(term));
+  }, [customers, loans, subscriptions, searchTerm, seniorityList]);
 
 
   const addCustomerToList = async (customer: Customer) => {

@@ -258,6 +258,7 @@ const CustomerListPage = () => {
         <h2 className="text-xl sm:text-4xl font-bold flex items-center gap-2 sm:gap-4">
           <UsersIcon className="w-7 h-7 sm:w-10 sm:h-10" />
           <span>All Customers</span>
+          <span className="ml-2 text-xl sm:text-4xl font-bold text-gray-400">({customers.length})</span>
           {isRefreshing && <SpinnerIcon className="w-5 h-5 sm:w-8 sm:h-8 animate-spin text-indigo-500" />}
         </h2>
         {customers.length > 0 && (

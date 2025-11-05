@@ -4,6 +4,7 @@ import GlassCard from '../ui/GlassCard';
 import { UsersIcon } from '../../constants';
 import { useData } from '../../context/DataContext';
 import type { Customer } from '../../types';
+import { formatDate } from '../../utils/dateFormatter';
 
 const LoanSeniorityPage = () => {
   const { customers, loans, subscriptions, seniorityList, fetchSeniorityList, addToSeniority, removeFromSeniority } = useData();
@@ -38,11 +39,8 @@ const LoanSeniorityPage = () => {
 
 
   const addCustomerToList = async (customer: Customer) => {
-    try {
-      await addToSeniority(customer.id);
-    } catch (err) {
-      alert((err as Error).message || 'Failed to add customer to seniority list');
-    }
+    // Open entry modal to collect extra fields before adding
+    setModalCustomer(customer);
   };
 
   const removeFromList = async (id: string) => {
@@ -50,6 +48,33 @@ const LoanSeniorityPage = () => {
       await removeFromSeniority(id);
     } catch (err) {
       alert((err as Error).message || 'Failed to remove customer from seniority list');
+    }
+  };
+
+  // Modal state for entry details
+  const [modalCustomer, setModalCustomer] = useState<Customer | null>(null);
+  const [stationName, setStationName] = useState('');
+  const [loanNumber, setLoanNumber] = useState('');
+  const [loanRequestDate, setLoanRequestDate] = useState('');
+
+  const closeModal = () => {
+    setModalCustomer(null);
+    setStationName('');
+    setLoanNumber('');
+    setLoanRequestDate('');
+  };
+
+  const saveModalEntry = async () => {
+    if (!modalCustomer) return;
+    try {
+      await addToSeniority(modalCustomer.id, {
+        station_name: stationName || null,
+        loan_number: loanNumber || null,
+        loan_request_date: loanRequestDate || null,
+      });
+      closeModal();
+    } catch (err: any) {
+      alert(err.message || 'Failed to save seniority entry');
     }
   };
 
@@ -79,7 +104,7 @@ const LoanSeniorityPage = () => {
               <div className="text-sm text-gray-500">No customers found.</div>
             ) : (
               filtered.map(c => (
-                <div key={c.id} className="flex items-center justify-between bg-white border border-gray-100 rounded p-2">
+                <div key={c.id} className="flex items:center justify-between bg-white border border-gray-100 rounded p-2">
                   <div>
                     <div className="font-semibold text-indigo-700">{c.name}</div>
                     <div className="text-sm text-gray-500">{c.phone}</div>
@@ -97,6 +122,36 @@ const LoanSeniorityPage = () => {
         </div>
       </GlassCard>
 
+      {/* Entry modal */}
+      {modalCustomer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Add Seniority Entry for {modalCustomer.name}</h3>
+              <button onClick={closeModal} className="text-gray-500">✕</button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">Station Name</label>
+                <input value={stationName} onChange={(e) => setStationName(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Loan Number</label>
+                <input value={loanNumber} onChange={(e) => setLoanNumber(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Loan Request Date</label>
+                <input value={loanRequestDate} onChange={(e) => setLoanRequestDate(e.target.value)} type="date" className="w-full border border-gray-300 rounded px-3 py-2" />
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={closeModal} className="px-3 py-2 rounded bg-gray-200">Cancel</button>
+              <button onClick={saveModalEntry} className="px-3 py-2 rounded bg-indigo-600 text-white">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <GlassCard className="!p-4">
         <h3 className="text-xl font-bold mb-3">Loan Seniority List</h3>
         {(!seniorityList || seniorityList.length === 0) ? (
@@ -104,10 +159,15 @@ const LoanSeniorityPage = () => {
         ) : (
           <div className="space-y-2">
             {seniorityList.map((entry: any) => (
-              <div key={entry.id} className="flex items-center justify-between bg-white border border-gray-100 rounded p-2">
-                <div>
-                  <div className="font-semibold text-indigo-700">{entry.customers?.name || 'Unknown'}</div>
+              <div key={entry.id} className="flex items-center justify-between bg-white border border-gray-100 rounded p-3">
+                <div className="min-w-0">
+                  <div className="font-semibold text-indigo-700 truncate">{entry.customers?.name || 'Unknown'}</div>
                   <div className="text-sm text-gray-500">{entry.customers?.phone || ''}</div>
+                  <div className="mt-2 space-y-1 text-sm text-gray-600">
+                    {entry.station_name && <div>Station: <span className="font-medium text-gray-800">{entry.station_name}</span></div>}
+                    {entry.loan_number && <div>Loan #: <span className="font-medium text-gray-800">{entry.loan_number}</span></div>}
+                    {entry.loan_request_date && <div>Requested: <span className="font-medium text-gray-800">{formatDate(entry.loan_request_date)}</span></div>}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button onClick={() => removeFromList(entry.id)} className="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700">Remove</button>

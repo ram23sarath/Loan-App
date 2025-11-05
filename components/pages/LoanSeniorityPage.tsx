@@ -4,10 +4,11 @@ import GlassCard from '../ui/GlassCard';
 import { UsersIcon } from '../../constants';
 import { useData } from '../../context/DataContext';
 import type { Customer } from '../../types';
+import { Trash2Icon, PencilIcon } from '../../constants';
 import { formatDate } from '../../utils/dateFormatter';
 
 const LoanSeniorityPage = () => {
-  const { customers, loans, subscriptions, seniorityList, fetchSeniorityList, addToSeniority, removeFromSeniority } = useData();
+  const { customers, loans, subscriptions, seniorityList, fetchSeniorityList, addToSeniority, updateSeniority, removeFromSeniority } = useData();
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -40,7 +41,8 @@ const LoanSeniorityPage = () => {
 
   const addCustomerToList = async (customer: Customer) => {
     // Open entry modal to collect extra fields before adding
-    setModalCustomer(customer);
+    setModalCustomer({ id: customer.id, name: customer.name });
+    setModalEditingId(null);
   };
 
   const removeFromList = async (id: string) => {
@@ -52,10 +54,11 @@ const LoanSeniorityPage = () => {
   };
 
   // Modal state for entry details
-  const [modalCustomer, setModalCustomer] = useState<Customer | null>(null);
+  const [modalCustomer, setModalCustomer] = useState<any | null>(null);
   const [stationName, setStationName] = useState('');
   const [loanNumber, setLoanNumber] = useState('');
   const [loanRequestDate, setLoanRequestDate] = useState('');
+  const [modalEditingId, setModalEditingId] = useState<string | null>(null);
 
   const closeModal = () => {
     setModalCustomer(null);
@@ -67,11 +70,16 @@ const LoanSeniorityPage = () => {
   const saveModalEntry = async () => {
     if (!modalCustomer) return;
     try {
-      await addToSeniority(modalCustomer.id, {
+      const details = {
         station_name: stationName || null,
         loan_number: loanNumber || null,
         loan_request_date: loanRequestDate || null,
-      });
+      };
+      if (modalEditingId) {
+        await updateSeniority(modalEditingId, details);
+      } else {
+        await addToSeniority(modalCustomer.id, details);
+      }
       closeModal();
     } catch (err: any) {
       alert(err.message || 'Failed to save seniority entry');
@@ -157,24 +165,89 @@ const LoanSeniorityPage = () => {
         {(!seniorityList || seniorityList.length === 0) ? (
           <div className="text-sm text-gray-500">No customers added yet. Search above and click Add to include a customer.</div>
         ) : (
-          <div className="space-y-2">
-            {seniorityList.map((entry: any) => (
-              <div key={entry.id} className="flex items-center justify-between bg-white border border-gray-100 rounded p-3">
-                <div className="min-w-0">
-                  <div className="font-semibold text-indigo-700 truncate">{entry.customers?.name || 'Unknown'}</div>
-                  <div className="text-sm text-gray-500">{entry.customers?.phone || ''}</div>
-                  <div className="mt-2 space-y-1 text-sm text-gray-600">
-                    {entry.station_name && <div>Station: <span className="font-medium text-gray-800">{entry.station_name}</span></div>}
-                    {entry.loan_number && <div>Loan #: <span className="font-medium text-gray-800">{entry.loan_number}</span></div>}
-                    {entry.loan_request_date && <div>Requested: <span className="font-medium text-gray-800">{formatDate(entry.loan_request_date)}</span></div>}
+          <>
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">#</th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Customer</th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Phone</th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Station</th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Loan #</th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Requested</th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {seniorityList.map((entry: any, idx: number) => (
+                    <tr key={entry.id} className="even:bg-gray-50">
+                      <td className="px-4 py-3">{idx + 1}</td>
+                      <td className="px-4 py-3 font-semibold text-indigo-700">{entry.customers?.name || 'Unknown'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{entry.customers?.phone || ''}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{entry.station_name || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{entry.loan_number || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{entry.loan_request_date ? formatDate(entry.loan_request_date) : '-'}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <button onClick={() => {
+                              // open edit modal prefilled
+                              setModalCustomer({ id: entry.customer_id, name: entry.customers?.name });
+                              setStationName(entry.station_name || '');
+                              setLoanNumber(entry.loan_number || '');
+                              setLoanRequestDate(entry.loan_request_date || '');
+                              setModalEditingId(entry.id);
+                            }}
+                            aria-label={`Edit seniority entry ${entry.id}`}
+                            className="p-2 rounded hover:bg-gray-100">
+                            <PencilIcon className="w-4 h-4 text-blue-600" />
+                          </button>
+                          <button onClick={() => removeFromList(entry.id)} aria-label={`Remove seniority entry ${entry.id}`} className="p-2 rounded hover:bg-gray-100">
+                            <Trash2Icon className="w-4 h-4 text-red-600" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="md:hidden space-y-3">
+              {seniorityList.map((entry: any, idx: number) => (
+                <div key={entry.id} className="bg-white border border-gray-100 rounded p-3">
+                  <div className="flex items-start justify-between">
+                    <div className="min-w-0">
+                      <div className="text-xs text-gray-400">#{idx + 1}</div>
+                      <div className="font-semibold text-indigo-700 truncate">{entry.customers?.name || 'Unknown'}</div>
+                      <div className="text-sm text-gray-500">{entry.customers?.phone || ''}</div>
+                      <div className="mt-2 text-sm text-gray-600 space-y-1">
+                        {entry.station_name && <div>Station: <span className="font-medium text-gray-800">{entry.station_name}</span></div>}
+                        {entry.loan_number && <div>Loan #: <span className="font-medium text-gray-800">{entry.loan_number}</span></div>}
+                        {entry.loan_request_date && <div>Requested: <span className="font-medium text-gray-800">{formatDate(entry.loan_request_date)}</span></div>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-3">
+                      <button onClick={() => {
+                        setModalCustomer({ id: entry.customer_id, name: entry.customers?.name });
+                        setStationName(entry.station_name || '');
+                        setLoanNumber(entry.loan_number || '');
+                        setLoanRequestDate(entry.loan_request_date || '');
+                        setModalEditingId(entry.id);
+                      }} className="p-2 rounded hover:bg-gray-100" aria-label="Edit">
+                        <PencilIcon className="w-4 h-4 text-blue-600" />
+                      </button>
+                      <button onClick={() => removeFromList(entry.id)} className="p-2 rounded hover:bg-gray-100" aria-label="Remove">
+                        <Trash2Icon className="w-4 h-4 text-red-600" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => removeFromList(entry.id)} className="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700">Remove</button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
       </GlassCard>
     </PageWrapper>

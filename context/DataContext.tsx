@@ -55,6 +55,7 @@ interface DataContextType {
   seniorityList: Array<any>;
   fetchSeniorityList: () => Promise<void>;
   addToSeniority: (customerId: string, details?: { station_name?: string; loan_number?: string; loan_request_date?: string }) => Promise<void>;
+  updateSeniority: (id: string, updates: { station_name?: string | null; loan_number?: string | null; loan_request_date?: string | null }) => Promise<void>;
   removeFromSeniority: (id: string) => Promise<void>;
 }
 
@@ -186,6 +187,17 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       await fetchSeniorityList();
     } catch (err: any) {
       throw new Error(parseSupabaseError(err, `removing seniority item ${id}`));
+    }
+  };
+
+  const updateSeniority = async (id: string, updates: { station_name?: string | null; loan_number?: string | null; loan_request_date?: string | null }) => {
+    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot modify seniority list');
+    try {
+      const { data, error } = await supabase.from('loan_seniority').update(updates).eq('id', id).select().single();
+      if (error || !data) throw error;
+      await fetchSeniorityList();
+    } catch (err: any) {
+      throw new Error(parseSupabaseError(err, `updating seniority item ${id}`));
     }
   };
 
@@ -569,7 +581,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
 
   return (
-    <DataContext.Provider value={{ session, customers, loans, subscriptions, installments, dataEntries, loading, isRefreshing, isScopedCustomer, scopedCustomerId, signInWithPassword, signOut, addCustomer, updateCustomer, addLoan, updateLoan, addSubscription, updateSubscription, addInstallment, updateInstallment, addDataEntry, updateDataEntry, deleteDataEntry, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, adjustSubscriptionForMisc, seniorityList, fetchSeniorityList, addToSeniority, removeFromSeniority }}>
+    <DataContext.Provider value={{ session, customers, loans, subscriptions, installments, dataEntries, loading, isRefreshing, isScopedCustomer, scopedCustomerId, signInWithPassword, signOut, addCustomer, updateCustomer, addLoan, updateLoan, addSubscription, updateSubscription, addInstallment, updateInstallment, addDataEntry, updateDataEntry, deleteDataEntry, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, adjustSubscriptionForMisc, seniorityList, fetchSeniorityList, addToSeniority, updateSeniority, removeFromSeniority }}>
       {children}
     </DataContext.Provider>
   );

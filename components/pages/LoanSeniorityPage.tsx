@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import PageWrapper from '../ui/PageWrapper';
 import GlassCard from '../ui/GlassCard';
 import { UsersIcon } from '../../constants';
@@ -6,9 +6,12 @@ import { useData } from '../../context/DataContext';
 import type { Customer } from '../../types';
 
 const LoanSeniorityPage = () => {
-  const { customers } = useData();
+  const { customers, seniorityList, fetchSeniorityList, addToSeniority, removeFromSeniority } = useData();
   const [searchTerm, setSearchTerm] = useState('');
-  const [seniorityList, setSeniorityList] = useState<Customer[]>([]);
+
+  useEffect(() => {
+    fetchSeniorityList().catch(err => console.error('Failed to load seniority list', err));
+  }, [fetchSeniorityList]);
 
   const filtered = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -16,13 +19,21 @@ const LoanSeniorityPage = () => {
     return customers.filter(c => c.name.toLowerCase().includes(term) || c.phone.includes(term));
   }, [customers, searchTerm]);
 
-  const addCustomerToList = (customer: Customer) => {
-    if (seniorityList.some(c => c.id === customer.id)) return;
-    setSeniorityList(prev => [customer, ...prev]);
+
+  const addCustomerToList = async (customer: Customer) => {
+    try {
+      await addToSeniority(customer.id);
+    } catch (err) {
+      alert((err as Error).message || 'Failed to add customer to seniority list');
+    }
   };
 
-  const removeFromList = (id: string) => {
-    setSeniorityList(prev => prev.filter(c => c.id !== id));
+  const removeFromList = async (id: string) => {
+    try {
+      await removeFromSeniority(id);
+    } catch (err) {
+      alert((err as Error).message || 'Failed to remove customer from seniority list');
+    }
   };
 
   return (
@@ -44,7 +55,7 @@ const LoanSeniorityPage = () => {
           />
         </div>
 
-        <div className="mt-4">
+          <div className="mt-4">
           <h3 className="text-lg font-semibold mb-2">Search results</h3>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {filtered.length === 0 ? (
@@ -71,18 +82,18 @@ const LoanSeniorityPage = () => {
 
       <GlassCard className="!p-4">
         <h3 className="text-xl font-bold mb-3">Loan Seniority List</h3>
-        {seniorityList.length === 0 ? (
+        {(!seniorityList || seniorityList.length === 0) ? (
           <div className="text-sm text-gray-500">No customers added yet. Search above and click Add to include a customer.</div>
         ) : (
           <div className="space-y-2">
-            {seniorityList.map(c => (
-              <div key={c.id} className="flex items-center justify-between bg-white border border-gray-100 rounded p-2">
+            {seniorityList.map((entry: any) => (
+              <div key={entry.id} className="flex items-center justify-between bg-white border border-gray-100 rounded p-2">
                 <div>
-                  <div className="font-semibold text-indigo-700">{c.name}</div>
-                  <div className="text-sm text-gray-500">{c.phone}</div>
+                  <div className="font-semibold text-indigo-700">{entry.customers?.name || 'Unknown'}</div>
+                  <div className="text-sm text-gray-500">{entry.customers?.phone || ''}</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => removeFromList(c.id)} className="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700">Remove</button>
+                  <button onClick={() => removeFromList(entry.id)} className="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700">Remove</button>
                 </div>
               </div>
             ))}

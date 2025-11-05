@@ -54,8 +54,8 @@ interface DataContextType {
   // Loan seniority list persisted per user
   seniorityList: Array<any>;
   fetchSeniorityList: () => Promise<void>;
-  addToSeniority: (customerId: string, details?: { station_name?: string; loan_number?: string; loan_request_date?: string }) => Promise<void>;
-  updateSeniority: (id: string, updates: { station_name?: string | null; loan_number?: string | null; loan_request_date?: string | null }) => Promise<void>;
+  addToSeniority: (customerId: string, details?: { station_name?: string; loan_type?: string; loan_request_date?: string }) => Promise<void>;
+  updateSeniority: (id: string, updates: { station_name?: string | null; loan_type?: string | null; loan_request_date?: string | null }) => Promise<void>;
   removeFromSeniority: (id: string) => Promise<void>;
 }
 
@@ -161,14 +161,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [session]);
 
-  const addToSeniority = async (customerId: string, details?: { station_name?: string; loan_number?: string; loan_request_date?: string }) => {
+  const addToSeniority = async (customerId: string, details?: { station_name?: string; loan_type?: string; loan_request_date?: string }) => {
     if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot modify seniority list');
     try {
       if (!session || !session.user) throw new Error('Not authenticated');
       const payload: any = { user_id: session.user.id, customer_id: customerId };
       if (details) {
         if (details.station_name) payload.station_name = details.station_name;
-        if (details.loan_number) payload.loan_number = details.loan_number;
+        if (details.loan_type) payload.loan_type = details.loan_type;
         if (details.loan_request_date) payload.loan_request_date = details.loan_request_date;
       }
       const { data, error } = await supabase.from('loan_seniority').insert([payload]).select().single();
@@ -190,7 +190,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateSeniority = async (id: string, updates: { station_name?: string | null; loan_number?: string | null; loan_request_date?: string | null }) => {
+  const updateSeniority = async (id: string, updates: { station_name?: string | null; loan_type?: string | null; loan_request_date?: string | null }) => {
     if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot modify seniority list');
     try {
       const { data, error } = await supabase.from('loan_seniority').update(updates).eq('id', id).select().single();

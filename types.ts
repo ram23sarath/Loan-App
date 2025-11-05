@@ -175,7 +175,7 @@ export type Database = {
           user_id: string;
           customer_id: string;
           station_name?: string | null;
-          loan_number?: string | null;
+          loan_type?: string | null;
           loan_request_date?: string | null;
           created_at: string;
         };
@@ -183,14 +183,14 @@ export type Database = {
           user_id: string;
           customer_id: string;
           station_name?: string | null;
-          loan_number?: string | null;
+          loan_type?: string | null;
           loan_request_date?: string | null;
         };
         Update: {
           user_id?: string;
           customer_id?: string;
           station_name?: string | null;
-          loan_number?: string | null;
+          loan_type?: string | null;
           loan_request_date?: string | null;
         };
         Relationships: [

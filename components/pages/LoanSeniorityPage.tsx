@@ -56,14 +56,14 @@ const LoanSeniorityPage = () => {
   // Modal state for entry details
   const [modalCustomer, setModalCustomer] = useState<any | null>(null);
   const [stationName, setStationName] = useState('');
-  const [loanNumber, setLoanNumber] = useState('');
+  const [loanType, setLoanType] = useState('General');
   const [loanRequestDate, setLoanRequestDate] = useState('');
   const [modalEditingId, setModalEditingId] = useState<string | null>(null);
 
   const closeModal = () => {
     setModalCustomer(null);
     setStationName('');
-    setLoanNumber('');
+    setLoanType('General');
     setLoanRequestDate('');
   };
 
@@ -72,7 +72,7 @@ const LoanSeniorityPage = () => {
     try {
       const details = {
         station_name: stationName || null,
-        loan_number: loanNumber || null,
+        loan_type: loanType || null,
         loan_request_date: loanRequestDate || null,
       };
       if (modalEditingId) {
@@ -144,8 +144,11 @@ const LoanSeniorityPage = () => {
                 <input value={stationName} onChange={(e) => setStationName(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2" />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Loan Number</label>
-                <input value={loanNumber} onChange={(e) => setLoanNumber(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2" />
+                <label className="block text-sm font-medium mb-1">Loan Type</label>
+                <select value={loanType} onChange={(e) => setLoanType(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2">
+                  <option value="General">General</option>
+                  <option value="Medical">Medical</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Loan Request Date</label>
@@ -175,7 +178,7 @@ const LoanSeniorityPage = () => {
                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Customer</th>
                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Phone</th>
                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Station</th>
-                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Loan #</th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Loan Type</th>
                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Requested</th>
                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Actions</th>
                   </tr>
@@ -187,7 +190,7 @@ const LoanSeniorityPage = () => {
                       <td className="px-4 py-3 font-semibold text-indigo-700">{entry.customers?.name || 'Unknown'}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{entry.customers?.phone || ''}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{entry.station_name || '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{entry.loan_number || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700">{entry.loan_type || '-'}</td>
                       <td className="px-4 py-3 text-sm text-gray-700">{entry.loan_request_date ? formatDate(entry.loan_request_date) : '-'}</td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2">
@@ -195,7 +198,7 @@ const LoanSeniorityPage = () => {
                               // open edit modal prefilled
                               setModalCustomer({ id: entry.customer_id, name: entry.customers?.name });
                               setStationName(entry.station_name || '');
-                              setLoanNumber(entry.loan_number || '');
+                              setLoanType(entry.loan_type || 'General');
                               setLoanRequestDate(entry.loan_request_date || '');
                               setModalEditingId(entry.id);
                             }}
@@ -225,7 +228,7 @@ const LoanSeniorityPage = () => {
                       <div className="text-sm text-gray-500">{entry.customers?.phone || ''}</div>
                       <div className="mt-2 text-sm text-gray-600 space-y-1">
                         {entry.station_name && <div>Station: <span className="font-medium text-gray-800">{entry.station_name}</span></div>}
-                        {entry.loan_number && <div>Loan #: <span className="font-medium text-gray-800">{entry.loan_number}</span></div>}
+                        {entry.loan_type && <div>Loan Type: <span className="font-medium text-gray-800">{entry.loan_type}</span></div>}
                         {entry.loan_request_date && <div>Requested: <span className="font-medium text-gray-800">{formatDate(entry.loan_request_date)}</span></div>}
                       </div>
                     </div>
@@ -233,7 +236,7 @@ const LoanSeniorityPage = () => {
                       <button onClick={() => {
                         setModalCustomer({ id: entry.customer_id, name: entry.customers?.name });
                         setStationName(entry.station_name || '');
-                        setLoanNumber(entry.loan_number || '');
+                        setLoanType(entry.loan_type || 'General');
                         setLoanRequestDate(entry.loan_request_date || '');
                         setModalEditingId(entry.id);
                       }} className="p-2 rounded hover:bg-gray-100" aria-label="Edit">

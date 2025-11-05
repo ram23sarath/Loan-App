@@ -120,6 +120,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
       <table className="min-w-full border-collapse hidden md:table">
         <thead>
           <tr className="bg-gray-100">
+            <th className="px-4 py-2 border-b text-left cursor-pointer">#</th>
             <th
               className="px-4 py-2 border-b text-left cursor-pointer"
               onClick={() => handleSort("customer")}
@@ -161,7 +162,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
           </tr>
         </thead>
         <tbody>
-          {sortedSubscriptions.map((sub) => {
+          {sortedSubscriptions.map((sub, idx) => {
             const customer = sub.customers;
             let message = "";
             let whatsappUrl = "#";
@@ -190,6 +191,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
             }
             return (
               <tr key={sub.id} className="even:bg-gray-50">
+                <td className="px-4 py-2 border-b font-medium text-sm text-gray-700">{idx + 1}</td>
                 <td className="px-4 py-2 border-b">
                   {customer?.name ?? "Unknown"}
                 </td>
@@ -247,7 +249,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
 
       {/* Mobile stacked cards */}
       <div className="md:hidden space-y-3">
-        {sortedSubscriptions.map((sub) => {
+        {sortedSubscriptions.map((sub, idx) => {
           const customer = sub.customers;
           let message = "";
           let whatsappUrl = "#";
@@ -277,16 +279,17 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
             }?text=${encodeURIComponent(message)}`;
           }
 
-          return (
+            return (
             <div
               key={sub.id}
               className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm"
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <div className="text-sm font-semibold text-indigo-700 truncate">
-                    {customer?.name ?? "Unknown"}
-                  </div>
+                    <div className="text-xs text-gray-400">#{idx + 1}</div>
+                    <div className="text-sm font-semibold text-indigo-700 truncate">
+                      {customer?.name ?? "Unknown"}
+                    </div>
                   <div className="text-xs text-gray-500">
                     {formatDate(sub.date) || "-"}
                   </div>

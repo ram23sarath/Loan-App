@@ -240,6 +240,7 @@ const LoanTableView: React.FC = () => {
       <table className="min-w-full border-collapse hidden md:table">
         <thead>
           <tr className="bg-gray-100/70">
+            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">#</th>
             <th
               className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer"
               onClick={() => handleSort("customer")}
@@ -320,7 +321,7 @@ const LoanTableView: React.FC = () => {
           variants={containerVariants}
         >
           <AnimatePresence>
-            {sortedLoans.map((loan: LoanWithCustomer) => {
+            {sortedLoans.map((loan: LoanWithCustomer, idx: number) => {
               const loanInstallments = installments
                 .filter((inst) => inst.loan_id === loan.id)
                 .sort(
@@ -344,6 +345,7 @@ const LoanTableView: React.FC = () => {
                     exit="exit"
                     className="even:bg-gray-50/50 hover:bg-indigo-50/50 transition-colors"
                   >
+                    <td className="px-4 py-2 border-b font-medium text-sm text-gray-700">{idx + 1}</td>
                     <td className="px-4 py-2 border-b">
                       <button
                         className="font-bold text-indigo-700 hover:underline focus:outline-none text-left"
@@ -404,7 +406,7 @@ const LoanTableView: React.FC = () => {
                   <AnimatePresence>
                     {isExpanded && (
                       <tr className="bg-gray-50/20">
-                        <td colSpan={11} className="p-0 border-b">
+                        <td colSpan={12} className="p-0 border-b">
                           <motion.div
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: "auto", opacity: 1 }}
@@ -567,7 +569,7 @@ const LoanTableView: React.FC = () => {
       {/* Mobile stacked cards */}
       {/* This `md:hidden` class is correct. It hides this view on desktop */}
       <div className="md:hidden mt-4 space-y-3">
-        {sortedLoans.map((loan) => {
+        {sortedLoans.map((loan, idx) => {
           const loanInstallments = installments
             .filter((inst) => inst.loan_id === loan.id)
             .sort(
@@ -581,12 +583,13 @@ const LoanTableView: React.FC = () => {
           const balance = totalRepayable - paid;
           const customer = loan.customers;
           return (
-            <div
+              <div
               key={loan.id}
               className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm"
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
+                  <div className="text-xs text-gray-400">#{idx + 1}</div>
                   <div className="text-sm font-semibold text-indigo-700 truncate">
                     {customer?.name ?? "Unknown"}
                   </div>

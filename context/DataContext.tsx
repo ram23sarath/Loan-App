@@ -483,6 +483,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { data, error } = await supabase.from('loans').insert([loanData] as any).select().single();
       if (error || !data) throw error;
+      // If a loan was created for a customer, remove that customer from the current user's loan_seniority list
+      try {
+        if (session?.user?.id && data.customer_id) {
+          await supabase.from('loan_seniority').delete().match({ customer_id: data.customer_id, user_id: session.user.id });
+        }
+      } catch (e) {
+        // Log but don't fail the main operation
+        console.error('Failed to cleanup loan_seniority after loan create', e);
+      }
       await fetchData();
       return data as Loan;
     } catch(error) {
@@ -495,6 +504,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { data, error } = await supabase.from('subscriptions').insert([subscriptionData] as any).select().single();
       if (error || !data) throw error;
+      // If a subscription was created for a customer, remove that customer from the current user's loan_seniority list
+      try {
+        if (session?.user?.id && data.customer_id) {
+          await supabase.from('loan_seniority').delete().match({ customer_id: data.customer_id, user_id: session.user.id });
+        }
+      } catch (e) {
+        console.error('Failed to cleanup loan_seniority after subscription create', e);
+      }
       await fetchData();
       return data as Subscription;
     } catch(error) {

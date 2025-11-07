@@ -12,8 +12,6 @@ import type {
   NewSubscription,
   NewInstallment,
 } from "../../types";
-import { WhatsAppIcon } from "../../constants";
-import { openWhatsApp } from "../../utils/whatsapp";
 import { formatDate } from "../../utils/dateFormatter";
 
 type LoanInputs = {
@@ -28,11 +26,6 @@ type SubscriptionInputs = Omit<NewSubscription, "customer_id"> & {
   late_fee?: number | null;
 };
 type InstallmentInputs = Omit<NewInstallment, "loan_id" | "customer_id">;
-
-interface LastTransactionInfo {
-  phone: string;
-  message: string;
-}
 
 const getTodayDateString = (): string => {
   const today = new Date();
@@ -67,8 +60,6 @@ const AddRecordPage = () => {
     show: false,
     message: "",
   });
-  const [lastTransactionInfo, setLastTransactionInfo] =
-    useState<LastTransactionInfo | null>(null);
 
   const loanForm = useForm<LoanInputs>();
   const subscriptionForm = useForm<SubscriptionInputs>();
@@ -79,7 +70,6 @@ const AddRecordPage = () => {
     subscriptionForm.reset();
     installmentForm.reset();
     setShowSuccess(null);
-    setLastTransactionInfo(null);
   };
 
   useEffect(() => {
@@ -173,19 +163,7 @@ const AddRecordPage = () => {
     };
 
     try {
-      const newLoan = await addLoan(newLoanData);
-      const customer = customers.find((c) => c.id === selectedCustomerId);
-      if (customer) {
-        setLastTransactionInfo({
-          phone: customer.phone,
-          message: `Hi ${customer.name}, your new loan of ₹${
-            newLoan.original_amount
-          } has been approved on ${formatDate(
-            newLoan.payment_date,
-            "whatsapp"
-          )}. Total repayable is ₹${data.totalRepayableAmount}. Thank you.`,
-        });
-      }
+      await addLoan(newLoanData);
       loanForm.reset({ payment_date: getTodayDateString() });
       setAction(null);
       setShowSuccess("Loan recorded successfully!");
@@ -204,21 +182,7 @@ const AddRecordPage = () => {
     };
 
     try {
-      const newSubscription = await addSubscription(newSubscriptionData);
-      const customer = customers.find((c) => c.id === selectedCustomerId);
-      if (customer) {
-        setLastTransactionInfo({
-          phone: customer.phone,
-          message: `Hi ${customer.name}, your subscription of ₹${
-            newSubscription.amount
-          } for the year ${
-            newSubscription.year
-          } has been recorded on ${formatDate(
-            newSubscription.date,
-            "whatsapp"
-          )}. Thank you.`,
-        });
-      }
+      await addSubscription(newSubscriptionData);
 
       subscriptionForm.reset();
       setShowSuccess("Subscription recorded successfully!");
@@ -917,27 +881,9 @@ const AddRecordPage = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 20 }}
-                    className="mt-4 text-center p-3 bg-green-100 text-green-800 rounded-lg flex justify-between items-center"
+                    className="mt-4 text-center p-3 bg-green-100 text-green-800 rounded-lg"
                   >
                     <span>{showSuccess}</span>
-                    {lastTransactionInfo && (
-                      <button
-                        onClick={() => {
-                          const ok = openWhatsApp(
-                            lastTransactionInfo.phone,
-                            lastTransactionInfo.message,
-                            { cooldownMs: 1200 }
-                          );
-                          if (!ok) {
-                            alert("Unable to open WhatsApp. Please try again.");
-                          }
-                        }}
-                        className="flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg"
-                      >
-                        <WhatsAppIcon className="w-5 h-5" />
-                        Send on WhatsApp
-                      </button>
-                    )}
                   </motion.div>
                 )}
               </AnimatePresence>

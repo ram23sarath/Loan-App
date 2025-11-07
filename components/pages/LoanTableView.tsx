@@ -46,6 +46,7 @@ const LoanTableView: React.FC = () => {
     loans,
     installments,
     deleteInstallment,
+    deleteLoan,
     updateInstallment,
     updateLoan,
   } = useData();
@@ -188,6 +189,10 @@ const LoanTableView: React.FC = () => {
   const [deleteTarget, setDeleteTarget] = React.useState<{
     id: string;
     number: number;
+  } | null>(null);
+  const [deleteLoanTarget, setDeleteLoanTarget] = React.useState<{
+    id: string;
+    customer?: string | null;
   } | null>(null);
   const [editTarget, setEditTarget] = React.useState<Installment | null>(null);
   const [editLoanTarget, setEditLoanTarget] =
@@ -398,6 +403,18 @@ const LoanTableView: React.FC = () => {
                           className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
                         >
                           Edit
+                        </button>
+                        <button
+                          onClick={() =>
+                            setDeleteLoanTarget({
+                              id: loan.id,
+                              customer: loan.customers?.name ?? null,
+                            })
+                          }
+                          className="p-1 rounded bg-red-600 text-white hover:bg-red-700"
+                          title="Delete loan"
+                        >
+                          <Trash2Icon className="w-5 h-5" />
                         </button>
                       </div>
                     </td>
@@ -660,6 +677,7 @@ const LoanTableView: React.FC = () => {
                     }}
                     className="p-2 rounded-md bg-red-50 text-red-600"
                     aria-label={`Delete latest installment for ${customer?.name}`}
+                    title="Delete latest installment"
                   >
                     <Trash2Icon className="w-5 h-5" />
                   </button>
@@ -863,6 +881,58 @@ const LoanTableView: React.FC = () => {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Loan Confirmation Modal */}
+      <AnimatePresence>
+        {deleteLoanTarget && (
+          <motion.div
+            variants={modalBackdropVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-2"
+          >
+            <motion.div
+              variants={modalContentVariants}
+              className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-xs sm:max-w-sm"
+            >
+              <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">
+                Delete Loan
+              </h3>
+              <p className="mb-4 sm:mb-6 text-sm sm:text-base">
+                Are you sure you want to delete the entire loan for{' '}
+                <span className="font-semibold">
+                  {deleteLoanTarget.customer ?? "this customer"}
+                </span>
+                ? This will remove the loan and all its installments.
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setDeleteLoanTarget(null)}
+                  className="px-3 py-2 rounded text-xs sm:text-base bg-gray-200 hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (deleteLoanTarget) {
+                      try {
+                        await deleteLoan(deleteLoanTarget.id);
+                      } catch (err: any) {
+                        alert(err?.message || String(err));
+                      }
+                      setDeleteLoanTarget(null);
+                    }
+                  }}
+                  className="px-3 py-2 rounded text-xs sm:text-base bg-red-600 text-white hover:bg-red-700"
+                >
+                  Delete Loan
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}

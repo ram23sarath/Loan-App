@@ -104,12 +104,41 @@ const AddRecordPage = () => {
 
       if (loanInProgress) {
         setActiveLoan(loanInProgress);
+        
+        // Get all installments for this loan
+        const loanInstallments = installments.filter(
+          (i) => i.loan_id === loanInProgress.id
+        );
+        
+        // Sort installments by number to get the most recent
+        const sortedInstallments = [...loanInstallments].sort(
+          (a, b) => b.installment_number - a.installment_number
+        );
+
         const paidNumbers = new Set(
-          installments
-            .filter((i) => i.loan_id === loanInProgress.id)
-            .map((i) => i.installment_number)
+          loanInstallments.map((i) => i.installment_number)
         );
         setPaidInstallmentNumbers(paidNumbers);
+        
+        // Auto-fill the installment form with the next values
+        if (sortedInstallments.length > 0) {
+          const lastInstallment = sortedInstallments[0];
+          const nextInstallmentNumber = lastInstallment.installment_number + 1;
+          
+          if (nextInstallmentNumber <= loanInProgress.total_instalments) {
+            installmentForm.setValue("amount", lastInstallment.amount);
+            installmentForm.setValue("installment_number", nextInstallmentNumber);
+          }
+        } else {
+          // If no installments yet, calculate the expected monthly amount
+          const monthlyAmount = Math.round(
+            (loanInProgress.original_amount + loanInProgress.interest_amount) / 
+            loanInProgress.total_instalments
+          );
+          installmentForm.setValue("amount", monthlyAmount);
+          installmentForm.setValue("installment_number", 1);
+        }
+
         setAction("installment");
       } else {
         setActiveLoan(null);

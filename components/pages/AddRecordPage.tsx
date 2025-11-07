@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Toast from "../ui/Toast";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { useLocation } from "react-router-dom";
@@ -66,11 +66,46 @@ const AddRecordPage = () => {
   const installmentForm = useForm<InstallmentInputs>();
 
   const resetAll = () => {
+    // Reset all forms but do not touch the success banner here. The
+    // success banner lifecycle is managed by showTemporarySuccess so
+    // it can be displayed briefly without being immediately cleared.
     loanForm.reset({ payment_date: getTodayDateString() });
     subscriptionForm.reset();
     installmentForm.reset();
-    setShowSuccess(null);
   };
+
+  // Helper to show a success message briefly, reset forms and optionally
+  // restore a follow-up action after the banner disappears.
+  const successTimeoutRef = useRef<number | null>(null);
+  const showTemporarySuccess = (message: string, followUp?: () => void) => {
+    // Clear any existing timeout
+    if (successTimeoutRef.current) {
+      window.clearTimeout(successTimeoutRef.current);
+      successTimeoutRef.current = null;
+    }
+
+    // Reset forms so the UI state is clean
+    resetAll();
+    // Close any open action UI to avoid layout jitter while showing success
+    setAction(null);
+    setShowSuccess(message);
+
+    // Hide after 2.5s and run optional follow-up (e.g., open installment)
+    successTimeoutRef.current = window.setTimeout(() => {
+      setShowSuccess(null);
+      successTimeoutRef.current = null;
+      if (followUp) followUp();
+    }, 2500) as unknown as number;
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) {
+        window.clearTimeout(successTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (location.state?.newCustomerId) {
@@ -163,10 +198,9 @@ const AddRecordPage = () => {
     };
 
     try {
-      await addLoan(newLoanData);
-      loanForm.reset({ payment_date: getTodayDateString() });
-      setAction(null);
-      setShowSuccess("Loan recorded successfully!");
+  await addLoan(newLoanData);
+  // Reset forms and show transient success banner
+  showTemporarySuccess("Loan recorded successfully!");
     } catch (error: any) {
       setToast({ show: true, message: error.message || "An error occurred." });
     }
@@ -183,15 +217,12 @@ const AddRecordPage = () => {
 
     try {
       await addSubscription(newSubscriptionData);
-
-      subscriptionForm.reset();
-      setShowSuccess("Subscription recorded successfully!");
-
-      if (activeLoan) {
-        setAction("installment");
-      } else {
-        setAction(null);
-      }
+      // Show transient success and, after it hides, open installment form
+      // if there is an active loan for this customer.
+      showTemporarySuccess("Subscription recorded successfully!", () => {
+        if (activeLoan) setAction("installment");
+        else setAction(null);
+      });
     } catch (error: any) {
       setToast({ show: true, message: error.message || "An error occurred." });
     }
@@ -235,26 +266,12 @@ const AddRecordPage = () => {
 
     try {
       const newInstallment = await addInstallment(installmentPayload);
-      const customer = customers.find((c) => c.id === activeLoan.customer_id);
-      if (customer) {
-        let paymentMessage = `your installment payment of ₹${newInstallment.amount}`;
-        if (newInstallment.late_fee && newInstallment.late_fee > 0) {
-          paymentMessage += ` (including a ₹${newInstallment.late_fee} late fee)`;
-        }
-
-        setLastTransactionInfo({
-          phone: customer.phone,
-          message: `Hi ${customer.name}, ${paymentMessage} (Installment #${
-            newInstallment.installment_number
-          }) was received on ${formatDate(
-            newInstallment.date,
-            "whatsapp"
-          )}. Thank you.`,
-        });
-      }
-
-      installmentForm.reset();
-      setShowSuccess(`Installment #${data.installment_number} recorded!`);
+      // WhatsApp notification removed; show transient success and reopen
+      // the installment form after banner hides so the flow is smooth.
+      showTemporarySuccess(`Installment #${data.installment_number} recorded!`, () => {
+        // Re-open installment UI so user can quickly add another payment
+        setAction("installment");
+      });
     } catch (error: any) {
       setToast({ show: true, message: error.message || "An error occurred." });
     }

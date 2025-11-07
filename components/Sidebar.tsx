@@ -292,7 +292,7 @@ const Sidebar = () => {
             </div>
             {!collapsed && (
               <div className="p-4 border-t border-gray-200 text-center text-xs text-gray-400">
-                <p>&copy; {new Date().getFullYear()} Sleek Solutions</p>
+                <p>&copy; {new Date().getFullYear()} I J Reddy Loan App</p>
               </div>
             )}
           </div>

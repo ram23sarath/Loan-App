@@ -114,7 +114,10 @@ const AddRecordPage = () => {
   }, [location.state]);
 
   useEffect(() => {
-    resetAll();
+    // Only reset forms when customer changes, not on every loan/installment update
+    if (!selectedCustomerId) {
+      resetAll();
+    }
 
     if (selectedCustomerId) {
       const customerLoans = loans.filter(
@@ -268,9 +271,16 @@ const AddRecordPage = () => {
       const newInstallment = await addInstallment(installmentPayload);
       // WhatsApp notification removed; show transient success and reopen
       // the installment form after banner hides so the flow is smooth.
+      // After successful submission, show success message and prepare next installment
+      const nextInstallmentNumber = data.installment_number + 1;
       showTemporarySuccess(`Installment #${data.installment_number} recorded!`, () => {
-        // Re-open installment UI so user can quickly add another payment
+        // Re-open installment UI with next installment pre-filled
         setAction("installment");
+        if (nextInstallmentNumber <= activeLoan.total_instalments) {
+          // Keep the same amount for the next installment
+          installmentForm.setValue("amount", data.amount);
+          installmentForm.setValue("installment_number", nextInstallmentNumber);
+        }
       });
     } catch (error: any) {
       setToast({ show: true, message: error.message || "An error occurred." });

@@ -51,6 +51,8 @@ const Sidebar = () => {
     installments = [],
     subscriptions = [],
     isScopedCustomer,
+    scopedCustomerId,
+    customers = [],
   } = useData();
   const [showPasswordModal, setShowPasswordModal] = React.useState(false);
 
@@ -279,12 +281,20 @@ const Sidebar = () => {
                 <div className="text-center">
                   <p
                     className="text-xs text-gray-500 truncate"
-                    title={session.user.email}
+                    title={
+                      isScopedCustomer && scopedCustomerId
+                        ? (customers.find((c) => c.id === scopedCustomerId)
+                            ?.name as string) || session.user.email
+                        : session.user.email
+                    }
                   >
                     Logged in as:
                   </p>
                   <p className="text-sm font-semibold text-gray-800 truncate">
-                    {session.user.email}
+                    {isScopedCustomer && scopedCustomerId
+                      ? customers.find((c) => c.id === scopedCustomerId)?.name ||
+                        session.user.email
+                      : session.user.email}
                   </p>
                 </div>
               )}

@@ -56,7 +56,7 @@ const DataPage = () => {
   });
 
   // UI state
-  const [showTable, setShowTable] = useState(false);
+  const [showTable, setShowTable] = useState(isScopedCustomer ? true : false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
@@ -68,6 +68,14 @@ const DataPage = () => {
   const customerMap = useMemo(() => {
     return new Map(customers.map(c => [c.id, c.name]));
   }, [customers]);
+
+  // Filter data entries by scoped customer if applicable
+  const displayedDataEntries = useMemo(() => {
+    if (isScopedCustomer && scopedCustomerId) {
+      return dataEntries.filter(entry => entry.customer_id === scopedCustomerId);
+    }
+    return dataEntries;
+  }, [dataEntries, isScopedCustomer, scopedCustomerId]);
 
   // Memoized list of customers for the form's dropdown
   const filteredCustomers = useMemo(() => {
@@ -228,7 +236,12 @@ const DataPage = () => {
           <div className="w-full md:w-auto">
             <button
               type="button"
-              className="w-full md:w-auto px-4 py-2 rounded-lg bg-indigo-100 text-indigo-700 font-semibold hover:bg-indigo-200 transition-colors duration-200 text-center mt-2 md:mt-0"
+              disabled={isScopedCustomer}
+              className={`w-full md:w-auto px-4 py-2 rounded-lg font-semibold transition-colors duration-200 text-center mt-2 md:mt-0 ${
+                isScopedCustomer 
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+              }`}
               onClick={() => {
                 setShowTable(v => !v);
                 // --- LOGIC FIX ---
@@ -258,10 +271,10 @@ const DataPage = () => {
                   </div>
                   <div className="bg-white">
                     <AnimatePresence>
-                      {dataEntries.length === 0 ? (
+                      {displayedDataEntries.length === 0 ? (
                         <div className="text-center text-gray-500 py-16 text-base">No data entries found.</div>
                       ) : (
-                        dataEntries.map(entry => {
+                        displayedDataEntries.map(entry => {
                           const customerName = customerMap.get(entry.customer_id) || 'Unknown';
                           const isExpanded = expandedNoteId === entry.id;
                           return (

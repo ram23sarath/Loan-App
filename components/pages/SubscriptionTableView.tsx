@@ -234,21 +234,23 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                 </td>
                 <td className="px-4 py-2 border-b">
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => setEditSubscriptionTarget(sub)}
-                      className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
-                    >
-                      Edit
-                    </button>
                     {!isScopedCustomer && (
-                      <button
-                        onClick={() => onDelete(sub)}
-                        className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
-                        aria-label={`Delete subscription for ${customer?.name}`}
-                        disabled={deletingId === sub.id}
-                      >
-                        <Trash2Icon className="w-5 h-5 text-red-500" />
-                      </button>
+                      <>
+                        <button
+                          onClick={() => setEditSubscriptionTarget(sub)}
+                          className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => onDelete(sub)}
+                          className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                          aria-label={`Delete subscription for ${customer?.name}`}
+                          disabled={deletingId === sub.id}
+                        >
+                          <Trash2Icon className="w-5 h-5 text-red-500" />
+                        </button>
+                      </>
                     )}
                   </div>
                 </td>
@@ -309,42 +311,44 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                   <div className="text-xs text-gray-500">{sub.year}</div>
                 </div>
               </div>
-              <div className="mt-3 flex items-center justify-between">
+                  <div className="mt-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() =>
-                      isValidPhone &&
-                      openWhatsApp(customer?.phone, message, {
-                        cooldownMs: 1200,
-                      })
-                    }
-                    className="p-2 rounded-md bg-green-50 text-green-600"
-                    disabled={!isValidPhone}
-                    aria-label={`Send subscription for ${customer?.name} on WhatsApp`}
-                  >
-                    <WhatsAppIcon className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => setEditSubscriptionTarget(sub)}
-                    className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
-                  >
-                    Edit
-                  </button>
+                      <button
+                        onClick={() =>
+                          isValidPhone &&
+                          openWhatsApp(customer?.phone, message, {
+                            cooldownMs: 1200,
+                          })
+                        }
+                        className="p-2 rounded-md bg-green-50 text-green-600"
+                        disabled={!isValidPhone}
+                        aria-label={`Send subscription for ${customer?.name} on WhatsApp`}
+                      >
+                        <WhatsAppIcon className="w-5 h-5" />
+                      </button>
+                      {!isScopedCustomer && (
+                        <button
+                          onClick={() => setEditSubscriptionTarget(sub)}
+                          className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
+                        >
+                          Edit
+                        </button>
+                      )}
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="text-sm text-gray-600">
                     Receipt: {sub.receipt || "-"}
                   </div>
-                  {!isScopedCustomer && (
-                    <button
-                      onClick={() => onDelete(sub)}
-                      className="p-2 rounded-md bg-red-50 text-red-600"
-                      aria-label={`Delete subscription for ${customer?.name}`}
-                      disabled={deletingId === sub.id}
-                    >
-                      <Trash2Icon className="w-5 h-5" />
-                    </button>
-                  )}
+                      {!isScopedCustomer && (
+                        <button
+                          onClick={() => onDelete(sub)}
+                          className="p-2 rounded-md bg-red-50 text-red-600"
+                          aria-label={`Delete subscription for ${customer?.name}`}
+                          disabled={deletingId === sub.id}
+                        >
+                          <Trash2Icon className="w-5 h-5" />
+                        </button>
+                      )}
                 </div>
               </div>
             </div>

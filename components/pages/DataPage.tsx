@@ -5,7 +5,7 @@ import { useData } from '../../context/DataContext';
 import { formatDate } from '../../utils/dateFormatter';
 
 const DataPage = () => {
-  const { customers = [], dataEntries = [], addDataEntry, deleteDataEntry, updateDataEntry } = useData();
+  const { customers = [], dataEntries = [], addDataEntry, deleteDataEntry, updateDataEntry, isScopedCustomer, scopedCustomerId } = useData();
 
   // State for the edit modal (full entry edit)
   const [editEntryId, setEditEntryId] = useState<string | null>(null);
@@ -350,7 +350,13 @@ const DataPage = () => {
               </motion.div>
             ) : (
               <motion.div key="form" variants={viewVariants} initial="hidden" animate="visible" exit="exit" className="w-full h-full">
-                <form className="flex flex-col gap-4 w-full p-1 pb-6" onSubmit={handleSubmit}>
+                {isScopedCustomer ? (
+                  <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                    <p className="text-gray-600 text-lg mb-4">You don't have permission to add data entries.</p>
+                    <p className="text-gray-500">As a customer, you can only view your own entries.</p>
+                  </div>
+                ) : (
+                  <form className="flex flex-col gap-4 w-full p-1 pb-6" onSubmit={handleSubmit}>
                   <div className="relative" ref={customerDropdownRef}>
                     <label htmlFor="customer-btn" className={labelBaseStyle}>Name</label>
                     <button id="customer-btn" type="button" className={`${inputBaseStyle} flex justify-between items-center text-left bg-white`} onClick={() => setShowCustomerDropdown(v => !v)}>
@@ -414,6 +420,7 @@ const DataPage = () => {
                   </div>
                   <button type="submit" className="w-full mt-4 bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition-colors duration-300 focus:outline-none focus:ring-4 focus:ring-indigo-300">Submit Entry</button>
                 </form>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

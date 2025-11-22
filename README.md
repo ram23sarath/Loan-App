@@ -32,6 +32,15 @@ git add . && git commit -m "Descriptive summary of changes" && git push origin m
 - **Modern UI:**  
   Responsive, glassmorphic interface with smooth animations.
 
+- **Automatic User Provisioning:**  
+  When a new customer is added, a user account is automatically created in Supabase with email `{phonenumber}@gmail.com` and password `{phonenumber}`.
+
+- **Password Management:**  
+  Users can change their password after login through the secure change password modal.
+
+- **Scoped Data Access:**  
+  Customers can only view and manage their own loans, subscriptions, and misc entries. Admin-only pages are hidden from customers, and all data queries are filtered at the database level for maximum security.
+
 ---
 
 ## 🚀 Getting Started

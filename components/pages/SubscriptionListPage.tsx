@@ -32,7 +32,7 @@ const itemVariants = {
 };
 
 const SubscriptionListPage = () => {
-  const { subscriptions, deleteSubscription, isRefreshing } = useData();
+  const { subscriptions, deleteSubscription, isRefreshing, isScopedCustomer } = useData();
 
   // always use table view for subscriptions
   const [pendingDelete, setPendingDelete] =

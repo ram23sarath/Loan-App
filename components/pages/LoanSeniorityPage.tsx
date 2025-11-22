@@ -105,21 +105,21 @@ const LoanSeniorityPage = () => {
           />
         </div>
 
-          <div className="mt-4">
+        <div className="mt-4">
           <h3 className="text-lg font-semibold mb-2">Search results</h3>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {filtered.length === 0 ? (
               <div className="text-sm text-gray-500">No customers found.</div>
             ) : (
               filtered.map(c => (
-                <div key={c.id} className="flex items:center justify-between bg-white border border-gray-100 rounded p-2">
-                  <div>
-                    <div className="font-semibold text-indigo-700">{c.name}</div>
+                <div key={c.id} className="flex items-center justify-between bg-white border border-gray-100 rounded p-2">
+                  <div className="min-w-0 mr-2">
+                    <div className="font-semibold text-indigo-700 truncate">{c.name}</div>
                     <div className="text-sm text-gray-500">{c.phone}</div>
                   </div>
                   <button
                     onClick={() => addCustomerToList(c)}
-                    className="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700"
+                    className="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 shrink-0"
                   >
                     Add
                   </button>
@@ -132,8 +132,8 @@ const LoanSeniorityPage = () => {
 
       {/* Entry modal */}
       {modalCustomer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-md">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Add Seniority Entry for {modalCustomer.name}</h3>
               <button onClick={closeModal} className="text-gray-500">✕</button>
@@ -195,13 +195,13 @@ const LoanSeniorityPage = () => {
                       <td className="px-4 py-3">
                         <div className="flex gap-2">
                           <button onClick={() => {
-                              // open edit modal prefilled
-                              setModalCustomer({ id: entry.customer_id, name: entry.customers?.name });
-                              setStationName(entry.station_name || '');
-                              setLoanType(entry.loan_type || 'General');
-                              setLoanRequestDate(entry.loan_request_date || '');
-                              setModalEditingId(entry.id);
-                            }}
+                            // open edit modal prefilled
+                            setModalCustomer({ id: entry.customer_id, name: entry.customers?.name });
+                            setStationName(entry.station_name || '');
+                            setLoanType(entry.loan_type || 'General');
+                            setLoanRequestDate(entry.loan_request_date || '');
+                            setModalEditingId(entry.id);
+                          }}
                             aria-label={`Edit seniority entry ${entry.id}`}
                             className="p-2 rounded hover:bg-gray-100">
                             <PencilIcon className="w-4 h-4 text-blue-600" />

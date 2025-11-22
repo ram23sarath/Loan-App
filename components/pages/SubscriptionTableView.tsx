@@ -94,7 +94,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
     const emptyMessage = isScopedCustomer && scopedCustomerId
       ? (() => {
         const customer = customers.find(c => c.id === scopedCustomerId);
-        return `No Entries for ${customer?.name || 'you'} yet!`;
+        return `No Subscription Entries for ${customer?.name || 'you'}`;
       })()
       : 'No subscriptions recorded yet.';
 

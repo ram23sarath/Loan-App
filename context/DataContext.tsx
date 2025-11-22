@@ -428,11 +428,29 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     initializeSession();
 
     // The listener for SIGNED_IN and SIGNED_OUT events remains the same.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (_event === 'SIGNED_IN') {
         setSession(session);
-        fetchData();
-          fetchSeniorityList();
+        // Check if this user is a scoped customer and fetch accordingly
+        if (session && session.user && session.user.id) {
+          try {
+            const { data: matchedCustomers, error } = await supabase.from('customers').select('id').eq('user_id', session.user.id).limit(1);
+            if (!error && matchedCustomers && matchedCustomers.length > 0) {
+              setIsScopedCustomer(true);
+              setScopedCustomerId(matchedCustomers[0].id);
+            } else {
+              setIsScopedCustomer(false);
+              setScopedCustomerId(null);
+            }
+          } catch (err) {
+            console.error('Error checking scoped customer on signin', err);
+            setIsScopedCustomer(false);
+            setScopedCustomerId(null);
+          }
+          // Fetch data after determining scoped status
+          await fetchData();
+          await fetchSeniorityList();
+        }
       } else if (_event === 'SIGNED_OUT') {
         setSession(null);
         // Clear both React state and any client-side persisted caches so the UI doesn't show stale data

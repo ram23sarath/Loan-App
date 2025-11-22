@@ -1,5 +1,5 @@
 import React from 'react';
-import { HashRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { HashRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { DataProvider } from './context/DataContext';
 import Sidebar from './components/Sidebar';
@@ -13,30 +13,79 @@ import SubscriptionListPage from './components/pages/SubscriptionListPage';
 import SummaryPage from './components/pages/SummaryPage';
 import DataPage from './components/pages/DataPage';
 import LoginPage from './components/pages/LoginPage';
+import CustomerDashboard from './components/pages/CustomerDashboard';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import { useData } from './context/DataContext';
+
+// AdminOnlyRoute component to restrict admin-only pages
+const AdminOnlyRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isScopedCustomer } = useData();
+  if (isScopedCustomer) {
+    return <Navigate to="/loans" replace />;
+  }
+  return <>{children}</>;
+};
 
 // AnimatedRoutes component to handle page transitions
-
 const AnimatedRoutes = () => {
   const location = useLocation();
+  const { isScopedCustomer } = useData();
   return (
     <AnimatePresence mode="wait">
       <Routes location={location}>
-        <Route path="/" element={<AddCustomerPage />} />
-        <Route path="/add-record" element={<AddRecordPage />} />
-        <Route path="/customers" element={<CustomerListPage />} />
-  <Route path="/loans" element={<LoanListPage />} />
-    <Route path="/loan-seniority" element={<LoanSeniorityPage />} />
+        <Route
+          path="/"
+          element={
+            isScopedCustomer ? (
+              <CustomerDashboard />
+            ) : (
+              <AdminOnlyRoute>
+                <AddCustomerPage />
+              </AdminOnlyRoute>
+            )
+          }
+        />
+        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/add-record"
+          element={
+            <AdminOnlyRoute>
+              <AddRecordPage />
+            </AdminOnlyRoute>
+          }
+        />
+        <Route
+          path="/customers"
+          element={
+            <AdminOnlyRoute>
+              <CustomerListPage />
+            </AdminOnlyRoute>
+          }
+        />
+        <Route path="/loans" element={<LoanListPage />} />
+        <Route
+          path="/loan-seniority"
+          element={
+            <AdminOnlyRoute>
+              <LoanSeniorityPage />
+            </AdminOnlyRoute>
+          }
+        />
         <Route path="/loans/:id" element={<LoanDetailPage />} />
-  <Route path="/subscriptions" element={<SubscriptionListPage />} />
-        <Route path="/summary" element={<SummaryPage />} />
+        <Route path="/subscriptions" element={<SubscriptionListPage />} />
+        <Route
+          path="/summary"
+          element={
+            <AdminOnlyRoute>
+              <SummaryPage />
+            </AdminOnlyRoute>
+          }
+        />
         <Route path="/data" element={<DataPage />} />
       </Routes>
     </AnimatePresence>
   );
 }
-
-import { useData } from './context/DataContext';
 
 const AutoLogout = () => {
   const { signOut } = useData();

@@ -17,7 +17,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
   onDelete,
   deletingId,
 }) => {
-  const { subscriptions, updateSubscription } = useData();
+  const { subscriptions, updateSubscription, isScopedCustomer, scopedCustomerId } = useData();
   const [editSubscriptionTarget, setEditSubscriptionTarget] = React.useState<
     any | null
   >(null);
@@ -29,7 +29,12 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
     "asc"
   );
 
-  const filteredSubscriptions = subscriptions.filter((sub) => {
+  // First filter by scoped customer if applicable
+  const scopedSubscriptions = isScopedCustomer && scopedCustomerId
+    ? subscriptions.filter((sub) => sub.customer_id === scopedCustomerId)
+    : subscriptions;
+
+  const filteredSubscriptions = scopedSubscriptions.filter((sub) => {
     const customerName = sub.customers?.name?.toLowerCase() || "";
     const receipt = (sub.receipt || "").toLowerCase();
     return (
@@ -231,14 +236,16 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                     >
                       Edit
                     </button>
-                    <button
-                      onClick={() => onDelete(sub)}
-                      className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
-                      aria-label={`Delete subscription for ${customer?.name}`}
-                      disabled={deletingId === sub.id}
-                    >
-                      <Trash2Icon className="w-5 h-5 text-red-500" />
-                    </button>
+                    {!isScopedCustomer && (
+                      <button
+                        onClick={() => onDelete(sub)}
+                        className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                        aria-label={`Delete subscription for ${customer?.name}`}
+                        disabled={deletingId === sub.id}
+                      >
+                        <Trash2Icon className="w-5 h-5 text-red-500" />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -327,14 +334,16 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                   <div className="text-sm text-gray-600">
                     Receipt: {sub.receipt || "-"}
                   </div>
-                  <button
-                    onClick={() => onDelete(sub)}
-                    className="p-2 rounded-md bg-red-50 text-red-600"
-                    aria-label={`Delete subscription for ${customer?.name}`}
-                    disabled={deletingId === sub.id}
-                  >
-                    <Trash2Icon className="w-5 h-5" />
-                  </button>
+                  {!isScopedCustomer && (
+                    <button
+                      onClick={() => onDelete(sub)}
+                      className="p-2 rounded-md bg-red-50 text-red-600"
+                      aria-label={`Delete subscription for ${customer?.name}`}
+                      disabled={deletingId === sub.id}
+                    >
+                      <Trash2Icon className="w-5 h-5" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

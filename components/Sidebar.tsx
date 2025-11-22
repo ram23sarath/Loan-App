@@ -32,15 +32,15 @@ import { useData } from "../context/DataContext";
 import HamburgerIcon from "./ui/HamburgerIcon";
 import ChangePasswordModal from "./modals/ChangePasswordModal";
 
-const navItems = [
-  { path: "/", label: "Add Customer", icon: UserPlusIcon },
-  { path: "/add-record", label: "Add Record", icon: FilePlusIcon },
-  { path: "/customers", label: "Customers", icon: UsersIcon },
+const allNavItems = [
+  { path: "/", label: "Add Customer", icon: UserPlusIcon, adminOnly: true },
+  { path: "/add-record", label: "Add Record", icon: FilePlusIcon, adminOnly: true },
+  { path: "/customers", label: "Customers", icon: UsersIcon, adminOnly: true },
   { path: "/loans", label: "Loans", icon: LandmarkIcon },
-  { path: "/loan-seniority", label: "Loan Seniority", icon: StarIcon },
+  { path: "/loan-seniority", label: "Loan Seniority", icon: StarIcon, adminOnly: true },
   { path: "/subscriptions", label: "Subscriptions", icon: HistoryIcon },
   { path: "/data", label: "Misc", icon: DatabaseIcon },
-  { path: "/summary", label: "Summary", icon: BookOpenIcon },
+  { path: "/summary", label: "Summary", icon: BookOpenIcon, adminOnly: true },
 ];
 
 const Sidebar = () => {
@@ -50,8 +50,12 @@ const Sidebar = () => {
     loans = [],
     installments = [],
     subscriptions = [],
+    isScopedCustomer,
   } = useData();
   const [showPasswordModal, setShowPasswordModal] = React.useState(false);
+
+  // Filter navigation items based on user role
+  const navItems = allNavItems.filter(item => !item.adminOnly || !isScopedCustomer);
 
   // --- Summary Calculations ---
   const totalInterestCollected = loans.reduce((acc, loan) => {

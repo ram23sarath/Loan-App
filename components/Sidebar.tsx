@@ -9,6 +9,7 @@ import {
   LogOutIcon,
   BookOpenIcon,
   StarIcon,
+  KeyIcon,
 } from "../constants";
 // Database icon for Data section
 const DatabaseIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -29,6 +30,7 @@ const DatabaseIcon = (props: React.SVGProps<SVGSVGElement>) => (
 // Hamburger removed — using bottom nav for mobile
 import { useData } from "../context/DataContext";
 import HamburgerIcon from "./ui/HamburgerIcon";
+import ChangePasswordModal from "./modals/ChangePasswordModal";
 
 const navItems = [
   { path: "/", label: "Add Customer", icon: UserPlusIcon },
@@ -49,6 +51,7 @@ const Sidebar = () => {
     installments = [],
     subscriptions = [],
   } = useData();
+  const [showPasswordModal, setShowPasswordModal] = React.useState(false);
 
   // --- Summary Calculations ---
   const totalInterestCollected = loans.reduce((acc, loan) => {
@@ -144,17 +147,9 @@ const Sidebar = () => {
   // Responsive sidebar and bottom nav
   return (
     <>
-      {/* --- CHANGED 3: Mobile hamburger button removed --- */}
-      {/* The button below was removed, as requested */}
-      {/*
-      <button
-        aria-label="Toggle menu"
-        onClick={toggleSidebar}
-        className="fixed top-4 left-4 z-50 p-2 rounded-md bg-white border border-gray-200 shadow sm:hidden"
-      >
-        <HamburgerIcon className="w-6 h-6 text-gray-700" />
-      </button>
-      */}
+      {showPasswordModal && (
+        <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />
+      )}
 
       {/* --- CHANGED 4: Bottom nav is now always visible on mobile --- */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 flex justify-around items-center py-2 sm:hidden">
@@ -172,6 +167,14 @@ const Sidebar = () => {
             <item.icon className="w-6 h-6" />
           </NavLink>
         ))}
+        {/* Password change button for mobile view */}
+        <button
+          onClick={() => setShowPasswordModal(true)}
+          aria-label="Change password"
+          className="flex flex-col items-center justify-center px-2 text-amber-600 hover:bg-amber-50 rounded-md"
+        >
+          <KeyIcon className="w-6 h-6" />
+        </button>
         {/* Logout button for mobile view */}
         <button
           onClick={handleSignOut}
@@ -281,6 +284,15 @@ const Sidebar = () => {
                   </p>
                 </div>
               )}
+              <button
+                onClick={() => setShowPasswordModal(true)}
+                className="w-full flex items-center justify-center p-3 rounded-lg transition-colors duration-200 text-amber-600 bg-amber-50 hover:bg-amber-100 font-semibold"
+                aria-label={collapsed ? "Change password" : undefined}
+                title="Change password"
+              >
+                <KeyIcon className={`w-5 h-5 ${collapsed ? "" : "mr-2"}`} />
+                {!collapsed && <span>Change Password</span>}
+              </button>
               <button
                 onClick={handleSignOut}
                 className="w-full flex items-center justify-center p-3 rounded-lg transition-colors duration-200 text-red-600 bg-red-50 hover:bg-red-100 font-semibold"

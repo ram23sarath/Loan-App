@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
 /**
- * INTEGRATION GUIDE: User Creation Script
+ * INTEGRATION GUIDE: User Creation & Auto-Provisioning
  * 
- * This script integrates with the Loan Management app to create Supabase users
- * from existing customers in the database.
+ * This guide covers both:
+ * 1. Batch user creation from existing customers (script)
+ * 2. Automatic user creation when new customers are added (app feature)
  * 
  * QUICK REFERENCE
  * ===============
@@ -215,6 +216,123 @@
  * - Full documentation
  * 
  * For latest docs: See USERS.md and scripts/README.md
+ * 
+ * ============================================================
+ * AUTOMATIC USER CREATION (NEW FEATURE)
+ * ============================================================
+ * 
+ * When you add a new customer through the app, a Supabase user
+ * is automatically created in the background!
+ * 
+ * HOW IT WORKS
+ * ============
+ * 
+ * 1. Admin adds a new customer via "Add Customer" page
+ * 2. Customer is saved to database
+ * 3. Netlify function automatically creates Supabase user
+ * 4. Email: {phone}@gmail.com
+ * 5. Password: {phone} (customer's phone number)
+ * 6. Customer record is updated with user_id
+ * 7. Everything happens silently in background
+ * 
+ * USER CREDENTIALS CREATED
+ * ========================
+ * 
+ * For a customer with phone 9876543210:
+ * - Email: 9876543210@gmail.com
+ * - Password: 9876543210
+ * 
+ * The customer can immediately log in with these credentials
+ * and change their password using the app.
+ * 
+ * SETUP REQUIREMENTS
+ * ==================
+ * 
+ * For automatic user creation to work, you need:
+ * 
+ * ✓ Deployed to Netlify (or similar serverless platform)
+ * ✓ Environment variable: SUPABASE_SERVICE_ROLE_KEY
+ * ✓ Database RLS policies allow user_id updates
+ * 
+ * HOW TO DEPLOY TO NETLIFY
+ * ========================
+ * 
+ * 1. Push code to GitHub:
+ *    git add .
+ *    git commit -m "Add auto user creation"
+ *    git push origin main
+ * 
+ * 2. In Netlify Dashboard:
+ *    - Connect your GitHub repo
+ *    - Settings → Environment
+ *    - Add SUPABASE_SERVICE_ROLE_KEY secret
+ *    - Deploy!
+ * 
+ * 3. Or use Netlify CLI:
+ *    npm install -g netlify-cli
+ *    netlify deploy
+ * 
+ * MONITORING AUTO CREATION
+ * ========================
+ * 
+ * Check if auto-creation worked by:
+ * 1. Open browser DevTools (F12)
+ * 2. Go to Console tab
+ * 3. Look for: "✅ User auto-created: [user-id]"
+ * 
+ * If you see warning: "⚠️  Failed to auto-create user"
+ * - Customer was still created successfully
+ * - But needs manual user setup (see batch script above)
+ * 
+ * TROUBLESHOOTING AUTO CREATION
+ * ==============================
+ * 
+ * If auto-creation fails:
+ * 
+ * Issue: Function returns 500 error
+ * Fix: Check SUPABASE_SERVICE_ROLE_KEY in Netlify env vars
+ * 
+ * Issue: Email already exists error
+ * Fix: Delete the duplicate user in Supabase → Auth
+ * 
+ * Issue: Database update fails
+ * Fix: Check RLS policies allow updates to customers.user_id
+ * 
+ * FALLBACK: MANUAL USER CREATION
+ * ==============================
+ * 
+ * If auto-creation fails, use the batch script:
+ * 
+ * 1. Set service role key:
+ *    export SUPABASE_SERVICE_ROLE_KEY="your-key"
+ * 
+ * 2. Run batch script:
+ *    node scripts/create-users-from-customers.js
+ * 
+ * This creates users for any customers without user_id
+ * 
+ * COMPLETE USER PROVISIONING WORKFLOW
+ * ====================================
+ * 
+ * FOR EXISTING CUSTOMERS (before auto-creation):
+ * 1. Admin runs: node scripts/create-users-from-customers.js
+ * 2. Users are created for all customers
+ * 3. Customers can log in and change password
+ * 
+ * FOR NEW CUSTOMERS (after deploying auto-creation):
+ * 1. Admin adds customer via "Add Customer" page
+ * 2. User is automatically created in background
+ * 3. Customer can immediately log in
+ * 4. Customer changes password using app
+ * 
+ * HYBRID APPROACH
+ * ===============
+ * 
+ * Use both methods together:
+ * - Batch script: for initial setup of existing customers
+ * - Auto-creation: for new customers added going forward
+ * 
+ * This ensures 100% coverage!
  * 
  */
 

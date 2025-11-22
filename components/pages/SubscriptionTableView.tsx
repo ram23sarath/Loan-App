@@ -17,7 +17,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
   onDelete,
   deletingId,
 }) => {
-  const { subscriptions, updateSubscription, isScopedCustomer, scopedCustomerId } = useData();
+  const { subscriptions, updateSubscription, isScopedCustomer, scopedCustomerId, customers } = useData();
   const [editSubscriptionTarget, setEditSubscriptionTarget] = React.useState<
     any | null
   >(null);
@@ -91,10 +91,17 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
   }, [filteredSubscriptions, sortField, sortDirection]);
 
   if (subscriptions.length === 0) {
+    const emptyMessage = isScopedCustomer && scopedCustomerId
+      ? (() => {
+          const customer = customers.find(c => c.id === scopedCustomerId);
+          return `No subscriptions recorded for ${customer?.name || 'you'} yet.`;
+        })()
+      : 'No subscriptions recorded yet.';
+    
     return (
       <GlassCard>
         <p className="text-center text-gray-500">
-          No subscriptions recorded yet.
+          {emptyMessage}
         </p>
       </GlassCard>
     );

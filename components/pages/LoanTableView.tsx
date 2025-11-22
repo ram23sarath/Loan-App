@@ -49,6 +49,9 @@ const LoanTableView: React.FC = () => {
     deleteLoan,
     updateInstallment,
     updateLoan,
+    customers,
+    isScopedCustomer,
+    scopedCustomerId,
   } = useData();
   const [filter, setFilter] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("");
@@ -178,9 +181,16 @@ const LoanTableView: React.FC = () => {
   }, [filteredLoans, sortField, sortDirection, installments]);
 
   if (loans.length === 0) {
+    const emptyMessage = isScopedCustomer && scopedCustomerId
+      ? (() => {
+          const customer = customers.find(c => c.id === scopedCustomerId);
+          return `No loans recorded for ${customer?.name || 'you'} yet.`;
+        })()
+      : 'No loans recorded yet.';
+    
     return (
       <GlassCard>
-        <p className="text-center text-gray-500">No loans recorded yet.</p>
+        <p className="text-center text-gray-500">{emptyMessage}</p>
       </GlassCard>
     );
   }

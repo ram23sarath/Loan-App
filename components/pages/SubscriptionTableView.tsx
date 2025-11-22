@@ -93,11 +93,11 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
   if (subscriptions.length === 0) {
     const emptyMessage = isScopedCustomer && scopedCustomerId
       ? (() => {
-          const customer = customers.find(c => c.id === scopedCustomerId);
-          return `No subscriptions recorded for ${customer?.name || 'you'} yet.`;
-        })()
+        const customer = customers.find(c => c.id === scopedCustomerId);
+        return `No Entries for ${customer?.name || 'you'} yet!`;
+      })()
       : 'No subscriptions recorded yet.';
-    
+
     return (
       <GlassCard>
         <p className="text-center text-gray-500">
@@ -185,21 +185,18 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
               /^\d{10,15}$/.test(customer.phone)
             ) {
               isValidPhone = true;
-              message = `Hi ${customer.name}, your subscription payment of ₹${
-                sub.amount
-              } for the year ${sub.year} was received on ${formatDate(
-                sub.date,
-                "whatsapp"
-              )}. Receipt: ${sub.receipt || "-"}${
-                sub.late_fee && sub.late_fee > 0
+              message = `Hi ${customer.name}, your subscription payment of ₹${sub.amount
+                } for the year ${sub.year} was received on ${formatDate(
+                  sub.date,
+                  "whatsapp"
+                )}. Receipt: ${sub.receipt || "-"}${sub.late_fee && sub.late_fee > 0
                   ? ` (including a late fee of ₹${sub.late_fee})`
                   : ""
-              }`;
+                }`;
               // Append signature
               message += " Thank You, I J Reddy.";
-              whatsappUrl = `https://wa.me/${
-                customer.phone
-              }?text=${encodeURIComponent(message)}`;
+              whatsappUrl = `https://wa.me/${customer.phone
+                }?text=${encodeURIComponent(message)}`;
             }
             return (
               <tr key={sub.id} className="even:bg-gray-50">
@@ -274,36 +271,33 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
             /^\d{10,15}$/.test(customer.phone)
           ) {
             isValidPhone = true;
-            message = `Hi ${
-              customer.name
-            }, your subscription payment of ${formatCurrencyIN(
-              sub.amount
-            )} for the year ${sub.year} was received on ${formatDate(
-              sub.date,
-              "whatsapp"
-            )}. Receipt: ${sub.receipt || "-"}${
-              sub.late_fee && sub.late_fee > 0
+            message = `Hi ${customer.name
+              }, your subscription payment of ${formatCurrencyIN(
+                sub.amount
+              )} for the year ${sub.year} was received on ${formatDate(
+                sub.date,
+                "whatsapp"
+              )}. Receipt: ${sub.receipt || "-"}${sub.late_fee && sub.late_fee > 0
                 ? ` (including a late fee of ${formatCurrencyIN(sub.late_fee)})`
                 : ""
-            }`;
+              }`;
             // Append signature
             message += " Thank You, I J Reddy.";
-            whatsappUrl = `https://wa.me/${
-              customer.phone
-            }?text=${encodeURIComponent(message)}`;
+            whatsappUrl = `https://wa.me/${customer.phone
+              }?text=${encodeURIComponent(message)}`;
           }
 
-            return (
+          return (
             <div
               key={sub.id}
               className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm"
             >
               <div className="flex justify-between items-start">
                 <div>
-                    <div className="text-xs text-gray-400">#{idx + 1}</div>
-                    <div className="text-sm font-semibold text-indigo-700 truncate">
-                      {customer?.name ?? "Unknown"}
-                    </div>
+                  <div className="text-xs text-gray-400">#{idx + 1}</div>
+                  <div className="text-sm font-semibold text-indigo-700 truncate">
+                    {customer?.name ?? "Unknown"}
+                  </div>
                   <div className="text-xs text-gray-500">
                     {formatDate(sub.date) || "-"}
                   </div>

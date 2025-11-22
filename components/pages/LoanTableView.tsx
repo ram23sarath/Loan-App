@@ -412,24 +412,28 @@ const LoanTableView: React.FC = () => {
                     </td>
                     <td className="px-4 py-2 border-b">
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => setEditLoanTarget(loan)}
-                          className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() =>
-                            setDeleteLoanTarget({
-                              id: loan.id,
-                              customer: loan.customers?.name ?? null,
-                            })
-                          }
-                          className="p-1 rounded bg-red-600 text-white hover:bg-red-700"
-                          title="Delete loan"
-                        >
-                          <Trash2Icon className="w-5 h-5" />
-                        </button>
+                        {!isScopedCustomer && (
+                          <>
+                            <button
+                              onClick={() => setEditLoanTarget(loan)}
+                              className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() =>
+                                setDeleteLoanTarget({
+                                  id: loan.id,
+                                  customer: loan.customers?.name ?? null,
+                                })
+                              }
+                              className="p-1 rounded bg-red-600 text-white hover:bg-red-700"
+                              title="Delete loan"
+                            >
+                              <Trash2Icon className="w-5 h-5" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </motion.tr>
@@ -524,52 +528,56 @@ const LoanTableView: React.FC = () => {
                                           >
                                             <WhatsAppIcon className="w-4 h-4 text-green-500" />
                                           </motion.button>
-                                          <motion.button
-                                            onClick={() => {
-                                              setEditTarget(inst);
-                                              setEditForm({
-                                                date: inst.date,
-                                                amount: inst.amount.toString(),
-                                                late_fee:
-                                                  inst.late_fee?.toString() ||
-                                                  "",
-                                                receipt_number:
-                                                  inst.receipt_number || "",
-                                              });
-                                            }}
-                                            className="p-1 rounded-full hover:bg-blue-500/10 transition-colors ml-2"
-                                            aria-label={`Edit installment #${inst.installment_number}`}
-                                            whileHover={{ scale: 1.2 }}
-                                            whileTap={{ scale: 0.9 }}
-                                          >
-                                            <svg
-                                              className="w-4 h-4 text-blue-500"
-                                              fill="none"
-                                              stroke="currentColor"
-                                              strokeWidth="2"
-                                              viewBox="0 0 24 24"
-                                            >
-                                              <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4 1a1 1 0 01-1.263-1.263l1-4a4 4 0 01.828-1.414z"
-                                              />
-                                            </svg>
-                                          </motion.button>
-                                          <motion.button
-                                            onClick={() =>
-                                              setDeleteTarget({
-                                                id: inst.id,
-                                                number: inst.installment_number,
-                                              })
-                                            }
-                                            className="p-1 rounded-full hover:bg-red-500/10 transition-colors ml-2"
-                                            aria-label={`Delete installment #${inst.installment_number}`}
-                                            whileHover={{ scale: 1.2 }}
-                                            whileTap={{ scale: 0.9 }}
-                                          >
-                                            <Trash2Icon className="w-4 h-4 text-red-500" />
-                                          </motion.button>
+                                          {!isScopedCustomer && (
+                                            <>
+                                              <motion.button
+                                                onClick={() => {
+                                                  setEditTarget(inst);
+                                                  setEditForm({
+                                                    date: inst.date,
+                                                    amount: inst.amount.toString(),
+                                                    late_fee:
+                                                      inst.late_fee?.toString() ||
+                                                      "",
+                                                    receipt_number:
+                                                      inst.receipt_number || "",
+                                                  });
+                                                }}
+                                                className="p-1 rounded-full hover:bg-blue-500/10 transition-colors ml-2"
+                                                aria-label={`Edit installment #${inst.installment_number}`}
+                                                whileHover={{ scale: 1.2 }}
+                                                whileTap={{ scale: 0.9 }}
+                                              >
+                                                <svg
+                                                  className="w-4 h-4 text-blue-500"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  strokeWidth="2"
+                                                  viewBox="0 0 24 24"
+                                                >
+                                                  <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4 1a1 1 0 01-1.263-1.263l1-4a4 4 0 01.828-1.414z"
+                                                  />
+                                                </svg>
+                                              </motion.button>
+                                              <motion.button
+                                                onClick={() =>
+                                                  setDeleteTarget({
+                                                    id: inst.id,
+                                                    number: inst.installment_number,
+                                                  })
+                                                }
+                                                className="p-1 rounded-full hover:bg-red-500/10 transition-colors ml-2"
+                                                aria-label={`Delete installment #${inst.installment_number}`}
+                                                whileHover={{ scale: 1.2 }}
+                                                whileTap={{ scale: 0.9 }}
+                                              >
+                                                <Trash2Icon className="w-4 h-4 text-red-500" />
+                                              </motion.button>
+                                            </>
+                                          )}
                                         </div>
                                       </li>
                                     );
@@ -660,12 +668,14 @@ const LoanTableView: React.FC = () => {
 
               <div className="mt-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setEditLoanTarget(loan)}
-                    className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
-                  >
-                    Edit
-                  </button>
+                  {!isScopedCustomer && (
+                    <button
+                      onClick={() => setEditLoanTarget(loan)}
+                      className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
+                    >
+                      Edit
+                    </button>
+                  )}
                   <button
                     onClick={() =>
                       setExpandedRow(expandedRow === loan.id ? null : loan.id)
@@ -676,22 +686,24 @@ const LoanTableView: React.FC = () => {
                   </button>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      // delete most recent installment or open delete modal
-                      if (loanInstallments.length > 0) {
-                        setDeleteTarget({
-                          id: loanInstallments[0].id,
-                          number: loanInstallments[0].installment_number,
-                        });
-                      }
-                    }}
-                    className="p-2 rounded-md bg-red-50 text-red-600"
-                    aria-label={`Delete latest installment for ${customer?.name}`}
-                    title="Delete latest installment"
-                  >
-                    <Trash2Icon className="w-5 h-5" />
-                  </button>
+                  {!isScopedCustomer && (
+                    <button
+                      onClick={() => {
+                        // delete most recent installment or open delete modal
+                        if (loanInstallments.length > 0) {
+                          setDeleteTarget({
+                            id: loanInstallments[0].id,
+                            number: loanInstallments[0].installment_number,
+                          });
+                        }
+                      }}
+                      className="p-2 rounded-md bg-red-50 text-red-600"
+                      aria-label={`Delete latest installment for ${customer?.name}`}
+                      title="Delete latest installment"
+                    >
+                      <Trash2Icon className="w-5 h-5" />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -721,31 +733,35 @@ const LoanTableView: React.FC = () => {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => {
-                              setEditTarget(inst);
-                              setEditForm({
-                                date: inst.date,
-                                amount: inst.amount.toString(),
-                                late_fee: inst.late_fee?.toString() || "",
-                                receipt_number: inst.receipt_number || "",
-                              });
-                            }}
-                            className="p-1 rounded bg-blue-50 text-blue-600"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() =>
-                              setDeleteTarget({
-                                id: inst.id,
-                                number: inst.installment_number,
-                              })
-                            }
-                            className="p-1 rounded bg-red-50 text-red-600"
-                          >
-                            Delete
-                          </button>
+                          {!isScopedCustomer && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setEditTarget(inst);
+                                  setEditForm({
+                                    date: inst.date,
+                                    amount: inst.amount.toString(),
+                                    late_fee: inst.late_fee?.toString() || "",
+                                    receipt_number: inst.receipt_number || "",
+                                  });
+                                }}
+                                className="p-1 rounded bg-blue-50 text-blue-600"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() =>
+                                  setDeleteTarget({
+                                    id: inst.id,
+                                    number: inst.installment_number,
+                                  })
+                                }
+                                className="p-1 rounded bg-red-50 text-red-600"
+                              >
+                                Delete
+                              </button>
+                            </>
+                          )}
                         </div>
                       </li>
                     ))}

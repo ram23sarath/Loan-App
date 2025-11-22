@@ -189,7 +189,7 @@ const LoanTableView: React.FC = () => {
     const emptyMessage = isScopedCustomer && scopedCustomerId
       ? (() => {
         const customer = customers.find(c => c.id === scopedCustomerId);
-        return `No loans recorded for ${customer?.name || 'you'} yet.`;
+        return `No Loan Entries for ${customer?.name || 'you'}`;
       })()
       : 'No loans recorded yet.';
 

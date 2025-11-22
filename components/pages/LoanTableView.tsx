@@ -62,6 +62,11 @@ const LoanTableView: React.FC = () => {
 
   // ... (All existing logic for filtering and sorting remains unchanged)
   const filteredLoans = loans.filter((loan) => {
+    // Filter by scoped customer if applicable
+    if (isScopedCustomer && scopedCustomerId && loan.customer_id !== scopedCustomerId) {
+      return false;
+    }
+
     const customerName = loan.customers?.name?.toLowerCase() || "";
     const checkNumber = (loan.check_number || "").toLowerCase();
     const status = (() => {
@@ -183,11 +188,11 @@ const LoanTableView: React.FC = () => {
   if (loans.length === 0) {
     const emptyMessage = isScopedCustomer && scopedCustomerId
       ? (() => {
-          const customer = customers.find(c => c.id === scopedCustomerId);
-          return `No loans recorded for ${customer?.name || 'you'} yet.`;
-        })()
+        const customer = customers.find(c => c.id === scopedCustomerId);
+        return `No loans recorded for ${customer?.name || 'you'} yet.`;
+      })()
       : 'No loans recorded yet.';
-    
+
     return (
       <GlassCard>
         <p className="text-center text-gray-500">{emptyMessage}</p>
@@ -400,9 +405,8 @@ const LoanTableView: React.FC = () => {
                       {loan.payment_date ? formatDate(loan.payment_date) : "-"}
                     </td>
                     <td
-                      className={`px-4 py-2 border-b font-semibold ${
-                        isPaidOff ? "text-green-600" : "text-orange-600"
-                      }`}
+                      className={`px-4 py-2 border-b font-semibold ${isPaidOff ? "text-green-600" : "text-orange-600"
+                        }`}
                     >
                       {isPaidOff ? "Paid Off" : "In Progress"}
                     </td>
@@ -462,23 +466,20 @@ const LoanTableView: React.FC = () => {
                                       if (inst.late_fee && inst.late_fee > 0) {
                                         message += ` (including a ₹${inst.late_fee} late fee)`;
                                       }
-                                      message += ` (Installment #${
-                                        inst.installment_number
-                                      }) was received on ${formatDate(
-                                        inst.date,
-                                        "whatsapp"
-                                      )}. Thank you.`;
+                                      message += ` (Installment #${inst.installment_number
+                                        }) was received on ${formatDate(
+                                          inst.date,
+                                          "whatsapp"
+                                        )}. Thank you.`;
                                       // Append signature
                                       message += " Thank You, I J Reddy.";
                                       // build wa.me URL and ensure proper encoding
                                       try {
-                                        whatsappUrl = `https://wa.me/${
-                                          customer.phone
-                                        }?text=${encodeURIComponent(message)}`;
+                                        whatsappUrl = `https://wa.me/${customer.phone
+                                          }?text=${encodeURIComponent(message)}`;
                                       } catch (err) {
-                                        whatsappUrl = `https://api.whatsapp.com/send?phone=${
-                                          customer.phone
-                                        }&text=${encodeURIComponent(message)}`;
+                                        whatsappUrl = `https://api.whatsapp.com/send?phone=${customer.phone
+                                          }&text=${encodeURIComponent(message)}`;
                                       }
                                     }
                                     return (
@@ -610,7 +611,7 @@ const LoanTableView: React.FC = () => {
           const balance = totalRepayable - paid;
           const customer = loan.customers;
           return (
-              <div
+            <div
               key={loan.id}
               className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm"
             >

@@ -114,7 +114,7 @@ const DataPage = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showCustomerDropdown]);
-  
+
   useEffect(() => {
     const handleClickOutsideNotes = (event: MouseEvent) => {
       if (expandedNoteId && notesRefs.current[expandedNoteId] && !notesRefs.current[expandedNoteId]?.contains(event.target as Node)) {
@@ -161,7 +161,7 @@ const DataPage = () => {
         receipt_number: form.receipt,
         notes: form.notes,
       });
-  setForm({ customerId: '', date: '', amount: '', type: 'credit', subtype: '', receipt: '', notes: '' });
+      setForm({ customerId: '', date: '', amount: '', type: 'credit', subtype: '', receipt: '', notes: '' });
       setToastMsg('Entry added successfully!');
       setShowToast(true);
     } catch (err: any) {
@@ -237,11 +237,10 @@ const DataPage = () => {
             <button
               type="button"
               disabled={isScopedCustomer}
-              className={`w-full md:w-auto px-4 py-2 rounded-lg font-semibold transition-colors duration-200 text-center mt-2 md:mt-0 ${
-                isScopedCustomer 
+              className={`w-full md:w-auto px-4 py-2 rounded-lg font-semibold transition-colors duration-200 text-center mt-2 md:mt-0 ${isScopedCustomer
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
-              }`}
+                }`}
               onClick={() => {
                 setShowTable(v => !v);
                 // --- LOGIC FIX ---
@@ -254,7 +253,7 @@ const DataPage = () => {
           </div>
         </div>
 
-  <div className={`w-full min-h-[300px] md:min-h-[500px] relative ${showTable ? 'px-2' : ''}`}>
+        <div className={`w-full min-h-[300px] md:min-h-[500px] relative ${showTable ? 'px-2' : ''}`}>
           <AnimatePresence mode="wait">
             {showTable ? (
               <motion.div key="table" variants={viewVariants} initial="hidden" animate="visible" exit="exit">
@@ -273,11 +272,11 @@ const DataPage = () => {
                     <AnimatePresence>
                       {displayedDataEntries.length === 0 ? (
                         <div className="text-center text-gray-500 py-16 text-base">
-                          {isScopedCustomer && scopedCustomerId 
+                          {isScopedCustomer && scopedCustomerId
                             ? (() => {
-                                const customer = customers.find(c => c.id === scopedCustomerId);
-                                return `No data entries recorded for ${customer?.name || 'you'} yet.`;
-                              })()
+                              const customer = customers.find(c => c.id === scopedCustomerId);
+                              return `No Entries for ${customer?.name || 'you'} yet!`;
+                            })()
                             : 'No data entries found.'}
                         </div>
                       ) : (
@@ -312,15 +311,15 @@ const DataPage = () => {
                                   <div className={`flex-1 cursor-pointer ${!isExpanded ? 'truncate' : ''}`} onClick={() => handleNoteClick(entry.id)}>
                                     {entry.notes || '-'}
                                   </div>
-                                    <button type="button" className="p-1 rounded-full hover:bg-indigo-100 transition-colors" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
-                                      <PencilIcon className="w-4 h-4 text-indigo-600" />
-                                    </button>
+                                  <button type="button" className="p-1 rounded-full hover:bg-indigo-100 transition-colors" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
+                                    <PencilIcon className="w-4 h-4 text-indigo-600" />
+                                  </button>
                                 </div>
                                 <div className="col-span-1 flex justify-center">
-                                <motion.button type="button" className="p-2 transition-colors duration-200 rounded-full text-red-600 hover:bg-red-100" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                                  <Trash2Icon className="w-5 h-5" />
-                                </motion.button>
-                              </div>
+                                  <motion.button type="button" className="p-2 transition-colors duration-200 rounded-full text-red-600 hover:bg-red-100" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
+                                    <Trash2Icon className="w-5 h-5" />
+                                  </motion.button>
+                                </div>
                               </motion.div>
 
                               {/* Mobile card (visible on small screens) */}
@@ -353,9 +352,9 @@ const DataPage = () => {
                                   <div className="mt-3 pt-3 border-t border-gray-200/80">
                                     <div className="flex justify-between items-start gap-3">
                                       <p className="flex-1 text-sm text-gray-700 break-words">{entry.notes}</p>
-                                        <button type="button" className="p-2 -mr-2 rounded-full text-indigo-600 hover:bg-indigo-50" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
-                                          <PencilIcon className="w-4 h-4" />
-                                        </button>
+                                      <button type="button" className="p-2 -mr-2 rounded-full text-indigo-600 hover:bg-indigo-50" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
+                                        <PencilIcon className="w-4 h-4" />
+                                      </button>
                                     </div>
                                   </div>
                                 )}
@@ -377,69 +376,69 @@ const DataPage = () => {
                   </div>
                 ) : (
                   <form className="flex flex-col gap-4 w-full p-1 pb-6" onSubmit={handleSubmit}>
-                  <div className="relative" ref={customerDropdownRef}>
-                    <label htmlFor="customer-btn" className={labelBaseStyle}>Name</label>
-                    <button id="customer-btn" type="button" className={`${inputBaseStyle} flex justify-between items-center text-left bg-white`} onClick={() => setShowCustomerDropdown(v => !v)}>
-                      {form.customerId ? (customerMap.get(form.customerId) || 'Select Customer') : 'Select Customer'}
-                      <svg className="w-4 h-4 ml-2 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
-                    </button>
-                    <AnimatePresence>
-                      {showCustomerDropdown && (
-                        <motion.div variants={dropdownVariants} initial="hidden" animate="visible" exit="exit" className="absolute top-full left-0 z-20 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-52 overflow-y-auto mt-1">
-                          <div className="p-2 sticky top-0 bg-white z-10 border-b border-gray-200">
-                            <input type="text" placeholder="Search customer..." value={customerFilter} onChange={e => setCustomerFilter(e.target.value)} className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 text-sm w-full" autoFocus />
-                          </div>
-                          {filteredCustomers.length === 0 ? (
-                            <div className="p-2 text-gray-400 text-sm">No customers found.</div>
-                          ) : (
-                            filteredCustomers.map((c) => (
-                              <div key={c.id} className={`p-2 cursor-pointer hover:bg-indigo-100 text-sm ${form.customerId === c.id ? 'bg-indigo-50 font-semibold' : ''}`} onClick={() => { setForm({ ...form, customerId: c.id }); setShowCustomerDropdown(false); setCustomerFilter(''); }}>
-                                {c.name}
-                              </div>
-                            ))
-                          )}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                  <div>
-                    <label htmlFor="date" className={labelBaseStyle}>Date</label>
-                    <input type="date" id="date" name="date" value={form.date} onChange={handleChange} className={inputBaseStyle} required />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                    <div className="md:col-span-2">
-                      <label htmlFor="type" className={labelBaseStyle}>Type</label>
-                      <select id="type" name="type" value={form.type} onChange={handleChange} className={`${inputBaseStyle} bg-white`} required>
-                        <option value="credit">Credit</option>
-                        <option value="expenditure">Expenditure</option>
-                      </select>
+                    <div className="relative" ref={customerDropdownRef}>
+                      <label htmlFor="customer-btn" className={labelBaseStyle}>Name</label>
+                      <button id="customer-btn" type="button" className={`${inputBaseStyle} flex justify-between items-center text-left bg-white`} onClick={() => setShowCustomerDropdown(v => !v)}>
+                        {form.customerId ? (customerMap.get(form.customerId) || 'Select Customer') : 'Select Customer'}
+                        <svg className="w-4 h-4 ml-2 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                      </button>
+                      <AnimatePresence>
+                        {showCustomerDropdown && (
+                          <motion.div variants={dropdownVariants} initial="hidden" animate="visible" exit="exit" className="absolute top-full left-0 z-20 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-52 overflow-y-auto mt-1">
+                            <div className="p-2 sticky top-0 bg-white z-10 border-b border-gray-200">
+                              <input type="text" placeholder="Search customer..." value={customerFilter} onChange={e => setCustomerFilter(e.target.value)} className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 text-sm w-full" autoFocus />
+                            </div>
+                            {filteredCustomers.length === 0 ? (
+                              <div className="p-2 text-gray-400 text-sm">No customers found.</div>
+                            ) : (
+                              filteredCustomers.map((c) => (
+                                <div key={c.id} className={`p-2 cursor-pointer hover:bg-indigo-100 text-sm ${form.customerId === c.id ? 'bg-indigo-50 font-semibold' : ''}`} onClick={() => { setForm({ ...form, customerId: c.id }); setShowCustomerDropdown(false); setCustomerFilter(''); }}>
+                                  {c.name}
+                                </div>
+                              ))
+                            )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
-                    <div className="md:col-span-2">
-                      <label htmlFor="subtype" className={labelBaseStyle}>Subtype</label>
-                      <select id="subtype" name="subtype" value={form.subtype} onChange={handleChange} className={`${inputBaseStyle} bg-white`}>
-                        <option value="">None</option>
-                        {/* Show Subscription only when type is NOT credit (hidden for credit entries) */}
-                        {form.type !== 'credit' && <option value="Subscription Return">Subscription Return</option>}
-                        <option value="Retirement Gift">Retirement Gift</option>
-                        <option value="Death Fund">Death Fund</option>
-                        <option value="Misc Expense">Misc Expense</option>
-                      </select>
+                    <div>
+                      <label htmlFor="date" className={labelBaseStyle}>Date</label>
+                      <input type="date" id="date" name="date" value={form.date} onChange={handleChange} className={inputBaseStyle} required />
                     </div>
-                    <div className="md:col-span-2">
-                      <label htmlFor="amount" className={labelBaseStyle}>Amount</label>
-                      <input type="number" id="amount" name="amount" value={form.amount} onChange={handleChange} className={inputBaseStyle} required min="0" placeholder="e.g. 5000" />
+                    <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                      <div className="md:col-span-2">
+                        <label htmlFor="type" className={labelBaseStyle}>Type</label>
+                        <select id="type" name="type" value={form.type} onChange={handleChange} className={`${inputBaseStyle} bg-white`} required>
+                          <option value="credit">Credit</option>
+                          <option value="expenditure">Expenditure</option>
+                        </select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label htmlFor="subtype" className={labelBaseStyle}>Subtype</label>
+                        <select id="subtype" name="subtype" value={form.subtype} onChange={handleChange} className={`${inputBaseStyle} bg-white`}>
+                          <option value="">None</option>
+                          {/* Show Subscription only when type is NOT credit (hidden for credit entries) */}
+                          {form.type !== 'credit' && <option value="Subscription Return">Subscription Return</option>}
+                          <option value="Retirement Gift">Retirement Gift</option>
+                          <option value="Death Fund">Death Fund</option>
+                          <option value="Misc Expense">Misc Expense</option>
+                        </select>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label htmlFor="amount" className={labelBaseStyle}>Amount</label>
+                        <input type="number" id="amount" name="amount" value={form.amount} onChange={handleChange} className={inputBaseStyle} required min="0" placeholder="e.g. 5000" />
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <label htmlFor="receipt" className={labelBaseStyle}>Receipt Number <span className="text-gray-400 font-normal">(Optional)</span></label>
-                    <input type="text" id="receipt" name="receipt" value={form.receipt} onChange={handleChange} className={inputBaseStyle} />
-                  </div>
-                  <div>
-                    <label htmlFor="notes" className={labelBaseStyle}>Notes <span className="text-gray-400 font-normal">(Optional)</span></label>
-                    <textarea id="notes" name="notes" value={form.notes} onChange={handleChange} className={`${inputBaseStyle} min-h-[100px]`} rows={3} placeholder="Enter any notes..." />
-                  </div>
-                  <button type="submit" className="w-full mt-4 bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition-colors duration-300 focus:outline-none focus:ring-4 focus:ring-indigo-300">Submit Entry</button>
-                </form>
+                    <div>
+                      <label htmlFor="receipt" className={labelBaseStyle}>Receipt Number <span className="text-gray-400 font-normal">(Optional)</span></label>
+                      <input type="text" id="receipt" name="receipt" value={form.receipt} onChange={handleChange} className={inputBaseStyle} />
+                    </div>
+                    <div>
+                      <label htmlFor="notes" className={labelBaseStyle}>Notes <span className="text-gray-400 font-normal">(Optional)</span></label>
+                      <textarea id="notes" name="notes" value={form.notes} onChange={handleChange} className={`${inputBaseStyle} min-h-[100px]`} rows={3} placeholder="Enter any notes..." />
+                    </div>
+                    <button type="submit" className="w-full mt-4 bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition-colors duration-300 focus:outline-none focus:ring-4 focus:ring-indigo-300">Submit Entry</button>
+                  </form>
                 )}
               </motion.div>
             )}

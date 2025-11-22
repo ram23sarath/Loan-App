@@ -471,6 +471,33 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { data, error } = await supabase.from('customers').insert([customerData] as any).select().single();
       if (error || !data) throw error;
+
+      // Automatically create Supabase user for this customer
+      // This happens asynchronously in the background
+      try {
+        const createUserResponse = await fetch('/.netlify/functions/create-user-from-customer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            customer_id: data.id,
+            name: customerData.name,
+            phone: customerData.phone,
+          }),
+        });
+
+        if (!createUserResponse.ok) {
+          const errorData = await createUserResponse.json();
+          console.warn('⚠️  Failed to auto-create user:', errorData.error);
+          // Don't throw - customer was created successfully even if user creation failed
+        } else {
+          const successData = await createUserResponse.json();
+          console.log('✅ User auto-created:', successData.user_id);
+        }
+      } catch (userCreateError) {
+        console.warn('⚠️  Failed to auto-create user in background:', userCreateError);
+        // Don't throw - customer was created successfully even if user creation failed
+      }
+
       await fetchData();
       return data as Customer;
     } catch(error) {

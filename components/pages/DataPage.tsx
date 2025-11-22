@@ -272,7 +272,14 @@ const DataPage = () => {
                   <div className="bg-white">
                     <AnimatePresence>
                       {displayedDataEntries.length === 0 ? (
-                        <div className="text-center text-gray-500 py-16 text-base">No data entries found.</div>
+                        <div className="text-center text-gray-500 py-16 text-base">
+                          {isScopedCustomer && scopedCustomerId 
+                            ? (() => {
+                                const customer = customers.find(c => c.id === scopedCustomerId);
+                                return `No data entries recorded for ${customer?.name || 'you'} yet.`;
+                              })()
+                            : 'No data entries found.'}
+                        </div>
                       ) : (
                         displayedDataEntries.map(entry => {
                           const customerName = customerMap.get(entry.customer_id) || 'Unknown';

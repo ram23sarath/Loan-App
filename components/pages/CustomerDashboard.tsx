@@ -4,10 +4,18 @@ import { useNavigate } from 'react-router-dom';
 import GlassCard from '../ui/GlassCard';
 import PageWrapper from '../ui/PageWrapper';
 import { motion } from 'framer-motion';
+import RequestSeniorityModal from '../ui/RequestSeniorityModal';
 
 const CustomerDashboard = () => {
   const { customers, loans, subscriptions, dataEntries, isScopedCustomer, scopedCustomerId } = useData();
   const navigate = useNavigate();
+  const { addToSeniority } = useData();
+
+  const [showRequestModal, setShowRequestModal] = React.useState(false);
+  const [stationName, setStationName] = React.useState('');
+  const [loanType, setLoanType] = React.useState('General');
+  const [loanRequestDate, setLoanRequestDate] = React.useState('');
+  const [isSavingRequest, setIsSavingRequest] = React.useState(false);
 
   // Get the current customer's data
   const customer = isScopedCustomer && scopedCustomerId 
@@ -33,6 +41,17 @@ const CustomerDashboard = () => {
             </p>
           </GlassCard>
         </motion.div>
+
+        {/* Request Modal for scoped customers */}
+        <RequestSeniorityModal
+          open={showRequestModal}
+          onClose={() => setShowRequestModal(false)}
+          customerId={customer?.id || ''}
+          customerName={customer?.name || ''}
+          defaultStation={stationName}
+          defaultLoanType={loanType}
+          defaultDate={loanRequestDate}
+        />
 
 
 
@@ -71,6 +90,21 @@ const CustomerDashboard = () => {
               >
                 View Misc Entries
               </motion.button>
+              {isScopedCustomer && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    // default requested date to today
+                    const today = new Date().toISOString().slice(0,10);
+                    setLoanRequestDate(today);
+                    setShowRequestModal(true);
+                  }}
+                  className="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+                >
+                  Request Loan/Subscription
+                </motion.button>
+              )}
             </div>
           </GlassCard>
         </motion.div>
@@ -82,3 +116,4 @@ const CustomerDashboard = () => {
 };
 
 export default CustomerDashboard;
+

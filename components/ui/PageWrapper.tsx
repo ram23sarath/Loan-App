@@ -2,6 +2,7 @@
 import React from 'react';
 import { motion, Transition } from 'framer-motion';
 import { useData } from '../../context/DataContext';
+import Toast from './Toast';
 
 const pageVariants = {
   initial: {
@@ -26,6 +27,28 @@ const pageTransition: Transition = {
 
 const PageWrapper = ({ children }: { children: React.ReactNode }) => {
   const { isScopedCustomer, session } = useData();
+  const [toast, setToast] = React.useState<{ show: boolean; message: string; type?: 'success' | 'error' | 'info' }>({ show: false, message: '', type: 'info' });
+
+  React.useEffect(() => {
+    const handler = (e: any) => {
+      try {
+        const d = e?.detail || {};
+        const type = d.status === 'success' ? 'success' : 'error';
+        const msg = d.message || (type === 'success' ? 'User created successfully' : 'Failed to create user');
+        setToast({ show: true, message: msg, type });
+      } catch (err) {
+        // ignore
+      }
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('background-user-create', handler as EventListener);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('background-user-create', handler as EventListener);
+      }
+    };
+  }, []);
 
   return (
     <motion.div
@@ -36,6 +59,8 @@ const PageWrapper = ({ children }: { children: React.ReactNode }) => {
       transition={pageTransition}
       className="w-full min-h-full p-4 pb-24 sm:p-8"
     >
+      <Toast show={toast.show} message={toast.message} onClose={() => setToast({ show: false, message: '', type: 'info' })} type={toast.type as any} />
+
       {/* Admin banner shown for non-scoped users (admins) */}
       {session?.user && !isScopedCustomer && (
         <div

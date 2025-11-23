@@ -579,6 +579,37 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const deleteCustomer = async (customerId: string): Promise<void> => {
     if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot delete customers');
     try {
+      // Fetch customer row to determine if a linked auth user exists
+      let customerUserId: string | null = null;
+      try {
+        const { data: custData, error: custFetchErr } = await supabase.from('customers').select('user_id').eq('id', customerId).limit(1);
+        if (!custFetchErr && custData && custData.length > 0) {
+          customerUserId = (custData[0] as any).user_id || null;
+        }
+      } catch (e) {
+        console.warn('Failed to fetch customer user_id before delete', e);
+      }
+
+      // If a linked auth user exists, attempt to delete it via server-side function
+      if (customerUserId) {
+        try {
+          const resp = await fetch('/.netlify/functions/delete-user-from-customer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ customer_id: customerId, user_id: customerUserId }),
+          });
+          if (!resp.ok) {
+            const errData = await resp.json().catch(() => ({}));
+            console.warn('Warning: failed to delete linked auth user:', errData.error || resp.statusText);
+            // Don't throw - continue deleting DB records to avoid leaving orphaned business data
+          } else {
+            console.log('✅ Linked auth user deleted for customer', customerId);
+          }
+        } catch (e) {
+          console.warn('Warning: error calling delete-user-from-customer function', e);
+        }
+      }
+
       // Delete dependent data_entries
       const { error: delDataErr } = await supabase.from('data_entries').delete().eq('customer_id', customerId);
       if (delDataErr) throw delDataErr;

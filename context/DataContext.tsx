@@ -490,30 +490,63 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       const { data, error } = await supabase.from('customers').insert([customerData] as any).select().single();
       if (error || !data) throw error;
 
-      // Automatically create Supabase user for this customer
-      // This happens asynchronously in the background
+      // Trigger background user creation without blocking the customer add flow.
+      // We intentionally DO NOT await this fetch so the UI can return immediately.
       try {
-        const createUserResponse = await fetch('/.netlify/functions/create-user-from-customer', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            customer_id: data.id,
-            name: customerData.name,
-            phone: customerData.phone,
-          }),
-        });
+        (async () => {
+          try {
+            const resp = await fetch('/.netlify/functions/create-user-from-customer', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                customer_id: data.id,
+                name: customerData.name,
+                phone: customerData.phone,
+              }),
+            });
 
-        if (!createUserResponse.ok) {
-          const errorData = await createUserResponse.json();
-          console.warn('⚠️  Failed to auto-create user:', errorData.error);
-          // Don't throw - customer was created successfully even if user creation failed
-        } else {
-          const successData = await createUserResponse.json();
-          console.log('✅ User auto-created:', successData.user_id);
-        }
+            if (!resp.ok) {
+              const errData = await resp.json().catch(() => ({}));
+                console.warn('⚠️  Background user creation failed:', errData.error || resp.statusText);
+                // Dispatch a window event so the app can show a toast notification
+                try {
+                  if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('background-user-create', {
+                      detail: {
+                        status: 'error',
+                        customer_id: data.id,
+                        message: errData.error || resp.statusText,
+                      }
+                    }));
+                  }
+                } catch (e) {
+                  // ignore
+                }
+            } else {
+              const successData = await resp.json().catch(() => ({}));
+                console.log('✅ Background user auto-created:', successData.user_id || '<unknown>');
+                try {
+                  if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('background-user-create', {
+                      detail: {
+                        status: 'success',
+                        customer_id: data.id,
+                        user_id: successData.user_id,
+                        message: 'User created successfully',
+                      }
+                    }));
+                  }
+                } catch (e) {
+                  // ignore
+                }
+            }
+          } catch (err) {
+            console.warn('⚠️  Error during background user creation:', err);
+          }
+        })();
       } catch (userCreateError) {
-        console.warn('⚠️  Failed to auto-create user in background:', userCreateError);
-        // Don't throw - customer was created successfully even if user creation failed
+        // Extremely defensive: should never reach here since we don't await, but log if it does
+        console.warn('⚠️  Failed to schedule background user creation:', userCreateError);
       }
 
       await fetchData();

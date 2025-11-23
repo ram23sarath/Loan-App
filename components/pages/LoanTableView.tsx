@@ -55,10 +55,9 @@ const LoanTableView: React.FC = () => {
   } = useData();
   const [filter, setFilter] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("");
-  const [sortField, setSortField] = React.useState("");
-  const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">(
-    "asc"
-  );
+  // Default to sorting by status so "In Progress" loans appear first
+  const [sortField, setSortField] = React.useState("status");
+  const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("asc");
 
   // ... (All existing logic for filtering and sorting remains unchanged)
   const filteredLoans = loans.filter((loan) => {

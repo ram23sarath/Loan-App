@@ -294,7 +294,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   // This addresses cases where stale data (e.g. truncated dates) remains visible
   // after an inactivity logout. We remove Supabase-related keys and reset
   // sessionStorage/localStorage where appropriate.
-  const clearClientCache = () => {
+  const clearClientCache = async () => {
     try {
       // Reset in-memory React state
       clearData();
@@ -337,6 +337,43 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // If the app uses any other caches (IndexedDB, service worker caches) consider clearing here.
+      try {
+        // Clear the Cache Storage (service worker caches) if present
+        if (typeof window !== 'undefined' && 'caches' in window) {
+          try {
+            const cacheNames = await (caches.keys ? caches.keys() : Promise.resolve([]));
+            for (const name of cacheNames) {
+              try {
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-ignore
+                await caches.delete(name);
+              } catch (e) {
+                // ignore individual cache deletion failures
+              }
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      try {
+        // Unregister service workers if any — helps when stale service-worker served assets cause old JS to run
+        if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+          try {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            for (const r of regs) {
+              try { await r.unregister(); } catch (e) { /* ignore */ }
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
     } catch (err) {
       // best-effort; do not throw
       console.error('Error clearing client cache', err);
@@ -495,9 +532,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       try {
         (async () => {
           try {
-            const resp = await fetch('/.netlify/functions/create-user-from-customer', {
+            // Add cache-control/no-cache headers and a timestamp query param to avoid CDN/browser caching
+            const createUrl = `/.netlify/functions/create-user-from-customer?_=${Date.now()}`;
+            const resp = await fetch(createUrl, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
               body: JSON.stringify({
                 customer_id: data.id,
                 name: customerData.name,
@@ -623,12 +662,25 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         console.warn('Failed to fetch customer user_id before delete', e);
       }
 
+      // Optimistically remove the customer and related items from local state to avoid stale UI
+      try {
+        const optimisticLoanIds = loans.filter(l => l.customer_id === customerId).map(l => l.id);
+        setCustomers(prev => prev.filter(c => c.id !== customerId));
+        setLoans(prev => prev.filter(l => l.customer_id !== customerId));
+        setSubscriptions(prev => prev.filter(s => s.customer_id !== customerId));
+        setInstallments(prev => prev.filter(i => !optimisticLoanIds.includes(i.loan_id)));
+        setDataEntries(prev => prev.filter(d => d.customer_id !== customerId));
+      } catch (e) {
+        // ignore optimistic update failures
+      }
+
       // If a linked auth user exists, attempt to delete it via server-side function
       if (customerUserId) {
         try {
-          const resp = await fetch('/.netlify/functions/delete-user-from-customer', {
+          const deleteUrl = `/.netlify/functions/delete-user-from-customer?_=${Date.now()}`;
+          const resp = await fetch(deleteUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
             body: JSON.stringify({ customer_id: customerId, user_id: customerUserId }),
           });
           if (!resp.ok) {

@@ -148,11 +148,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         setSeniorityList([]);
         return;
       }
-      const { data, error } = await supabase
-        .from('loan_seniority')
-        .select('*, customers(name, phone)')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false });
+
+      // If the current user is a scoped customer, only fetch their own seniority entries.
+      // Admins (non-scoped users) should be able to see all entries.
+      let query = supabase.from('loan_seniority').select('*, customers(name, phone)').order('created_at', { ascending: false });
+      if (isScopedCustomer) {
+        query = query.eq('user_id', session.user.id as string);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       setSeniorityList((data as any[]) || []);
     } catch (err: any) {
@@ -162,7 +166,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }, [session]);
 
   const addToSeniority = async (customerId: string, details?: { station_name?: string; loan_type?: string; loan_request_date?: string }) => {
-    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot modify seniority list');
+    // Allow scoped customers to submit a seniority request, but only for their own customer record.
+    if (isScopedCustomer && scopedCustomerId && customerId !== scopedCustomerId) {
+      throw new Error('Read-only access: scoped customers can only request seniority for their own account');
+    }
     try {
       if (!session || !session.user) throw new Error('Not authenticated');
       const payload: any = { user_id: session.user.id, customer_id: customerId };

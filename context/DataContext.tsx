@@ -373,350 +373,365 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-// Ref to track the last processed session token to prevent redundant updates
-const lastSessionTokenRef = React.useRef<string | null>(null);
+    // Ref to track the last processed session token to prevent redundant updates
+    const lastSessionTokenRef = React.useRef<string | null>(null);
+    // Ref to track the last authenticated user ID to prevent redundant fetches on token refresh
+    const lastUserIdRef = React.useRef<string | null>(null);
 
-// FIX: This useEffect now runs strictly ONCE on mount (empty dependency array).
-// Logic inside calculates state variables locally before calling fetch, avoiding
-// the need to depend on updated state values.
-useEffect(() => {
-    const initializeSession = async () => {
-        setLoading(true);
-        try {
-            // 1. Get the current session
-            const { data: { session } } = await supabase.auth.getSession();
+    // FIX: This useEffect now runs strictly ONCE on mount (empty dependency array).
+    // Logic inside calculates state variables locally before calling fetch, avoiding
+    // the need to depend on updated state values.
+    useEffect(() => {
+        const initializeSession = async () => {
+            setLoading(true);
+            try {
+                // 1. Get the current session
+                const { data: { session } } = await supabase.auth.getSession();
 
-            // Prevent redundant initialization if we already have this session
-            if (session?.access_token === lastSessionTokenRef.current) {
+                // Prevent redundant initialization if we already have this session
+                if (session?.access_token === lastSessionTokenRef.current) {
+                    setLoading(false);
+                    return;
+                }
+
+                setSession(session);
+                lastSessionTokenRef.current = session?.access_token || null;
+                lastUserIdRef.current = session?.user?.id || null;
+
+                let currentIsScoped = false;
+                let currentScopedId: string | null = null;
+
+                // 2. If session exists, determine scope LOCALLY first
+                if (session && session.user && session.user.id) {
+                    try {
+                        const { data: matchedCustomers, error } = await supabase.from('customers').select('id').eq('user_id', session.user.id).limit(1);
+                        if (!error && matchedCustomers && matchedCustomers.length > 0) {
+                            currentIsScoped = true;
+                            currentScopedId = matchedCustomers[0].id;
+                        }
+                    } catch (err) {
+                        console.error('Error checking scoped customer', err);
+                    }
+
+                    // 3. Update State (these are async, so we can't use them in the next line)
+                    setIsScopedCustomer(currentIsScoped);
+                    setScopedCustomerId(currentScopedId);
+
+                    // 4. Fetch data using the LOCALLY calculated variables
+                    try {
+                        await fetchData(currentIsScoped, currentScopedId);
+                    } catch (err) {
+                        console.error('Error in fetchData during initialization', err);
+                    }
+
+                    // Seniority List fetch
+                    try {
+                        await fetchSeniorityList(session, currentIsScoped);
+                    } catch (err) {
+                        console.error('Error in fetchSeniorityList during initialization', err);
+                    }
+                }
+            } catch (err) {
+                console.error('Error initializing session', err);
+            } finally {
                 setLoading(false);
+            }
+        };
+
+        initializeSession();
+
+        // Event Listener
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            // Check if the token actually changed to avoid infinite loops on TOKEN_REFRESHED
+            const newToken = session?.access_token || null;
+            const newUserId = session?.user?.id || null;
+
+            if (newToken === lastSessionTokenRef.current && _event === 'TOKEN_REFRESHED') {
                 return;
             }
 
-            setSession(session);
-            lastSessionTokenRef.current = session?.access_token || null;
+            lastSessionTokenRef.current = newToken;
 
-            let currentIsScoped = false;
-            let currentScopedId: string | null = null;
+            // If it's just a token refresh and the user is the same, update session but DON'T re-fetch data
+            if (_event === 'TOKEN_REFRESHED' && newUserId === lastUserIdRef.current) {
+                console.log('Token refreshed for same user, skipping data re-fetch');
+                setSession(session);
+                return;
+            }
 
-            // 2. If session exists, determine scope LOCALLY first
-            if (session && session.user && session.user.id) {
-                try {
-                    const { data: matchedCustomers, error } = await supabase.from('customers').select('id').eq('user_id', session.user.id).limit(1);
-                    if (!error && matchedCustomers && matchedCustomers.length > 0) {
-                        currentIsScoped = true;
-                        currentScopedId = matchedCustomers[0].id;
+            lastUserIdRef.current = newUserId;
+
+            if (_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED') {
+                setSession(session);
+
+                // Check scope again locally for the new session
+                let currentIsScoped = false;
+                let currentScopedId: string | null = null;
+
+                if (session && session.user && session.user.id) {
+                    try {
+                        const { data: matchedCustomers, error } = await supabase.from('customers').select('id').eq('user_id', session.user.id).limit(1);
+                        if (!error && matchedCustomers && matchedCustomers.length > 0) {
+                            currentIsScoped = true;
+                            currentScopedId = matchedCustomers[0].id;
+                        }
+                    } catch (err) {
+                        console.error('Error checking scoped customer on signin', err);
                     }
-                } catch (err) {
-                    console.error('Error checking scoped customer', err);
-                }
 
-                // 3. Update State (these are async, so we can't use them in the next line)
-                setIsScopedCustomer(currentIsScoped);
-                setScopedCustomerId(currentScopedId);
+                    setIsScopedCustomer(currentIsScoped);
+                    setScopedCustomerId(currentScopedId);
 
-                // 4. Fetch data using the LOCALLY calculated variables
-                try {
+                    // Pass calculated values to fetch immediately
                     await fetchData(currentIsScoped, currentScopedId);
-                } catch (err) {
-                    console.error('Error in fetchData during initialization', err);
-                }
-
-                // Seniority List fetch
-                try {
                     await fetchSeniorityList(session, currentIsScoped);
-                } catch (err) {
-                    console.error('Error in fetchSeniorityList during initialization', err);
                 }
+            } else if (_event === 'SIGNED_OUT') {
+                setSession(null);
+                lastSessionTokenRef.current = null;
+                lastUserIdRef.current = null;
+                clearClientCache();
             }
-        } catch (err) {
-            console.error('Error initializing session', err);
-        } finally {
-            setLoading(false);
+        });
+
+        return () => {
+            subscription.unsubscribe();
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Dependency array is explicitly empty to run only on mount
+
+    // ... [Rest of the component remains unchanged: signIn, signOut, adds, deletes, etc.] ...
+
+    const signInWithPassword = async (email: string, pass: string) => {
+        try {
+            const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+            if (error) throw error;
+        } catch (error) {
+            throw new Error(parseSupabaseError(error, 'signing in'));
         }
     };
 
-    initializeSession();
-
-    // Event Listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-        // Check if the token actually changed to avoid infinite loops on TOKEN_REFRESHED
-        const newToken = session?.access_token || null;
-        if (newToken === lastSessionTokenRef.current && _event === 'TOKEN_REFRESHED') {
-            return;
-        }
-
-        lastSessionTokenRef.current = newToken;
-
-        if (_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED') {
-            setSession(session);
-
-            // Check scope again locally for the new session
-            let currentIsScoped = false;
-            let currentScopedId: string | null = null;
-
-            if (session && session.user && session.user.id) {
-                try {
-                    const { data: matchedCustomers, error } = await supabase.from('customers').select('id').eq('user_id', session.user.id).limit(1);
-                    if (!error && matchedCustomers && matchedCustomers.length > 0) {
-                        currentIsScoped = true;
-                        currentScopedId = matchedCustomers[0].id;
-                    }
-                } catch (err) {
-                    console.error('Error checking scoped customer on signin', err);
-                }
-
-                setIsScopedCustomer(currentIsScoped);
-                setScopedCustomerId(currentScopedId);
-
-                // Pass calculated values to fetch immediately
-                await fetchData(currentIsScoped, currentScopedId);
-                await fetchSeniorityList(session, currentIsScoped);
-            }
-        } else if (_event === 'SIGNED_OUT') {
-            setSession(null);
-            lastSessionTokenRef.current = null;
+    const signOut = async () => {
+        try {
+            const { error } = await supabase.auth.signOut();
+            if (error) throw error;
             clearClientCache();
+        } catch (error) {
+            throw new Error(parseSupabaseError(error, 'signing out'));
         }
-    });
-
-    return () => {
-        subscription.unsubscribe();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []); // Dependency array is explicitly empty to run only on mount
 
-// ... [Rest of the component remains unchanged: signIn, signOut, adds, deletes, etc.] ...
-
-const signInWithPassword = async (email: string, pass: string) => {
-    try {
-        const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-        if (error) throw error;
-    } catch (error) {
-        throw new Error(parseSupabaseError(error, 'signing in'));
-    }
-};
-
-const signOut = async () => {
-    try {
-        const { error } = await supabase.auth.signOut();
-        if (error) throw error;
-        clearClientCache();
-    } catch (error) {
-        throw new Error(parseSupabaseError(error, 'signing out'));
-    }
-};
-
-const addCustomer = async (customerData: Omit<NewCustomer, 'user_id'>): Promise<Customer> => {
-    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot add customers');
-    try {
-        const { data, error } = await supabase.from('customers').insert([customerData] as any).select().single();
-        if (error || !data) throw error;
-
-        // Trigger background user creation without blocking the customer add flow.
+    const addCustomer = async (customerData: Omit<NewCustomer, 'user_id'>): Promise<Customer> => {
+        if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot add customers');
         try {
-            (async () => {
-                try {
-                    const createUrl = `/.netlify/functions/create-user-from-customer?_=${Date.now()}`;
-                    const resp = await fetch(createUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
-                        body: JSON.stringify({
-                            customer_id: data.id,
-                            name: customerData.name,
-                            phone: customerData.phone,
-                        }),
-                    });
+            const { data, error } = await supabase.from('customers').insert([customerData] as any).select().single();
+            if (error || !data) throw error;
 
-                    if (!resp.ok) {
-                        const errData = await resp.json().catch(() => ({}));
-                        console.warn('⚠️  Background user creation failed:', errData.error || resp.statusText);
-                        try {
-                            if (typeof window !== 'undefined') {
-                                window.dispatchEvent(new CustomEvent('background-user-create', {
-                                    detail: { status: 'error', customer_id: data.id, message: errData.error || resp.statusText }
-                                }));
-                            }
-                        } catch (e) { }
-                    } else {
-                        const successData = await resp.json().catch(() => ({}));
-                        console.log('✅ Background user auto-created:', successData.user_id || '<unknown>');
-                        try {
-                            if (typeof window !== 'undefined') {
-                                window.dispatchEvent(new CustomEvent('background-user-create', {
-                                    detail: { status: 'success', customer_id: data.id, user_id: successData.user_id, message: 'User created successfully' }
-                                }));
-                            }
-                        } catch (e) { }
-                    }
-                } catch (err) {
-                    console.warn('⚠️  Error during background user creation:', err);
-                }
-            })();
-        } catch (userCreateError) {
-            console.warn('⚠️  Failed to schedule background user creation:', userCreateError);
-        }
-
-        await fetchData();
-        return data as Customer;
-    } catch (error) {
-        throw new Error(parseSupabaseError(error, 'adding customer'));
-    }
-};
-
-const addLoan = async (loanData: NewLoan): Promise<Loan> => {
-    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot add loans');
-    try {
-        const { data, error } = await supabase.from('loans').insert([loanData] as any).select().single();
-        if (error || !data) throw error;
-        try {
-            if (session?.user?.id && data.customer_id) {
-                await supabase.from('loan_seniority').delete().match({ customer_id: data.customer_id, user_id: session.user.id });
-            }
-        } catch (e) {
-            console.error('Failed to cleanup loan_seniority after loan create', e);
-        }
-        await fetchData();
-        return data as Loan;
-    } catch (error) {
-        throw new Error(parseSupabaseError(error, 'adding loan'));
-    }
-};
-
-const addSubscription = async (subscriptionData: NewSubscription): Promise<Subscription> => {
-    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot add subscriptions');
-    try {
-        const { data, error } = await supabase.from('subscriptions').insert([subscriptionData] as any).select().single();
-        if (error || !data) throw error;
-        try {
-            if (session?.user?.id && data.customer_id) {
-                await supabase.from('loan_seniority').delete().match({ customer_id: data.customer_id, user_id: session.user.id });
-            }
-        } catch (e) {
-            console.error('Failed to cleanup loan_seniority after subscription create', e);
-        }
-        await fetchData();
-        return data as Subscription;
-    } catch (error) {
-        throw new Error(parseSupabaseError(error, 'adding subscription'));
-    }
-};
-
-const addInstallment = async (installmentData: NewInstallment): Promise<Installment> => {
-    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot add installments');
-    try {
-        const { data, error } = await supabase.from('installments').insert([installmentData] as any).select().single();
-        if (error || !data) throw error;
-        await fetchData();
-        return data as Installment;
-    } catch (error) {
-        throw new Error(parseSupabaseError(error, 'adding installment'));
-    }
-};
-
-const deleteCustomer = async (customerId: string): Promise<void> => {
-    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot delete customers');
-    try {
-        let customerUserId: string | null = null;
-        try {
-            const { data: custData, error: custFetchErr } = await supabase.from('customers').select('user_id').eq('id', customerId).limit(1);
-            if (!custFetchErr && custData && custData.length > 0) {
-                customerUserId = (custData[0] as any).user_id || null;
-            }
-        } catch (e) {
-            console.warn('Failed to fetch customer user_id before delete', e);
-        }
-
-        try {
-            const optimisticLoanIds = loans.filter(l => l.customer_id === customerId).map(l => l.id);
-            setCustomers(prev => prev.filter(c => c.id !== customerId));
-            setLoans(prev => prev.filter(l => l.customer_id !== customerId));
-            setSubscriptions(prev => prev.filter(s => s.customer_id !== customerId));
-            setInstallments(prev => prev.filter(i => !optimisticLoanIds.includes(i.loan_id)));
-            setDataEntries(prev => prev.filter(d => d.customer_id !== customerId));
-        } catch (e) { }
-
-        if (customerUserId) {
+            // Trigger background user creation without blocking the customer add flow.
             try {
-                const deleteUrl = `/.netlify/functions/delete-user-from-customer?_=${Date.now()}`;
-                const resp = await fetch(deleteUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
-                    body: JSON.stringify({ customer_id: customerId, user_id: customerUserId }),
-                });
-                if (!resp.ok) {
-                    const errData = await resp.json().catch(() => ({}));
-                    console.warn('Warning: failed to delete linked auth user:', errData.error || resp.statusText);
-                } else {
-                    console.log('✅ Linked auth user deleted for customer', customerId);
+                (async () => {
+                    try {
+                        const createUrl = `/.netlify/functions/create-user-from-customer?_=${Date.now()}`;
+                        const resp = await fetch(createUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+                            body: JSON.stringify({
+                                customer_id: data.id,
+                                name: customerData.name,
+                                phone: customerData.phone,
+                            }),
+                        });
+
+                        if (!resp.ok) {
+                            const errData = await resp.json().catch(() => ({}));
+                            console.warn('⚠️  Background user creation failed:', errData.error || resp.statusText);
+                            try {
+                                if (typeof window !== 'undefined') {
+                                    window.dispatchEvent(new CustomEvent('background-user-create', {
+                                        detail: { status: 'error', customer_id: data.id, message: errData.error || resp.statusText }
+                                    }));
+                                }
+                            } catch (e) { }
+                        } else {
+                            const successData = await resp.json().catch(() => ({}));
+                            console.log('✅ Background user auto-created:', successData.user_id || '<unknown>');
+                            try {
+                                if (typeof window !== 'undefined') {
+                                    window.dispatchEvent(new CustomEvent('background-user-create', {
+                                        detail: { status: 'success', customer_id: data.id, user_id: successData.user_id, message: 'User created successfully' }
+                                    }));
+                                }
+                            } catch (e) { }
+                        }
+                    } catch (err) {
+                        console.warn('⚠️  Error during background user creation:', err);
+                    }
+                })();
+            } catch (userCreateError) {
+                console.warn('⚠️  Failed to schedule background user creation:', userCreateError);
+            }
+
+            await fetchData();
+            return data as Customer;
+        } catch (error) {
+            throw new Error(parseSupabaseError(error, 'adding customer'));
+        }
+    };
+
+    const addLoan = async (loanData: NewLoan): Promise<Loan> => {
+        if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot add loans');
+        try {
+            const { data, error } = await supabase.from('loans').insert([loanData] as any).select().single();
+            if (error || !data) throw error;
+            try {
+                if (session?.user?.id && data.customer_id) {
+                    await supabase.from('loan_seniority').delete().match({ customer_id: data.customer_id, user_id: session.user.id });
                 }
             } catch (e) {
-                console.warn('Warning: error calling delete-user-from-customer function', e);
+                console.error('Failed to cleanup loan_seniority after loan create', e);
             }
+            await fetchData();
+            return data as Loan;
+        } catch (error) {
+            throw new Error(parseSupabaseError(error, 'adding loan'));
         }
+    };
 
-        const { error: delDataErr } = await supabase.from('data_entries').delete().eq('customer_id', customerId);
-        if (delDataErr) throw delDataErr;
-
-        const { data: loansForCustomer, error: loansFetchError } = await supabase.from('loans').select('id').eq('customer_id', customerId);
-        if (loansFetchError) throw loansFetchError;
-        const loanIds = (loansForCustomer || []).map((l: any) => l.id);
-        if (loanIds.length > 0) {
-            const { error: delInstallErr } = await supabase.from('installments').delete().in('loan_id', loanIds);
-            if (delInstallErr) throw delInstallErr;
-            const { error: delLoanErr } = await supabase.from('loans').delete().in('id', loanIds);
-            if (delLoanErr) throw delLoanErr;
+    const addSubscription = async (subscriptionData: NewSubscription): Promise<Subscription> => {
+        if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot add subscriptions');
+        try {
+            const { data, error } = await supabase.from('subscriptions').insert([subscriptionData] as any).select().single();
+            if (error || !data) throw error;
+            try {
+                if (session?.user?.id && data.customer_id) {
+                    await supabase.from('loan_seniority').delete().match({ customer_id: data.customer_id, user_id: session.user.id });
+                }
+            } catch (e) {
+                console.error('Failed to cleanup loan_seniority after subscription create', e);
+            }
+            await fetchData();
+            return data as Subscription;
+        } catch (error) {
+            throw new Error(parseSupabaseError(error, 'adding subscription'));
         }
+    };
 
-        const { error: delSubErr } = await supabase.from('subscriptions').delete().eq('customer_id', customerId);
-        if (delSubErr) throw delSubErr;
+    const addInstallment = async (installmentData: NewInstallment): Promise<Installment> => {
+        if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot add installments');
+        try {
+            const { data, error } = await supabase.from('installments').insert([installmentData] as any).select().single();
+            if (error || !data) throw error;
+            await fetchData();
+            return data as Installment;
+        } catch (error) {
+            throw new Error(parseSupabaseError(error, 'adding installment'));
+        }
+    };
 
-        const { error: delCustErr } = await supabase.from('customers').delete().eq('id', customerId);
-        if (delCustErr) throw delCustErr;
+    const deleteCustomer = async (customerId: string): Promise<void> => {
+        if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot delete customers');
+        try {
+            let customerUserId: string | null = null;
+            try {
+                const { data: custData, error: custFetchErr } = await supabase.from('customers').select('user_id').eq('id', customerId).limit(1);
+                if (!custFetchErr && custData && custData.length > 0) {
+                    customerUserId = (custData[0] as any).user_id || null;
+                }
+            } catch (e) {
+                console.warn('Failed to fetch customer user_id before delete', e);
+            }
 
-        await fetchData();
-    } catch (error) {
-        throw new Error(parseSupabaseError(error, `deleting customer ${customerId}`));
-    }
-};
+            try {
+                const optimisticLoanIds = loans.filter(l => l.customer_id === customerId).map(l => l.id);
+                setCustomers(prev => prev.filter(c => c.id !== customerId));
+                setLoans(prev => prev.filter(l => l.customer_id !== customerId));
+                setSubscriptions(prev => prev.filter(s => s.customer_id !== customerId));
+                setInstallments(prev => prev.filter(i => !optimisticLoanIds.includes(i.loan_id)));
+                setDataEntries(prev => prev.filter(d => d.customer_id !== customerId));
+            } catch (e) { }
 
-const deleteLoan = async (loanId: string): Promise<void> => {
-    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot delete loans');
-    try {
-        const { error } = await supabase.from('loans').delete().eq('id', loanId);
-        if (error) throw error;
-        await fetchData();
-    } catch (error) {
-        throw new Error(parseSupabaseError(error, `deleting loan ${loanId}`));
-    }
-};
+            if (customerUserId) {
+                try {
+                    const deleteUrl = `/.netlify/functions/delete-user-from-customer?_=${Date.now()}`;
+                    const resp = await fetch(deleteUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+                        body: JSON.stringify({ customer_id: customerId, user_id: customerUserId }),
+                    });
+                    if (!resp.ok) {
+                        const errData = await resp.json().catch(() => ({}));
+                        console.warn('Warning: failed to delete linked auth user:', errData.error || resp.statusText);
+                    } else {
+                        console.log('✅ Linked auth user deleted for customer', customerId);
+                    }
+                } catch (e) {
+                    console.warn('Warning: error calling delete-user-from-customer function', e);
+                }
+            }
 
-const deleteSubscription = async (subscriptionId: string): Promise<void> => {
-    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot delete subscriptions');
-    try {
-        const { error } = await supabase.from('subscriptions').delete().eq('id', subscriptionId);
-        if (error) throw error;
-        await fetchData();
-    } catch (error) {
-        throw new Error(parseSupabaseError(error, `deleting subscription ${subscriptionId}`));
-    }
-};
+            const { error: delDataErr } = await supabase.from('data_entries').delete().eq('customer_id', customerId);
+            if (delDataErr) throw delDataErr;
 
-const deleteInstallment = async (installmentId: string): Promise<void> => {
-    if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot delete installments');
-    try {
-        const { data, error } = await supabase.from('installments').delete().eq('id', installmentId);
-        if (error) throw error;
-        await fetchData();
-    } catch (error) {
-        throw new Error(parseSupabaseError(error, `deleting installment ${installmentId}`));
-    }
-};
+            const { data: loansForCustomer, error: loansFetchError } = await supabase.from('loans').select('id').eq('customer_id', customerId);
+            if (loansFetchError) throw loansFetchError;
+            const loanIds = (loansForCustomer || []).map((l: any) => l.id);
+            if (loanIds.length > 0) {
+                const { error: delInstallErr } = await supabase.from('installments').delete().in('loan_id', loanIds);
+                if (delInstallErr) throw delInstallErr;
+                const { error: delLoanErr } = await supabase.from('loans').delete().in('id', loanIds);
+                if (delLoanErr) throw delLoanErr;
+            }
 
-return (
-    <DataContext.Provider value={{ session, customers, loans, subscriptions, installments, dataEntries, loading, isRefreshing, isScopedCustomer, scopedCustomerId, signInWithPassword, signOut, addCustomer, updateCustomer, addLoan, updateLoan, addSubscription, updateSubscription, addInstallment, updateInstallment, addDataEntry, updateDataEntry, deleteDataEntry, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, adjustSubscriptionForMisc, seniorityList, fetchSeniorityList, addToSeniority, updateSeniority, removeFromSeniority }}>
-        {children}
-    </DataContext.Provider>
-);
+            const { error: delSubErr } = await supabase.from('subscriptions').delete().eq('customer_id', customerId);
+            if (delSubErr) throw delSubErr;
+
+            const { error: delCustErr } = await supabase.from('customers').delete().eq('id', customerId);
+            if (delCustErr) throw delCustErr;
+
+            await fetchData();
+        } catch (error) {
+            throw new Error(parseSupabaseError(error, `deleting customer ${customerId}`));
+        }
+    };
+
+    const deleteLoan = async (loanId: string): Promise<void> => {
+        if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot delete loans');
+        try {
+            const { error } = await supabase.from('loans').delete().eq('id', loanId);
+            if (error) throw error;
+            await fetchData();
+        } catch (error) {
+            throw new Error(parseSupabaseError(error, `deleting loan ${loanId}`));
+        }
+    };
+
+    const deleteSubscription = async (subscriptionId: string): Promise<void> => {
+        if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot delete subscriptions');
+        try {
+            const { error } = await supabase.from('subscriptions').delete().eq('id', subscriptionId);
+            if (error) throw error;
+            await fetchData();
+        } catch (error) {
+            throw new Error(parseSupabaseError(error, `deleting subscription ${subscriptionId}`));
+        }
+    };
+
+    const deleteInstallment = async (installmentId: string): Promise<void> => {
+        if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot delete installments');
+        try {
+            const { data, error } = await supabase.from('installments').delete().eq('id', installmentId);
+            if (error) throw error;
+            await fetchData();
+        } catch (error) {
+            throw new Error(parseSupabaseError(error, `deleting installment ${installmentId}`));
+        }
+    };
+
+    return (
+        <DataContext.Provider value={{ session, customers, loans, subscriptions, installments, dataEntries, loading, isRefreshing, isScopedCustomer, scopedCustomerId, signInWithPassword, signOut, addCustomer, updateCustomer, addLoan, updateLoan, addSubscription, updateSubscription, addInstallment, updateInstallment, addDataEntry, updateDataEntry, deleteDataEntry, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, adjustSubscriptionForMisc, seniorityList, fetchSeniorityList, addToSeniority, updateSeniority, removeFromSeniority }}>
+            {children}
+        </DataContext.Provider>
+    );
 };
 
 export const useData = () => {

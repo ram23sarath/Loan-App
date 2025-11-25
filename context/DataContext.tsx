@@ -75,24 +75,30 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [isScopedCustomer, setIsScopedCustomer] = useState(false);
   const [scopedCustomerId, setScopedCustomerId] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
+  // Update fetchData to accept optional overrides for scoped parameters.
+  // This allows the initialization logic to fetch the correct data immediately without waiting for state updates.
+  const fetchData = useCallback(async (overrideIsScoped?: boolean, overrideScopedId?: string | null) => {
     setIsRefreshing(true);
     try {
+      // Determine which values to use: overrides if provided, otherwise current state
+      const effectiveIsScoped = overrideIsScoped !== undefined ? overrideIsScoped : isScopedCustomer;
+      const effectiveScopedId = overrideScopedId !== undefined ? overrideScopedId : scopedCustomerId;
+
       // If the user is scoped to a customer, fetch only that customer's related data
-      if (isScopedCustomer && scopedCustomerId) {
+      if (effectiveIsScoped && effectiveScopedId) {
         // Customers: only the scoped customer
-        const { data: customerData, error: custErr } = await supabase.from('customers').select('*').eq('id', scopedCustomerId).limit(1);
+        const { data: customerData, error: custErr } = await supabase.from('customers').select('*').eq('id', effectiveScopedId).limit(1);
         if (custErr) throw custErr;
         setCustomers((customerData as unknown as Customer[]) || []);
 
         // Loans for this customer
-        const { data: loansData, error: loansError } = await supabase.from('loans').select('*, customers(name, phone)').eq('customer_id', scopedCustomerId);
+        const { data: loansData, error: loansError } = await supabase.from('loans').select('*, customers(name, phone)').eq('customer_id', effectiveScopedId);
         if (loansError) throw loansError;
         const loansArr = (loansData as unknown as LoanWithCustomer[]) || [];
         setLoans(loansArr);
 
         // Subscriptions for this customer
-        const { data: subscriptionsData, error: subscriptionsError } = await supabase.from('subscriptions').select('*, customers(name, phone)').eq('customer_id', scopedCustomerId);
+        const { data: subscriptionsData, error: subscriptionsError } = await supabase.from('subscriptions').select('*, customers(name, phone)').eq('customer_id', effectiveScopedId);
         if (subscriptionsError) throw subscriptionsError;
         setSubscriptions((subscriptionsData as unknown as SubscriptionWithCustomer[]) || []);
 
@@ -107,7 +113,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         }
 
         // Data entries for this customer
-        const { data: dataEntriesData, error: dataEntriesError } = await supabase.from('data_entries').select('*').eq('customer_id', scopedCustomerId);
+        const { data: dataEntriesData, error: dataEntriesError } = await supabase.from('data_entries').select('*').eq('customer_id', effectiveScopedId);
         if (dataEntriesError) throw dataEntriesError;
         setDataEntries((dataEntriesData as DataEntry[]) || []);
       } else {
@@ -163,7 +169,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       console.error('Failed to fetch loan seniority list', err);
       // don't throw to avoid breaking other flows
     }
-  }, [session]);
+  }, [session, isScopedCustomer]);
 
   const addToSeniority = async (customerId: string, details?: { station_name?: string; loan_type?: string; loan_request_date?: string }) => {
     // Allow scoped customers to submit a seniority request, but only for their own customer record.
@@ -259,7 +265,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         if (error) throw error;
       } else {
         // no subscription exists - create a negative subscription entry to represent the deduction
-        const now = date || new Date().toISOString().slice(0,10);
+        const now = date || new Date().toISOString().slice(0, 10);
         const year = new Date(now).getFullYear();
         const newSub = {
           customer_id: customerId,
@@ -276,7 +282,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       throw new Error(parseSupabaseError(error, `adjusting subscription for misc entry for customer ${customerId}`));
     }
   };
-  
+
   const updateInstallment = async (installmentId: string, updates: Partial<Installment>): Promise<Installment> => {
     if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot perform updates');
     try {
@@ -443,24 +449,27 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
 
+      let currentIsScoped = false;
+      let currentScopedId: string | null = null;
+
       // 2. If a session exists, determine whether the auth user is mapped to a customer (scoped user)
       if (session && session.user && session.user.id) {
         try {
           const { data: matchedCustomers, error } = await supabase.from('customers').select('id').eq('user_id', session.user.id).limit(1);
           if (!error && matchedCustomers && matchedCustomers.length > 0) {
-            setIsScopedCustomer(true);
-            setScopedCustomerId(matchedCustomers[0].id);
-          } else {
-            setIsScopedCustomer(false);
-            setScopedCustomerId(null);
+            currentIsScoped = true;
+            currentScopedId = matchedCustomers[0].id;
           }
         } catch (err) {
           console.error('Error checking scoped customer', err);
-          setIsScopedCustomer(false);
-          setScopedCustomerId(null);
         }
-        // Fetch data (scoped or full) after setting flags
-        await fetchData();
+
+        // Update state
+        setIsScopedCustomer(currentIsScoped);
+        setScopedCustomerId(currentScopedId);
+
+        // Fetch data (scoped or full) using the determined values immediately
+        await fetchData(currentIsScoped, currentScopedId);
         // fetch user's seniority list as well
         await fetchSeniorityList();
       }
@@ -475,24 +484,27 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (_event === 'SIGNED_IN') {
         setSession(session);
+
+        let currentIsScoped = false;
+        let currentScopedId: string | null = null;
+
         // Check if this user is a scoped customer and fetch accordingly
         if (session && session.user && session.user.id) {
           try {
             const { data: matchedCustomers, error } = await supabase.from('customers').select('id').eq('user_id', session.user.id).limit(1);
             if (!error && matchedCustomers && matchedCustomers.length > 0) {
-              setIsScopedCustomer(true);
-              setScopedCustomerId(matchedCustomers[0].id);
-            } else {
-              setIsScopedCustomer(false);
-              setScopedCustomerId(null);
+              currentIsScoped = true;
+              currentScopedId = matchedCustomers[0].id;
             }
           } catch (err) {
             console.error('Error checking scoped customer on signin', err);
-            setIsScopedCustomer(false);
-            setScopedCustomerId(null);
           }
+
+          setIsScopedCustomer(currentIsScoped);
+          setScopedCustomerId(currentScopedId);
+
           // Fetch data after determining scoped status
-          await fetchData();
+          await fetchData(currentIsScoped, currentScopedId);
           await fetchSeniorityList();
         }
       } else if (_event === 'SIGNED_OUT') {
@@ -505,7 +517,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchData]);
+    // IMPORTANT: removed fetchData from dependency array to avoid infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // All other functions are correct and unchanged...
   const signInWithPassword = async (email: string, pass: string) => {
@@ -523,7 +537,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
       // Ensure local caches are cleared after sign out (explicit or due to inactivity)
       clearClientCache();
-    } catch(error) {
+    } catch (error) {
       throw new Error(parseSupabaseError(error, 'signing out'));
     }
   };
@@ -553,38 +567,38 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
             if (!resp.ok) {
               const errData = await resp.json().catch(() => ({}));
-                console.warn('⚠️  Background user creation failed:', errData.error || resp.statusText);
-                // Dispatch a window event so the app can show a toast notification
-                try {
-                  if (typeof window !== 'undefined') {
-                    window.dispatchEvent(new CustomEvent('background-user-create', {
-                      detail: {
-                        status: 'error',
-                        customer_id: data.id,
-                        message: errData.error || resp.statusText,
-                      }
-                    }));
-                  }
-                } catch (e) {
-                  // ignore
+              console.warn('⚠️  Background user creation failed:', errData.error || resp.statusText);
+              // Dispatch a window event so the app can show a toast notification
+              try {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('background-user-create', {
+                    detail: {
+                      status: 'error',
+                      customer_id: data.id,
+                      message: errData.error || resp.statusText,
+                    }
+                  }));
                 }
+              } catch (e) {
+                // ignore
+              }
             } else {
               const successData = await resp.json().catch(() => ({}));
-                console.log('✅ Background user auto-created:', successData.user_id || '<unknown>');
-                try {
-                  if (typeof window !== 'undefined') {
-                    window.dispatchEvent(new CustomEvent('background-user-create', {
-                      detail: {
-                        status: 'success',
-                        customer_id: data.id,
-                        user_id: successData.user_id,
-                        message: 'User created successfully',
-                      }
-                    }));
-                  }
-                } catch (e) {
-                  // ignore
+              console.log('✅ Background user auto-created:', successData.user_id || '<unknown>');
+              try {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('background-user-create', {
+                    detail: {
+                      status: 'success',
+                      customer_id: data.id,
+                      user_id: successData.user_id,
+                      message: 'User created successfully',
+                    }
+                  }));
                 }
+              } catch (e) {
+                // ignore
+              }
             }
           } catch (err) {
             console.warn('⚠️  Error during background user creation:', err);
@@ -597,7 +611,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
       await fetchData();
       return data as Customer;
-    } catch(error) {
+    } catch (error) {
       throw new Error(parseSupabaseError(error, 'adding customer'));
     }
   };
@@ -618,7 +632,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
       await fetchData();
       return data as Loan;
-    } catch(error) {
+    } catch (error) {
       throw new Error(parseSupabaseError(error, 'adding loan'));
     }
   };
@@ -638,11 +652,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
       await fetchData();
       return data as Subscription;
-    } catch(error) {
+    } catch (error) {
       throw new Error(parseSupabaseError(error, 'adding subscription'));
     }
   };
-  
+
   const addInstallment = async (installmentData: NewInstallment): Promise<Installment> => {
     if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot add installments');
     try {
@@ -650,7 +664,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (error || !data) throw error;
       await fetchData();
       return data as Installment;
-    } catch(error) {
+    } catch (error) {
       throw new Error(parseSupabaseError(error, 'adding installment'));
     }
   };
@@ -737,7 +751,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       const { error } = await supabase.from('loans').delete().eq('id', loanId);
       if (error) throw error;
       await fetchData();
-    } catch(error) {
+    } catch (error) {
       throw new Error(parseSupabaseError(error, `deleting loan ${loanId}`));
     }
   };
@@ -748,18 +762,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       const { error } = await supabase.from('subscriptions').delete().eq('id', subscriptionId);
       if (error) throw error;
       await fetchData();
-    } catch(error) {
+    } catch (error) {
       throw new Error(parseSupabaseError(error, `deleting subscription ${subscriptionId}`));
     }
   };
-  
+
   const deleteInstallment = async (installmentId: string): Promise<void> => {
     if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot delete installments');
     try {
       const { data, error } = await supabase.from('installments').delete().eq('id', installmentId);
       if (error) throw error;
       await fetchData();
-    } catch(error) {
+    } catch (error) {
       throw new Error(parseSupabaseError(error, `deleting installment ${installmentId}`));
     }
   };

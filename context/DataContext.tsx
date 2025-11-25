@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, ReactNode, useEffect, useCa
 import { supabase } from '../src/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import type { Customer, Loan, Subscription, Installment, NewCustomer, NewLoan, NewSubscription, NewInstallment, LoanWithCustomer, SubscriptionWithCustomer, DataEntry, NewDataEntry } from '../types';
+import { a } from 'framer-motion/client';
 
 // parseSupabaseError and DataContextType interface remain unchanged...
 const parseSupabaseError = (error: any, context: string): string => {
@@ -171,6 +172,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [session, isScopedCustomer]);
 
+  // NEW: Background fetcher for Seniority List
+  // This runs automatically whenever the session/scope changes,
+  // but it does NOT block the main UI 'loading' state.
+  useEffect(() => {
+    if (session?.user) {
+      fetchSeniorityList();
+    }
+  }, [fetchSeniorityList, session]);
+
   const addToSeniority = async (customerId: string, details?: { station_name?: string; loan_type?: string; loan_request_date?: string }) => {
     // Allow scoped customers to submit a seniority request, but only for their own customer record.
     if (isScopedCustomer && scopedCustomerId && customerId !== scopedCustomerId) {
@@ -304,31 +314,21 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }
 
   // Clear client-side caches and storage that may persist after session expiry.
-  // This addresses cases where stale data (e.g. truncated dates) remains visible
-  // after an inactivity logout. We remove Supabase-related keys and reset
-  // sessionStorage/localStorage where appropriate.
   const clearClientCache = async () => {
     try {
-      // Reset in-memory React state
       clearData();
-
       if (typeof window === 'undefined') return;
 
-      // Clear sessionStorage fully (session-scoped)
       try {
         window.sessionStorage.clear();
-      } catch (err) {
-        // ignore
-      }
+      } catch (err) { }
 
-      // Remove Supabase and app-specific keys from localStorage to avoid stale cached session/data.
       try {
         const keysToRemove: string[] = [];
         for (let i = 0; i < window.localStorage.length; i++) {
           const key = window.localStorage.key(i);
           if (!key) continue;
           const lower = key.toLowerCase();
-          // Supabase auth/storage keys often contain 'supabase', 'sb-' or 'gotrue' or 'auth'
           if (
             lower.includes('supabase') ||
             lower.startsWith('sb-') ||
@@ -341,17 +341,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         for (const k of keysToRemove) {
           try {
             window.localStorage.removeItem(k);
-          } catch (e) {
-            // ignore individual key removal failures
-          }
+          } catch (e) { }
         }
-      } catch (err) {
-        // ignore
-      }
+      } catch (err) { }
 
-      // If the app uses any other caches (IndexedDB, service worker caches) consider clearing here.
       try {
-        // Clear the Cache Storage (service worker caches) if present
         if (typeof window !== 'undefined' && 'caches' in window) {
           try {
             const cacheNames = await (caches.keys ? caches.keys() : Promise.resolve([]));
@@ -360,38 +354,27 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                 // @ts-ignore
                 await caches.delete(name);
-              } catch (e) {
-                // ignore individual cache deletion failures
-              }
+              } catch (e) { }
             }
-          } catch (e) {
-            // ignore
-          }
+          } catch (e) { }
         }
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) { }
 
       try {
-        // Unregister service workers if any — helps when stale service-worker served assets cause old JS to run
         if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
           try {
             const regs = await navigator.serviceWorker.getRegistrations();
             for (const r of regs) {
-              try { await r.unregister(); } catch (e) { /* ignore */ }
+              try { await r.unregister(); } catch (e) { }
             }
-          } catch (e) {
-            // ignore
-          }
+          } catch (e) { }
         }
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) { }
     } catch (err) {
-      // best-effort; do not throw
       console.error('Error clearing client cache', err);
     }
   }
+
   // Add Data Entry
   const addDataEntry = async (entry: NewDataEntry): Promise<DataEntry> => {
     if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot add data entries');
@@ -404,7 +387,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           await adjustSubscriptionForMisc(entry.customer_id, Number(entry.amount), entry.date);
         }
       } catch (err) {
-        // Log but don't fail the main insert; adjustment failure should be visible in console
         console.error('Failed to adjust subscription for misc entry:', err);
       }
 
@@ -440,58 +422,47 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // FIX: This useEffect hook is updated to prevent the race condition.
+  // FIX: Main useEffect logic
+  // 1. Removes race conditions causing infinite loading.
+  // 2. Removes seniority list fetch from the blocking path (moved to background).
   useEffect(() => {
-    // Wrap the initialization in an async function to handle promises correctly.
-    const initializeSession = async () => {
-      setLoading(true);
-      // 1. Get the current session from Supabase.
+    let mounted = true;
+
+    const initialize = async () => {
+      // 1. Check if a session exists immediately
       const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
 
-      let currentIsScoped = false;
-      let currentScopedId: string | null = null;
-
-      // 2. If a session exists, determine whether the auth user is mapped to a customer (scoped user)
-      if (session && session.user && session.user.id) {
-        try {
-          const { data: matchedCustomers, error } = await supabase.from('customers').select('id').eq('user_id', session.user.id).limit(1);
-          if (!error && matchedCustomers && matchedCustomers.length > 0) {
-            currentIsScoped = true;
-            currentScopedId = matchedCustomers[0].id;
-          }
-        } catch (err) {
-          console.error('Error checking scoped customer', err);
-        }
-
-        // Update state
-        setIsScopedCustomer(currentIsScoped);
-        setScopedCustomerId(currentScopedId);
-
-        // Fetch data (scoped or full) using the determined values immediately
-        await fetchData(currentIsScoped, currentScopedId);
-        // fetch user's seniority list as well
-        await fetchSeniorityList();
+      // If NO session exists, stop loading immediately so the login screen appears.
+      // If a session DOES exist, we do nothing here and let the onAuthStateChange 
+      // listener handle the data fetching to avoid double-fetching/race conditions.
+      if (!session && mounted) {
+        setSession(null);
+        setLoading(false);
       }
-
-      // 3. Only set loading to false AFTER all data is fetched.
-      setLoading(false);
     };
 
-    initializeSession();
+    initialize();
 
-    // The listener for SIGNED_IN and SIGNED_OUT events remains the same.
+    // 2. Set up the listener for Auth changes (fires immediately if user is logged in)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (_event === 'SIGNED_IN') {
+      if (!mounted) return;
+
+      // specific events that mean we have a valid user
+      if (_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED' || _event === 'INITIAL_SESSION') {
         setSession(session);
 
         let currentIsScoped = false;
         let currentScopedId: string | null = null;
 
-        // Check if this user is a scoped customer and fetch accordingly
+        // Check scope logic
         if (session && session.user && session.user.id) {
           try {
-            const { data: matchedCustomers, error } = await supabase.from('customers').select('id').eq('user_id', session.user.id).limit(1);
+            const { data: matchedCustomers, error } = await supabase
+              .from('customers')
+              .select('id')
+              .eq('user_id', session.user.id)
+              .limit(1);
+
             if (!error && matchedCustomers && matchedCustomers.length > 0) {
               currentIsScoped = true;
               currentScopedId = matchedCustomers[0].id;
@@ -499,25 +470,30 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           } catch (err) {
             console.error('Error checking scoped customer on signin', err);
           }
-
-          setIsScopedCustomer(currentIsScoped);
-          setScopedCustomerId(currentScopedId);
-
-          // Fetch data after determining scoped status
-          await fetchData(currentIsScoped, currentScopedId);
-          await fetchSeniorityList();
         }
+
+        // Update state
+        setIsScopedCustomer(currentIsScoped);
+        setScopedCustomerId(currentScopedId);
+
+        // Fetch CRITICAL data only.
+        // Seniority list fetch is removed from here and handled by the background useEffect above.
+        await fetchData(currentIsScoped, currentScopedId);
+
+        // Turn off loading here after critical data is ready
+        if (mounted) setLoading(false);
+
       } else if (_event === 'SIGNED_OUT') {
         setSession(null);
-        // Clear both React state and any client-side persisted caches so the UI doesn't show stale data
         clearClientCache();
+        if (mounted) setLoading(false);
       }
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
-    // IMPORTANT: removed fetchData from dependency array to avoid infinite loop
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -535,7 +511,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      // Ensure local caches are cleared after sign out (explicit or due to inactivity)
       clearClientCache();
     } catch (error) {
       throw new Error(parseSupabaseError(error, 'signing out'));
@@ -549,11 +524,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (error || !data) throw error;
 
       // Trigger background user creation without blocking the customer add flow.
-      // We intentionally DO NOT await this fetch so the UI can return immediately.
       try {
         (async () => {
           try {
-            // Add cache-control/no-cache headers and a timestamp query param to avoid CDN/browser caching
             const createUrl = `/.netlify/functions/create-user-from-customer?_=${Date.now()}`;
             const resp = await fetch(createUrl, {
               method: 'POST',
@@ -567,8 +540,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
             if (!resp.ok) {
               const errData = await resp.json().catch(() => ({}));
-              console.warn('⚠️  Background user creation failed:', errData.error || resp.statusText);
-              // Dispatch a window event so the app can show a toast notification
+              console.warn('⚠️  Background user creation failed:', errData.error || resp.statusText);
               try {
                 if (typeof window !== 'undefined') {
                   window.dispatchEvent(new CustomEvent('background-user-create', {
@@ -579,9 +551,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     }
                   }));
                 }
-              } catch (e) {
-                // ignore
-              }
+              } catch (e) { }
             } else {
               const successData = await resp.json().catch(() => ({}));
               console.log('✅ Background user auto-created:', successData.user_id || '<unknown>');
@@ -596,17 +566,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     }
                   }));
                 }
-              } catch (e) {
-                // ignore
-              }
+              } catch (e) { }
             }
           } catch (err) {
-            console.warn('⚠️  Error during background user creation:', err);
+            console.warn('⚠️  Error during background user creation:', err);
           }
         })();
       } catch (userCreateError) {
-        // Extremely defensive: should never reach here since we don't await, but log if it does
-        console.warn('⚠️  Failed to schedule background user creation:', userCreateError);
+        console.warn('⚠️  Failed to schedule background user creation:', userCreateError);
       }
 
       await fetchData();
@@ -627,7 +594,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           await supabase.from('loan_seniority').delete().match({ customer_id: data.customer_id, user_id: session.user.id });
         }
       } catch (e) {
-        // Log but don't fail the main operation
         console.error('Failed to cleanup loan_seniority after loan create', e);
       }
       await fetchData();
@@ -691,9 +657,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         setSubscriptions(prev => prev.filter(s => s.customer_id !== customerId));
         setInstallments(prev => prev.filter(i => !optimisticLoanIds.includes(i.loan_id)));
         setDataEntries(prev => prev.filter(d => d.customer_id !== customerId));
-      } catch (e) {
-        // ignore optimistic update failures
-      }
+      } catch (e) { }
 
       // If a linked auth user exists, attempt to delete it via server-side function
       if (customerUserId) {
@@ -707,7 +671,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           if (!resp.ok) {
             const errData = await resp.json().catch(() => ({}));
             console.warn('Warning: failed to delete linked auth user:', errData.error || resp.statusText);
-            // Don't throw - continue deleting DB records to avoid leaving orphaned business data
           } else {
             console.log('✅ Linked auth user deleted for customer', customerId);
           }

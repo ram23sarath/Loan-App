@@ -75,9 +75,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     // UPDATED: Accepts optional arguments. If provided, uses them; otherwise falls back to state.
     // This allows the useEffect to call it with calculated values before state updates commit.
+    // NOTE: No dependency array needed since we're using overrides during initialization
     const fetchData = useCallback(async (overrideIsScoped?: boolean, overrideScopedId?: string | null) => {
-        setIsRefreshing(true);
         try {
+            // Don't set isRefreshing during initialization - only during user-triggered refreshes
+            // Check if we're being called during initialization by checking if overrides are provided
+            const isInitialization = overrideIsScoped !== undefined || overrideScopedId !== undefined;
+            if (!isInitialization) {
+                setIsRefreshing(true);
+            }
+            
             // Use overrides if they are explicitly passed (even if false/null), otherwise use state
             const effectiveIsScoped = overrideIsScoped !== undefined ? overrideIsScoped : isScopedCustomer;
             const effectiveScopedId = overrideScopedId !== undefined ? overrideScopedId : scopedCustomerId;
@@ -142,7 +149,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             console.error('Error in fetchData:', error);
             alert(parseSupabaseError(error, 'fetching data'));
         } finally {
-            setIsRefreshing(false);
+            // Only reset isRefreshing if it was set (user-triggered refresh, not initialization)
+            const isInitialization = overrideIsScoped !== undefined || overrideScopedId !== undefined;
+            if (!isInitialization) {
+                setIsRefreshing(false);
+            }
         }
     }, [isScopedCustomer, scopedCustomerId]);
 
@@ -378,21 +389,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // Ref to track the last authenticated user ID to prevent redundant fetches on token refresh
     const lastUserIdRef = React.useRef<string | null>(null);
 
-    // FIX: This useEffect now runs strictly ONCE on mount (empty dependency array).
-    // Logic inside calculates state variables locally before calling fetch, avoiding
-    // the need to depend on updated state values.
+    // FIX: Simplified initialization for Chrome/Edge compatibility
     useEffect(() => {
+        let isMounted = true;
+
         const initializeSession = async () => {
+            if (!isMounted) return;
             setLoading(true);
+
             try {
-                // 1. Get the current session
+                // Get the current session
                 const { data: { session } } = await supabase.auth.getSession();
 
-                // Prevent redundant initialization if we already have this session
-                if (session?.access_token === lastSessionTokenRef.current) {
-                    setLoading(false);
-                    return;
-                }
+                if (!isMounted) return;
 
                 setSession(session);
                 lastSessionTokenRef.current = session?.access_token || null;
@@ -401,7 +410,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 let currentIsScoped = false;
                 let currentScopedId: string | null = null;
 
-                // 2. If session exists, determine scope LOCALLY first
+                // If session exists, determine scope and fetch data
                 if (session && session.user && session.user.id) {
                     try {
                         const { data: matchedCustomers, error } = await supabase.from('customers').select('id').eq('user_id', session.user.id).limit(1);
@@ -413,81 +422,106 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                         console.error('Error checking scoped customer', err);
                     }
 
-                    // 3. Update State (these are async, so we can't use them in the next line)
+                    if (!isMounted) return;
+
                     setIsScopedCustomer(currentIsScoped);
                     setScopedCustomerId(currentScopedId);
 
-                    // 4. Fetch data using the LOCALLY calculated variables
+                    // Inline the fetch logic during initialization to avoid issues with fetchData callback
                     try {
-                        await fetchData(currentIsScoped, currentScopedId);
+                        if (currentIsScoped && currentScopedId) {
+                            // Scoped customer data fetch
+                            const [customerRes, loansRes, subsRes, dataEntriesRes] = await Promise.all([
+                                supabase.from('customers').select('*').eq('id', currentScopedId).limit(1),
+                                supabase.from('loans').select('*, customers(name, phone)').eq('customer_id', currentScopedId),
+                                supabase.from('subscriptions').select('*, customers(name, phone)').eq('customer_id', currentScopedId),
+                                supabase.from('data_entries').select('*').eq('customer_id', currentScopedId),
+                            ]);
+
+                            if (!isMounted) return;
+
+                            if (customerRes.error) throw customerRes.error;
+                            if (loansRes.error) throw loansRes.error;
+                            if (subsRes.error) throw subsRes.error;
+                            if (dataEntriesRes.error) throw dataEntriesRes.error;
+
+                            setCustomers((customerRes.data as unknown as Customer[]) || []);
+                            const loansArr = (loansRes.data as unknown as LoanWithCustomer[]) || [];
+                            setLoans(loansArr);
+                            setSubscriptions((subsRes.data as unknown as SubscriptionWithCustomer[]) || []);
+                            setDataEntries((dataEntriesRes.data as DataEntry[]) || []);
+
+                            // Fetch installments for loans
+                            const loanIds = loansArr.map(l => l.id);
+                            if (loanIds.length > 0) {
+                                const { data: installmentsData, error: installmentsError } = await supabase.from('installments').select('*').in('loan_id', loanIds);
+                                if (installmentsError) throw installmentsError;
+                                if (isMounted) setInstallments((installmentsData as Installment[]) || []);
+                            } else if (isMounted) {
+                                setInstallments([]);
+                            }
+                        } else {
+                            // Admin/full data fetch
+                            const [customersRes, loansRes, subsRes, installmentsRes, dataEntriesRes] = await Promise.all([
+                                supabase.from('customers').select('*').order('created_at', { ascending: false }),
+                                supabase.from('loans').select('*, customers(name, phone)'),
+                                supabase.from('subscriptions').select('*, customers(name, phone)'),
+                                supabase.from('installments').select('*'),
+                                supabase.from('data_entries').select('*'),
+                            ]);
+
+                            if (!isMounted) return;
+
+                            if (customersRes.error) throw customersRes.error;
+                            if (loansRes.error) throw loansRes.error;
+                            if (subsRes.error) throw subsRes.error;
+                            if (installmentsRes.error) throw installmentsRes.error;
+                            if (dataEntriesRes.error) throw dataEntriesRes.error;
+
+                            setCustomers((customersRes.data as unknown as Customer[]) || []);
+                            setLoans((loansRes.data as unknown as LoanWithCustomer[]) || []);
+                            setSubscriptions((subsRes.data as unknown as SubscriptionWithCustomer[]) || []);
+                            setInstallments((installmentsRes.data as unknown as Installment[]) || []);
+                            setDataEntries((dataEntriesRes.data as DataEntry[]) || []);
+                        }
                     } catch (err) {
-                        console.error('Error in fetchData during initialization', err);
+                        console.error('Error fetching data during initialization', err);
                     }
 
-                    // Seniority List fetch
+                    // Fetch seniority list
                     try {
-                        await fetchSeniorityList(session, currentIsScoped);
+                        let query = supabase.from('loan_seniority').select('*, customers(name, phone)').order('created_at', { ascending: false });
+                        if (currentIsScoped) {
+                            query = query.eq('user_id', session.user.id as string);
+                        }
+                        const { data, error } = await query;
+                        if (error) throw error;
+                        if (isMounted) setSeniorityList((data as any[]) || []);
                     } catch (err) {
-                        console.error('Error in fetchSeniorityList during initialization', err);
+                        console.error('Error fetching seniority list during initialization', err);
                     }
                 }
             } catch (err) {
                 console.error('Error initializing session', err);
             } finally {
-                setLoading(false);
+                if (isMounted) {
+                    setLoading(false);
+                    setIsRefreshing(false);
+                }
             }
         };
 
         initializeSession();
 
-        // Event Listener
+        // Listen for auth state changes - ONLY for actual sign-in/out events
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            // Check if the token actually changed to avoid infinite loops on TOKEN_REFRESHED
-            const newToken = session?.access_token || null;
-            const newUserId = session?.user?.id || null;
+            if (!isMounted) return;
 
-            if (newToken === lastSessionTokenRef.current && _event === 'TOKEN_REFRESHED') {
-                return;
-            }
-
-            lastSessionTokenRef.current = newToken;
-
-            // If it's just a token refresh and the user is the same, update session but DON'T re-fetch data
-            if (_event === 'TOKEN_REFRESHED' && newUserId === lastUserIdRef.current) {
-                console.log('Token refreshed for same user, skipping data re-fetch');
-                setSession(session);
-                return;
-            }
-
-            lastUserIdRef.current = newUserId;
-
-            if (_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED') {
-                setSession(session);
-
-                // Check scope again locally for the new session
-                let currentIsScoped = false;
-                let currentScopedId: string | null = null;
-
-                if (session && session.user && session.user.id) {
-                    try {
-                        const { data: matchedCustomers, error } = await supabase.from('customers').select('id').eq('user_id', session.user.id).limit(1);
-                        if (!error && matchedCustomers && matchedCustomers.length > 0) {
-                            currentIsScoped = true;
-                            currentScopedId = matchedCustomers[0].id;
-                        }
-                    } catch (err) {
-                        console.error('Error checking scoped customer on signin', err);
-                    }
-
-                    setIsScopedCustomer(currentIsScoped);
-                    setScopedCustomerId(currentScopedId);
-
-                    // Pass calculated values to fetch immediately
-                    await fetchData(currentIsScoped, currentScopedId);
-                    await fetchSeniorityList(session, currentIsScoped);
-                }
-            } else if (_event === 'SIGNED_OUT') {
+            // Only respond to SIGNED_OUT - skip everything else during initial load
+            if (_event === 'SIGNED_OUT') {
                 setSession(null);
+                setLoading(false);
+                setIsRefreshing(false);
                 lastSessionTokenRef.current = null;
                 lastUserIdRef.current = null;
                 clearClientCache();
@@ -495,10 +529,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         });
 
         return () => {
+            isMounted = false;
             subscription.unsubscribe();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Dependency array is explicitly empty to run only on mount
+    }, []);
 
     // ... [Rest of the component remains unchanged: signIn, signOut, adds, deletes, etc.] ...
 

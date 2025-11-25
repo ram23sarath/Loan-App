@@ -543,7 +543,117 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // ... [Rest of the component remains unchanged: signIn, signOut, adds, deletes, etc.] ...
+    // Refetch data when user logs in (when session becomes available but data hasn't been loaded yet)
+    useEffect(() => {
+        if (!session || !session.user) return;
+
+        // Only refetch if we have empty data (user just logged in)
+        const hasNoData = customers.length === 0 && loans.length === 0;
+        if (!hasNoData) return;
+
+        let isMounted = true;
+
+        const refetchDataAfterLogin = async () => {
+            try {
+                // Determine if user is scoped
+                let currentIsScoped = false;
+                let currentScopedId: string | null = null;
+
+                try {
+                    const { data: matchedCustomers, error } = await supabase.from('customers').select('id').eq('user_id', session.user.id).limit(1);
+                    if (!error && matchedCustomers && matchedCustomers.length > 0) {
+                        currentIsScoped = true;
+                        currentScopedId = matchedCustomers[0].id;
+                    }
+                } catch (err) {
+                    console.error('Error checking scoped customer after login', err);
+                }
+
+                if (!isMounted) return;
+
+                setIsScopedCustomer(currentIsScoped);
+                setScopedCustomerId(currentScopedId);
+
+                // Fetch all data
+                if (currentIsScoped && currentScopedId) {
+                    // Scoped customer data fetch
+                    const [customerRes, loansRes, subsRes, dataEntriesRes] = await Promise.all([
+                        supabase.from('customers').select('*').eq('id', currentScopedId).limit(1),
+                        supabase.from('loans').select('*, customers(name, phone)').eq('customer_id', currentScopedId),
+                        supabase.from('subscriptions').select('*, customers(name, phone)').eq('customer_id', currentScopedId),
+                        supabase.from('data_entries').select('*').eq('customer_id', currentScopedId),
+                    ]);
+
+                    if (!isMounted) return;
+
+                    if (customerRes.error) throw customerRes.error;
+                    if (loansRes.error) throw loansRes.error;
+                    if (subsRes.error) throw subsRes.error;
+                    if (dataEntriesRes.error) throw dataEntriesRes.error;
+
+                    setCustomers((customerRes.data as unknown as Customer[]) || []);
+                    const loansArr = (loansRes.data as unknown as LoanWithCustomer[]) || [];
+                    setLoans(loansArr);
+                    setSubscriptions((subsRes.data as unknown as SubscriptionWithCustomer[]) || []);
+                    setDataEntries((dataEntriesRes.data as DataEntry[]) || []);
+
+                    // Fetch installments
+                    const loanIds = loansArr.map(l => l.id);
+                    if (loanIds.length > 0) {
+                        const { data: installmentsData, error: installmentsError } = await supabase.from('installments').select('*').in('loan_id', loanIds);
+                        if (installmentsError) throw installmentsError;
+                        if (isMounted) setInstallments((installmentsData as Installment[]) || []);
+                    } else if (isMounted) {
+                        setInstallments([]);
+                    }
+                } else {
+                    // Admin/full data fetch
+                    const [customersRes, loansRes, subsRes, installmentsRes, dataEntriesRes] = await Promise.all([
+                        supabase.from('customers').select('*').order('created_at', { ascending: false }),
+                        supabase.from('loans').select('*, customers(name, phone)'),
+                        supabase.from('subscriptions').select('*, customers(name, phone)'),
+                        supabase.from('installments').select('*'),
+                        supabase.from('data_entries').select('*'),
+                    ]);
+
+                    if (!isMounted) return;
+
+                    if (customersRes.error) throw customersRes.error;
+                    if (loansRes.error) throw loansRes.error;
+                    if (subsRes.error) throw subsRes.error;
+                    if (installmentsRes.error) throw installmentsRes.error;
+                    if (dataEntriesRes.error) throw dataEntriesRes.error;
+
+                    setCustomers((customersRes.data as unknown as Customer[]) || []);
+                    setLoans((loansRes.data as unknown as LoanWithCustomer[]) || []);
+                    setSubscriptions((subsRes.data as unknown as SubscriptionWithCustomer[]) || []);
+                    setInstallments((installmentsRes.data as unknown as Installment[]) || []);
+                    setDataEntries((dataEntriesRes.data as DataEntry[]) || []);
+                }
+
+                // Fetch seniority list
+                try {
+                    let query = supabase.from('loan_seniority').select('*, customers(name, phone)').order('created_at', { ascending: false });
+                    if (currentIsScoped) {
+                        query = query.eq('user_id', session.user.id as string);
+                    }
+                    const { data, error } = await query;
+                    if (error) throw error;
+                    if (isMounted) setSeniorityList((data as any[]) || []);
+                } catch (err) {
+                    console.error('Error fetching seniority list after login', err);
+                }
+            } catch (err) {
+                console.error('Error refetching data after login', err);
+            }
+        };
+
+        refetchDataAfterLogin();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [session?.user?.id]);
 
     const signInWithPassword = async (email: string, pass: string) => {
         try {

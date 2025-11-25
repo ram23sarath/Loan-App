@@ -60,6 +60,52 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
+// Cache helper functions
+const getCachedData = (key: string) => {
+    try {
+        const cached = localStorage.getItem(`loan_app_cache_${key}`);
+        if (cached) {
+            const { data, timestamp } = JSON.parse(cached);
+            // Cache valid for 5 minutes
+            if (Date.now() - timestamp < 5 * 60 * 1000) {
+                return data;
+            }
+        }
+    } catch (err) {
+        console.error('Error reading from cache:', err);
+    }
+    return null;
+};
+
+const setCachedData = (key: string, data: any) => {
+    try {
+        localStorage.setItem(`loan_app_cache_${key}`, JSON.stringify({
+            data,
+            timestamp: Date.now()
+        }));
+    } catch (err) {
+        console.error('Error writing to cache:', err);
+    }
+};
+
+const clearCache = (key?: string) => {
+    try {
+        if (key) {
+            localStorage.removeItem(`loan_app_cache_${key}`);
+        } else {
+            // Clear all cache keys
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key?.startsWith('loan_app_cache_')) {
+                    localStorage.removeItem(key);
+                }
+            }
+        }
+    } catch (err) {
+        console.error('Error clearing cache:', err);
+    }
+};
+
 export const DataProvider = ({ children }: { children: ReactNode }) => {
     const [session, setSession] = useState<Session | null>(null);
     const [customers, setCustomers] = useState<Customer[]>([]);
@@ -427,6 +473,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     setIsScopedCustomer(currentIsScoped);
                     setScopedCustomerId(currentScopedId);
 
+                    // Load cached data immediately if available (for smooth UX)
+                    const cacheKey = currentIsScoped ? `data_scoped_${currentScopedId}` : 'data_admin';
+                    const cachedData = getCachedData(cacheKey);
+                    if (cachedData) {
+                        setCustomers(cachedData.customers || []);
+                        setLoans(cachedData.loans || []);
+                        setSubscriptions(cachedData.subscriptions || []);
+                        setInstallments(cachedData.installments || []);
+                        setDataEntries(cachedData.dataEntries || []);
+                        setSeniorityList(cachedData.seniorityList || []);
+                    }
+
                     // Inline the fetch logic during initialization to avoid issues with fetchData callback
                     try {
                         if (currentIsScoped && currentScopedId) {
@@ -445,21 +503,37 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                             if (subsRes.error) throw subsRes.error;
                             if (dataEntriesRes.error) throw dataEntriesRes.error;
 
-                            setCustomers((customerRes.data as unknown as Customer[]) || []);
+                            const customersData = (customerRes.data as unknown as Customer[]) || [];
                             const loansArr = (loansRes.data as unknown as LoanWithCustomer[]) || [];
+                            const subscriptionsData = (subsRes.data as unknown as SubscriptionWithCustomer[]) || [];
+                            const dataEntriesData = (dataEntriesRes.data as DataEntry[]) || [];
+
+                            setCustomers(customersData);
                             setLoans(loansArr);
-                            setSubscriptions((subsRes.data as unknown as SubscriptionWithCustomer[]) || []);
-                            setDataEntries((dataEntriesRes.data as DataEntry[]) || []);
+                            setSubscriptions(subscriptionsData);
+                            setDataEntries(dataEntriesData);
 
                             // Fetch installments for loans
+                            let installmentsData: Installment[] = [];
                             const loanIds = loansArr.map(l => l.id);
                             if (loanIds.length > 0) {
-                                const { data: installmentsData, error: installmentsError } = await supabase.from('installments').select('*').in('loan_id', loanIds);
+                                const { data: fetchedInstallments, error: installmentsError } = await supabase.from('installments').select('*').in('loan_id', loanIds);
                                 if (installmentsError) throw installmentsError;
-                                if (isMounted) setInstallments((installmentsData as Installment[]) || []);
+                                installmentsData = (fetchedInstallments as Installment[]) || [];
+                                if (isMounted) setInstallments(installmentsData);
                             } else if (isMounted) {
                                 setInstallments([]);
                             }
+
+                            // Cache the fetched data
+                            setCachedData(`data_scoped_${currentScopedId}`, {
+                                customers: customersData,
+                                loans: loansArr,
+                                subscriptions: subscriptionsData,
+                                installments: installmentsData,
+                                dataEntries: dataEntriesData,
+                                seniorityList: [] // Will be set below
+                            });
                         } else {
                             // Admin/full data fetch
                             const [customersRes, loansRes, subsRes, installmentsRes, dataEntriesRes] = await Promise.all([
@@ -478,11 +552,27 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                             if (installmentsRes.error) throw installmentsRes.error;
                             if (dataEntriesRes.error) throw dataEntriesRes.error;
 
-                            setCustomers((customersRes.data as unknown as Customer[]) || []);
-                            setLoans((loansRes.data as unknown as LoanWithCustomer[]) || []);
-                            setSubscriptions((subsRes.data as unknown as SubscriptionWithCustomer[]) || []);
-                            setInstallments((installmentsRes.data as unknown as Installment[]) || []);
-                            setDataEntries((dataEntriesRes.data as DataEntry[]) || []);
+                            const customersData = (customersRes.data as unknown as Customer[]) || [];
+                            const loansData = (loansRes.data as unknown as LoanWithCustomer[]) || [];
+                            const subscriptionsData = (subsRes.data as unknown as SubscriptionWithCustomer[]) || [];
+                            const installmentsData = (installmentsRes.data as unknown as Installment[]) || [];
+                            const dataEntriesData = (dataEntriesRes.data as DataEntry[]) || [];
+
+                            setCustomers(customersData);
+                            setLoans(loansData);
+                            setSubscriptions(subscriptionsData);
+                            setInstallments(installmentsData);
+                            setDataEntries(dataEntriesData);
+
+                            // Cache the fetched data
+                            setCachedData('data_admin', {
+                                customers: customersData,
+                                loans: loansData,
+                                subscriptions: subscriptionsData,
+                                installments: installmentsData,
+                                dataEntries: dataEntriesData,
+                                seniorityList: [] // Will be set below
+                            });
                         }
                     } catch (err) {
                         console.error('Error fetching data during initialization', err);
@@ -490,13 +580,21 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
                     // Fetch seniority list
                     try {
+                        const seniorityKey = currentIsScoped ? `seniority_scoped_${currentScopedId}` : 'seniority_admin';
+                        const cachedSeniority = getCachedData(seniorityKey);
+                        if (cachedSeniority) {
+                            if (isMounted) setSeniorityList(cachedSeniority);
+                        }
+
                         let query = supabase.from('loan_seniority').select('*, customers(name, phone)').order('created_at', { ascending: false });
                         if (currentIsScoped) {
                             query = query.eq('user_id', session.user.id as string);
                         }
                         const { data, error } = await query;
                         if (error) throw error;
-                        if (isMounted) setSeniorityList((data as any[]) || []);
+                        const seniorityData = (data as any[]) || [];
+                        if (isMounted) setSeniorityList(seniorityData);
+                        setCachedData(seniorityKey, seniorityData);
                     } catch (err) {
                         console.error('Error fetching seniority list during initialization', err);
                     }
@@ -576,6 +674,17 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
                 // Fetch all data
                 if (currentIsScoped && currentScopedId) {
+                    // Load from cache first for instant display
+                    const cacheKey = `loan_app_cache_data_scoped_${currentScopedId}`;
+                    const cachedData = getCachedData(cacheKey);
+                    if (cachedData && isMounted) {
+                        setCustomers(cachedData.customers || []);
+                        setLoans(cachedData.loans || []);
+                        setSubscriptions(cachedData.subscriptions || []);
+                        setDataEntries(cachedData.dataEntries || []);
+                        setInstallments(cachedData.installments || []);
+                    }
+
                     // Scoped customer data fetch
                     const [customerRes, loansRes, subsRes, dataEntriesRes] = await Promise.all([
                         supabase.from('customers').select('*').eq('id', currentScopedId).limit(1),
@@ -599,14 +708,35 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
                     // Fetch installments
                     const loanIds = loansArr.map(l => l.id);
+                    let installmentsData: Installment[] = [];
                     if (loanIds.length > 0) {
-                        const { data: installmentsData, error: installmentsError } = await supabase.from('installments').select('*').in('loan_id', loanIds);
+                        const { data, error: installmentsError } = await supabase.from('installments').select('*').in('loan_id', loanIds);
                         if (installmentsError) throw installmentsError;
-                        if (isMounted) setInstallments((installmentsData as Installment[]) || []);
-                    } else if (isMounted) {
-                        setInstallments([]);
+                        installmentsData = (data as Installment[]) || [];
                     }
+                    if (isMounted) setInstallments(installmentsData);
+
+                    // Cache all scoped customer data
+                    setCachedData(cacheKey, {
+                        customers: (customerRes.data as unknown as Customer[]) || [],
+                        loans: loansArr,
+                        subscriptions: (subsRes.data as unknown as SubscriptionWithCustomer[]) || [],
+                        installments: installmentsData,
+                        dataEntries: (dataEntriesRes.data as DataEntry[]) || [],
+                        seniorityList: [],
+                    });
                 } else {
+                    // Load from cache first for instant display
+                    const cacheKey = 'loan_app_cache_data_admin';
+                    const cachedData = getCachedData(cacheKey);
+                    if (cachedData && isMounted) {
+                        setCustomers(cachedData.customers || []);
+                        setLoans(cachedData.loans || []);
+                        setSubscriptions(cachedData.subscriptions || []);
+                        setInstallments(cachedData.installments || []);
+                        setDataEntries(cachedData.dataEntries || []);
+                    }
+
                     // Admin/full data fetch
                     const [customersRes, loansRes, subsRes, installmentsRes, dataEntriesRes] = await Promise.all([
                         supabase.from('customers').select('*').order('created_at', { ascending: false }),
@@ -629,17 +759,35 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     setSubscriptions((subsRes.data as unknown as SubscriptionWithCustomer[]) || []);
                     setInstallments((installmentsRes.data as unknown as Installment[]) || []);
                     setDataEntries((dataEntriesRes.data as DataEntry[]) || []);
+
+                    // Cache admin data
+                    setCachedData('loan_app_cache_data_admin', {
+                        customers: (customersRes.data as unknown as Customer[]) || [],
+                        loans: (loansRes.data as unknown as LoanWithCustomer[]) || [],
+                        subscriptions: (subsRes.data as unknown as SubscriptionWithCustomer[]) || [],
+                        installments: (installmentsRes.data as unknown as Installment[]) || [],
+                        dataEntries: (dataEntriesRes.data as DataEntry[]) || [],
+                        seniorityList: [],
+                    });
                 }
 
                 // Fetch seniority list
                 try {
+                    const seniorityKey = currentIsScoped ? `seniority_scoped_${currentScopedId}` : 'seniority_admin';
+                    const cachedSeniority = getCachedData(seniorityKey);
+                    if (cachedSeniority) {
+                        if (isMounted) setSeniorityList(cachedSeniority);
+                    }
+
                     let query = supabase.from('loan_seniority').select('*, customers(name, phone)').order('created_at', { ascending: false });
                     if (currentIsScoped) {
                         query = query.eq('user_id', session.user.id as string);
                     }
                     const { data, error } = await query;
                     if (error) throw error;
-                    if (isMounted) setSeniorityList((data as any[]) || []);
+                    const seniorityData = (data as any[]) || [];
+                    if (isMounted) setSeniorityList(seniorityData);
+                    setCachedData(seniorityKey, seniorityData);
                 } catch (err) {
                     console.error('Error fetching seniority list after login', err);
                 }

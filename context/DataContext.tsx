@@ -371,6 +371,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Ref to track the last processed session token to prevent redundant updates
+  const lastSessionTokenRef = React.useRef<string | null>(null);
+
   // FIX: This useEffect now runs strictly ONCE on mount (empty dependency array).
   // Logic inside calculates state variables locally before calling fetch, avoiding
   // the need to depend on updated state values.
@@ -380,7 +383,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       try {
         // 1. Get the current session
         const { data: { session } } = await supabase.auth.getSession();
+
+        // Prevent redundant initialization if we already have this session
+        if (session?.access_token === lastSessionTokenRef.current) {
+          setLoading(false);
+          return;
+        }
+
         setSession(session);
+        lastSessionTokenRef.current = session?.access_token || null;
 
         let currentIsScoped = false;
         let currentScopedId: string | null = null;
@@ -407,13 +418,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           } catch (err) {
             console.error('Error in fetchData during initialization', err);
           }
-          
+
           // Seniority List fetch
           try {
-            // Since this function reads 'session' from state (which might be stale here),
-            // and we just called setSession, it might be safer to rely on internal Supabase client state
-            // or refactor fetchSeniorityList. However, strictly for this useEffect refactor,
-            // we call it here. If it fails due to session, the UI will just show empty list.
             await fetchSeniorityList();
           } catch (err) {
             console.error('Error in fetchSeniorityList during initialization', err);
@@ -430,9 +437,17 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     // Event Listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      // Check if the token actually changed to avoid infinite loops on TOKEN_REFRESHED
+      const newToken = session?.access_token || null;
+      if (newToken === lastSessionTokenRef.current && _event === 'TOKEN_REFRESHED') {
+        return;
+      }
+
+      lastSessionTokenRef.current = newToken;
+
       if (_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED') {
         setSession(session);
-        
+
         // Check scope again locally for the new session
         let currentIsScoped = false;
         let currentScopedId: string | null = null;
@@ -457,6 +472,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         }
       } else if (_event === 'SIGNED_OUT') {
         setSession(null);
+        lastSessionTokenRef.current = null;
         clearClientCache();
       }
     });

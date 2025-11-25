@@ -427,12 +427,79 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     setIsScopedCustomer(currentIsScoped);
                     setScopedCustomerId(currentScopedId);
 
-                    // Fetch data
-                    if (!isMounted) return;
-                    await fetchData(currentIsScoped, currentScopedId);
+                    // Inline the fetch logic during initialization to avoid issues with fetchData callback
+                    try {
+                        if (currentIsScoped && currentScopedId) {
+                            // Scoped customer data fetch
+                            const [customerRes, loansRes, subsRes, dataEntriesRes] = await Promise.all([
+                                supabase.from('customers').select('*').eq('id', currentScopedId).limit(1),
+                                supabase.from('loans').select('*, customers(name, phone)').eq('customer_id', currentScopedId),
+                                supabase.from('subscriptions').select('*, customers(name, phone)').eq('customer_id', currentScopedId),
+                                supabase.from('data_entries').select('*').eq('customer_id', currentScopedId),
+                            ]);
 
-                    if (!isMounted) return;
-                    await fetchSeniorityList(session, currentIsScoped);
+                            if (!isMounted) return;
+
+                            if (customerRes.error) throw customerRes.error;
+                            if (loansRes.error) throw loansRes.error;
+                            if (subsRes.error) throw subsRes.error;
+                            if (dataEntriesRes.error) throw dataEntriesRes.error;
+
+                            setCustomers((customerRes.data as unknown as Customer[]) || []);
+                            const loansArr = (loansRes.data as unknown as LoanWithCustomer[]) || [];
+                            setLoans(loansArr);
+                            setSubscriptions((subsRes.data as unknown as SubscriptionWithCustomer[]) || []);
+                            setDataEntries((dataEntriesRes.data as DataEntry[]) || []);
+
+                            // Fetch installments for loans
+                            const loanIds = loansArr.map(l => l.id);
+                            if (loanIds.length > 0) {
+                                const { data: installmentsData, error: installmentsError } = await supabase.from('installments').select('*').in('loan_id', loanIds);
+                                if (installmentsError) throw installmentsError;
+                                if (isMounted) setInstallments((installmentsData as Installment[]) || []);
+                            } else if (isMounted) {
+                                setInstallments([]);
+                            }
+                        } else {
+                            // Admin/full data fetch
+                            const [customersRes, loansRes, subsRes, installmentsRes, dataEntriesRes] = await Promise.all([
+                                supabase.from('customers').select('*').order('created_at', { ascending: false }),
+                                supabase.from('loans').select('*, customers(name, phone)'),
+                                supabase.from('subscriptions').select('*, customers(name, phone)'),
+                                supabase.from('installments').select('*'),
+                                supabase.from('data_entries').select('*'),
+                            ]);
+
+                            if (!isMounted) return;
+
+                            if (customersRes.error) throw customersRes.error;
+                            if (loansRes.error) throw loansRes.error;
+                            if (subsRes.error) throw subsRes.error;
+                            if (installmentsRes.error) throw installmentsRes.error;
+                            if (dataEntriesRes.error) throw dataEntriesRes.error;
+
+                            setCustomers((customersRes.data as unknown as Customer[]) || []);
+                            setLoans((loansRes.data as unknown as LoanWithCustomer[]) || []);
+                            setSubscriptions((subsRes.data as unknown as SubscriptionWithCustomer[]) || []);
+                            setInstallments((installmentsRes.data as unknown as Installment[]) || []);
+                            setDataEntries((dataEntriesRes.data as DataEntry[]) || []);
+                        }
+                    } catch (err) {
+                        console.error('Error fetching data during initialization', err);
+                    }
+
+                    // Fetch seniority list
+                    try {
+                        let query = supabase.from('loan_seniority').select('*, customers(name, phone)').order('created_at', { ascending: false });
+                        if (currentIsScoped) {
+                            query = query.eq('user_id', session.user.id as string);
+                        }
+                        const { data, error } = await query;
+                        if (error) throw error;
+                        if (isMounted) setSeniorityList((data as any[]) || []);
+                    } catch (err) {
+                        console.error('Error fetching seniority list during initialization', err);
+                    }
                 }
             } catch (err) {
                 console.error('Error initializing session', err);
@@ -446,7 +513,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
         initializeSession();
 
-        // Listen for auth state changes
+        // Listen for auth state changes - handle sign in and sign out
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             if (!isMounted) return;
 
@@ -461,46 +528,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 return;
             }
 
-            // Avoid processing the same token twice
-            if (session?.access_token === lastSessionTokenRef.current) {
-                if (_event === 'TOKEN_REFRESHED') {
-                    console.log('Token refreshed, skipping re-fetch');
-                    return;
-                }
-            }
-
-            lastSessionTokenRef.current = session?.access_token || null;
-
-            // Handle sign in and token refresh
-            if (_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED') {
+            // Handle sign in - set the session so user stays logged in
+            if (_event === 'SIGNED_IN') {
                 setSession(session);
-                
-                let currentIsScoped = false;
-                let currentScopedId: string | null = null;
-
-                if (session && session.user && session.user.id) {
-                    try {
-                        const { data: matchedCustomers, error } = await supabase.from('customers').select('id').eq('user_id', session.user.id).limit(1);
-                        if (!error && matchedCustomers && matchedCustomers.length > 0) {
-                            currentIsScoped = true;
-                            currentScopedId = matchedCustomers[0].id;
-                        }
-                    } catch (err) {
-                        console.error('Error checking scoped customer', err);
-                    }
-
-                    if (!isMounted) return;
-
-                    setIsScopedCustomer(currentIsScoped);
-                    setScopedCustomerId(currentScopedId);
-
-                    // Only fetch on SIGNED_IN, not TOKEN_REFRESHED
-                    if (_event === 'SIGNED_IN') {
-                        await fetchData(currentIsScoped, currentScopedId);
-                        if (!isMounted) return;
-                        await fetchSeniorityList(session, currentIsScoped);
-                    }
-                }
+                lastSessionTokenRef.current = session?.access_token || null;
+                lastUserIdRef.current = session?.user?.id || null;
             }
         });
 

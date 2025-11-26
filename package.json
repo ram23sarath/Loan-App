@@ -6,11 +6,16 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "setup-env": "node scripts/setup-env.js",
+    "reset-password": "node scripts/reset-password-cli.js",
+    "verify-users": "node scripts/verify-all-users.js",
+    "create-users": "node scripts/create-users-from-customers.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.44.4",
     "chart.js": "^4.5.0",
+    "dotenv": "^16.4.5",
     "framer-motion": "^12.23.11",
     "react": "^19.1.1",
     "react-chartjs-2": "^5.3.0",

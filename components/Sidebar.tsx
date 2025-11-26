@@ -40,7 +40,7 @@ const allNavItems = [
   { path: "/loan-seniority", label: "Loan Seniority", icon: StarIcon, adminOnly: true },
   { path: "/subscriptions", label: "Subscriptions", icon: HistoryIcon },
   { path: "/data", label: "Misc", icon: DatabaseIcon },
-  { path: "/summary", label: "Summary", icon: BookOpenIcon, adminOnly: true },
+  { path: "/summary", label: "Summary", icon: BookOpenIcon },
 ];
 
 const Sidebar = () => {

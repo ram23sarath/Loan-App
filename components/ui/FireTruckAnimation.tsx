@@ -7,10 +7,10 @@ interface FireTruckAnimationProps {
 
 const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) => {
     useEffect(() => {
-        // Reduced duration slightly for a snappier feel
+        // Duration matches the animation duration for smooth completion
         const timer = setTimeout(() => {
             onComplete();
-        }, 3000);
+        }, 4500);
 
         return () => clearTimeout(timer);
     }, [onComplete]);
@@ -28,7 +28,7 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
                     initial={{ x: '-20vw' }}
                     animate={{ x: '120vw' }}
                     transition={{
-                        duration: 2.5,
+                        duration: 4,
                         ease: [0.45, 0, 0.55, 1], // Custom bezier for smooth acceleration/deceleration
                     }}
                     className="absolute left-0"
@@ -46,7 +46,7 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
                         <motion.div
                             initial={{ opacity: 0, width: 0 }}
                             animate={{ opacity: [0, 0.5, 0], width: [0, 100, 0] }}
-                            transition={{ duration: 2, times: [0, 0.5, 1] }}
+                            transition={{ duration: 3, times: [0, 0.5, 1] }}
                             className="absolute top-1/2 -left-20 h-1 bg-gradient-to-r from-transparent to-indigo-400 rounded-full blur-sm"
                         />
 

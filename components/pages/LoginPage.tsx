@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useData } from '../../context/DataContext';
 import GlassCard from '../ui/GlassCard';
+import Toast from '../ui/Toast';
 import FireTruckAnimation from '../ui/FireTruckAnimation';
 
 type FormInputs = {
@@ -17,6 +18,10 @@ const LoginPage = () => {
   const location = useLocation();
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormInputs>();
   const [showAnimation, setShowAnimation] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [isWiggling, setIsWiggling] = useState(false);
 
   const from = location.state?.from?.pathname || "/";
 
@@ -37,12 +42,30 @@ const LoginPage = () => {
       // On success, show animation instead of immediate navigation
       setShowAnimation(true);
     } catch (error: any) {
-      alert(error.message);
+      setToastMessage(error.message);
+      setShowToast(true);
+      // Trigger wiggle animation
+      setIsWiggling(true);
+      setTimeout(() => setIsWiggling(false), 600);
     }
   };
 
   const handleAnimationComplete = () => {
     navigate(from, { replace: true });
+  };
+
+  // Wiggle animation variants
+  const wiggleVariants = {
+    wiggle: {
+      x: [0, -10, 10, -10, 10, 0],
+      transition: {
+        duration: 0.6,
+        ease: 'easeInOut',
+      },
+    },
+    normal: {
+      x: 0,
+    },
   };
 
   // If user is already logged in and we are not showing animation, redirect
@@ -53,6 +76,7 @@ const LoginPage = () => {
   return (
     <div className="flex items-center justify-center min-h-screen">
       {showAnimation && <FireTruckAnimation onComplete={handleAnimationComplete} />}
+      <Toast message={toastMessage} show={showToast} onClose={() => setShowToast(false)} type="error" />
       <GlassCard className="w-full max-w-md" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
         <h2 className="text-3xl font-bold text-center mb-6 text-gray-800">Loan Management Login</h2>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -81,6 +105,9 @@ const LoginPage = () => {
             {errors.password && <p className="text-red-600 text-sm mt-1">{errors.password.message}</p>}
           </div>
           <motion.button
+            ref={buttonRef}
+            animate={isWiggling ? 'wiggle' : 'normal'}
+            variants={wiggleVariants}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             type="submit"

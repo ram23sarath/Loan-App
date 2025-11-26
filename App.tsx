@@ -73,14 +73,7 @@ const AnimatedRoutes = () => {
         />
         <Route path="/loans/:id" element={<LoanDetailPage />} />
         <Route path="/subscriptions" element={<SubscriptionListPage />} />
-        <Route
-          path="/summary"
-          element={
-            <AdminOnlyRoute>
-              <SummaryPage />
-            </AdminOnlyRoute>
-          }
-        />
+        <Route path="/summary" element={<SummaryPage />} />
         <Route path="/data" element={<DataPage />} />
       </Routes>
     </AnimatePresence>

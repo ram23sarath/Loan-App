@@ -11,6 +11,7 @@ const SummaryPage = () => {
     installments = [],
     subscriptions = [],
     dataEntries = [],
+    isScopedCustomer = false,
   } = useData();
 
   // --- Financial Year Selector Setup ---
@@ -751,35 +752,36 @@ const SummaryPage = () => {
           </motion.div>
         </motion.div>
 
-        {/* Financial Year Section - separate visualization for selected FY */}
-        <div className="w-full mt-6 bg-gray-50 rounded-lg p-4 border border-gray-100">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <div className="text-2xl font-bold text-gray-700 uppercase">
-                Financial Year Summary — FY {fyLabel(selectedFYStart)}
+        {/* Financial Year Section - separate visualization for selected FY (Admin only) */}
+        {!isScopedCustomer && (
+          <div className="w-full mt-6 bg-gray-50 rounded-lg p-4 border border-gray-100">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="text-2xl font-bold text-gray-700 uppercase">
+                  Financial Year Summary — FY {fyLabel(selectedFYStart)}
+                </div>
+                <div className="text-xs text-gray-400">
+                  Select a fiscal year (Apr - Mar) to visualize collections
+                </div>
               </div>
-              <div className="text-xs text-gray-400">
-                Select a fiscal year (Apr - Mar) to visualize collections
+              <div className="flex items-center gap-3 no-print">
+                <select
+                  value={selectedFYStart}
+                  onChange={(e) => setSelectedFYStart(Number(e.target.value))}
+                  className="px-5 py-2 rounded border bg-white text-base"
+                  style={{ minWidth: 150 }}
+                >
+                  {fyOptions.map((y) => (
+                    <option key={y} value={y}>
+                      {fyLabel(y)}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
-            <div className="flex items-center gap-3 no-print">
-              <select
-                value={selectedFYStart}
-                onChange={(e) => setSelectedFYStart(Number(e.target.value))}
-                className="px-5 py-2 rounded border bg-white text-base"
-                style={{ minWidth: 150 }}
-              >
-                {fyOptions.map((y) => (
-                  <option key={y} value={y}>
-                    {fyLabel(y)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
 
-          <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div className="p-4 rounded-xl bg-cyan-50 border border-cyan-200 flex flex-col items-start">
+            <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="p-4 rounded-xl bg-cyan-50 border border-cyan-200 flex flex-col items-start">
               <div className="flex items-center justify-between w-full">
                 <div className="text-xs text-gray-600">Subscriptions (FY)</div>
                 <button
@@ -931,8 +933,9 @@ const SummaryPage = () => {
                 )}
               </div>
             </div>
+            </div>
           </div>
-        </div>
+        )}
 
         <div className="text-center text-xs text-gray-400 mt-2">
           Updated as of {formatDate(new Date().toISOString().slice(0, 10))}

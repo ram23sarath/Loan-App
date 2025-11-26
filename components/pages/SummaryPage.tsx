@@ -527,15 +527,6 @@ const SummaryPage = () => {
               Summary Dashboard
             </h2>
           </div>
-          <div className="flex items-center gap-2 no-print">
-            <button
-              onClick={() => window.print()}
-              title="Print / Export to PDF"
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-indigo-600 text-white text-sm hover:bg-indigo-700"
-            >
-              Print
-            </button>
-          </div>
         </div>
 
         <motion.div

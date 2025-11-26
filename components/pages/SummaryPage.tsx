@@ -1,18 +1,63 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import FYBreakdownModal from "../modals/FYBreakdownModal";
 import { useData } from "../../context/DataContext";
 import { formatCurrencyIN } from "../../utils/numberFormatter";
 import { formatDate } from "../../utils/dateFormatter";
+import { calculateSummaryData, expenseSubtypes } from "../../utils/summaryCalculations";
+import { supabase } from "../../src/lib/supabase";
+import type { LoanWithCustomer, SubscriptionWithCustomer, Installment, DataEntry } from "../../types";
 
 const SummaryPage = () => {
   const {
-    loans = [],
-    installments = [],
-    subscriptions = [],
-    dataEntries = [],
+    loans: contextLoans = [],
+    installments: contextInstallments = [],
+    subscriptions: contextSubscriptions = [],
+    dataEntries: contextDataEntries = [],
     isScopedCustomer = false,
   } = useData();
+
+  // For scoped customers, fetch unfiltered data for summary calculations
+  const [loansForSummary, setLoansForSummary] = useState<LoanWithCustomer[]>([]);
+  const [installmentsForSummary, setInstallmentsForSummary] = useState<Installment[]>([]);
+  const [subscriptionsForSummary, setSubscriptionsForSummary] = useState<SubscriptionWithCustomer[]>([]);
+  const [dataEntriesForSummary, setDataEntriesForSummary] = useState<DataEntry[]>([]);
+
+  useEffect(() => {
+    const fetchUnfilteredData = async () => {
+      if (isScopedCustomer) {
+        try {
+          // Fetch all data for summary calculations
+          const [loansRes, subscriptionsRes, dataEntriesRes] = await Promise.all([
+            supabase.from('loans').select('*, customers(name, phone)'),
+            supabase.from('subscriptions').select('*, customers(name, phone)'),
+            supabase.from('data_entries').select('*'),
+          ]);
+
+          if (loansRes.data) setLoansForSummary(loansRes.data as LoanWithCustomer[]);
+          if (subscriptionsRes.data) setSubscriptionsForSummary(subscriptionsRes.data as SubscriptionWithCustomer[]);
+          if (dataEntriesRes.data) setDataEntriesForSummary(dataEntriesRes.data as DataEntry[]);
+
+          // Fetch installments for all loans
+          if (loansRes.data && loansRes.data.length > 0) {
+            const loanIds = (loansRes.data as LoanWithCustomer[]).map(l => l.id);
+            const installmentsRes = await supabase.from('installments').select('*').in('loan_id', loanIds);
+            if (installmentsRes.data) setInstallmentsForSummary(installmentsRes.data as Installment[]);
+          }
+        } catch (error) {
+          console.error('Error fetching unfiltered data for summary:', error);
+        }
+      }
+    };
+
+    fetchUnfilteredData();
+  }, [isScopedCustomer]);
+
+  // Use unfiltered data for scoped customers, context data for admins
+  const loans = isScopedCustomer ? loansForSummary : contextLoans;
+  const installments = isScopedCustomer ? installmentsForSummary : contextInstallments;
+  const subscriptions = isScopedCustomer ? subscriptionsForSummary : contextSubscriptions;
+  const dataEntries = isScopedCustomer ? dataEntriesForSummary : contextDataEntries;
 
   // --- Financial Year Selector Setup ---
   const today = new Date();
@@ -67,109 +112,26 @@ const SummaryPage = () => {
     return { start, end };
   }, [selectedFYStart]);
 
-  // --- Data Calculation (overall totals) ---
-  const totalInterestCollected = loans.reduce((acc, loan) => {
-    const loanInstallments = installments.filter((i) => i.loan_id === loan.id);
-    const totalPaidForLoan = loanInstallments.reduce(
-      (sum, inst) => sum + inst.amount,
-      0
-    );
-    if (totalPaidForLoan > loan.original_amount) {
-      const interestCollected = Math.min(
-        totalPaidForLoan - loan.original_amount,
-        loan.interest_amount
-      );
-      return acc + interestCollected;
-    }
-    return acc;
-  }, 0);
-  const totalLateFeeCollected =
-    installments.reduce((acc, inst) => acc + (inst.late_fee || 0), 0) +
-    subscriptions.reduce((acc, sub) => acc + (sub.late_fee || 0), 0);
-  const totalSubscriptionCollected = subscriptions.reduce(
-    (acc, sub) => acc + (sub.amount || 0),
-    0
-  );
-  // Calculate Subscription Return from dataEntries (expenditure entries with subtype 'Subscription Return')
-  const subscriptionReturnTotal = dataEntries.reduce((acc, entry) => {
-    if (
-      (entry as any).type === "expenditure" &&
-      entry.subtype === "Subscription Return"
-    ) {
-      return acc + (entry.amount || 0);
-    }
-    return acc;
-  }, 0);
-  // Balance = Subscriptions - Subscription Return
-  const subscriptionBalance =
-    totalSubscriptionCollected - subscriptionReturnTotal;
-  const totalDataCollected = dataEntries.reduce((acc, entry) => {
-    if (entry.type === "expenditure") {
-      return acc - (entry.amount || 0);
-    }
-    return acc + (entry.amount || 0);
-  }, 0);
-  // New: calculate Expenses from specific subtypes recorded in New Data Entry
-  const expenseSubtypes = [
-    "Subscription Return",
-    "Retirement Gift",
-    "Death Fund",
-    "Misc Expense",
-  ];
-  const totalExpenses = dataEntries.reduce((acc, entry) => {
-    // Consider only entries that are expenditures and match the requested subtypes
-    if (
-      entry.type === "expenditure" &&
-      entry.subtype &&
-      expenseSubtypes.includes(entry.subtype)
-    ) {
-      return acc + (entry.amount || 0);
-    }
-    return acc;
-  }, 0);
-  // Calculate per-subtype totals so we can show breakdown under Expenses
-  const expenseTotalsBySubtype: Record<string, number> = expenseSubtypes.reduce(
-    (acc, subtype) => {
-      acc[subtype] = 0;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
-  dataEntries.forEach((entry) => {
-    if (
-      entry.type === "expenditure" &&
-      entry.subtype &&
-      expenseSubtypes.includes(entry.subtype)
-    ) {
-      expenseTotalsBySubtype[entry.subtype!] =
-        (expenseTotalsBySubtype[entry.subtype!] || 0) + (entry.amount || 0);
-    }
-  });
-  const totalAllCollected =
-    totalInterestCollected +
-    totalLateFeeCollected +
-    totalSubscriptionCollected +
-    totalDataCollected;
-  // Show only principal amount disbursed (original_amount) — do not include interest here
-  const totalLoansGiven = loans.reduce(
-    (acc, loan) => acc + (loan.original_amount || 0),
-    0
+  // --- Data Calculation (overall totals) using shared utility ---
+  const summaryData = useMemo(
+    () => calculateSummaryData(loans, installments, subscriptions, dataEntries),
+    [loans, installments, subscriptions, dataEntries]
   );
 
-  // New: calculate total principal recovered (payments applied to principal, excluding interest)
-  const totalPrincipalRecovered = loans.reduce((acc, loan) => {
-    const loanInstallments = installments.filter((i) => i.loan_id === loan.id);
-    const totalPaidForLoan = loanInstallments.reduce(
-      (sum, inst) => sum + (inst.amount || 0),
-      0
-    );
-    // Payments are applied to principal first; principal recovered is min(totalPaid, original_amount)
-    const principalRecovered = Math.min(
-      totalPaidForLoan,
-      loan.original_amount || 0
-    );
-    return acc + principalRecovered;
-  }, 0);
+  const {
+    totalInterestCollected,
+    totalLateFeeCollected,
+    totalSubscriptionCollected,
+    subscriptionReturnTotal,
+    subscriptionBalance,
+    totalDataCollected,
+    totalExpenses,
+    expenseTotalsBySubtype,
+    totalAllCollected,
+    totalLoansGiven,
+    totalPrincipalRecovered,
+    loanBalance,
+  } = summaryData;
 
   // --- Data Calculation (financial year filtered totals) ---
   const { start: fyStart, end: fyEnd } = fyRange;
@@ -464,9 +426,6 @@ const SummaryPage = () => {
 
     setBreakdownOpen(true);
   };
-
-  // Loan Balance = Total Loans Given - Loan Recovery (Principal)
-  const loanBalance = totalLoansGiven - totalPrincipalRecovered;
 
   // No tab state — Loan Recovery will be displayed as its own heading below Total Collected
 

@@ -5,9 +5,10 @@ import GlassCard from '../ui/GlassCard';
 import PageWrapper from '../ui/PageWrapper';
 import { motion } from 'framer-motion';
 import RequestSeniorityModal from '../ui/RequestSeniorityModal';
+import { formatCurrencyIN } from '../../utils/numberFormatter';
 
 const CustomerDashboard = () => {
-  const { customers, loans, subscriptions, dataEntries, isScopedCustomer, scopedCustomerId } = useData();
+  const { customers, loans, installments, subscriptions, dataEntries, isScopedCustomer, scopedCustomerId } = useData();
   const navigate = useNavigate();
   const { addToSeniority } = useData();
 
@@ -21,6 +22,114 @@ const CustomerDashboard = () => {
   const customer = isScopedCustomer && scopedCustomerId 
     ? customers.find(c => c.id === scopedCustomerId)
     : customers.length > 0 ? customers[0] : null;
+
+  // --- Summary Data Calculations ---
+  const totalInterestCollected = loans.reduce((acc, loan) => {
+    const loanInstallments = installments.filter((i) => i.loan_id === loan.id);
+    const totalPaidForLoan = loanInstallments.reduce(
+      (sum, inst) => sum + inst.amount,
+      0
+    );
+    if (totalPaidForLoan > loan.original_amount) {
+      const interestCollected = Math.min(
+        totalPaidForLoan - loan.original_amount,
+        loan.interest_amount
+      );
+      return acc + interestCollected;
+    }
+    return acc;
+  }, 0);
+
+  const totalLateFeeCollected =
+    installments.reduce((acc, inst) => acc + (inst.late_fee || 0), 0) +
+    subscriptions.reduce((acc, sub) => acc + (sub.late_fee || 0), 0);
+
+  const totalSubscriptionCollected = subscriptions.reduce(
+    (acc, sub) => acc + (sub.amount || 0),
+    0
+  );
+
+  const subscriptionReturnTotal = dataEntries.reduce((acc, entry) => {
+    if (
+      (entry as any).type === "expenditure" &&
+      entry.subtype === "Subscription Return"
+    ) {
+      return acc + (entry.amount || 0);
+    }
+    return acc;
+  }, 0);
+
+  const subscriptionBalance = totalSubscriptionCollected - subscriptionReturnTotal;
+
+  const totalDataCollected = dataEntries.reduce((acc, entry) => {
+    if (entry.type === "expenditure") {
+      return acc - (entry.amount || 0);
+    }
+    return acc + (entry.amount || 0);
+  }, 0);
+
+  const expenseSubtypes = [
+    "Subscription Return",
+    "Retirement Gift",
+    "Death Fund",
+    "Misc Expense",
+  ];
+
+  const totalExpenses = dataEntries.reduce((acc, entry) => {
+    if (
+      entry.type === "expenditure" &&
+      entry.subtype &&
+      expenseSubtypes.includes(entry.subtype)
+    ) {
+      return acc + (entry.amount || 0);
+    }
+    return acc;
+  }, 0);
+
+  const expenseTotalsBySubtype: Record<string, number> = expenseSubtypes.reduce(
+    (acc, subtype) => {
+      acc[subtype] = 0;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
+
+  dataEntries.forEach((entry) => {
+    if (
+      entry.type === "expenditure" &&
+      entry.subtype &&
+      expenseSubtypes.includes(entry.subtype)
+    ) {
+      expenseTotalsBySubtype[entry.subtype!] =
+        (expenseTotalsBySubtype[entry.subtype!] || 0) + (entry.amount || 0);
+    }
+  });
+
+  const totalAllCollected =
+    totalInterestCollected +
+    totalLateFeeCollected +
+    totalSubscriptionCollected +
+    totalDataCollected;
+
+  const totalLoansGiven = loans.reduce(
+    (acc, loan) => acc + (loan.original_amount || 0),
+    0
+  );
+
+  const totalPrincipalRecovered = loans.reduce((acc, loan) => {
+    const loanInstallments = installments.filter((i) => i.loan_id === loan.id);
+    const totalPaidForLoan = loanInstallments.reduce(
+      (sum, inst) => sum + (inst.amount || 0),
+      0
+    );
+    const principalRecovered = Math.min(
+      totalPaidForLoan,
+      loan.original_amount || 0
+    );
+    return acc + principalRecovered;
+  }, 0);
+
+  const loanBalance = totalLoansGiven - totalPrincipalRecovered;
 
   return (
     <PageWrapper>
@@ -69,14 +178,6 @@ const CustomerDashboard = () => {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => navigate('/summary')}
-                className="bg-slate-600 hover:bg-slate-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-              >
-                Summary Dashboard
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
                 onClick={() => navigate('/loans')}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
               >
@@ -115,6 +216,160 @@ const CustomerDashboard = () => {
               )}
             </div>
           </GlassCard>
+        </motion.div>
+
+        {/* Summary Dashboard - Income and Expenses */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+          className="mt-6"
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Income Section */}
+            <GlassCard className="!p-6 sm:!p-8">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 font-bold">
+                  ₹
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                    Income
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    Collections & recoveries
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex flex-col items-center p-4 rounded-lg bg-indigo-50 border border-indigo-200">
+                  <span className="text-sm font-medium text-indigo-800 uppercase">
+                    Total Collected
+                  </span>
+                  <span className="text-3xl font-bold text-indigo-700 mt-2">
+                    {formatCurrencyIN(totalAllCollected)}
+                  </span>
+                </div>
+
+                <div className="flex flex-col items-center p-4 rounded-lg bg-blue-50 border border-blue-200">
+                  <span className="text-sm font-medium text-blue-800 uppercase">
+                    Loan Recovery (Principal)
+                  </span>
+                  <span className="text-2xl font-bold text-blue-700 mt-2">
+                    {formatCurrencyIN(totalPrincipalRecovered)}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="flex flex-col items-center p-3 rounded-lg bg-green-50 border border-green-200">
+                    <span className="text-xs font-medium text-green-700">Interest</span>
+                    <span className="text-sm font-bold text-green-800 mt-1">
+                      {formatCurrencyIN(totalInterestCollected)}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-center p-3 rounded-lg bg-orange-50 border border-orange-200">
+                    <span className="text-xs font-medium text-orange-700">Late Fees</span>
+                    <span className="text-sm font-bold text-orange-800 mt-1">
+                      {formatCurrencyIN(totalLateFeeCollected)}
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-center p-3 rounded-lg bg-cyan-50 border border-cyan-200">
+                    <span className="text-xs font-medium text-cyan-700">Subscriptions</span>
+                    <span className="text-sm font-bold text-cyan-800 mt-1">
+                      {formatCurrencyIN(totalSubscriptionCollected)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center p-4 rounded-lg bg-cyan-50 border border-cyan-200">
+                  <span className="text-sm font-medium text-cyan-800 mb-3">Subscriptions Balance</span>
+                  <div className="w-full space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-700">Subscriptions</span>
+                      <span className="font-medium text-cyan-700">{formatCurrencyIN(totalSubscriptionCollected)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-700">Return</span>
+                      <span className="font-medium text-cyan-700">{formatCurrencyIN(subscriptionReturnTotal)}</span>
+                    </div>
+                    <div className="border-t border-cyan-200 pt-2 flex justify-between">
+                      <span className="font-medium text-cyan-800">Balance</span>
+                      <span className={`font-bold ${subscriptionBalance < 0 ? "text-red-600" : "text-cyan-800"}`}>
+                        {formatCurrencyIN(subscriptionBalance)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </GlassCard>
+
+            {/* Expenses Section */}
+            <GlassCard className="!p-6 sm:!p-8">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-red-100 text-red-700 font-bold">
+                  -
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                    Expenses
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    Outgoing & disbursed principal
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex flex-col items-center p-4 rounded-lg bg-blue-50 border border-blue-200">
+                  <span className="text-sm font-medium text-blue-800 uppercase">
+                    Total Loans Given
+                  </span>
+                  <span className="text-3xl font-bold text-blue-700 mt-2">
+                    {formatCurrencyIN(totalLoansGiven)}
+                  </span>
+                </div>
+
+                <div className="flex flex-col items-center p-4 rounded-lg bg-red-50 border border-red-200">
+                  <span className="text-sm font-medium text-red-800 uppercase">
+                    Expenses
+                  </span>
+                  <span className="text-2xl font-bold text-red-700 mt-2">
+                    {formatCurrencyIN(totalExpenses)}
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {Object.entries(expenseTotalsBySubtype).map(([subtype, amt]) => (
+                    <div key={subtype} className="flex justify-between items-center p-2 rounded-md bg-red-50 border border-red-100 text-sm">
+                      <span className="text-gray-700">{subtype}</span>
+                      <span className="font-medium text-red-700">{formatCurrencyIN(amt || 0)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-col items-center p-4 rounded-lg bg-blue-50 border border-blue-200">
+                  <span className="text-sm font-medium text-blue-800 mb-3">Loan Balance</span>
+                  <div className="w-full space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-700">Total Loans Given</span>
+                      <span className="font-medium text-blue-700">{formatCurrencyIN(totalLoansGiven)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-700">Recovery (Principal)</span>
+                      <span className="font-medium text-blue-700">{formatCurrencyIN(totalPrincipalRecovered)}</span>
+                    </div>
+                    <div className="border-t border-blue-200 pt-2 flex justify-between">
+                      <span className="font-medium text-blue-800">Balance</span>
+                      <span className={`font-bold ${loanBalance < 0 ? "text-red-600" : "text-blue-800"}`}>
+                        {formatCurrencyIN(loanBalance)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </GlassCard>
+          </div>
         </motion.div>
 
 

@@ -27,11 +27,19 @@ const LoginPage = () => {
 
   const normalizeLoginIdentifier = (value: string) => {
     const v = value.trim();
+    
     // If the input looks like a phone (digits only, length between 6 and 15), normalize to email
     const digits = v.replace(/\D/g, '');
     if (/^\d{6,15}$/.test(digits)) {
       return `${digits}@gmail.com`;
     }
+    
+    // If input is not an email (no @ symbol), append @gmail.com
+    if (!v.includes('@')) {
+      return `${v}@gmail.com`;
+    }
+    
+    // Return as-is if it already contains @
     return v;
   };
 
@@ -81,13 +89,13 @@ const LoginPage = () => {
         <h2 className="text-3xl font-bold text-center mb-6 text-gray-800">Loan Management Login</h2>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-2">Email or Phone</label>
+            <label htmlFor="email" className="block text-sm font-medium mb-2">Phone Number</label>
             <input
               id="email"
               type="text"
-              {...register('email', { required: 'Email or phone is required' })}
+              {...register('email', { required: 'Email, username, or phone is required' })}
               className="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="you@example.com or 9515808010"
+              placeholder="Enter Phone Number"
               disabled={isSubmitting || showAnimation}
             />
             {errors.email && <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>}

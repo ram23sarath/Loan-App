@@ -68,7 +68,7 @@ const PageWrapper = ({ children }: { children: React.ReactNode }) => {
       exit="out"
       variants={pageVariants}
       transition={pageTransition}
-      className="w-full min-h-full p-4 pb-24 sm:p-8"
+      className="w-full min-h-full p-4 pb-24 sm:p-8 landscape:pb-16"
     >
       <Toast show={toast.show} message={toast.message} onClose={() => setToast({ show: false, message: '', type: 'info' })} type={toast.type as any} />
 

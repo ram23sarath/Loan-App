@@ -157,38 +157,47 @@ const Sidebar = () => {
         <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />
       )}
 
+      {/* Bottom nav padding adjustment for mobile - larger in portrait, smaller in landscape */}
+      <div className="h-20 sm:hidden landscape:h-12" aria-hidden="true" />
+
       {/* --- CHANGED 4: Bottom nav is now always visible on mobile --- */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 flex justify-around items-center py-2 sm:hidden">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              `flex flex-col items-center justify-center px-2 ${
-                isActive ? "text-indigo-600" : "text-gray-500"
-              }`
-            }
-            aria-label={item.label}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 sm:hidden">
+        <div className="flex justify-around items-center py-2 overflow-x-auto landscape:py-1">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center px-2 py-1 landscape:px-1 transition-colors duration-200 whitespace-nowrap text-xs landscape:text-xs ${
+                  isActive ? "text-indigo-600" : "text-gray-500 hover:text-gray-700"
+                }`
+              }
+              aria-label={item.label}
+            >
+              <item.icon className="w-5 h-5 landscape:w-4 landscape:h-4" />
+              <span className="landscape:hidden mt-1">{item.label}</span>
+            </NavLink>
+          ))}
+          {/* Password change button for mobile view */}
+          <button
+            onClick={() => setShowPasswordModal(true)}
+            aria-label="Change password"
+            className="flex flex-col items-center justify-center px-2 py-1 landscape:px-1 text-amber-600 hover:bg-amber-50 rounded-md transition-colors duration-200 whitespace-nowrap text-xs"
+            title="Change password"
           >
-            <item.icon className="w-6 h-6" />
-          </NavLink>
-        ))}
-        {/* Password change button for mobile view */}
-        <button
-          onClick={() => setShowPasswordModal(true)}
-          aria-label="Change password"
-          className="flex flex-col items-center justify-center px-2 text-amber-600 hover:bg-amber-50 rounded-md"
-        >
-          <KeyIcon className="w-6 h-6" />
-        </button>
-        {/* Logout button for mobile view */}
-        <button
-          onClick={handleSignOut}
-          aria-label="Logout"
-          className="flex flex-col items-center justify-center px-2 text-red-600 hover:bg-red-50 rounded-md"
-        >
-          <LogOutIcon className="w-6 h-6" />
-        </button>
+            <KeyIcon className="w-5 h-5 landscape:w-4 landscape:h-4" />
+            <span className="landscape:hidden mt-1">Password</span>
+          </button>
+          {/* Logout button for mobile view */}
+          <button
+            onClick={handleSignOut}
+            aria-label="Logout"
+            className="flex flex-col items-center justify-center px-2 py-1 landscape:px-1 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200 whitespace-nowrap text-xs"
+          >
+            <LogOutIcon className="w-5 h-5 landscape:w-4 landscape:h-4" />
+            <span className="landscape:hidden mt-1">Logout</span>
+          </button>
+        </div>
       </nav>
 
       {/* Desktop sidebar (hidden on small screens) */}

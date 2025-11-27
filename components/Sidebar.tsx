@@ -11,6 +11,9 @@ import {
   StarIcon,
   KeyIcon,
 } from "../constants";
+import { useData } from "../context/DataContext";
+import HamburgerIcon from "./ui/HamburgerIcon";
+import ChangePasswordModal from "./modals/ChangePasswordModal";
 
 // Database icon for Data section
 const DatabaseIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -28,10 +31,6 @@ const DatabaseIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <path d="M4 12v6c0 1.657 3.582 3 8 3s8-1.343 8-3v-6" />
   </svg>
 );
-
-import { useData } from "../context/DataContext";
-import HamburgerIcon from "./ui/HamburgerIcon";
-import ChangePasswordModal from "./modals/ChangePasswordModal";
 
 const allNavItems = [
   { path: "/", label: "Add Customer", icon: UserPlusIcon, adminOnly: true },
@@ -62,7 +61,7 @@ const Sidebar = () => {
   // Filter navigation items based on user role
   const navItems = allNavItems.filter((item) => !item.adminOnly || !isScopedCustomer);
 
-  // --- Summary Calculations ---
+  // --- Summary Calculations (kept as in original) ---
   const totalInterestCollected = loans.reduce((acc, loan) => {
     const loanInstallments = installments.filter((i) => i.loan_id === loan.id);
     const totalPaidForLoan = loanInstallments.reduce(
@@ -106,15 +105,15 @@ const Sidebar = () => {
     }
   };
 
-  // Sidebar collapsed by default; users can expand via hover or toggle.
+  // Sidebar collapsed by default; users can expand via hover or toggle (desktop only).
   const [collapsed, setCollapsed] = React.useState(true);
 
-  // Publish sidebar width as a CSS variable so the main content can shift accordingly.
+  // Publish sidebar width as a CSS variable so the main content can shift accordingly (desktop only).
   React.useEffect(() => {
     const applyVar = () => {
       if (typeof window === "undefined") return;
       const isDesktop = window.matchMedia("(min-width: 640px)").matches;
-      const sidebarWidth = collapsed ? 80 : 256;
+      const sidebarWidth = collapsed ? 80 : 256; // matches inline width
       const leftOffset = 16; // left-4 -> 16px
       const gap = 16;
       const total = isDesktop ? `${sidebarWidth + leftOffset + gap}px` : "0px";
@@ -167,7 +166,7 @@ const Sidebar = () => {
       {/* Bottom nav padding adjustment for mobile - larger in portrait, smaller in landscape */}
       <div className="h-20 sm:hidden landscape:h-16" aria-hidden="true" />
 
-      {/* Mobile bottom nav */}
+      {/* MOBILE bottom nav (hidden on sm and above) */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 sm:hidden">
         {/* Portrait mode - show all nav items + password + logout */}
         <div className="landscape:hidden flex justify-around items-center py-2 overflow-x-auto">
@@ -221,9 +220,9 @@ const Sidebar = () => {
             <HamburgerIcon className="w-5 h-5" />
           </button>
 
-          {/* Right side: Password + Logout */}
+          {/* Right-side action icons */}
           <div className="flex gap-2">
-            {/* Password change button */}
+            {/* Change Password */}
             <button
               onClick={() => setShowPasswordModal(true)}
               aria-label="Change password"
@@ -233,7 +232,7 @@ const Sidebar = () => {
               <KeyIcon className="w-5 h-5" />
             </button>
 
-            {/* Logout button */}
+            {/* Logout */}
             <button
               onClick={handleSignOut}
               aria-label="Logout"
@@ -297,6 +296,8 @@ const Sidebar = () => {
               >
                 <div className="relative flex items-center w-full">
                   <item.icon className="w-6 h-6 text-current" />
+
+                  {/* label container - animate maxWidth & opacity to avoid reflow jitter */}
                   <span
                     className="inline-block overflow-hidden whitespace-nowrap transition-all duration-200 ease-in-out"
                     style={{
@@ -310,7 +311,7 @@ const Sidebar = () => {
                     {item.label}
                   </span>
 
-                  {/* Tooltip when collapsed */}
+                  {/* simple tooltip shown only when collapsed */}
                   {collapsed && (
                     <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 pointer-events-none hidden group-hover:block">
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
@@ -346,7 +347,6 @@ const Sidebar = () => {
                   </p>
                 </div>
               )}
-
               <button
                 onClick={() => setShowPasswordModal(true)}
                 className="w-full flex items-center justify-center p-3 rounded-lg transition-colors duration-200 text-amber-600 bg-amber-50 hover:bg-amber-100 font-semibold"
@@ -356,7 +356,6 @@ const Sidebar = () => {
                 <KeyIcon className={`w-5 h-5 ${collapsed ? "" : "mr-2"}`} />
                 {!collapsed && <span>Change Password</span>}
               </button>
-
               <button
                 onClick={handleSignOut}
                 className="w-full flex items-center justify-center p-3 rounded-lg transition-colors duration-200 text-red-600 bg-red-50 hover:bg-red-100 font-semibold"
@@ -366,7 +365,6 @@ const Sidebar = () => {
                 {!collapsed && <span>Logout</span>}
               </button>
             </div>
-
             {!collapsed && (
               <div className="p-4 border-t border-gray-200 text-center text-xs text-gray-400">
                 <p>&copy; {new Date().getFullYear()} I J Reddy Loan App</p>
@@ -382,6 +380,7 @@ const Sidebar = () => {
           className="fixed inset-0 z-40 sm:hidden landscape:flex items-end justify-end bg-black/30"
           onClick={() => setShowLandscapeMenu(false)}
         >
+          {/* Stop propagation so clicks inside panel don't close overlay */}
           <div
             className="w-full bg-white rounded-t-2xl shadow-lg p-4 max-h-[70vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}

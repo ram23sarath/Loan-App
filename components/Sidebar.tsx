@@ -159,7 +159,7 @@ const Sidebar = () => {
       )}
 
       {/* Bottom nav padding adjustment for mobile - larger in portrait, smaller in landscape */}
-      <div className="h-20 sm:hidden landscape:h-10" aria-hidden="true" />
+      <div className="h-20 sm:hidden landscape:h-16" aria-hidden="true" />
 
       {/* --- CHANGED 4: Bottom nav is now always visible on mobile --- */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 sm:hidden">
@@ -201,35 +201,34 @@ const Sidebar = () => {
           </button>
         </div>
 
-        {/* Landscape mode - compact menu + always visible action buttons */}
-        <div className="hidden landscape:flex justify-between items-center py-1 px-2">
+        {/* Landscape mode - compact hamburger menu + always visible action buttons */}
+        <div className="hidden landscape:flex justify-between items-center py-2 px-2 gap-2">
           <button
             onClick={() => setShowLandscapeMenu(!showLandscapeMenu)}
-            className="flex items-center justify-center px-3 py-1 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors duration-200"
+            className="flex items-center justify-center px-3 py-2 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors duration-200"
             aria-label="Open menu"
             title="Navigate"
           >
             <HamburgerIcon className="w-5 h-5" />
-            <span className="ml-1 text-xs font-semibold">Menu</span>
           </button>
-          <div className="flex gap-1">
+          <div className="flex gap-2">
             {/* Password change button */}
             <button
               onClick={() => setShowPasswordModal(true)}
               aria-label="Change password"
-              className="flex items-center justify-center px-2 py-1 text-amber-600 hover:bg-amber-50 rounded-md transition-colors duration-200"
+              className="flex items-center justify-center px-3 py-2 text-amber-600 hover:bg-amber-50 rounded-md transition-colors duration-200"
               title="Change password"
             >
-              <KeyIcon className="w-4 h-4" />
+              <KeyIcon className="w-5 h-5" />
             </button>
             {/* Logout button */}
             <button
               onClick={handleSignOut}
               aria-label="Logout"
-              className="flex items-center justify-center px-2 py-1 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200"
+              className="flex items-center justify-center px-3 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200"
               title="Logout"
             >
-              <LogOutIcon className="w-4 h-4" />
+              <LogOutIcon className="w-5 h-5" />
             </button>
           </div>
         </div>

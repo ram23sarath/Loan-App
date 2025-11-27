@@ -15,7 +15,6 @@ import { useData } from "../context/DataContext";
 import HamburgerIcon from "./ui/HamburgerIcon";
 import ChangePasswordModal from "./modals/ChangePasswordModal";
 
-// Database icon for Data section
 const DatabaseIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     viewBox="0 0 24 24"
@@ -54,10 +53,9 @@ const Sidebar = () => {
 
   const [showPasswordModal, setShowPasswordModal] = React.useState(false);
   const [showLandscapeMenu, setShowLandscapeMenu] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
 
-  // Filter navigation items based on user role
   const navItems = allNavItems.filter((item) => !item.adminOnly || !isScopedCustomer);
-
   const activeLinkClass = "bg-indigo-50 text-indigo-600 font-semibold";
   const inactiveLinkClass = "text-gray-600 hover:bg-gray-100 hover:text-gray-900";
 
@@ -69,28 +67,47 @@ const Sidebar = () => {
     }
   };
 
-  // Sidebar collapsed by default; users can expand via hover or toggle (desktop only).
   const [collapsed, setCollapsed] = React.useState(true);
 
-  // --- UPDATED LAYOUT CALCULATION ---
+  // Close landscape dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowLandscapeMenu(false);
+      }
+    };
+    if (showLandscapeMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showLandscapeMenu]);
+
+  // --- RESPONSIVE OFFSET LOGIC ---
   React.useEffect(() => {
     const applyVar = () => {
       if (typeof window === "undefined") return;
 
-      // Logic: Sidebar is visible if:
-      // 1. It is a large screen (Laptop/Desktop) OR
-      // 2. It is a tablet in portrait mode (sm but not landscape)
       const isLargeDesktop = window.matchMedia("(min-width: 1024px)").matches;
       const isTabletPortrait = window.matchMedia("(min-width: 640px) and (orientation: portrait)").matches;
-      
-      const isSidebarVisible = isLargeDesktop || isTabletPortrait;
+      // Added: Detection for Mobile Landscape
+      const isMobileLandscape = window.matchMedia("(max-width: 1023px) and (orientation: landscape)").matches;
 
-      const sidebarWidth = collapsed ? 80 : 256; 
-      const leftOffset = 16; 
+      // Base gap and offset
+      const leftOffset = 16;
       const gap = 16;
-      // If sidebar is hidden (mobile landscape), offset is 0
-      const total = isSidebarVisible ? `${sidebarWidth + leftOffset + gap}px` : "0px";
-      
+      let total = "0px";
+
+      if (isLargeDesktop || isTabletPortrait) {
+        // Desktop Sidebar logic
+        const sidebarWidth = collapsed ? 80 : 256;
+        total = `${sidebarWidth + leftOffset + gap}px`;
+      } else if (isMobileLandscape) {
+        // Mobile Landscape Rail logic (fixed width 64px/w-16)
+        total = `${64}px`; // No extra gap needed usually, or add +16 if preferred
+      }
+
       try {
         document.documentElement.style.setProperty("--sidebar-offset", total);
       } catch (e) {}
@@ -99,7 +116,6 @@ const Sidebar = () => {
     applyVar();
     window.addEventListener("resize", applyVar);
     window.addEventListener("orientationchange", applyVar);
-    
     return () => {
       window.removeEventListener("resize", applyVar);
       window.removeEventListener("orientationchange", applyVar);
@@ -109,15 +125,14 @@ const Sidebar = () => {
     };
   }, [collapsed]);
 
+  // Collapse timer for desktop hover
   const collapseTimer = React.useRef<number | null>(null);
-
   const clearCollapseTimer = () => {
     if (collapseTimer.current) {
       clearTimeout(collapseTimer.current as unknown as number);
       collapseTimer.current = null;
     }
   };
-
   const startCollapseTimer = (ms = 3000) => {
     clearCollapseTimer();
     collapseTimer.current = window.setTimeout(() => {
@@ -125,7 +140,6 @@ const Sidebar = () => {
       collapseTimer.current = null;
     }, ms) as unknown as number;
   };
-
   React.useEffect(() => {
     return () => clearCollapseTimer();
   }, []);
@@ -136,17 +150,15 @@ const Sidebar = () => {
         <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />
       )}
 
-      {/* Spacer div: Larger in portrait (h-20), Smaller in landscape (h-16).
-          UPDATED: Added lg:landscape:hidden so it doesn't take space on laptops */}
-      <div className="h-20 sm:hidden landscape:h-16 lg:landscape:hidden" aria-hidden="true" />
+      {/* Spacer for Portrait Mobile Bottom Nav only */}
+      <div className="h-20 sm:hidden landscape:hidden" aria-hidden="true" />
 
-      {/* --- MOBILE NAV BAR --- */}
-      {/* UPDATED CLASS: sm:hidden landscape:flex lg:landscape:hidden 
-          This forces it to appear on mobile landscape, but hide on laptops */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 sm:hidden landscape:flex lg:landscape:hidden">
-        
-        {/* 1. PORTRAIT MODE: Show scrollable list of icons */}
-        <div className="landscape:hidden flex justify-around items-center py-2 overflow-x-auto w-full">
+      {/* -------------------------------------------
+        1. PORTRAIT MOBILE NAV (Bottom Bar)
+        -------------------------------------------
+      */}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 sm:hidden landscape:hidden">
+        <div className="flex justify-around items-center py-2 overflow-x-auto w-full">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
@@ -156,7 +168,6 @@ const Sidebar = () => {
                   isActive ? "text-indigo-600" : "text-gray-500 hover:text-gray-700"
                 }`
               }
-              aria-label={item.label}
             >
               <item.icon className="w-5 h-5" />
               <span className="mt-1">{item.label}</span>
@@ -164,49 +175,93 @@ const Sidebar = () => {
           ))}
           <button
             onClick={() => setShowPasswordModal(true)}
-            className="flex flex-col items-center justify-center px-2 py-1 text-amber-600 hover:bg-amber-50 rounded-md transition-colors duration-200 whitespace-nowrap text-xs"
+            className="flex flex-col items-center justify-center px-2 py-1 text-amber-600 hover:bg-amber-50 rounded-md transition-colors duration-200 text-xs"
           >
             <KeyIcon className="w-5 h-5" />
-            <span className="mt-1">Password</span>
+            <span className="mt-1">Pass</span>
           </button>
           <button
             onClick={handleSignOut}
-            className="flex flex-col items-center justify-center px-2 py-1 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200 whitespace-nowrap text-xs"
+            className="flex flex-col items-center justify-center px-2 py-1 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200 text-xs"
           >
             <LogOutIcon className="w-5 h-5" />
             <span className="mt-1">Logout</span>
           </button>
         </div>
+      </nav>
 
-        {/* 2. LANDSCAPE MODE: Show exactly 3 icons */}
-        <div className="hidden landscape:flex justify-between items-center py-2 px-4 w-full">
+      {/* -------------------------------------------
+        2. MOBILE LANDSCAPE RAIL (Left Side)
+        -------------------------------------------
+        Visible only on: Mobile Landscape
+        Hidden on: Mobile Portrait, Laptop/Desktop
+      */}
+      <div 
+        ref={menuRef}
+        className="fixed top-0 bottom-0 left-0 z-50 w-16 bg-white border-r border-gray-200 hidden landscape:flex lg:landscape:hidden flex-col justify-between items-center py-4"
+      >
+        {/* Top: Hamburger */}
+        <div className="relative">
           <button
-            onClick={() => setShowLandscapeMenu(true)}
-            className="p-2 -ml-2 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+            onClick={() => setShowLandscapeMenu(!showLandscapeMenu)}
+            className={`p-3 rounded-xl transition-colors ${showLandscapeMenu ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:bg-gray-100'}`}
           >
             <HamburgerIcon className="w-6 h-6" />
           </button>
 
-          <div className="flex gap-4">
-            <button
-              onClick={() => setShowPasswordModal(true)}
-              className="flex items-center text-amber-600 hover:bg-amber-50 rounded-md p-2 transition-colors"
-            >
-              <KeyIcon className="w-6 h-6" />
-            </button>
-            <button
-              onClick={handleSignOut}
-              className="flex items-center text-red-600 hover:bg-red-50 rounded-md p-2 transition-colors"
-            >
-              <LogOutIcon className="w-6 h-6" />
-            </button>
-          </div>
+          {/* THE DROPDOWN / FLYOUT MENU */}
+          {showLandscapeMenu && (
+            <div className="absolute top-0 left-full ml-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden py-1 animate-in fade-in slide-in-from-left-2 duration-200">
+               <div className="px-3 py-2 border-b border-gray-100 bg-gray-50/50">
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Navigate</span>
+               </div>
+               <nav className="max-h-[70vh] overflow-y-auto p-1">
+                {navItems.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setShowLandscapeMenu(false)}
+                    className={({ isActive }) =>
+                      `flex items-center px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                        isActive 
+                          ? "bg-indigo-50 text-indigo-700 font-medium" 
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      }`
+                    }
+                  >
+                    <item.icon className="w-4 h-4 mr-3" />
+                    {item.label}
+                  </NavLink>
+                ))}
+              </nav>
+            </div>
+          )}
         </div>
-      </nav>
 
-      {/* --- DESKTOP SIDEBAR --- */}
-      {/* UPDATED CLASS: hidden sm:flex landscape:hidden lg:landscape:flex 
-          This hides it on mobile landscape, but shows it on Tablet Portrait (sm) and Laptop (lg) */}
+        {/* Bottom: Actions */}
+        <div className="flex flex-col gap-4">
+          <button
+            onClick={() => setShowPasswordModal(true)}
+            className="p-3 text-amber-600 hover:bg-amber-50 rounded-xl transition-colors"
+            title="Change Password"
+          >
+            <KeyIcon className="w-6 h-6" />
+          </button>
+          <button
+            onClick={handleSignOut}
+            className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+            title="Logout"
+          >
+            <LogOutIcon className="w-6 h-6" />
+          </button>
+        </div>
+      </div>
+
+      {/* -------------------------------------------
+        3. DESKTOP SIDEBAR 
+        -------------------------------------------
+        Hidden on mobile landscape (handled by the Rail above)
+      */}
       <aside
         onMouseEnter={() => {
           setCollapsed(false);
@@ -280,7 +335,6 @@ const Sidebar = () => {
             ))}
           </nav>
           
-          {/* Bottom actions (User, Pass, Logout) */}
           <div className="shrink-0">
             <div className="p-4 border-t border-gray-200 space-y-4">
               {session?.user && !collapsed && (
@@ -316,50 +370,6 @@ const Sidebar = () => {
           </div>
         </div>
       </aside>
-
-      {/* --- MENU MODAL (LANDSCAPE MOBILE ONLY) --- */}
-      {showLandscapeMenu && (
-        <div
-          className="fixed inset-0 z-50 sm:hidden landscape:flex lg:landscape:hidden items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-          onClick={() => setShowLandscapeMenu(false)}
-        >
-          <div
-            className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between p-4 border-b border-gray-100">
-              <h3 className="text-lg font-bold text-gray-800">Navigation</h3>
-              <button
-                onClick={() => setShowLandscapeMenu(false)}
-                className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <nav className="p-4 grid grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto">
-              {navItems.map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setShowLandscapeMenu(false)}
-                  className={({ isActive }) =>
-                    `flex items-center p-3 rounded-lg transition-colors duration-200 border ${
-                      isActive 
-                        ? "bg-indigo-50 border-indigo-100 text-indigo-700" 
-                        : "border-gray-50 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                    }`
-                  }
-                >
-                  <item.icon className="w-5 h-5 mr-3 shrink-0" />
-                  <span className="font-medium text-sm truncate">{item.label}</span>
-                </NavLink>
-              ))}
-            </nav>
-          </div>
-        </div>
-      )}
     </>
   );
 };

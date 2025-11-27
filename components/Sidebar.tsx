@@ -370,7 +370,7 @@ const Sidebar = () => {
 
       {/* Landscape menu modal - only shows in landscape on mobile */}
       {showLandscapeMenu && (
-        <div className="fixed inset-0 z-50 bg-black/30 sm:hidden landscape:flex items-end hidden">
+        <div className="fixed inset-0 z-50 bg-black/30 sm:hidden landscape:flex items-end flex-col justify-end">
           <div className="w-full bg-white rounded-t-2xl shadow-lg p-4 max-h-[70vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Navigation</h3>
@@ -408,7 +408,7 @@ const Sidebar = () => {
       {/* Overlay for landscape menu to close when clicking outside */}
       {showLandscapeMenu && (
         <div
-          className="fixed inset-0 z-40 sm:hidden landscape:block"
+          className="fixed inset-0 z-40 hidden sm:hidden landscape:block"
           onClick={() => setShowLandscapeMenu(false)}
         />
       )}

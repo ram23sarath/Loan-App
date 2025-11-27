@@ -602,10 +602,7 @@ const SummaryPage = () => {
               <div className="flex items-center justify-between p-4 rounded-lg bg-blue-50 border border-blue-200">
                 <div>
                   <div className="text-sm font-medium text-blue-700">
-                    Total Loans Given
-                  </div>
-                  <div className="text-sm font-medium text-blue-700">
-                    {formatCurrencyIN(totalLoansGiven)}
+                    Loans Summary
                   </div>
                 </div>
               </div>

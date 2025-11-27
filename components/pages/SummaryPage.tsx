@@ -524,38 +524,34 @@ const SummaryPage = () => {
               </span>
             </div>
 
-            <div className="flex flex-col items-center mt-4">
-              <span className="text-sm font-medium text-indigo-800 uppercase tracking-wider">
-                Loan Recovery (Principal)
-              </span>
-              <span className="text-lg font-bold text-indigo-700 mt-1">
-                {formatCurrencyIN(totalPrincipalRecovered)}
-              </span>
-            </div>
 
-            <motion.div
-              className="w-full grid grid-cols-2 gap-4"
-              variants={breakdownContainerVariants}
-            >
-              {leftCards.map((card) => (
-                <motion.div
-                  key={card.label}
-                  className={`flex flex-col items-center justify-center p-4 rounded-xl bg-${card.color}-50 border border-${card.color}-200`}
-                  variants={breakdownCardVariants}
-                >
-                  <span
-                    className={`text-sm font-medium text-${card.color}-700`}
+
+            {/* Income breakdown as list items */}
+            <div className="w-full mt-4">
+              <div className="space-y-3">
+                {leftCards.map((card) => (
+                  <div
+                    key={card.label}
+                    className={`flex items-center justify-between px-4 py-3 rounded-lg bg-${card.color}-50 border border-${card.color}-200`}
                   >
-                    {card.label}
+                    <span className={`text-sm font-medium text-${card.color}-700`}>
+                      {card.label}
+                    </span>
+                    <span className={`text-lg font-bold text-${card.color}-800`}>
+                      {formatCurrencyIN(card.value)}
+                    </span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-blue-50 border border-blue-200">
+                  <span className="text-sm font-medium text-blue-700">
+                    Loan Recovery (Principal)
                   </span>
-                  <span
-                    className={`text-xl font-bold text-${card.color}-800 mt-1`}
-                  >
-                    {formatCurrencyIN(card.value)}
+                  <span className="text-lg font-bold text-blue-800">
+                    {formatCurrencyIN(totalPrincipalRecovered)}
                   </span>
-                </motion.div>
-              ))}
-            </motion.div>
+                </div>
+              </div>
+            </div>
             {/* Subscriptions Balance box: shows Subscriptions, Subscription Return and Balance */}
             <div className="w-full mt-4">
               <div className="flex items-center justify-between p-4 rounded-lg bg-cyan-50 border border-cyan-200">

@@ -55,6 +55,7 @@ const Sidebar = () => {
     customers = [],
   } = useData();
   const [showPasswordModal, setShowPasswordModal] = React.useState(false);
+  const [showLandscapeMenu, setShowLandscapeMenu] = React.useState(false);
 
   // Filter navigation items based on user role
   const navItems = allNavItems.filter(item => !item.adminOnly || !isScopedCustomer);
@@ -100,9 +101,6 @@ const Sidebar = () => {
       alert(error.message);
     }
   };
-
-  // State for landscape menu toggle
-  const [landscapeMenuOpen, setLandscapeMenuOpen] = React.useState(false);
 
   // Sidebar collapsed by default; users can expand via hover or toggle.
   const [collapsed, setCollapsed] = React.useState(true);
@@ -161,12 +159,12 @@ const Sidebar = () => {
       )}
 
       {/* Bottom nav padding adjustment for mobile - larger in portrait, smaller in landscape */}
-      <div className="h-20 sm:hidden landscape:h-12" aria-hidden="true" />
+      <div className="h-20 sm:hidden landscape:h-10" aria-hidden="true" />
 
       {/* --- CHANGED 4: Bottom nav is now always visible on mobile --- */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 sm:hidden">
-        {/* Portrait mode: all nav items with labels */}
-        <div className="flex justify-around items-center py-2 overflow-x-auto portrait:flex landscape:hidden">
+        {/* Portrait mode - show all nav items */}
+        <div className="landscape:hidden flex justify-around items-center py-2 overflow-x-auto">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
@@ -203,65 +201,37 @@ const Sidebar = () => {
           </button>
         </div>
 
-        {/* Landscape mode: Menu dropdown + fixed buttons */}
-        <div className="hidden landscape:flex items-center justify-between py-1 px-2">
-          {/* Menu button with dropdown */}
-          <div className="relative flex-1">
+        {/* Landscape mode - compact menu + always visible action buttons */}
+        <div className="hidden landscape:flex justify-between items-center py-1 px-2">
+          <button
+            onClick={() => setShowLandscapeMenu(!showLandscapeMenu)}
+            className="flex items-center justify-center px-3 py-1 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors duration-200"
+            aria-label="Open menu"
+            title="Navigate"
+          >
+            <HamburgerIcon className="w-5 h-5" />
+            <span className="ml-1 text-xs font-semibold">Menu</span>
+          </button>
+          <div className="flex gap-1">
+            {/* Password change button */}
             <button
-              onClick={() => setLandscapeMenuOpen(!landscapeMenuOpen)}
-              className="w-full flex items-center justify-center px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-md transition-colors duration-200 text-xs font-semibold"
-              aria-label="Navigation menu"
-              aria-expanded={landscapeMenuOpen}
+              onClick={() => setShowPasswordModal(true)}
+              aria-label="Change password"
+              className="flex items-center justify-center px-2 py-1 text-amber-600 hover:bg-amber-50 rounded-md transition-colors duration-200"
+              title="Change password"
             >
-              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
-              </svg>
-              Menu
+              <KeyIcon className="w-4 h-4" />
             </button>
-
-            {/* Dropdown menu - appears above the nav bar */}
-            {landscapeMenuOpen && (
-              <div className="absolute bottom-full left-0 right-0 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
-                {navItems.map((item) => (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    onClick={() => setLandscapeMenuOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center px-4 py-2 text-sm transition-colors duration-200 border-b border-gray-100 last:border-b-0 ${
-                        isActive
-                          ? "bg-indigo-50 text-indigo-600 font-semibold"
-                          : "text-gray-700 hover:bg-gray-50"
-                      }`
-                    }
-                  >
-                    <item.icon className="w-4 h-4 mr-3" />
-                    <span>{item.label}</span>
-                  </NavLink>
-                ))}
-              </div>
-            )}
+            {/* Logout button */}
+            <button
+              onClick={handleSignOut}
+              aria-label="Logout"
+              className="flex items-center justify-center px-2 py-1 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200"
+              title="Logout"
+            >
+              <LogOutIcon className="w-4 h-4" />
+            </button>
           </div>
-
-          {/* Fixed buttons - always visible */}
-          <button
-            onClick={() => {
-              setShowPasswordModal(true);
-              setLandscapeMenuOpen(false);
-            }}
-            aria-label="Change password"
-            className="p-1 ml-1 text-amber-600 hover:bg-amber-50 rounded-md transition-colors duration-200"
-            title="Change password"
-          >
-            <KeyIcon className="w-5 h-5" />
-          </button>
-          <button
-            onClick={handleSignOut}
-            aria-label="Logout"
-            className="p-1 ml-1 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200"
-          >
-            <LogOutIcon className="w-5 h-5" />
-          </button>
         </div>
       </nav>
 
@@ -399,24 +369,20 @@ const Sidebar = () => {
         </div>
       </aside>
 
-      {/* --- CHANGED 5: Mobile drawer overlay removed --- */}
-      {/*
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 sm:hidden"
-          onClick={() => setMobileOpen(false)}
-        >
-          <div
-            className="absolute left-0 top-0 bottom-0 w-64 bg-white p-4 shadow-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
+      {/* Landscape menu modal - only shows in landscape on mobile */}
+      {showLandscapeMenu && (
+        <div className="fixed inset-0 z-50 bg-black/30 sm:hidden landscape:flex items-end hidden">
+          <div className="w-full bg-white rounded-t-2xl shadow-lg p-4 max-h-[70vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold">Menu</h2>
+              <h3 className="text-lg font-semibold">Navigation</h3>
               <button
-                onClick={() => setMobileOpen(false)}
+                onClick={() => setShowLandscapeMenu(false)}
                 className="p-1 rounded hover:bg-gray-100"
+                aria-label="Close menu"
               >
-                ✕
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
             <nav className="space-y-2">
@@ -424,22 +390,29 @@ const Sidebar = () => {
                 <NavLink
                   key={item.path}
                   to={item.path}
-                  onClick={() => setMobileOpen(false)}
+                  onClick={() => setShowLandscapeMenu(false)}
                   className={({ isActive }) =>
-                    `flex items-center p-3 rounded-lg ${
+                    `flex items-center p-3 rounded-lg transition-colors duration-200 ${
                       isActive ? activeLinkClass : inactiveLinkClass
                     }`
                   }
                 >
-                  <item.icon className="w-6 h-6 mr-3" />
-                  <span>{item.label}</span>
+                  <item.icon className="w-5 h-5 mr-3" />
+                  <span className="font-medium">{item.label}</span>
                 </NavLink>
               ))}
             </nav>
           </div>
         </div>
       )}
-      */}
+
+      {/* Overlay for landscape menu to close when clicking outside */}
+      {showLandscapeMenu && (
+        <div
+          className="fixed inset-0 z-40 sm:hidden landscape:block"
+          onClick={() => setShowLandscapeMenu(false)}
+        />
+      )}
     </>
   );
 };

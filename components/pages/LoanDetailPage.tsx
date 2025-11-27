@@ -54,23 +54,23 @@ const LoanDetailPage: React.FC = () => {
       <h3 className="text-lg font-semibold mb-3">Installments Paid</h3>
       {loanInstallments.length > 0 ? (
         <div className="overflow-x-auto border border-gray-100 rounded-lg">
-          <div className="grid grid-cols-6 gap-4 bg-indigo-50 text-xs font-semibold text-indigo-700 p-3">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-2 md:gap-4 bg-indigo-50 text-xs font-semibold text-indigo-700 p-3">
             <div>#</div>
-            <div>Date</div>
-            <div className="text-right">Amount</div>
-            <div className="text-right">Late Fee</div>
-            <div>Receipt</div>
-            <div className="text-right">Notes</div>
+            <div className="hidden md:block">Date</div>
+            <div className="text-right md:text-right">Amount</div>
+            <div className="hidden md:block md:text-right">Late Fee</div>
+            <div className="hidden md:block">Receipt</div>
+            <div className="hidden md:block md:text-right">Notes</div>
           </div>
           <div className="divide-y divide-gray-100">
             {loanInstallments.map(inst => (
-              <div key={inst.id} className="grid grid-cols-6 gap-4 items-center p-3 bg-white">
+              <div key={inst.id} className="grid grid-cols-2 md:grid-cols-6 gap-2 md:gap-4 items-center p-3 bg-white">
                 <div className="text-sm text-gray-700">#{inst.installment_number}</div>
-                <div className="text-sm text-gray-600">{formatDate(inst.date)}</div>
+                <div className="hidden md:block text-sm text-gray-600">{formatDate(inst.date)}</div>
                 <div className="text-sm font-semibold text-green-700 text-right">₹{inst.amount.toLocaleString()}</div>
-                <div className="text-sm text-gray-700 text-right">{inst.late_fee ? `₹${inst.late_fee}` : '-'}</div>
-                <div className="text-sm text-gray-600">{inst.receipt_number || '-'}</div>
-                <div className="text-sm text-gray-500 text-right">{inst.notes || '-'}</div>
+                <div className="hidden md:block text-sm text-gray-700 md:text-right">{inst.late_fee ? `₹${inst.late_fee}` : '-'}</div>
+                <div className="hidden md:block text-sm text-gray-600">{inst.receipt_number || '-'}</div>
+                <div className="hidden md:block text-sm text-gray-500 md:text-right">{inst.notes || '-'}</div>
               </div>
             ))}
           </div>

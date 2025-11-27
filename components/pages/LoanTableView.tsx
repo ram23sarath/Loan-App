@@ -241,12 +241,12 @@ const LoanTableView: React.FC = () => {
           placeholder="Filter by customer or check number..."
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="border border-gray-300 rounded px-3 py-2 w-full sm:w-64 bg-white/50"
+          className="border border-gray-300 rounded px-3 py-2 w-full sm:w-64 md:flex-1 bg-white/50"
         />
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="border border-gray-300 rounded px-3 py-2 w-full sm:w-48 bg-white/50"
+          className="border border-gray-300 rounded px-3 py-2 w-full sm:w-48 md:w-auto bg-white/50"
         >
           <option value="">All Statuses</option>
           <option value="Paid Off">Paid Off</option>
@@ -640,7 +640,7 @@ const LoanTableView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="mt-2 grid grid-cols-2 gap-2 text-sm text-gray-700">
+              <div className="mt-2 grid grid-cols-2 lg:grid-cols-4 gap-2 text-sm text-gray-700">
                 <div>
                   Paid:{" "}
                   <span className="font-semibold">

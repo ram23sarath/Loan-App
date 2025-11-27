@@ -264,6 +264,7 @@ const Sidebar = () => {
         style={{
           width: collapsed ? 80 : 256,
           transition: "width 260ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+          willChange: 'width'
         }}
         className="fixed left-4 top-4 bottom-4 z-40 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col hidden sm:flex landscape:hidden lg:landscape:flex"
       >

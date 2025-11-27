@@ -105,11 +105,11 @@ export const calculateSummaryData = (
   );
 
   // Calculate Total All Collected
+  // Total Collected = Subscriptions + Interest + Late Fees
   const totalAllCollected =
-    totalInterestCollected +
-    totalLateFeeCollected +
     totalSubscriptionCollected +
-    totalDataCollected;
+    totalInterestCollected +
+    totalLateFeeCollected;
 
   // Calculate Total Loans Given (principal only)
   const totalLoansGiven = loans.reduce(

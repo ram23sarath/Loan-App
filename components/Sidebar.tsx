@@ -47,9 +47,6 @@ const Sidebar = () => {
   const {
     session,
     signOut,
-    loans = [],
-    installments = [],
-    subscriptions = [],
     isScopedCustomer,
     scopedCustomerId,
     customers = [],
@@ -61,41 +58,8 @@ const Sidebar = () => {
   // Filter navigation items based on user role
   const navItems = allNavItems.filter((item) => !item.adminOnly || !isScopedCustomer);
 
-  // --- Summary Calculations (kept as in original) ---
-  const totalInterestCollected = loans.reduce((acc, loan) => {
-    const loanInstallments = installments.filter((i) => i.loan_id === loan.id);
-    const totalPaidForLoan = loanInstallments.reduce(
-      (sum, inst) => sum + inst.amount,
-      0
-    );
-    if (totalPaidForLoan > loan.original_amount) {
-      const interestCollected = Math.min(
-        totalPaidForLoan - loan.original_amount,
-        loan.interest_amount
-      );
-      return acc + interestCollected;
-    }
-    return acc;
-  }, 0);
-
-  const totalLateFeeCollected = installments.reduce(
-    (acc, inst) => acc + (inst.late_fee || 0),
-    0
-  );
-  const totalSubscriptionCollected = subscriptions.reduce(
-    (acc, sub) => acc + (sub.amount || 0),
-    0
-  );
-  const totalAllCollected =
-    totalInterestCollected + totalLateFeeCollected + totalSubscriptionCollected;
-  const totalLoansGiven = loans.reduce(
-    (acc, loan) => acc + loan.original_amount + loan.interest_amount,
-    0
-  );
-
   const activeLinkClass = "bg-indigo-50 text-indigo-600 font-semibold";
-  const inactiveLinkClass =
-    "text-gray-600 hover:bg-gray-100 hover:text-gray-900";
+  const inactiveLinkClass = "text-gray-600 hover:bg-gray-100 hover:text-gray-900";
 
   const handleSignOut = async () => {
     try {
@@ -108,31 +72,40 @@ const Sidebar = () => {
   // Sidebar collapsed by default; users can expand via hover or toggle (desktop only).
   const [collapsed, setCollapsed] = React.useState(true);
 
-  // Publish sidebar width as a CSS variable so the main content can shift accordingly (desktop only).
+  // --- UPDATED LAYOUT CALCULATION ---
   React.useEffect(() => {
     const applyVar = () => {
       if (typeof window === "undefined") return;
-      const isDesktop = window.matchMedia("(min-width: 640px)").matches;
-      const sidebarWidth = collapsed ? 80 : 256; // matches inline width
-      const leftOffset = 16; // left-4 -> 16px
+
+      // Logic: Sidebar is visible if:
+      // 1. It is a large screen (Laptop/Desktop) OR
+      // 2. It is a tablet in portrait mode (sm but not landscape)
+      const isLargeDesktop = window.matchMedia("(min-width: 1024px)").matches;
+      const isTabletPortrait = window.matchMedia("(min-width: 640px) and (orientation: portrait)").matches;
+      
+      const isSidebarVisible = isLargeDesktop || isTabletPortrait;
+
+      const sidebarWidth = collapsed ? 80 : 256; 
+      const leftOffset = 16; 
       const gap = 16;
-      const total = isDesktop ? `${sidebarWidth + leftOffset + gap}px` : "0px";
+      // If sidebar is hidden (mobile landscape), offset is 0
+      const total = isSidebarVisible ? `${sidebarWidth + leftOffset + gap}px` : "0px";
+      
       try {
         document.documentElement.style.setProperty("--sidebar-offset", total);
-      } catch {
-        // ignore
-      }
+      } catch (e) {}
     };
 
     applyVar();
     window.addEventListener("resize", applyVar);
+    window.addEventListener("orientationchange", applyVar);
+    
     return () => {
       window.removeEventListener("resize", applyVar);
+      window.removeEventListener("orientationchange", applyVar);
       try {
         document.documentElement.style.setProperty("--sidebar-offset", "0px");
-      } catch {
-        // ignore
-      }
+      } catch (e) {}
     };
   }, [collapsed]);
 
@@ -163,13 +136,17 @@ const Sidebar = () => {
         <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />
       )}
 
-      {/* Bottom nav padding adjustment for mobile - larger in portrait, smaller in landscape */}
-      <div className="h-20 sm:hidden landscape:h-16" aria-hidden="true" />
+      {/* Spacer div: Larger in portrait (h-20), Smaller in landscape (h-16).
+          UPDATED: Added lg:landscape:hidden so it doesn't take space on laptops */}
+      <div className="h-20 sm:hidden landscape:h-16 lg:landscape:hidden" aria-hidden="true" />
 
-      {/* MOBILE bottom nav (hidden on sm and above) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 sm:hidden">
-        {/* Portrait mode - show all nav items + password + logout */}
-        <div className="landscape:hidden flex justify-around items-center py-2 overflow-x-auto">
+      {/* --- MOBILE NAV BAR --- */}
+      {/* UPDATED CLASS: sm:hidden landscape:flex lg:landscape:hidden 
+          This forces it to appear on mobile landscape, but hide on laptops */}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 sm:hidden landscape:flex lg:landscape:hidden">
+        
+        {/* 1. PORTRAIT MODE: Show scrollable list of icons */}
+        <div className="landscape:hidden flex justify-around items-center py-2 overflow-x-auto w-full">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
@@ -185,22 +162,15 @@ const Sidebar = () => {
               <span className="mt-1">{item.label}</span>
             </NavLink>
           ))}
-
-          {/* Password change button - portrait */}
           <button
             onClick={() => setShowPasswordModal(true)}
-            aria-label="Change password"
             className="flex flex-col items-center justify-center px-2 py-1 text-amber-600 hover:bg-amber-50 rounded-md transition-colors duration-200 whitespace-nowrap text-xs"
-            title="Change password"
           >
             <KeyIcon className="w-5 h-5" />
             <span className="mt-1">Password</span>
           </button>
-
-          {/* Logout button - portrait */}
           <button
             onClick={handleSignOut}
-            aria-label="Logout"
             className="flex flex-col items-center justify-center px-2 py-1 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200 whitespace-nowrap text-xs"
           >
             <LogOutIcon className="w-5 h-5" />
@@ -208,44 +178,35 @@ const Sidebar = () => {
           </button>
         </div>
 
-        {/* Landscape mode - ONLY 3 icons: Hamburger, Change Password, Logout */}
-        <div className="hidden landscape:flex justify-between items-center py-2 px-2 gap-2">
-          {/* Hamburger menu icon */}
+        {/* 2. LANDSCAPE MODE: Show exactly 3 icons */}
+        <div className="hidden landscape:flex justify-between items-center py-2 px-4 w-full">
           <button
-            onClick={() => setShowLandscapeMenu((prev) => !prev)}
-            className="flex items-center justify-center px-3 py-2 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors duration-200"
-            aria-label="Open menu"
-            title="Navigate"
+            onClick={() => setShowLandscapeMenu(true)}
+            className="p-2 -ml-2 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
           >
-            <HamburgerIcon className="w-5 h-5" />
+            <HamburgerIcon className="w-6 h-6" />
           </button>
 
-          {/* Right-side action icons */}
-          <div className="flex gap-2">
-            {/* Change Password */}
+          <div className="flex gap-4">
             <button
               onClick={() => setShowPasswordModal(true)}
-              aria-label="Change password"
-              className="flex items-center justify-center px-3 py-2 text-amber-600 hover:bg-amber-50 rounded-md transition-colors duration-200"
-              title="Change password"
+              className="flex items-center text-amber-600 hover:bg-amber-50 rounded-md p-2 transition-colors"
             >
-              <KeyIcon className="w-5 h-5" />
+              <KeyIcon className="w-6 h-6" />
             </button>
-
-            {/* Logout */}
             <button
               onClick={handleSignOut}
-              aria-label="Logout"
-              className="flex items-center justify-center px-3 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200"
-              title="Logout"
+              className="flex items-center text-red-600 hover:bg-red-50 rounded-md p-2 transition-colors"
             >
-              <LogOutIcon className="w-5 h-5" />
+              <LogOutIcon className="w-6 h-6" />
             </button>
           </div>
         </div>
       </nav>
 
-      {/* Desktop sidebar (hidden on small screens) */}
+      {/* --- DESKTOP SIDEBAR --- */}
+      {/* UPDATED CLASS: hidden sm:flex landscape:hidden lg:landscape:flex 
+          This hides it on mobile landscape, but shows it on Tablet Portrait (sm) and Laptop (lg) */}
       <aside
         onMouseEnter={() => {
           setCollapsed(false);
@@ -258,7 +219,7 @@ const Sidebar = () => {
           width: collapsed ? 80 : 256,
           transition: "width 260ms cubic-bezier(0.2, 0.8, 0.2, 1)",
         }}
-        className="fixed left-4 top-4 bottom-4 z-40 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col hidden sm:flex"
+        className="fixed left-4 top-4 bottom-4 z-40 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col hidden sm:flex landscape:hidden lg:landscape:flex"
       >
         <div
           className={`p-4 border-b border-gray-200 flex items-center ${
@@ -271,7 +232,6 @@ const Sidebar = () => {
             </h1>
           )}
           <button
-            aria-label={collapsed ? "Expand menu" : "Collapse menu"}
             onClick={() => {
               setCollapsed(!collapsed);
               clearCollapseTimer();
@@ -296,8 +256,6 @@ const Sidebar = () => {
               >
                 <div className="relative flex items-center w-full">
                   <item.icon className="w-6 h-6 text-current" />
-
-                  {/* label container - animate maxWidth & opacity to avoid reflow jitter */}
                   <span
                     className="inline-block overflow-hidden whitespace-nowrap transition-all duration-200 ease-in-out"
                     style={{
@@ -310,8 +268,6 @@ const Sidebar = () => {
                   >
                     {item.label}
                   </span>
-
-                  {/* simple tooltip shown only when collapsed */}
                   {collapsed && (
                     <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 pointer-events-none hidden group-hover:block">
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
@@ -323,26 +279,16 @@ const Sidebar = () => {
               </NavLink>
             ))}
           </nav>
-
+          
+          {/* Bottom actions (User, Pass, Logout) */}
           <div className="shrink-0">
             <div className="p-4 border-t border-gray-200 space-y-4">
               {session?.user && !collapsed && (
                 <div className="text-center">
-                  <p
-                    className="text-xs text-gray-500 truncate"
-                    title={
-                      isScopedCustomer && scopedCustomerId
-                        ? (customers.find((c) => c.id === scopedCustomerId)
-                            ?.name as string) || session.user.email
-                        : session.user.email
-                    }
-                  >
-                    Logged in as:
-                  </p>
+                  <p className="text-xs text-gray-500 truncate">Logged in as:</p>
                   <p className="text-sm font-semibold text-gray-800 truncate">
                     {isScopedCustomer && scopedCustomerId
-                      ? customers.find((c) => c.id === scopedCustomerId)?.name ||
-                        session.user.email
+                      ? customers.find((c) => c.id === scopedCustomerId)?.name || session.user.email
                       : session.user.email}
                   </p>
                 </div>
@@ -350,8 +296,6 @@ const Sidebar = () => {
               <button
                 onClick={() => setShowPasswordModal(true)}
                 className="w-full flex items-center justify-center p-3 rounded-lg transition-colors duration-200 text-amber-600 bg-amber-50 hover:bg-amber-100 font-semibold"
-                aria-label={collapsed ? "Change password" : undefined}
-                title="Change password"
               >
                 <KeyIcon className={`w-5 h-5 ${collapsed ? "" : "mr-2"}`} />
                 {!collapsed && <span>Change Password</span>}
@@ -359,7 +303,6 @@ const Sidebar = () => {
               <button
                 onClick={handleSignOut}
                 className="w-full flex items-center justify-center p-3 rounded-lg transition-colors duration-200 text-red-600 bg-red-50 hover:bg-red-100 font-semibold"
-                aria-label={collapsed ? "Logout" : undefined}
               >
                 <LogOutIcon className={`w-5 h-5 ${collapsed ? "" : "mr-2"}`} />
                 {!collapsed && <span>Logout</span>}
@@ -374,72 +317,48 @@ const Sidebar = () => {
         </div>
       </aside>
 
-      {/* Landscape menu modal - centered modal only on mobile landscape */}
+      {/* --- MENU MODAL (LANDSCAPE MOBILE ONLY) --- */}
       {showLandscapeMenu && (
         <div
-          className="fixed inset-0 z-50 hidden sm:hidden landscape:flex items-center justify-center bg-black/40 p-2"
+          className="fixed inset-0 z-50 sm:hidden landscape:flex lg:landscape:hidden items-center justify-center bg-black/40 backdrop-blur-sm p-4"
           onClick={() => setShowLandscapeMenu(false)}
         >
-          {/* Modal container - stop propagation to prevent closing when clicking inside */}
           <div
-            className="bg-white rounded-lg shadow-2xl flex flex-col max-h-[80vh] max-w-sm w-full"
+            className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header - fixed */}
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 shrink-0">
-              <h3 className="text-lg font-semibold text-gray-800">Navigation</h3>
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-800">Navigation</h3>
               <button
                 onClick={() => setShowLandscapeMenu(false)}
-                className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
-                aria-label="Close menu"
+                className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
               >
-                <svg
-                  className="w-6 h-6 text-gray-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-
-            {/* Modal Content - scrollable navigation list */}
-            <nav className="flex-1 overflow-y-auto min-h-0 p-2">
-              <div className="space-y-1">
-                {navItems.map((item) => (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    onClick={() => setShowLandscapeMenu(false)}
-                    className={({ isActive }) =>
-                      `flex items-center px-4 py-3 rounded-lg transition-colors duration-150 ${
-                        isActive ? activeLinkClass : inactiveLinkClass
-                      }`
-                    }
-                  >
-                    <item.icon className="w-5 h-5 mr-3 shrink-0" />
-                    <span className="font-medium">{item.label}</span>
-                  </NavLink>
-                ))}
-              </div>
+            <nav className="p-4 grid grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto">
+              {navItems.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setShowLandscapeMenu(false)}
+                  className={({ isActive }) =>
+                    `flex items-center p-3 rounded-lg transition-colors duration-200 border ${
+                      isActive 
+                        ? "bg-indigo-50 border-indigo-100 text-indigo-700" 
+                        : "border-gray-50 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    }`
+                  }
+                >
+                  <item.icon className="w-5 h-5 mr-3 shrink-0" />
+                  <span className="font-medium text-sm truncate">{item.label}</span>
+                </NavLink>
+              ))}
             </nav>
           </div>
         </div>
-      )}
-
-      {/* Overlay backdrop for landscape menu - click to close */}
-      {showLandscapeMenu && (
-        <div
-          className="fixed inset-0 z-40 hidden sm:hidden landscape:block bg-transparent"
-          onClick={() => setShowLandscapeMenu(false)}
-          role="presentation"
-        />
       )}
     </>
   );

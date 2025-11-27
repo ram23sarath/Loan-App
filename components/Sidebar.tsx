@@ -99,13 +99,11 @@ const Sidebar = () => {
       
       let total = "0px";
 
-      // 1. Desktop & Tablet Portrait (Uses the 'aside' component)
       if (isLargeDesktop || isTabletPortrait) {
         const sidebarWidth = collapsed ? 80 : 256;
         total = `${sidebarWidth + leftOffset + gap}px`;
       } 
-      // 2. Mobile Landscape (Uses the floating 'div' component)
-      // MATCH DESKTOP: Width is fixed at 80px (same as desktop collapsed)
+      // Mobile Landscape
       else if (isMobileLandscape) {
         const sidebarWidth = 80; 
         total = `${sidebarWidth + leftOffset + gap}px`;
@@ -190,7 +188,6 @@ const Sidebar = () => {
       </nav>
 
       {/* 2. MOBILE LANDSCAPE SIDEBAR (Left Side Floating) */}
-      {/* Visuals now match Desktop: w-[80px], rounded-2xl, floating with offsets */}
       <div 
         ref={menuRef}
         className="fixed top-4 bottom-4 left-4 z-50 w-[80px] bg-white rounded-2xl border border-gray-200 shadow-sm hidden landscape:flex lg:landscape:hidden flex-col justify-between items-center py-4"
@@ -204,28 +201,31 @@ const Sidebar = () => {
             <HamburgerIcon className="w-6 h-6" />
           </button>
 
-          {/* DROPDOWN MENU */}
+          {/* --- CHANGED: 2-COLUMN GRID DROPDOWN --- */}
+          {/* w-96 makes it wide enough for 2 columns. max-h-[85vh] prevents overflow. */}
           {showLandscapeMenu && (
-            <div className="absolute top-0 left-full ml-4 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-left-2 duration-200">
+            <div className="absolute top-0 left-full ml-4 w-96 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-left-2 duration-200">
                <div className="px-3 py-2 border-b border-gray-100 bg-gray-50/50">
                   <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Navigate</span>
                </div>
-               <nav className="max-h-[70vh] overflow-y-auto p-1">
+               
+               {/* 2 Column Grid Layout */}
+               <nav className="max-h-[85vh] overflow-y-auto p-2 grid grid-cols-2 gap-2">
                 {navItems.map((item) => (
                   <NavLink
                     key={item.path}
                     to={item.path}
                     onClick={() => setShowLandscapeMenu(false)}
                     className={({ isActive }) =>
-                      `flex items-center px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                      `flex items-center px-3 py-2 rounded-lg text-sm transition-colors border ${
                         isActive 
-                          ? "bg-indigo-50 text-indigo-700 font-medium" 
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                          ? "bg-indigo-50 border-indigo-100 text-indigo-700 font-medium" 
+                          : "border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                       }`
                     }
                   >
-                    <item.icon className="w-4 h-4 mr-3" />
-                    {item.label}
+                    <item.icon className="w-4 h-4 mr-2 shrink-0" />
+                    <span className="truncate">{item.label}</span>
                   </NavLink>
                 ))}
               </nav>

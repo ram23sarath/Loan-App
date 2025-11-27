@@ -216,7 +216,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 return;
             }
 
-            let query = supabase.from('loan_seniority').select('*, customers(name, phone)').order('created_at', { ascending: false });
+            let query = supabase.from('loan_seniority').select('*, customers(name, phone)').order('created_at', { ascending: true });
             if (effectiveIsScoped) {
                 query = query.eq('user_id', effectiveSession.user.id as string);
             }

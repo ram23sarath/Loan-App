@@ -430,13 +430,13 @@ const SummaryPage = () => {
   // No tab state — Loan Recovery will be displayed as its own heading below Total Collected
 
   const collectedBreakdownCards = [
-    { label: "Interest", value: totalInterestCollected, color: "green" },
-    { label: "Late Fees", value: totalLateFeeCollected, color: "orange" },
     {
       label: "Subscriptions",
       value: totalSubscriptionCollected,
       color: "cyan",
     },
+    { label: "Interest", value: totalInterestCollected, color: "green" },
+    { label: "Late Fees", value: totalLateFeeCollected, color: "orange" },
   ];
 
   // Keep all collected breakdown cards in leftCards (no Misc Expenses redundant card)
@@ -529,6 +529,16 @@ const SummaryPage = () => {
             {/* Income breakdown as list items */}
             <div className="w-full mt-4">
               <div className="space-y-3">
+                {/* Loan Recovery (Principal) */}
+                <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-blue-50 border border-blue-200">
+                  <span className="text-sm font-medium text-blue-700">
+                    Loan Recovery (Principal)
+                  </span>
+                  <span className="text-lg font-bold text-blue-800">
+                    {formatCurrencyIN(totalPrincipalRecovered)}
+                  </span>
+                </div>
+                {/* Subscriptions, Interest, Late Fees */}
                 {leftCards.map((card) => (
                   <div
                     key={card.label}
@@ -542,14 +552,6 @@ const SummaryPage = () => {
                     </span>
                   </div>
                 ))}
-                <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-blue-50 border border-blue-200">
-                  <span className="text-sm font-medium text-blue-700">
-                    Loan Recovery (Principal)
-                  </span>
-                  <span className="text-lg font-bold text-blue-800">
-                    {formatCurrencyIN(totalPrincipalRecovered)}
-                  </span>
-                </div>
               </div>
             </div>
             {/* Subscriptions Balance box: shows Subscriptions, Subscription Return and Balance */}

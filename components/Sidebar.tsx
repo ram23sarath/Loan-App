@@ -91,21 +91,24 @@ const Sidebar = () => {
 
       const isLargeDesktop = window.matchMedia("(min-width: 1024px)").matches;
       const isTabletPortrait = window.matchMedia("(min-width: 640px) and (orientation: portrait)").matches;
-      // Added: Detection for Mobile Landscape
       const isMobileLandscape = window.matchMedia("(max-width: 1023px) and (orientation: landscape)").matches;
 
-      // Base gap and offset
+      // Common visual constants
       const leftOffset = 16;
       const gap = 16;
+      
       let total = "0px";
 
+      // 1. Desktop & Tablet Portrait (Uses the 'aside' component)
       if (isLargeDesktop || isTabletPortrait) {
-        // Desktop Sidebar logic
         const sidebarWidth = collapsed ? 80 : 256;
         total = `${sidebarWidth + leftOffset + gap}px`;
-      } else if (isMobileLandscape) {
-        // Mobile Landscape Rail logic (fixed width 64px/w-16)
-        total = `${64}px`; // No extra gap needed usually, or add +16 if preferred
+      } 
+      // 2. Mobile Landscape (Uses the floating 'div' component)
+      // MATCH DESKTOP: Width is fixed at 80px (same as desktop collapsed)
+      else if (isMobileLandscape) {
+        const sidebarWidth = 80; 
+        total = `${sidebarWidth + leftOffset + gap}px`;
       }
 
       try {
@@ -125,7 +128,6 @@ const Sidebar = () => {
     };
   }, [collapsed]);
 
-  // Collapse timer for desktop hover
   const collapseTimer = React.useRef<number | null>(null);
   const clearCollapseTimer = () => {
     if (collapseTimer.current) {
@@ -153,10 +155,7 @@ const Sidebar = () => {
       {/* Spacer for Portrait Mobile Bottom Nav only */}
       <div className="h-20 sm:hidden landscape:hidden" aria-hidden="true" />
 
-      {/* -------------------------------------------
-        1. PORTRAIT MOBILE NAV (Bottom Bar)
-        -------------------------------------------
-      */}
+      {/* 1. PORTRAIT MOBILE NAV (Bottom Bar) */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 sm:hidden landscape:hidden">
         <div className="flex justify-around items-center py-2 overflow-x-auto w-full">
           {navItems.map((item) => (
@@ -190,15 +189,11 @@ const Sidebar = () => {
         </div>
       </nav>
 
-      {/* -------------------------------------------
-        2. MOBILE LANDSCAPE RAIL (Left Side)
-        -------------------------------------------
-        Visible only on: Mobile Landscape
-        Hidden on: Mobile Portrait, Laptop/Desktop
-      */}
+      {/* 2. MOBILE LANDSCAPE SIDEBAR (Left Side Floating) */}
+      {/* Visuals now match Desktop: w-[80px], rounded-2xl, floating with offsets */}
       <div 
         ref={menuRef}
-        className="fixed top-0 bottom-0 left-0 z-50 w-16 bg-white border-r border-gray-200 hidden landscape:flex lg:landscape:hidden flex-col justify-between items-center py-4"
+        className="fixed top-4 bottom-4 left-4 z-50 w-[80px] bg-white rounded-2xl border border-gray-200 shadow-sm hidden landscape:flex lg:landscape:hidden flex-col justify-between items-center py-4"
       >
         {/* Top: Hamburger */}
         <div className="relative">
@@ -209,9 +204,9 @@ const Sidebar = () => {
             <HamburgerIcon className="w-6 h-6" />
           </button>
 
-          {/* THE DROPDOWN / FLYOUT MENU */}
+          {/* DROPDOWN MENU */}
           {showLandscapeMenu && (
-            <div className="absolute top-0 left-full ml-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden py-1 animate-in fade-in slide-in-from-left-2 duration-200">
+            <div className="absolute top-0 left-full ml-4 w-56 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-left-2 duration-200">
                <div className="px-3 py-2 border-b border-gray-100 bg-gray-50/50">
                   <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Navigate</span>
                </div>
@@ -257,11 +252,7 @@ const Sidebar = () => {
         </div>
       </div>
 
-      {/* -------------------------------------------
-        3. DESKTOP SIDEBAR 
-        -------------------------------------------
-        Hidden on mobile landscape (handled by the Rail above)
-      */}
+      {/* 3. DESKTOP SIDEBAR */}
       <aside
         onMouseEnter={() => {
           setCollapsed(false);

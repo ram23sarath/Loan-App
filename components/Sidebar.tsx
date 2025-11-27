@@ -101,6 +101,9 @@ const Sidebar = () => {
     }
   };
 
+  // State for landscape menu toggle
+  const [landscapeMenuOpen, setLandscapeMenuOpen] = React.useState(false);
+
   // Sidebar collapsed by default; users can expand via hover or toggle.
   const [collapsed, setCollapsed] = React.useState(true);
   // Publish sidebar width as a CSS variable so the main content can shift accordingly.
@@ -162,40 +165,102 @@ const Sidebar = () => {
 
       {/* --- CHANGED 4: Bottom nav is now always visible on mobile --- */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 sm:hidden">
-        <div className="flex justify-around items-center py-2 overflow-x-auto landscape:py-1">
+        {/* Portrait mode: all nav items with labels */}
+        <div className="flex justify-around items-center py-2 overflow-x-auto portrait:flex landscape:hidden">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center px-2 py-1 landscape:px-1 transition-colors duration-200 whitespace-nowrap text-xs landscape:text-xs ${
+                `flex flex-col items-center justify-center px-2 py-1 transition-colors duration-200 whitespace-nowrap text-xs ${
                   isActive ? "text-indigo-600" : "text-gray-500 hover:text-gray-700"
                 }`
               }
               aria-label={item.label}
             >
-              <item.icon className="w-5 h-5 landscape:w-4 landscape:h-4" />
-              <span className="landscape:hidden mt-1">{item.label}</span>
+              <item.icon className="w-5 h-5" />
+              <span className="mt-1">{item.label}</span>
             </NavLink>
           ))}
           {/* Password change button for mobile view */}
           <button
             onClick={() => setShowPasswordModal(true)}
             aria-label="Change password"
-            className="flex flex-col items-center justify-center px-2 py-1 landscape:px-1 text-amber-600 hover:bg-amber-50 rounded-md transition-colors duration-200 whitespace-nowrap text-xs"
+            className="flex flex-col items-center justify-center px-2 py-1 text-amber-600 hover:bg-amber-50 rounded-md transition-colors duration-200 whitespace-nowrap text-xs"
             title="Change password"
           >
-            <KeyIcon className="w-5 h-5 landscape:w-4 landscape:h-4" />
-            <span className="landscape:hidden mt-1">Password</span>
+            <KeyIcon className="w-5 h-5" />
+            <span className="mt-1">Password</span>
           </button>
           {/* Logout button for mobile view */}
           <button
             onClick={handleSignOut}
             aria-label="Logout"
-            className="flex flex-col items-center justify-center px-2 py-1 landscape:px-1 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200 whitespace-nowrap text-xs"
+            className="flex flex-col items-center justify-center px-2 py-1 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200 whitespace-nowrap text-xs"
           >
-            <LogOutIcon className="w-5 h-5 landscape:w-4 landscape:h-4" />
-            <span className="landscape:hidden mt-1">Logout</span>
+            <LogOutIcon className="w-5 h-5" />
+            <span className="mt-1">Logout</span>
+          </button>
+        </div>
+
+        {/* Landscape mode: Menu dropdown + fixed buttons */}
+        <div className="hidden landscape:flex items-center justify-between py-1 px-2">
+          {/* Menu button with dropdown */}
+          <div className="relative flex-1">
+            <button
+              onClick={() => setLandscapeMenuOpen(!landscapeMenuOpen)}
+              className="w-full flex items-center justify-center px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-md transition-colors duration-200 text-xs font-semibold"
+              aria-label="Navigation menu"
+              aria-expanded={landscapeMenuOpen}
+            >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+              </svg>
+              Menu
+            </button>
+
+            {/* Dropdown menu - appears above the nav bar */}
+            {landscapeMenuOpen && (
+              <div className="absolute bottom-full left-0 right-0 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+                {navItems.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setLandscapeMenuOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center px-4 py-2 text-sm transition-colors duration-200 border-b border-gray-100 last:border-b-0 ${
+                        isActive
+                          ? "bg-indigo-50 text-indigo-600 font-semibold"
+                          : "text-gray-700 hover:bg-gray-50"
+                      }`
+                    }
+                  >
+                    <item.icon className="w-4 h-4 mr-3" />
+                    <span>{item.label}</span>
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Fixed buttons - always visible */}
+          <button
+            onClick={() => {
+              setShowPasswordModal(true);
+              setLandscapeMenuOpen(false);
+            }}
+            aria-label="Change password"
+            className="p-1 ml-1 text-amber-600 hover:bg-amber-50 rounded-md transition-colors duration-200"
+            title="Change password"
+          >
+            <KeyIcon className="w-5 h-5" />
+          </button>
+          <button
+            onClick={handleSignOut}
+            aria-label="Logout"
+            className="p-1 ml-1 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200"
+          >
+            <LogOutIcon className="w-5 h-5" />
           </button>
         </div>
       </nav>

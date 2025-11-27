@@ -368,48 +368,54 @@ const Sidebar = () => {
         </div>
       </aside>
 
-      {/* Landscape menu modal - only shows in landscape on mobile */}
+      {/* Landscape menu modal - centered overlay modal for landscape on mobile */}
       {showLandscapeMenu && (
-        <div className="fixed inset-0 z-50 bg-black/30 sm:hidden landscape:flex items-end flex-col justify-end">
-          <div className="w-full bg-white rounded-t-2xl shadow-lg p-4 max-h-[70vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Navigation</h3>
+        <div className="fixed inset-0 z-50 hidden sm:hidden landscape:flex items-center justify-center bg-black/40 p-2">
+          <div className="bg-white rounded-lg shadow-2xl flex flex-col max-h-[80vh] max-w-sm w-full">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 shrink-0">
+              <h3 className="text-lg font-semibold text-gray-800">Navigation</h3>
               <button
                 onClick={() => setShowLandscapeMenu(false)}
-                className="p-1 rounded hover:bg-gray-100"
+                className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
                 aria-label="Close menu"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
-            <nav className="space-y-2">
-              {navItems.map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  onClick={() => setShowLandscapeMenu(false)}
-                  className={({ isActive }) =>
-                    `flex items-center p-3 rounded-lg transition-colors duration-200 ${
-                      isActive ? activeLinkClass : inactiveLinkClass
-                    }`
-                  }
-                >
-                  <item.icon className="w-5 h-5 mr-3" />
-                  <span className="font-medium">{item.label}</span>
-                </NavLink>
-              ))}
+            
+            {/* Modal Content - Scrollable Navigation List */}
+            <nav className="flex-1 overflow-y-auto min-h-0 p-2">
+              <div className="space-y-1">
+                {navItems.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setShowLandscapeMenu(false)}
+                    className={({ isActive }) =>
+                      `flex items-center px-4 py-3 rounded-lg transition-colors duration-150 ${
+                        isActive ? activeLinkClass : inactiveLinkClass
+                      }`
+                    }
+                  >
+                    <item.icon className="w-5 h-5 mr-3 shrink-0" />
+                    <span className="font-medium">{item.label}</span>
+                  </NavLink>
+                ))}
+              </div>
             </nav>
           </div>
         </div>
       )}
 
-      {/* Overlay for landscape menu to close when clicking outside */}
+      {/* Overlay backdrop for landscape menu - click to close */}
       {showLandscapeMenu && (
         <div
-          className="fixed inset-0 z-40 hidden sm:hidden landscape:block"
+          className="fixed inset-0 z-40 hidden sm:hidden landscape:block bg-transparent"
           onClick={() => setShowLandscapeMenu(false)}
+          role="presentation"
         />
       )}
     </>

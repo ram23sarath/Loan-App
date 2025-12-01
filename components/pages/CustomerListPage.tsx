@@ -40,13 +40,27 @@ const CustomerListPage = () => {
   // --- CHANGED: Added state for collapsible sections ---
   const [expandedSections, setExpandedSections] = useState({
     both: true,
-    loans: true,
-    subs: true,
-    neither: true,
+    loans: false,
+    subs: false,
+    neither: false,
   });
+
+  // --- CHANGED: Added pagination state for each section ---
+  const [currentPages, setCurrentPages] = useState({
+    both: 1,
+    loans: 1,
+    subs: 1,
+    neither: 1,
+  });
+
+  const itemsPerPage = 25;
 
   const toggleSection = (key: 'both' | 'loans' | 'subs' | 'neither') => {
     setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const setCurrentPage = (section: 'both' | 'loans' | 'subs' | 'neither', page: number) => {
+    setCurrentPages(prev => ({ ...prev, [section]: page }));
   };
 
   // Auto logout after 30 minutes of inactivity
@@ -252,6 +266,83 @@ const CustomerListPage = () => {
     collapsed: { opacity: 0, height: 0, overflow: 'hidden' }
   };
 
+  // --- CHANGED: Pagination controls component ---
+  const PaginationControls = ({ section, totalItems }: { section: 'both' | 'loans' | 'subs' | 'neither', totalItems: number }) => {
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const currentPage = currentPages[section];
+
+    if (totalPages <= 1) return null;
+
+    return (
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-200">
+        <div className="text-sm text-gray-600">
+          Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+          {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} customers
+        </div>
+        <div className="flex gap-2 flex-wrap justify-center">
+          <button
+            onClick={() => setCurrentPage(section, 1)}
+            disabled={currentPage === 1}
+            className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            First
+          </button>
+          <button
+            onClick={() => setCurrentPage(section, Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            Previous
+          </button>
+          
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+            if (
+              page === 1 ||
+              page === totalPages ||
+              Math.abs(page - currentPage) <= 1
+            ) {
+              return (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(section, page)}
+                  className={`px-3 py-1 rounded border ${
+                    currentPage === page
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  {page}
+                </button>
+              );
+            }
+            if (page === 2 && currentPage > 3) {
+              return <span key="dots-start" className="px-2">...</span>;
+            }
+            if (page === totalPages - 1 && currentPage < totalPages - 2) {
+              return <span key="dots-end" className="px-2">...</span>;
+            }
+            return null;
+          })}
+          
+          <button
+            onClick={() => setCurrentPage(section, Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            Next
+          </button>
+          <button
+            onClick={() => setCurrentPage(section, totalPages)}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            Last
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <PageWrapper>
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-4 sm:gap-0 px-2 sm:px-0">
@@ -334,74 +425,87 @@ const CustomerListPage = () => {
                     transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
                   >
                     <div className="p-2 sm:p-4 pt-0">
-                      {/* Desktop Table */}
-                      <div className="hidden sm:block">
-                        {/* --- CHANGED: Reverted table header --- */}
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead>
-                            <tr>
-                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
-                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
-                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Loans</th>
-                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Loan Value</th>
-                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Subscriptions</th>
-                              <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {categorizedCustomers.withBoth.map(customer => {
-                                const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
-                                const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
-                                const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
-                                return (
-                                    <tr key={customer.id} className="bg-white hover:bg-indigo-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
-                                        {/* --- CHANGED: Reverted table row --- */}
-                                        <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
-                                        <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
-                                        <td className="px-4 py-2 text-gray-700">{customerLoans.length}</td>
-                                        <td className="px-4 py-2 text-green-600">{formatCurrency(loanValue)}</td>
-                                        <td className="px-4 py-2 text-cyan-600">{customerSubscriptions.length}</td>
-                                        <td className="px-4 py-2">
-                                          <div className="flex justify-center gap-2">
-                                            <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {}, subscription: customerSubscriptions[0] || {} } }); }} className="p-2 rounded-full hover:bg-blue-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><span className="text-blue-600 font-bold">Edit</span></motion.button>
-                                            <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                      {/* Pagination for withBoth */}
+                      {(() => {
+                        const totalPages = Math.ceil(categorizedCustomers.withBoth.length / itemsPerPage);
+                        const start = (currentPages.both - 1) * itemsPerPage;
+                        const end = start + itemsPerPage;
+                        const paginatedCustomers = categorizedCustomers.withBoth.slice(start, end);
+                        return (
+                          <>
+                            {/* Desktop Table */}
+                            <div className="hidden sm:block">
+                              {/* --- CHANGED: Reverted table header --- */}
+                              <table className="min-w-full divide-y divide-gray-200">
+                                <thead>
+                                  <tr>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Loans</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Loan Value</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Subscriptions</th>
+                                    <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">Actions</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {paginatedCustomers.map(customer => {
+                                      const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
+                                      const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
+                                      const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+                                      return (
+                                          <tr key={customer.id} className="bg-white hover:bg-indigo-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
+                                              {/* --- CHANGED: Reverted table row --- */}
+                                              <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
+                                              <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
+                                              <td className="px-4 py-2 text-gray-700">{customerLoans.length}</td>
+                                              <td className="px-4 py-2 text-green-600">{formatCurrency(loanValue)}</td>
+                                              <td className="px-4 py-2 text-cyan-600">{customerSubscriptions.length}</td>
+                                              <td className="px-4 py-2">
+                                                <div className="flex justify-center gap-2">
+                                                  <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {}, subscription: customerSubscriptions[0] || {} } }); }} className="p-2 rounded-full hover:bg-blue-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><span className="text-blue-600 font-bold">Edit</span></motion.button>
+                                                  <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                                                </div>
+                                              </td>
+                                          </tr>
+                                      );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                            {/* Mobile Cards (unchanged) */}
+                            <div className="sm:hidden space-y-3">
+                              {paginatedCustomers.map(customer => {
+                                  const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
+                                  const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
+                                  const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+                                  return (
+                                      <div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)}>
+                                          <div className="grid grid-cols-3 gap-3 items-start">
+                                              <div className="col-span-2">
+                                                  <div className="text-base font-bold text-indigo-700">{customer.name}</div>
+                                                  <div className="text-xs text-gray-500">{customer.phone}</div>
+                                                  <div className="mt-2 text-sm text-gray-700 space-y-1">
+                                                      <div className="flex justify-between"><span className="text-gray-600">Loans</span><span className="font-semibold">{customerLoans.length}</span></div>
+                                                      <div className="flex justify-between"><span className="text-gray-600">Loan Value</span><span className="font-semibold">{formatCurrency(loanValue)}</span></div>
+                                                      <div className="flex justify-between"><span className="text-gray-600">Subscriptions</span><span className="font-semibold">{customerSubscriptions.length}</span></div>
+                                                  </div>
+                                              </div>
+                                              <div className="flex flex-col items-end justify-between">
+                                                  <div className="flex gap-2">
+                                                      <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {}, subscription: customerSubscriptions[0] || {} } }); }} className="px-3 py-1 rounded bg-white border border-gray-200 text-blue-600 font-bold text-sm" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
+                                                      <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                                                  </div>
+                                              </div>
                                           </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                      {/* Mobile Cards (unchanged) */}
-                      <div className="sm:hidden space-y-3">
-                        {categorizedCustomers.withBoth.map(customer => {
-                            const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
-                            const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
-                            const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
-                            return (
-                                <div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)}>
-                                    <div className="grid grid-cols-3 gap-3 items-start">
-                                        <div className="col-span-2">
-                                            <div className="text-base font-bold text-indigo-700">{customer.name}</div>
-                                            <div className="text-xs text-gray-500">{customer.phone}</div>
-                                            <div className="mt-2 text-sm text-gray-700 space-y-1">
-                                                <div className="flex justify-between"><span className="text-gray-600">Loans</span><span className="font-semibold">{customerLoans.length}</span></div>
-                                                <div className="flex justify-between"><span className="text-gray-600">Loan Value</span><span className="font-semibold">{formatCurrency(loanValue)}</span></div>
-                                                <div className="flex justify-between"><span className="text-gray-600">Subscriptions</span><span className="font-semibold">{customerSubscriptions.length}</span></div>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col items-end justify-between">
-                                            <div className="flex gap-2">
-                                                <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {}, subscription: customerSubscriptions[0] || {} } }); }} className="px-3 py-1 rounded bg-white border border-gray-200 text-blue-600 font-bold text-sm" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
-                                                <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                      </div>
+                                      </div>
+                                  );
+                              })}
+                            </div>
+                            {/* Pagination Controls */}
+                            <PaginationControls section="both" totalItems={categorizedCustomers.withBoth.length} />
+                          </>
+                        );
+                      })()}
                     </div>
                   </motion.div>
                 )}
@@ -432,69 +536,82 @@ const CustomerListPage = () => {
                     transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
                   >
                     <div className="p-2 sm:p-4 pt-0">
-                      {/* Desktop Table */}
-                      <div className="hidden sm:block">
-                        {/* --- CHANGED: Reverted table header --- */}
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead>
-                            <tr>
-                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
-                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
-                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Loans</th>
-                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Loan Value</th>
-                              <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {categorizedCustomers.withOnlyLoans.map(customer => {
-                                const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
-                                const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
-                                return (
-                                    <tr key={customer.id} className="bg-white hover:bg-blue-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
-                                        {/* --- CHANGED: Reverted table row --- */}
-                                        <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
-                                        <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
-                                        <td className="px-4 py-2 text-gray-700">{customerLoans.length}</td>
-                                        <td className="px-4 py-2 text-green-600">{formatCurrency(loanValue)}</td>
-                                        <td className="px-4 py-2">
-                                          <div className="flex justify-center gap-2">
-                                            <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {} } }); }} className="p-2 rounded-full hover:bg-blue-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><span className="text-blue-600 font-bold">Edit</span></motion.button>
-                                            <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                      {/* Pagination for withOnlyLoans */}
+                      {(() => {
+                        const totalPages = Math.ceil(categorizedCustomers.withOnlyLoans.length / itemsPerPage);
+                        const start = (currentPages.loans - 1) * itemsPerPage;
+                        const end = start + itemsPerPage;
+                        const paginatedCustomers = categorizedCustomers.withOnlyLoans.slice(start, end);
+                        return (
+                          <>
+                            {/* Desktop Table */}
+                            <div className="hidden sm:block">
+                              {/* --- CHANGED: Reverted table header --- */}
+                              <table className="min-w-full divide-y divide-gray-200">
+                                <thead>
+                                  <tr>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Loans</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Loan Value</th>
+                                    <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">Actions</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {paginatedCustomers.map(customer => {
+                                      const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
+                                      const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+                                      return (
+                                          <tr key={customer.id} className="bg-white hover:bg-blue-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
+                                              {/* --- CHANGED: Reverted table row --- */}
+                                              <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
+                                              <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
+                                              <td className="px-4 py-2 text-gray-700">{customerLoans.length}</td>
+                                              <td className="px-4 py-2 text-green-600">{formatCurrency(loanValue)}</td>
+                                              <td className="px-4 py-2">
+                                                <div className="flex justify-center gap-2">
+                                                  <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {} } }); }} className="p-2 rounded-full hover:bg-blue-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><span className="text-blue-600 font-bold">Edit</span></motion.button>
+                                                  <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                                                </div>
+                                              </td>
+                                          </tr>
+                                      );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                            {/* Mobile Cards (unchanged) */}
+                            <div className="sm:hidden space-y-3">
+                              {paginatedCustomers.map(customer => {
+                                  const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
+                                  const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+                                  return (
+                                      <div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)}>
+                                          <div className="grid grid-cols-3 gap-3 items-start">
+                                              <div className="col-span-2">
+                                                  <div className="text-base font-bold text-indigo-700">{customer.name}</div>
+                                                  <div className="text-xs text-gray-500">{customer.phone}</div>
+                                                  <div className="mt-2 text-sm text-gray-700">
+                                                      <div className="flex justify-between"><span className="text-gray-600">Loans</span><span className="font-semibold">{customerLoans.length}</span></div>
+                                                      <div className="flex justify-between"><span className="text-gray-600">Loan Value</span><span className="font-semibold">{formatCurrency(loanValue)}</span></div>
+                                                  </div>
+                                              </div>
+                                              <div className="flex flex-col items-end justify-between">
+                                                  <div className="flex gap-2">
+                                                      <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {} } }); }} className="px-3 py-1 rounded bg-white border border-gray-200 text-blue-600 font-bold text-sm" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
+                                                      <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                                                  </div>
+                                              </div>
                                           </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                      {/* Mobile Cards (unchanged) */}
-                      <div className="sm:hidden space-y-3">
-                        {categorizedCustomers.withOnlyLoans.map(customer => {
-                            const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
-                            const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
-                            return (
-                                <div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)}>
-                                    <div className="grid grid-cols-3 gap-3 items-start">
-                                        <div className="col-span-2">
-                                            <div className="text-base font-bold text-indigo-700">{customer.name}</div>
-                                            <div className="text-xs text-gray-500">{customer.phone}</div>
-                                            <div className="mt-2 text-sm text-gray-700">
-                                                <div className="flex justify-between"><span className="text-gray-600">Loans</span><span className="font-semibold">{customerLoans.length}</span></div>
-                                                <div className="flex justify-between"><span className="text-gray-600">Loan Value</span><span className="font-semibold">{formatCurrency(loanValue)}</span></div>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col items-end justify-between">
-                                            <div className="flex gap-2">
-                                                <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {} } }); }} className="px-3 py-1 rounded bg-white border border-gray-200 text-blue-600 font-bold text-sm" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
-                                                <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                      </div>
+                                      </div>
+                                  );
+                              })}
+                            </div>
+                            {/* Pagination Controls */}
+                            <PaginationControls section="loans" totalItems={categorizedCustomers.withOnlyLoans.length} />
+                          </>
+                        );
+                      })()}
                     </div>
                   </motion.div>
                 )}
@@ -525,69 +642,82 @@ const CustomerListPage = () => {
                     transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
                   >
                     <div className="p-2 sm:p-4 pt-0">
-                      {/* Desktop Table */}
-                      <div className="hidden sm:block">
-                        {/* --- CHANGED: Reverted table header --- */}
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead>
-                            <tr>
-                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
-                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
-                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Subscriptions</th>
-                              <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Total Value</th>
-                              <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {categorizedCustomers.withOnlySubscriptions.map(customer => {
-                                const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
-                                const subValue = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
-                                return (
-                                    <tr key={customer.id} className="bg-white hover:bg-cyan-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
-                                        {/* --- CHANGED: Reverted table row --- */}
-                                        <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
-                                        <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
-                                        <td className="px-4 py-2 text-cyan-600">{customerSubscriptions.length}</td>
-                                        <td className="px-4 py-2 text-cyan-600">{formatCurrency(subValue)}</td>
-                                        <td className="px-4 py-2">
-                                          <div className="flex justify-center gap-2">
-                                            <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, subscription: customerSubscriptions[0] || {} } }); }} className="p-2 rounded-full hover:bg-blue-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><span className="text-blue-600 font-bold">Edit</span></motion.button>
-                                            <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                      {/* Pagination for withOnlySubscriptions */}
+                      {(() => {
+                        const totalPages = Math.ceil(categorizedCustomers.withOnlySubscriptions.length / itemsPerPage);
+                        const start = (currentPages.subs - 1) * itemsPerPage;
+                        const end = start + itemsPerPage;
+                        const paginatedCustomers = categorizedCustomers.withOnlySubscriptions.slice(start, end);
+                        return (
+                          <>
+                            {/* Desktop Table */}
+                            <div className="hidden sm:block">
+                              {/* --- CHANGED: Reverted table header --- */}
+                              <table className="min-w-full divide-y divide-gray-200">
+                                <thead>
+                                  <tr>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Subscriptions</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Total Value</th>
+                                    <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">Actions</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {paginatedCustomers.map(customer => {
+                                      const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
+                                      const subValue = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
+                                      return (
+                                          <tr key={customer.id} className="bg-white hover:bg-cyan-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
+                                              {/* --- CHANGED: Reverted table row --- */}
+                                              <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
+                                              <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
+                                              <td className="px-4 py-2 text-cyan-600">{customerSubscriptions.length}</td>
+                                              <td className="px-4 py-2 text-cyan-600">{formatCurrency(subValue)}</td>
+                                              <td className="px-4 py-2">
+                                                <div className="flex justify-center gap-2">
+                                                  <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, subscription: customerSubscriptions[0] || {} } }); }} className="p-2 rounded-full hover:bg-blue-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><span className="text-blue-600 font-bold">Edit</span></motion.button>
+                                                  <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                                                </div>
+                                              </td>
+                                          </tr>
+                                      );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                            {/* Mobile Cards (unchanged) */}
+                            <div className="sm:hidden space-y-3">
+                              {paginatedCustomers.map(customer => {
+                                  const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
+                                  const subValue = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
+                                  return (
+                                      <div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)}>
+                                          <div className="grid grid-cols-3 gap-3 items-start">
+                                              <div className="col-span-2">
+                                                  <div className="text-base font-bold text-indigo-700">{customer.name}</div>
+                                                  <div className="text-xs text-gray-500">{customer.phone}</div>
+                                                  <div className="mt-2 text-sm text-gray-700">
+                                                      <div className="flex justify-between"><span className="text-gray-600">Subscriptions</span><span className="font-semibold">{customerSubscriptions.length}</span></div>
+                                                      <div className="flex justify-between"><span className="text-gray-600">Total Value</span><span className="font-semibold">{formatCurrency(subValue)}</span></div>
+                                                  </div>
+                                              </div>
+                                              <div className="flex flex-col items-end justify-between">
+                                                  <div className="flex gap-2">
+                                                      <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, subscription: customerSubscriptions[0] || {} } }); }} className="px-3 py-1 rounded bg-white border border-gray-200 text-blue-600 font-bold text-sm" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
+                                                      <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                                                  </div>
+                                              </div>
                                           </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                      {/* Mobile Cards (unchanged) */}
-                      <div className="sm:hidden space-y-3">
-                        {categorizedCustomers.withOnlySubscriptions.map(customer => {
-                            const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
-                            const subValue = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
-                            return (
-                                <div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)}>
-                                    <div className="grid grid-cols-3 gap-3 items-start">
-                                        <div className="col-span-2">
-                                            <div className="text-base font-bold text-indigo-700">{customer.name}</div>
-                                            <div className="text-xs text-gray-500">{customer.phone}</div>
-                                            <div className="mt-2 text-sm text-gray-700">
-                                                <div className="flex justify-between"><span className="text-gray-600">Subscriptions</span><span className="font-semibold">{customerSubscriptions.length}</span></div>
-                                                <div className="flex justify-between"><span className="text-gray-600">Total Value</span><span className="font-semibold">{formatCurrency(subValue)}</span></div>
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col items-end justify-between">
-                                            <div className="flex gap-2">
-                                                <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, subscription: customerSubscriptions[0] || {} } }); }} className="px-3 py-1 rounded bg-white border border-gray-200 text-blue-600 font-bold text-sm" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
-                                                <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                      </div>
+                                      </div>
+                                  );
+                              })}
+                            </div>
+                            {/* Pagination Controls */}
+                            <PaginationControls section="subs" totalItems={categorizedCustomers.withOnlySubscriptions.length} />
+                          </>
+                        );
+                      })()}
                     </div>
                   </motion.div>
                 )}
@@ -618,53 +748,66 @@ const CustomerListPage = () => {
                       transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
                     >
                       <div className="p-2 sm:p-4 pt-0">
-                        {/* Desktop Table */}
-                        <div className="hidden sm:block">
-                          {/* --- CHANGED: Reverted table header --- */}
-                          <table className="min-w-full divide-y divide-gray-200">
-                            <thead>
-                                <tr>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
-                                    <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {categorizedCustomers.withNeither.map(customer => (
-                                    <tr key={customer.id} className="bg-white hover:bg-gray-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
-                                        {/* --- CHANGED: Reverted table row --- */}
-                                        <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
-                                        <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
-                                        <td className="px-4 py-2">
-                                          <div className="flex justify-center gap-2">
-                                            <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer } }); }} className="p-2 rounded-full hover:bg-blue-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><span className="text-blue-600 font-bold">Edit</span></motion.button>
-                                            <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                        {/* Pagination for withNeither */}
+                        {(() => {
+                          const totalPages = Math.ceil(categorizedCustomers.withNeither.length / itemsPerPage);
+                          const start = (currentPages.neither - 1) * itemsPerPage;
+                          const end = start + itemsPerPage;
+                          const paginatedCustomers = categorizedCustomers.withNeither.slice(start, end);
+                          return (
+                            <>
+                              {/* Desktop Table */}
+                              <div className="hidden sm:block">
+                                {/* --- CHANGED: Reverted table header --- */}
+                                <table className="min-w-full divide-y divide-gray-200">
+                                  <thead>
+                                      <tr>
+                                          <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
+                                          <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
+                                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">Actions</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                      {paginatedCustomers.map(customer => (
+                                          <tr key={customer.id} className="bg-white hover:bg-gray-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
+                                              {/* --- CHANGED: Reverted table row --- */}
+                                              <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
+                                              <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
+                                              <td className="px-4 py-2">
+                                                <div className="flex justify-center gap-2">
+                                                  <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer } }); }} className="p-2 rounded-full hover:bg-blue-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><span className="text-blue-600 font-bold">Edit</span></motion.button>
+                                                  <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                                                </div>
+                                              </td>
+                                          </tr>
+                                      ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                              {/* Mobile Cards (unchanged) */}
+                              <div className="sm:hidden space-y-3">
+                                  {paginatedCustomers.map(customer => (
+                                      <div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)}>
+                                          <div className="grid grid-cols-3 gap-3 items-start">
+                                              <div className="col-span-2">
+                                                  <div className="text-base font-bold text-indigo-700">{customer.name}</div>
+                                                  <div className="text-xs text-gray-500">{customer.phone}</div>
+                                              </div>
+                                              <div className="flex flex-col items-end justify-between">
+                                                  <div className="flex gap-2">
+                                                      <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer } }); }} className="px-3 py-1 rounded bg-white border border-gray-200 text-blue-600 font-bold text-sm" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
+                                                      <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                                                  </div>
+                                              </div>
                                           </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                          </table>
-                        </div>
-                        {/* Mobile Cards (unchanged) */}
-                        <div className="sm:hidden space-y-3">
-                            {categorizedCustomers.withNeither.map(customer => (
-                                <div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)}>
-                                    <div className="grid grid-cols-3 gap-3 items-start">
-                                        <div className="col-span-2">
-                                            <div className="text-base font-bold text-indigo-700">{customer.name}</div>
-                                            <div className="text-xs text-gray-500">{customer.phone}</div>
-                                        </div>
-                                        <div className="flex flex-col items-end justify-between">
-                                            <div className="flex gap-2">
-                                                <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer } }); }} className="px-3 py-1 rounded bg-white border border-gray-200 text-blue-600 font-bold text-sm" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
-                                                <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                      </div>
+                                  ))}
+                              </div>
+                              {/* Pagination Controls */}
+                              <PaginationControls section="neither" totalItems={categorizedCustomers.withNeither.length} />
+                            </>
+                          );
+                        })()}
                       </div>
                     </motion.div>
                   )}

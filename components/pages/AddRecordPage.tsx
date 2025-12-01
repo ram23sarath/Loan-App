@@ -59,7 +59,7 @@ const AddRecordPage = () => {
   >(new Set());
   const [showSuccess, setShowSuccess] = useState<string | null>(null);
   const [lastRecordData, setLastRecordData] = useState<{
-    type: "loan" | "subscription";
+    type: "loan" | "subscription" | "installment";
     customerPhone?: string;
     data: any;
   } | null>(null);
@@ -299,19 +299,25 @@ const AddRecordPage = () => {
 
     try {
       const newInstallment = await addInstallment(installmentPayload);
-      // WhatsApp notification removed; show transient success and reopen
-      // the installment form after banner hides so the flow is smooth.
-      // After successful submission, show success message and prepare next installment
-      const nextInstallmentNumber = data.installment_number + 1;
-      showTemporarySuccess(`Installment #${data.installment_number} recorded!`, () => {
-        // Re-open installment UI with next installment pre-filled
-        setAction("installment");
-        if (nextInstallmentNumber <= activeLoan.total_instalments) {
-          // Keep the same amount for the next installment
-          installmentForm.setValue("amount", data.amount);
-          installmentForm.setValue("installment_number", nextInstallmentNumber);
+      // Store record data for WhatsApp sharing
+      const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+      setLastRecordData({
+        type: 'installment',
+        customerPhone: selectedCustomer?.phone,
+        data: {
+          customerName: selectedCustomer?.name,
+          installment_number: data.installment_number,
+          amount: data.amount,
+          date: data.date,
+          receipt_number: data.receipt_number,
+          late_fee: data.late_fee,
+          loanAmount: activeLoan.original_amount,
+          totalRepayable: activeLoan.original_amount + activeLoan.interest_amount,
         }
       });
+      // After successful submission, show success message and prepare next installment
+      const nextInstallmentNumber = data.installment_number + 1;
+      showTemporarySuccess(`Installment #${data.installment_number} recorded!`);
     } catch (error: any) {
       setToast({ show: true, message: error.message || "An error occurred." });
     }
@@ -1004,6 +1010,8 @@ const AddRecordPage = () => {
                               message = `Hi ${data.customerName}, your loan of ₹${data.original_amount.toLocaleString()} with interest ₹${data.interest_amount.toLocaleString()} (Total: ₹${(data.original_amount + data.interest_amount).toLocaleString()}) has been recorded. Payment date: ${formatDate(data.payment_date)}. Total installments: ${data.total_instalments}. Thank You, I J Reddy.`;
                             } else if (lastRecordData.type === 'subscription') {
                               message = `Hi ${data.customerName}, your subscription of ₹${data.amount.toLocaleString()} for the year ${data.year} was recorded on ${formatDate(data.date)}. Receipt: ${data.receipt}${data.late_fee && data.late_fee > 0 ? ` (Late fee: ₹${data.late_fee})` : ''}. Thank You, I J Reddy.`;
+                            } else if (lastRecordData.type === 'installment') {
+                              message = `Hi ${data.customerName}, your installment payment of ₹${data.amount.toLocaleString()} (Installment #${data.installment_number}) has been recorded on ${formatDate(data.date)}. Receipt: ${data.receipt_number}${data.late_fee && data.late_fee > 0 ? ` (Late fee: ₹${data.late_fee})` : ''}. Thank You, I J Reddy.`;
                             }
                             openWhatsApp(lastRecordData.customerPhone, message, { cooldownMs: 800 });
                           }}
@@ -1019,31 +1027,65 @@ const AddRecordPage = () => {
 
                     {/* Quick Action Buttons */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4 pt-4 border-t border-green-300">
-                      <motion.button
-                        type="button"
-                        onClick={() => {
-                          setShowSuccess(null);
-                          setAction(lastRecordData?.type === 'loan' ? 'subscription' : 'loan');
-                        }}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded-lg text-sm transition-colors"
-                      >
-                        Record {lastRecordData?.type === 'loan' ? 'Subscription' : 'Loan'}
-                      </motion.button>
+                      {lastRecordData?.type !== 'installment' && (
+                        <>
+                          <motion.button
+                            type="button"
+                            onClick={() => {
+                              setShowSuccess(null);
+                              setAction(lastRecordData?.type === 'loan' ? 'subscription' : 'loan');
+                            }}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded-lg text-sm transition-colors"
+                          >
+                            Record {lastRecordData?.type === 'loan' ? 'Subscription' : 'Loan'}
+                          </motion.button>
+                          
+                          <motion.button
+                            type="button"
+                            onClick={() => {
+                              setShowSuccess(null);
+                              setAction(lastRecordData?.type === 'loan' ? 'loan' : 'subscription');
+                            }}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-3 rounded-lg text-sm transition-colors"
+                          >
+                            Record Another {lastRecordData?.type === 'loan' ? 'Loan' : 'Subscription'}
+                          </motion.button>
+                        </>
+                      )}
                       
-                      <motion.button
-                        type="button"
-                        onClick={() => {
-                          setShowSuccess(null);
-                          setAction(lastRecordData?.type === 'loan' ? 'loan' : 'subscription');
-                        }}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-3 rounded-lg text-sm transition-colors"
-                      >
-                        Record Another {lastRecordData?.type === 'loan' ? 'Loan' : 'Subscription'}
-                      </motion.button>
+                      {lastRecordData?.type === 'installment' && (
+                        <>
+                          <motion.button
+                            type="button"
+                            onClick={() => {
+                              setShowSuccess(null);
+                              setAction('installment');
+                            }}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-3 rounded-lg text-sm transition-colors"
+                          >
+                            Record Another Installment
+                          </motion.button>
+                          
+                          <motion.button
+                            type="button"
+                            onClick={() => {
+                              setShowSuccess(null);
+                              setAction('subscription');
+                            }}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded-lg text-sm transition-colors"
+                          >
+                            Record Subscription
+                          </motion.button>
+                        </>
+                      )}
 
                       <motion.button
                         type="button"

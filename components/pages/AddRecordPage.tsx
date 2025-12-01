@@ -13,6 +13,8 @@ import type {
   NewInstallment,
 } from "../../types";
 import { formatDate } from "../../utils/dateFormatter";
+import { openWhatsApp } from "../../utils/whatsapp";
+import { WhatsAppIcon } from "../../constants";
 
 type LoanInputs = {
   original_amount: number;
@@ -56,6 +58,11 @@ const AddRecordPage = () => {
     Set<number>
   >(new Set());
   const [showSuccess, setShowSuccess] = useState<string | null>(null);
+  const [lastRecordData, setLastRecordData] = useState<{
+    type: "loan" | "subscription";
+    customerPhone?: string;
+    data: any;
+  } | null>(null);
   const [toast, setToast] = useState<{ show: boolean; message: string }>({
     show: false,
     message: "",
@@ -90,12 +97,8 @@ const AddRecordPage = () => {
     setAction(null);
     setShowSuccess(message);
 
-    // Hide after 2.5s and run optional follow-up (e.g., open installment)
-    successTimeoutRef.current = window.setTimeout(() => {
-      setShowSuccess(null);
-      successTimeoutRef.current = null;
-      if (followUp) followUp();
-    }, 2500) as unknown as number;
+    // Don't auto-hide anymore - let user click action buttons to close
+    // The follow-up callback is now handled by action button clicks
   };
 
   // Cleanup timeout on unmount
@@ -194,16 +197,29 @@ const AddRecordPage = () => {
     const newLoanData: NewLoan = {
       customer_id: selectedCustomerId,
       original_amount: data.original_amount,
-      interest_amount,
+      interest_amount: data.totalRepayableAmount - data.original_amount,
       payment_date: data.payment_date,
       total_instalments: data.total_instalments,
       check_number: data.check_number || null,
     };
 
     try {
-  await addLoan(newLoanData);
-  // Reset forms and show transient success banner
-  showTemporarySuccess("Loan recorded successfully!");
+      await addLoan(newLoanData);
+      const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+      // Store record data for WhatsApp sharing
+      setLastRecordData({
+        type: 'loan',
+        customerPhone: selectedCustomer?.phone,
+        data: {
+          customerName: selectedCustomer?.name,
+          original_amount: data.original_amount,
+          interest_amount: data.totalRepayableAmount - data.original_amount,
+          payment_date: data.payment_date,
+          total_instalments: data.total_instalments,
+        }
+      });
+      // Reset forms and show transient success banner
+      showTemporarySuccess("Loan recorded successfully!");
     } catch (error: any) {
       setToast({ show: true, message: error.message || "An error occurred." });
     }
@@ -220,6 +236,20 @@ const AddRecordPage = () => {
 
     try {
       await addSubscription(newSubscriptionData);
+      const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+      // Store record data for WhatsApp sharing
+      setLastRecordData({
+        type: 'subscription',
+        customerPhone: selectedCustomer?.phone,
+        data: {
+          customerName: selectedCustomer?.name,
+          amount: data.amount,
+          year: data.year,
+          date: data.date,
+          receipt: data.receipt,
+          late_fee: data.late_fee,
+        }
+      });
       // Show transient success and, after it hides, open installment form
       // if there is an active loan for this customer.
       showTemporarySuccess("Subscription recorded successfully!", () => {
@@ -620,6 +650,22 @@ const AddRecordPage = () => {
                           ? "Saving..."
                           : "Submit Payment"}
                       </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCustomerId('');
+                          setCustomerSearch('');
+                          setAction(null);
+                          setActiveLoan(null);
+                          resetAll();
+                        }}
+                        className="w-full mt-2 bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg"
+                        disabled={isSubmittingInstallment}
+                      >
+                        Switch Customer
+                      </motion.button>
                     </form>
                     <div className="text-center mt-4">
                       <button
@@ -745,6 +791,22 @@ const AddRecordPage = () => {
                       disabled={isSubmittingLoan}
                     >
                       {isSubmittingLoan ? "Saving..." : "Submit Loan"}
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCustomerId('');
+                        setCustomerSearch('');
+                        setAction(null);
+                        setActiveLoan(null);
+                        resetAll();
+                      }}
+                      className="w-full mt-2 bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg"
+                      disabled={isSubmittingLoan}
+                    >
+                      Switch Customer
                     </motion.button>
                   </motion.form>
                 )}
@@ -886,6 +948,22 @@ const AddRecordPage = () => {
                           ? "Saving..."
                           : "Submit Subscription"}
                       </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCustomerId('');
+                          setCustomerSearch('');
+                          setAction(null);
+                          setActiveLoan(null);
+                          resetAll();
+                        }}
+                        className="w-full mt-2 bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg"
+                        disabled={isSubmittingSubscription}
+                      >
+                        Switch Customer
+                      </motion.button>
                     </form>
                     {activeLoan && (
                       <div className="text-center mt-4">
@@ -908,9 +986,83 @@ const AddRecordPage = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 20 }}
-                    className="mt-4 text-center p-3 bg-green-100 text-green-800 rounded-lg"
+                    className="mt-4 p-4 bg-green-100 text-green-800 rounded-lg"
                   >
-                    <span>{showSuccess}</span>
+                    <div className="text-center mb-4">
+                      <span className="font-semibold text-lg">{showSuccess}</span>
+                    </div>
+                    
+                    {/* WhatsApp Button */}
+                    {lastRecordData && lastRecordData.customerPhone && (
+                      <div className="flex justify-center mb-4">
+                        <motion.button
+                          type="button"
+                          onClick={() => {
+                            const data = lastRecordData.data;
+                            let message = '';
+                            if (lastRecordData.type === 'loan') {
+                              message = `Hi ${data.customerName}, your loan of ₹${data.original_amount.toLocaleString()} with interest ₹${data.interest_amount.toLocaleString()} (Total: ₹${(data.original_amount + data.interest_amount).toLocaleString()}) has been recorded. Payment date: ${formatDate(data.payment_date)}. Total installments: ${data.total_instalments}. Thank You, I J Reddy.`;
+                            } else if (lastRecordData.type === 'subscription') {
+                              message = `Hi ${data.customerName}, your subscription of ₹${data.amount.toLocaleString()} for the year ${data.year} was recorded on ${formatDate(data.date)}. Receipt: ${data.receipt}${data.late_fee && data.late_fee > 0 ? ` (Late fee: ₹${data.late_fee})` : ''}. Thank You, I J Reddy.`;
+                            }
+                            openWhatsApp(lastRecordData.customerPhone, message, { cooldownMs: 800 });
+                          }}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors"
+                        >
+                          <WhatsAppIcon className="w-5 h-5" />
+                          Send in WhatsApp
+                        </motion.button>
+                      </div>
+                    )}
+
+                    {/* Quick Action Buttons */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4 pt-4 border-t border-green-300">
+                      <motion.button
+                        type="button"
+                        onClick={() => {
+                          setShowSuccess(null);
+                          setAction(lastRecordData?.type === 'loan' ? 'subscription' : 'loan');
+                        }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded-lg text-sm transition-colors"
+                      >
+                        Record {lastRecordData?.type === 'loan' ? 'Subscription' : 'Loan'}
+                      </motion.button>
+                      
+                      <motion.button
+                        type="button"
+                        onClick={() => {
+                          setShowSuccess(null);
+                          setAction(lastRecordData?.type === 'loan' ? 'loan' : 'subscription');
+                        }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-3 rounded-lg text-sm transition-colors"
+                      >
+                        Record Another {lastRecordData?.type === 'loan' ? 'Loan' : 'Subscription'}
+                      </motion.button>
+
+                      <motion.button
+                        type="button"
+                        onClick={() => {
+                          setShowSuccess(null);
+                          setSelectedCustomerId('');
+                          setCustomerSearch('');
+                          setAction(null);
+                          setActiveLoan(null);
+                          setLastRecordData(null);
+                          resetAll();
+                        }}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-3 rounded-lg text-sm transition-colors"
+                      >
+                        Different Customer
+                      </motion.button>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>

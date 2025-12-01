@@ -1,4 +1,5 @@
 import React from "react";
+import { motion } from "framer-motion";
 import { useData } from "../../context/DataContext";
 import GlassCard from "../ui/GlassCard";
 import { formatDate } from "../../utils/dateFormatter";
@@ -22,6 +23,8 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
     any | null
   >(null);
   const [filter, setFilter] = React.useState("");
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const itemsPerPage = 25;
 
   // Sorting state
   const [sortField, setSortField] = React.useState("");
@@ -44,51 +47,74 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
   });
 
   const sortedSubscriptions = React.useMemo(() => {
-    if (!sortField) return filteredSubscriptions;
-    return [...filteredSubscriptions].sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
-      const compareMaybeNumeric = (x: any, y: any) => {
-        const xs = x == null ? "" : String(x).trim();
-        const ys = y == null ? "" : String(y).trim();
-        const numeric = /^-?\d+(?:\.\d+)?$/;
-        if (numeric.test(xs) && numeric.test(ys)) {
-          return Number(xs) - Number(ys);
+    let result = [...filteredSubscriptions];
+    
+    // If no sort field is set, sort by date descending (latest first)
+    if (!sortField) {
+      result.sort((a, b) => {
+        const aDate = a.date ? new Date(a.date).getTime() : 0;
+        const bDate = b.date ? new Date(b.date).getTime() : 0;
+        return bDate - aDate;
+      });
+    } else {
+      result.sort((a, b) => {
+        let aValue: any;
+        let bValue: any;
+        const compareMaybeNumeric = (x: any, y: any) => {
+          const xs = x == null ? "" : String(x).trim();
+          const ys = y == null ? "" : String(y).trim();
+          const numeric = /^-?\d+(?:\.\d+)?$/;
+          if (numeric.test(xs) && numeric.test(ys)) {
+            return Number(xs) - Number(ys);
+          }
+          return xs.localeCompare(ys);
+        };
+        switch (sortField) {
+          case "customer":
+            aValue = a.customers?.name || "";
+            bValue = b.customers?.name || "";
+            break;
+          case "amount":
+            aValue = a.amount;
+            bValue = b.amount;
+            break;
+          case "year":
+            aValue = a.year;
+            bValue = b.year;
+            break;
+          case "date":
+            aValue = a.date;
+            bValue = b.date;
+            break;
+          case "receipt":
+            aValue = a.receipt || "";
+            bValue = b.receipt || "";
+            break;
+          default:
+            aValue = "";
+            bValue = "";
         }
-        return xs.localeCompare(ys);
-      };
-      switch (sortField) {
-        case "customer":
-          aValue = a.customers?.name || "";
-          bValue = b.customers?.name || "";
-          break;
-        case "amount":
-          aValue = a.amount;
-          bValue = b.amount;
-          break;
-        case "year":
-          aValue = a.year;
-          bValue = b.year;
-          break;
-        case "date":
-          aValue = a.date;
-          bValue = b.date;
-          break;
-        case "receipt":
-          aValue = a.receipt || "";
-          bValue = b.receipt || "";
-          break;
-        default:
-          aValue = "";
-          bValue = "";
-      }
-      if (typeof aValue === "number" && typeof bValue === "number") {
-        return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
-      }
-      const cmp = compareMaybeNumeric(aValue, bValue);
-      return sortDirection === "asc" ? cmp : -cmp;
-    });
+        if (typeof aValue === "number" && typeof bValue === "number") {
+          return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+        }
+        const cmp = compareMaybeNumeric(aValue, bValue);
+        return sortDirection === "asc" ? cmp : -cmp;
+      });
+    }
+    return result;
   }, [filteredSubscriptions, sortField, sortDirection]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(sortedSubscriptions.length / itemsPerPage);
+  const paginatedSubscriptions = sortedSubscriptions.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Reset to page 1 when filter changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [filter]);
 
   if (subscriptions.length === 0) {
     const emptyMessage = isScopedCustomer && scopedCustomerId
@@ -174,7 +200,8 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
           </tr>
         </thead>
         <tbody>
-          {sortedSubscriptions.map((sub, idx) => {
+          {paginatedSubscriptions.map((sub, idx) => {
+            const actualIndex = (currentPage - 1) * itemsPerPage + idx + 1;
             const customer = sub.customers;
             let message = "";
             let whatsappUrl = "#";
@@ -199,8 +226,15 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                 }?text=${encodeURIComponent(message)}`;
             }
             return (
-              <tr key={sub.id} className="even:bg-gray-50">
-                <td className="px-4 py-2 border-b font-medium text-sm text-gray-700">{idx + 1}</td>
+              <motion.tr
+                key={sub.id}
+                className="even:bg-gray-50"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3, delay: idx * 0.05 }}
+              >
+                <td className="px-4 py-2 border-b font-medium text-sm text-gray-700">{actualIndex}</td>
                 <td className="px-4 py-2 border-b">
                   {customer?.name ?? "Unknown"}
                 </td>
@@ -254,7 +288,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                     )}
                   </div>
                 </td>
-              </tr>
+              </motion.tr>
             );
           })}
         </tbody>
@@ -262,7 +296,8 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
 
       {/* Mobile stacked cards */}
       <div className="md:hidden space-y-3">
-        {sortedSubscriptions.map((sub, idx) => {
+        {paginatedSubscriptions.map((sub, idx) => {
+          const actualIndex = (currentPage - 1) * itemsPerPage + idx + 1;
           const customer = sub.customers;
           let message = "";
           let whatsappUrl = "#";
@@ -290,13 +325,17 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
           }
 
           return (
-            <div
+            <motion.div
               key={sub.id}
               className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.3, delay: idx * 0.05 }}
             >
               <div className="flex justify-between items-start">
                 <div>
-                  <div className="text-xs text-gray-400">#{idx + 1}</div>
+                  <div className="text-xs text-gray-400">#{actualIndex}</div>
                   <div className="text-sm font-semibold text-indigo-700 truncate">
                     {customer?.name ?? "Unknown"}
                   </div>
@@ -351,10 +390,91 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                       )}
                 </div>
               </div>
-            </div>
+            </motion.div>
           );
         })}
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <motion.div
+          className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-gray-200"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          <div className="text-sm text-gray-600">
+            Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+            {Math.min(currentPage * itemsPerPage, sortedSubscriptions.length)} of{" "}
+            {sortedSubscriptions.length} entries
+          </div>
+          <div className="flex gap-2 flex-wrap justify-center">
+            <button
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+              className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              First
+            </button>
+            <button
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              Previous
+            </button>
+            
+            {/* Page numbers */}
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+              // Show first, last, current, and neighbors
+              if (
+                page === 1 ||
+                page === totalPages ||
+                Math.abs(page - currentPage) <= 1
+              ) {
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-1 rounded border ${
+                      currentPage === page
+                        ? "bg-indigo-600 text-white border-indigo-600"
+                        : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                );
+              }
+              // Show dots for skipped pages
+              if (page === 2 && currentPage > 3) {
+                return <span key="dots-start" className="px-2">...</span>;
+              }
+              if (page === totalPages - 1 && currentPage < totalPages - 2) {
+                return <span key="dots-end" className="px-2">...</span>;
+              }
+              return null;
+            })}
+            
+            <button
+              onClick={() =>
+                setCurrentPage(Math.min(totalPages, currentPage + 1))
+              }
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              Next
+            </button>
+            <button
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              Last
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       {editSubscriptionTarget && (
         <EditModal

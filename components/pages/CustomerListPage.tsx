@@ -448,12 +448,12 @@ const CustomerListPage = () => {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {paginatedCustomers.map(customer => {
+                                  {paginatedCustomers.map((customer, idx) => {
                                       const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
                                       const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
                                       const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
                                       return (
-                                          <tr key={customer.id} className="bg-white hover:bg-indigo-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
+                                          <motion.tr key={customer.id} className="bg-white hover:bg-indigo-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                               {/* --- CHANGED: Reverted table row --- */}
                                               <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
                                               <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
@@ -466,7 +466,7 @@ const CustomerListPage = () => {
                                                   <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
                                                 </div>
                                               </td>
-                                          </tr>
+                                          </motion.tr>
                                       );
                                   })}
                                 </tbody>
@@ -474,12 +474,12 @@ const CustomerListPage = () => {
                             </div>
                             {/* Mobile Cards (unchanged) */}
                             <div className="sm:hidden space-y-3">
-                              {paginatedCustomers.map(customer => {
+                              {paginatedCustomers.map((customer, idx) => {
                                   const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
                                   const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
                                   const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
                                   return (
-                                      <div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)}>
+                                      <motion.div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                           <div className="grid grid-cols-3 gap-3 items-start">
                                               <div className="col-span-2">
                                                   <div className="text-base font-bold text-indigo-700">{customer.name}</div>
@@ -497,7 +497,7 @@ const CustomerListPage = () => {
                                                   </div>
                                               </div>
                                           </div>
-                                      </div>
+                                      </motion.div>
                                   );
                               })}
                             </div>
@@ -558,11 +558,11 @@ const CustomerListPage = () => {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {paginatedCustomers.map(customer => {
+                                  {paginatedCustomers.map((customer, idx) => {
                                       const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
                                       const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
                                       return (
-                                          <tr key={customer.id} className="bg-white hover:bg-blue-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
+                                          <motion.tr key={customer.id} className="bg-white hover:bg-blue-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                               {/* --- CHANGED: Reverted table row --- */}
                                               <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
                                               <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
@@ -574,7 +574,7 @@ const CustomerListPage = () => {
                                                   <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
                                                 </div>
                                               </td>
-                                          </tr>
+                                          </motion.tr>
                                       );
                                   })}
                                 </tbody>
@@ -582,11 +582,11 @@ const CustomerListPage = () => {
                             </div>
                             {/* Mobile Cards (unchanged) */}
                             <div className="sm:hidden space-y-3">
-                              {paginatedCustomers.map(customer => {
+                              {paginatedCustomers.map((customer, idx) => {
                                   const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
                                   const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
                                   return (
-                                      <div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)}>
+                                      <motion.div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                           <div className="grid grid-cols-3 gap-3 items-start">
                                               <div className="col-span-2">
                                                   <div className="text-base font-bold text-indigo-700">{customer.name}</div>
@@ -603,7 +603,7 @@ const CustomerListPage = () => {
                                                   </div>
                                               </div>
                                           </div>
-                                      </div>
+                                      </motion.div>
                                   );
                               })}
                             </div>
@@ -664,11 +664,11 @@ const CustomerListPage = () => {
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {paginatedCustomers.map(customer => {
+                                  {paginatedCustomers.map((customer, idx) => {
                                       const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
                                       const subValue = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
                                       return (
-                                          <tr key={customer.id} className="bg-white hover:bg-cyan-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
+                                          <motion.tr key={customer.id} className="bg-white hover:bg-cyan-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                               {/* --- CHANGED: Reverted table row --- */}
                                               <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
                                               <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
@@ -680,7 +680,7 @@ const CustomerListPage = () => {
                                                   <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
                                                 </div>
                                               </td>
-                                          </tr>
+                                          </motion.tr>
                                       );
                                   })}
                                 </tbody>
@@ -688,11 +688,11 @@ const CustomerListPage = () => {
                             </div>
                             {/* Mobile Cards (unchanged) */}
                             <div className="sm:hidden space-y-3">
-                              {paginatedCustomers.map(customer => {
+                              {paginatedCustomers.map((customer, idx) => {
                                   const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
                                   const subValue = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
                                   return (
-                                      <div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)}>
+                                      <motion.div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                           <div className="grid grid-cols-3 gap-3 items-start">
                                               <div className="col-span-2">
                                                   <div className="text-base font-bold text-indigo-700">{customer.name}</div>
@@ -709,7 +709,7 @@ const CustomerListPage = () => {
                                                   </div>
                                               </div>
                                           </div>
-                                      </div>
+                                      </motion.div>
                                   );
                               })}
                             </div>
@@ -768,8 +768,8 @@ const CustomerListPage = () => {
                                       </tr>
                                   </thead>
                                   <tbody>
-                                      {paginatedCustomers.map(customer => (
-                                          <tr key={customer.id} className="bg-white hover:bg-gray-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)}>
+                                      {paginatedCustomers.map((customer, idx) => (
+                                          <motion.tr key={customer.id} className="bg-white hover:bg-gray-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                               {/* --- CHANGED: Reverted table row --- */}
                                               <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
                                               <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
@@ -779,15 +779,15 @@ const CustomerListPage = () => {
                                                   <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-full hover:bg-red-500/10" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
                                                 </div>
                                               </td>
-                                          </tr>
+                                          </motion.tr>
                                       ))}
                                   </tbody>
                                 </table>
                               </div>
                               {/* Mobile Cards (unchanged) */}
                               <div className="sm:hidden space-y-3">
-                                  {paginatedCustomers.map(customer => (
-                                      <div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)}>
+                                  {paginatedCustomers.map((customer, idx) => (
+                                      <motion.div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                           <div className="grid grid-cols-3 gap-3 items-start">
                                               <div className="col-span-2">
                                                   <div className="text-base font-bold text-indigo-700">{customer.name}</div>
@@ -800,7 +800,7 @@ const CustomerListPage = () => {
                                                   </div>
                                               </div>
                                           </div>
-                                      </div>
+                                      </motion.div>
                                   ))}
                               </div>
                               {/* Pagination Controls */}

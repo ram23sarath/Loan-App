@@ -4,6 +4,13 @@ A visually stunning and highly functional loan management application featuring 
 
 git add . && git commit -m "Descriptive summary of changes" && git push origin main
 
+Reset local Commits
+git fetch --all
+git checkout main
+git reset --hard origin/main
+git clean -fd
+git pull
+
 ---
 
 ## ✨ Features

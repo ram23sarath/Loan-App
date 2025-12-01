@@ -6,6 +6,7 @@ import { useData } from '../../context/DataContext';
 import GlassCard from '../ui/GlassCard';
 import Toast from '../ui/Toast';
 import FireTruckAnimation from '../ui/FireTruckAnimation';
+import { EyeIcon, EyeOffIcon } from '../../constants';
 
 type FormInputs = {
   email: string; // accepts email or phone
@@ -22,6 +23,7 @@ const LoginPage = () => {
   const [showToast, setShowToast] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [isWiggling, setIsWiggling] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const from = location.state?.from?.pathname || "/";
 
@@ -102,14 +104,29 @@ const LoginPage = () => {
           </div>
           <div>
             <label htmlFor="password" className="block text-sm font-medium mb-2">Password</label>
-            <input
-              id="password"
-              type="password"
-              {...register('password', { required: 'Password is required' })}
-              className="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="••••••••"
-              disabled={isSubmitting || showAnimation}
-            />
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                {...register('password', { required: 'Password is required' })}
+                className="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-4 pr-12 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="••••••••"
+                disabled={isSubmitting || showAnimation}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={isSubmitting || showAnimation}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOffIcon className="w-5 h-5" />
+                ) : (
+                  <EyeIcon className="w-5 h-5" />
+                )}
+              </button>
+            </div>
             {errors.password && <p className="text-red-600 text-sm mt-1">{errors.password.message}</p>}
           </div>
           <motion.button

@@ -1,9 +1,7 @@
-
 import React from 'react';
 import { motion, Transition } from 'framer-motion';
 import { useData } from '../../context/DataContext';
 import Toast from './Toast';
-import RequestSeniorityModal from './RequestSeniorityModal';
 
 const pageVariants = {
   initial: {
@@ -29,8 +27,6 @@ const pageTransition: Transition = {
 const PageWrapper = ({ children }: { children: React.ReactNode }) => {
   const { isScopedCustomer, session, scopedCustomerId, customers } = useData();
   const [toast, setToast] = React.useState<{ show: boolean; message: string; type?: 'success' | 'error' | 'info' }>({ show: false, message: '', type: 'info' });
-  const [showRequestModal, setShowRequestModal] = React.useState(false);
-  const [fabDefaultDate, setFabDefaultDate] = React.useState('');
 
   React.useEffect(() => {
     const handler = (e: any) => {
@@ -53,14 +49,6 @@ const PageWrapper = ({ children }: { children: React.ReactNode }) => {
     };
   }, []);
 
-  React.useEffect(() => {
-    try {
-      setFabDefaultDate(new Date().toISOString().slice(0,10));
-    } catch (e) {
-      setFabDefaultDate('');
-    }
-  }, []);
-
   return (
     <motion.div
       initial="initial"
@@ -73,28 +61,6 @@ const PageWrapper = ({ children }: { children: React.ReactNode }) => {
       <Toast show={toast.show} message={toast.message} onClose={() => setToast({ show: false, message: '', type: 'info' })} type={toast.type as any} />
 
       {children}
-
-      {/* Floating action button for scoped customers to request loan/subscription */}
-      {isScopedCustomer && scopedCustomerId && (
-        <>
-          <button
-            onClick={() => setShowRequestModal(true)}
-            title="Request Loan/Subscription"
-            className="fixed right-6 bottom-6 z-50 bg-yellow-600 hover:bg-yellow-700 text-white p-3 rounded-full shadow-lg"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-          </button>
-          <RequestSeniorityModal
-            open={showRequestModal}
-            onClose={() => setShowRequestModal(false)}
-            customerId={scopedCustomerId}
-            customerName={customers.find(c => c.id === scopedCustomerId)?.name || ''}
-            defaultDate={fabDefaultDate}
-          />
-        </>
-      )}
     </motion.div>
   );
 };

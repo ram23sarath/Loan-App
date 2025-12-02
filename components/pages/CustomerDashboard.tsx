@@ -258,6 +258,18 @@ const CustomerDashboard = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Quick summary: Loan Balance (moved to Income column to avoid confusion in desktop two-column layout) */}
+                <div className="w-full mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg bg-blue-50 border border-blue-100 flex flex-col items-start">
+                    <div className="text-xs text-gray-600">Loan Balance</div>
+                    <div className="text-lg font-bold text-blue-800 mt-1">{formatCurrencyIN(loanBalance)}</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-cyan-50 border border-cyan-100 flex flex-col items-start">
+                    <div className="text-xs text-gray-600">Subscription Balance</div>
+                    <div className="text-lg font-bold text-cyan-800 mt-1">{formatCurrencyIN(subscriptionBalance)}</div>
+                  </div>
+                </div>
               </div>
             </GlassCard>
 
@@ -304,26 +316,7 @@ const CustomerDashboard = () => {
                     </div>
                   ))}
                 </div>
-
-                <div className="flex flex-col items-center p-4 rounded-lg bg-blue-50 border border-blue-200">
-                  <span className="text-sm font-medium text-blue-800 mb-3">Loan Balance</span>
-                  <div className="w-full space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-700">Total Loans Given</span>
-                      <span className="font-medium text-blue-700">{formatCurrencyIN(totalLoansGiven)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-700">Recovery (Principal)</span>
-                      <span className="font-medium text-blue-700">{formatCurrencyIN(totalPrincipalRecovered)}</span>
-                    </div>
-                    <div className="border-t border-blue-200 pt-2 flex justify-between">
-                      <span className="font-medium text-blue-800">Balance</span>
-                      <span className={`font-bold ${loanBalance < 0 ? "text-red-600" : "text-blue-800"}`}>
-                        {formatCurrencyIN(loanBalance)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                {/* Loan Balance moved to Income section above to avoid confusion in desktop two-column layout */}
               </div>
             </GlassCard>
           </div>

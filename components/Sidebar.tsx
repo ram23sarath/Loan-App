@@ -8,6 +8,7 @@ import {
   UsersIcon,
   BookOpenIcon,
   StarIcon,
+  HomeIcon,
 } from "../constants";
 import { useData } from "../context/DataContext";
 import HamburgerIcon from "./ui/HamburgerIcon";
@@ -51,7 +52,18 @@ const Sidebar = () => {
   const [showLandscapeMenu, setShowLandscapeMenu] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
 
-  const navItems = allNavItems.filter((item) => !item.adminOnly || !isScopedCustomer);
+  let navItems = allNavItems.filter((item) => !item.adminOnly || !isScopedCustomer);
+
+  // For scoped customers, add a Home link that navigates to the customer dashboard above Loans
+  if (isScopedCustomer) {
+    const homeItem = { path: '/', label: 'Home', icon: HomeIcon };
+    const loansIndex = navItems.findIndex((it) => it.path === '/loans');
+    if (loansIndex >= 0) {
+      navItems.splice(loansIndex, 0, homeItem);
+    } else {
+      navItems.unshift(homeItem);
+    }
+  }
   const activeLinkClass = "bg-indigo-50 text-indigo-600 font-semibold";
   const inactiveLinkClass = "text-gray-600 hover:bg-gray-100 hover:text-gray-900";
 

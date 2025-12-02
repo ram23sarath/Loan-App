@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import ReactDOM from 'react-dom';
 import ChangePasswordModal from './modals/ChangePasswordModal';
 
 const ProfileHeader = () => {
@@ -12,6 +13,7 @@ const ProfileHeader = () => {
   const [stationName, setStationName] = useState('');
   const [isSavingStation, setIsSavingStation] = useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   if (!session || !session.user) return null;
 
@@ -75,9 +77,21 @@ const ProfileHeader = () => {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    setShowMenu(false);
+  const handleSignOut = () => {
+    // Open confirmation dialog instead of signing out immediately
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = async () => {
+    try {
+      await signOut();
+    } catch (err) {
+      console.error('Logout failed', err);
+    } finally {
+      setShowLogoutConfirm(false);
+      setShowMenu(false);
+      setShowProfilePanel(false);
+    }
   };
 
   return (
@@ -148,6 +162,37 @@ const ProfileHeader = () => {
       {/* Change Password Modal */}
       {showChangePasswordModal && (
         <ChangePasswordModal onClose={() => setShowChangePasswordModal(false)} />
+      )}
+
+      {/* Logout Confirmation Dialog (rendered into document.body via portal to ensure centering) */}
+      {showLogoutConfirm && typeof document !== 'undefined' && ReactDOM.createPortal(
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.15 }}
+            className="bg-white rounded-xl shadow-xl p-6 max-w-sm mx-4"
+          >
+            <h2 className="text-lg font-bold text-gray-800 mb-2">Confirm Logout</h2>
+            <p className="text-gray-600 mb-4">Are you sure you want to logout?</p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmLogout}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors"
+              >
+                Yes, Logout
+              </button>
+            </div>
+          </motion.div>
+        </div>,
+        document.body
       )}
 
       {/* Profile Panel */}

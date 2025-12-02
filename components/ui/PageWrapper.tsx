@@ -72,16 +72,6 @@ const PageWrapper = ({ children }: { children: React.ReactNode }) => {
     >
       <Toast show={toast.show} message={toast.message} onClose={() => setToast({ show: false, message: '', type: 'info' })} type={toast.type as any} />
 
-      {/* Admin banner shown for non-scoped users (admins) */}
-      {session?.user && !isScopedCustomer && (
-        <div
-          aria-hidden
-          className="fixed top-6 right-6 z-50 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 shadow-sm text-sm font-semibold"
-        >
-          Admin
-        </div>
-      )}
-
       {children}
 
       {/* Floating action button for scoped customers to request loan/subscription */}

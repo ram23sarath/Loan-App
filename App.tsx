@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route, useLocation, Navigate } from 'react-router-d
 import { AnimatePresence } from 'framer-motion';
 import { DataProvider } from './context/DataContext';
 import Sidebar from './components/Sidebar';
+import ProfileHeader from './components/ProfileHeader';
 import AddCustomerPage from './components/pages/AddCustomerPage';
 import AddRecordPage from './components/pages/AddRecordPage';
 import CustomerListPage from './components/pages/CustomerListPage';
@@ -113,6 +114,7 @@ const App = () => (
         <Route path="/login" element={<LoginPage />} />
         <Route path="/*" element={
           <ProtectedRoute>
+            <ProfileHeader />
             <div className="flex w-full h-screen overflow-hidden">
               <Sidebar />
               <main

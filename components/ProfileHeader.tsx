@@ -11,16 +11,19 @@ const ProfileHeader = () => {
   const [isEditingStation, setIsEditingStation] = useState(false);
   const [stationName, setStationName] = useState('');
   const [isSavingStation, setIsSavingStation] = useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
 
   if (!session || !session.user) return null;
 
   const userEmail = session.user.email || 'User';
-  const initials = userEmail.substring(0, 2).toUpperCase();
-
   // Get customer details if scoped user
   const customerDetails = isScopedCustomer && scopedCustomerId 
     ? customers.find(c => c.id === scopedCustomerId)
     : null;
+
+  // Prefer the customer's name for display when scoped; fall back to email for admins
+  const displayName = isScopedCustomer && customerDetails?.name ? customerDetails.name : userEmail;
+  const initials = (displayName && displayName.trim().charAt(0).toUpperCase()) || 'U';
 
   // Initialize station name when profile panel opens
   React.useEffect(() => {
@@ -30,6 +33,23 @@ const ProfileHeader = () => {
       setStationName('');
     }
   }, [showProfilePanel, customerDetails]);
+
+  // Close menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMenu]);
 
   const handleViewProfile = () => {
     setShowMenu(false);
@@ -61,13 +81,13 @@ const ProfileHeader = () => {
   };
 
   return (
-    <div className="fixed top-2 right-2 md:top-4 md:right-4 z-[100]">
+    <div className="fixed top-2 right-6 md:top-4 md:right-6 z-[100]" ref={menuRef}>
       <motion.button
         onClick={() => setShowMenu(!showMenu)}
-        className="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center justify-center shadow-lg transition-colors"
+        className="w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center justify-center shadow-lg transition-colors text-lg md:text-xl"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        title={userEmail}
+        title={displayName}
       >
         {initials}
       </motion.button>
@@ -84,7 +104,9 @@ const ProfileHeader = () => {
             <div className="px-3 md:px-4 py-2 md:py-3 border-b border-gray-100">
               <p className="text-xs text-gray-500">Logged in as</p>
               <div className="flex items-center justify-between gap-1 md:gap-2 mt-1">
-                <p className="text-xs md:text-sm font-semibold text-gray-800 truncate">{userEmail}</p>
+                <p className="text-xs md:text-sm font-semibold text-gray-800 truncate">
+                  {isScopedCustomer && customerDetails ? customerDetails.name : userEmail}
+                </p>
                 {isScopedCustomer && (
                   <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full whitespace-nowrap">
                     Customer

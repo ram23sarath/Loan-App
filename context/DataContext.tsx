@@ -277,7 +277,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     // ... [All CRUD operations remain unchanged] ...
     const updateCustomer = async (customerId: string, updates: Partial<Customer>): Promise<Customer> => {
-        if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot perform updates');
+        // Allow scoped customers to update only their own station_name
+        if (isScopedCustomer) {
+            const isOwnRecord = customerId === scopedCustomerId;
+            const isOnlyStationName = Object.keys(updates).length === 1 && 'station_name' in updates;
+            if (!isOwnRecord || !isOnlyStationName) {
+                throw new Error('Read-only access: scoped customers can only update their own station name');
+            }
+        }
         try {
             const { data, error } = await supabase.from('customers').update(updates).eq('id', customerId).select().single();
             if (error || !data) throw error;

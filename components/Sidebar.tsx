@@ -6,14 +6,11 @@ import {
   LandmarkIcon,
   UserPlusIcon,
   UsersIcon,
-  LogOutIcon,
   BookOpenIcon,
   StarIcon,
-  KeyIcon,
 } from "../constants";
 import { useData } from "../context/DataContext";
 import HamburgerIcon from "./ui/HamburgerIcon";
-import ChangePasswordModal from "./modals/ChangePasswordModal";
 
 const DatabaseIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -51,31 +48,12 @@ const Sidebar = () => {
     customers = [],
   } = useData();
 
-  const [showPasswordModal, setShowPasswordModal] = React.useState(false);
   const [showLandscapeMenu, setShowLandscapeMenu] = React.useState(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
 
   const navItems = allNavItems.filter((item) => !item.adminOnly || !isScopedCustomer);
   const activeLinkClass = "bg-indigo-50 text-indigo-600 font-semibold";
   const inactiveLinkClass = "text-gray-600 hover:bg-gray-100 hover:text-gray-900";
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-    } catch (error: any) {
-      alert(error.message);
-    }
-  };
-
-  const handleLogoutClick = () => {
-    setShowLogoutConfirm(true);
-  };
-
-  const confirmLogout = async () => {
-    setShowLogoutConfirm(false);
-    await handleSignOut();
-  };
 
   const [collapsed, setCollapsed] = React.useState(true);
 
@@ -156,34 +134,6 @@ const Sidebar = () => {
 
   return (
     <>
-      {showPasswordModal && (
-        <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />
-      )}
-
-      {/* Logout Confirmation Dialog */}
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm mx-4 animate-in fade-in zoom-in duration-200">
-            <h2 className="text-xl font-bold text-gray-800 mb-2">Confirm Logout</h2>
-            <p className="text-gray-600 mb-6">Are you sure you want to logout?.</p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setShowLogoutConfirm(false)}
-                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmLogout}
-                className="px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors"
-              >
-                Yes, Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Spacer for Portrait Mobile Bottom Nav only */}
       <div className="h-20 sm:hidden landscape:hidden" aria-hidden="true" />
 
@@ -204,20 +154,6 @@ const Sidebar = () => {
               <span className="mt-1">{item.label}</span>
             </NavLink>
           ))}
-          <button
-            onClick={() => setShowPasswordModal(true)}
-            className="flex flex-col items-center justify-center px-2 py-1 text-amber-600 hover:bg-amber-50 rounded-md transition-colors duration-200 text-xs"
-          >
-            <KeyIcon className="w-5 h-5" />
-            <span className="mt-1">Pass</span>
-          </button>
-          <button
-            onClick={handleLogoutClick}
-            className="flex flex-col items-center justify-center px-2 py-1 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200 text-xs"
-          >
-            <LogOutIcon className="w-5 h-5" />
-            <span className="mt-1">Logout</span>
-          </button>
         </div>
       </nav>
 
@@ -265,24 +201,6 @@ const Sidebar = () => {
               </nav>
             </div>
           )}
-        </div>
-
-        {/* Bottom: Actions */}
-        <div className="flex flex-col gap-4">
-          <button
-            onClick={() => setShowPasswordModal(true)}
-            className="p-3 text-amber-600 hover:bg-amber-50 rounded-xl transition-colors"
-            title="Change Password"
-          >
-            <KeyIcon className="w-6 h-6" />
-          </button>
-          <button
-            onClick={handleLogoutClick}
-            className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
-            title="Logout"
-          >
-            <LogOutIcon className="w-6 h-6" />
-          </button>
         </div>
       </div>
 
@@ -361,32 +279,6 @@ const Sidebar = () => {
           </nav>
           
           <div className="shrink-0">
-            <div className="p-4 border-t border-gray-200 space-y-4">
-              {session?.user && !collapsed && (
-                <div className="text-center">
-                  <p className="text-xs text-gray-500 truncate">Logged in as:</p>
-                  <p className="text-sm font-semibold text-gray-800 truncate">
-                    {isScopedCustomer && scopedCustomerId
-                      ? customers.find((c) => c.id === scopedCustomerId)?.name || session.user.email
-                      : session.user.email}
-                  </p>
-                </div>
-              )}
-              <button
-                onClick={() => setShowPasswordModal(true)}
-                className="w-full flex items-center justify-center p-3 rounded-lg transition-colors duration-200 text-amber-600 bg-amber-50 hover:bg-amber-100 font-semibold"
-              >
-                <KeyIcon className={`w-5 h-5 ${collapsed ? "" : "mr-2"}`} />
-                {!collapsed && <span>Change Password</span>}
-              </button>
-              <button
-                onClick={handleLogoutClick}
-                className="w-full flex items-center justify-center p-3 rounded-lg transition-colors duration-200 text-red-600 bg-red-50 hover:bg-red-100 font-semibold"
-              >
-                <LogOutIcon className={`w-5 h-5 ${collapsed ? "" : "mr-2"}`} />
-                {!collapsed && <span>Logout</span>}
-              </button>
-            </div>
             {!collapsed && (
               <div className="p-4 border-t border-gray-200 text-center text-xs text-gray-400">
                 <p>&copy; {new Date().getFullYear()} I J Reddy Loan App</p>

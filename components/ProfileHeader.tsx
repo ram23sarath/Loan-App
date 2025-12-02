@@ -166,26 +166,27 @@ const ProfileHeader = () => {
 
       {/* Logout Confirmation Dialog (rendered into document.body via portal to ensure centering) */}
       {showLogoutConfirm && typeof document !== 'undefined' && ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-4" onClick={() => setShowLogoutConfirm(false)}>
           <motion.div
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{ duration: 0.15 }}
-            className="bg-white rounded-xl shadow-xl p-6 max-w-sm mx-4"
+            className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm"
+            onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold text-gray-800 mb-2">Confirm Logout</h2>
-            <p className="text-gray-600 mb-4">Are you sure you want to logout?</p>
-            <div className="flex gap-3 justify-center">
+            <p className="text-gray-600 mb-6">Are you sure you want to logout?</p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
               <button
                 onClick={() => setShowLogoutConfirm(false)}
-                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+                className="flex-1 sm:flex-none px-6 py-3 sm:py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 active:bg-gray-100 transition-colors min-h-[44px] sm:min-h-auto"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmLogout}
-                className="px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition-colors"
+                className="flex-1 sm:flex-none px-6 py-3 sm:py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 active:bg-red-800 transition-colors min-h-[44px] sm:min-h-auto"
               >
                 Yes, Logout
               </button>

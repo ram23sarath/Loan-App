@@ -166,20 +166,20 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
             <div className="py-1">
               <button
                 onClick={handleViewProfile}
-                className="w-full px-3 md:px-4 py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2"
+                className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2"
               >
                 👤 View Profile
               </button>
               <button
                 onClick={handleChangePassword}
-                className="w-full px-3 md:px-4 py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2"
+                className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2"
               >
                 🔑 Change Password
               </button>
               <div className="border-t border-gray-100 my-1" />
               <button
                 onClick={handleSignOut}
-                className="w-full px-3 md:px-4 py-2 text-left text-xs md:text-sm text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors font-medium flex items-center gap-2"
+                className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors font-medium flex items-center gap-2"
               >
                 🚪 Sign Out
               </button>

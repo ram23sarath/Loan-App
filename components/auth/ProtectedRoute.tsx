@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
 import LoadingSpinner from '../ui/LoadingSpinner';
 
@@ -9,14 +9,13 @@ type ProtectedRouteProps = {
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { session, loading } = useData();
-  const location = useLocation();
 
   if (loading) {
     return <LoadingSpinner />;
   }
 
   if (!session) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/login" replace />;
   }
 
   return children;

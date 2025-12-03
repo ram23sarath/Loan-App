@@ -82,7 +82,7 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
+    <div className="flex items-center justify-center min-h-screen px-4 py-8 sm:px-0">
       {showAnimation && <FireTruckAnimation onComplete={handleAnimationComplete} />}
       <Toast message={toastMessage} show={showToast} onClose={() => setShowToast(false)} type="error" />
       <GlassCard className="w-full max-w-md" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>

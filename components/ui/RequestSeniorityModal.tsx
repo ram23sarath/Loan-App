@@ -117,7 +117,13 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Requested Date</label>
-                <input value={loanRequestDate} onChange={(e) => setLoanRequestDate(e.target.value)} type="date" className="w-full border border-gray-300 rounded px-3 py-2 appearance-none" style={{ WebkitAppearance: 'none' }} />
+                <input 
+                  value={loanRequestDate} 
+                  onChange={(e) => setLoanRequestDate(e.target.value)} 
+                  type="date" 
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-base bg-white block"
+                  style={{ minHeight: '42px', WebkitAppearance: 'none' }}
+                />
               </div>
             </div>
             <div className="mt-4 flex justify-end gap-2">

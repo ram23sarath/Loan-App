@@ -187,7 +187,8 @@ const EditModal: React.FC<EditModalProps> = ({
                       : ""
                   }
                   onChange={handleCombinedChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2"
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-base bg-white block"
+                  style={{ minHeight: '42px', WebkitAppearance: 'none' }}
                   min="1980-01-01"
                   max="2050-12-31"
                 />
@@ -236,7 +237,8 @@ const EditModal: React.FC<EditModalProps> = ({
                         : ""
                     }
                     onChange={handleCombinedChange}
-                    className="w-full border border-gray-300 rounded px-3 py-2"
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-base bg-white block"
+                    style={{ minHeight: '42px', WebkitAppearance: 'none' }}
                     min="1980-01-01"
                     max="2050-12-31"
                   />
@@ -389,7 +391,8 @@ const EditModal: React.FC<EditModalProps> = ({
                 type="date"
                 value={form.payment_date ? form.payment_date.slice(0, 10) : ""}
                 onChange={handleChange}
-                className="w-full border border-gray-300 rounded px-3 py-2"
+                className="w-full border border-gray-300 rounded px-3 py-2 text-base bg-white block"
+                style={{ minHeight: '42px', WebkitAppearance: 'none' }}
                 min="1980-01-01"
                 max="2050-12-31"
               />
@@ -425,7 +428,8 @@ const EditModal: React.FC<EditModalProps> = ({
                 type="date"
                 value={form.date ? form.date.slice(0, 10) : ""}
                 onChange={handleChange}
-                className="w-full border border-gray-300 rounded px-3 py-2"
+                className="w-full border border-gray-300 rounded px-3 py-2 text-base bg-white block"
+                style={{ minHeight: '42px', WebkitAppearance: 'none' }}
                 min="1980-01-01"
                 max="2050-12-31"
               />

@@ -220,6 +220,8 @@ const DataPage = () => {
 
   // --- STYLES & VARIANTS ---
   const inputBaseStyle = "w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-shadow";
+  const dateInputStyle = "w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-shadow text-base bg-white block";
+  const dateInputInlineStyles = { minHeight: '42px', WebkitAppearance: 'none' as const };
   const labelBaseStyle = "block mb-2 text-sm font-medium text-gray-700";
   const viewVariants = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } }, exit: { opacity: 0, y: -20, transition: { duration: 0.3, ease: 'easeIn' } } };
   const modalVariants = { hidden: { scale: 0.9, opacity: 0 }, visible: { scale: 1, opacity: 1 }, exit: { scale: 0.95, opacity: 0 } };
@@ -401,7 +403,7 @@ const DataPage = () => {
                     </div>
                     <div>
                       <label htmlFor="date" className={labelBaseStyle}>Date</label>
-                      <input type="date" id="date" name="date" value={form.date} onChange={handleChange} className={inputBaseStyle} required />
+                      <input type="date" id="date" name="date" value={form.date} onChange={handleChange} className={dateInputStyle} style={dateInputInlineStyles} required />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                       <div className="md:col-span-2">
@@ -460,7 +462,7 @@ const DataPage = () => {
                 </select>
 
                 <label className={labelBaseStyle}>Date</label>
-                <input type="date" name="date" value={editEntryForm.date} onChange={e => setEditEntryForm(prev => ({ ...prev, date: e.target.value }))} className={inputBaseStyle} />
+                <input type="date" name="date" value={editEntryForm.date} onChange={e => setEditEntryForm(prev => ({ ...prev, date: e.target.value }))} className={dateInputStyle} style={dateInputInlineStyles} />
 
                 <label className={labelBaseStyle}>Type</label>
                 <select name="type" value={editEntryForm.type} onChange={e => setEditEntryForm(prev => ({ ...prev, type: e.target.value }))} className={inputBaseStyle}>

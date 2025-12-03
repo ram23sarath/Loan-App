@@ -36,6 +36,8 @@ const SummaryPage = () => {
 
     customers: contextCustomers = [],
 
+    seniorityList = [],
+
     isScopedCustomer = false,
 
   } = useData();
@@ -1104,6 +1106,132 @@ const SummaryPage = () => {
 
 
 
+  const handleExportLoans = () => {
+
+    const loansData = loans.map(loan => {
+
+      const loanInstallments = installments.filter(i => i.loan_id === loan.id)
+
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+
+
+      let amountPaid = 0;
+
+      let principalPaid = 0;
+
+      let interestCollected = 0;
+
+
+
+      for (const inst of loanInstallments) {
+
+        amountPaid += inst.amount;
+
+        if (principalPaid < loan.original_amount) {
+
+          const principalPortion = Math.min(inst.amount, loan.original_amount - principalPaid);
+
+          principalPaid += principalPortion;
+
+          const interestPortion = inst.amount - principalPortion;
+
+          interestCollected += interestPortion;
+
+        } else {
+
+          interestCollected += inst.amount;
+
+        }
+
+      }
+
+
+
+      const totalRepayable = loan.original_amount + loan.interest_amount;
+
+      const isPaidOff = amountPaid >= totalRepayable;
+
+
+
+      return {
+
+        'Customer Name': loan.customers?.name ?? 'N/A',
+
+        'Customer Phone': loan.customers?.phone ?? 'N/A',
+
+        'Original Amount': loan.original_amount,
+
+        'Interest Amount': loan.interest_amount,
+
+        'Total Repayable': totalRepayable,
+
+        'Amount Paid': amountPaid,
+
+        'Principal Paid': principalPaid,
+
+        'Interest Collected': interestCollected,
+
+        'Balance': totalRepayable - amountPaid,
+
+        'Loan Date': formatDate(loan.payment_date),
+
+        'Installments': `${loanInstallments.length} / ${loan.total_instalments}`,
+
+        'Status': isPaidOff ? 'Paid Off' : 'In Progress',
+
+      };
+
+    });
+
+    const ws = XLSX.utils.json_to_sheet(loansData);
+
+    const wb = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(wb, ws, "Loans");
+
+    XLSX.writeFile(wb, "Loans_Data.xlsx");
+
+    setExportMenuOpen(false);
+
+  };
+
+
+
+  const handleExportSeniority = () => {
+
+    const seniorityData = seniorityList.map((item, index) => ({
+
+      'Position': index + 1,
+
+      'Customer Name': item.customers?.name ?? 'N/A',
+
+      'Customer Phone': item.customers?.phone ?? 'N/A',
+
+      'Station Name': item.station_name ?? 'N/A',
+
+      'Loan Type': item.loan_type ?? 'N/A',
+
+      'Request Date': item.loan_request_date ? formatDate(item.loan_request_date) : 'N/A',
+
+      'Added Date': formatDate(item.created_at),
+
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(seniorityData);
+
+    const wb = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(wb, ws, "Seniority List");
+
+    XLSX.writeFile(wb, "Seniority_List.xlsx");
+
+    setExportMenuOpen(false);
+
+  };
+
+
+
   // --- Animation Variants (No changes here) ---
 
   const mainContainerVariants = {
@@ -1230,6 +1358,20 @@ const SummaryPage = () => {
 
                     <button
 
+                      onClick={handleExportLoans}
+
+                      className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
+
+                    >
+
+                      <FileDownIcon className="w-4 h-4 text-blue-600" />
+
+                      Export Loans
+
+                    </button>
+
+                    <button
+
                       onClick={handleExportSubscriptions}
 
                       className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
@@ -1241,6 +1383,22 @@ const SummaryPage = () => {
                       Export Subscriptions
 
                     </button>
+
+                    <button
+
+                      onClick={handleExportSeniority}
+
+                      className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
+
+                    >
+
+                      <FileDownIcon className="w-4 h-4 text-purple-600" />
+
+                      Export Loan Seniority
+
+                    </button>
+
+                    <div className="border-t border-gray-100 my-1" />
 
                     <button
 

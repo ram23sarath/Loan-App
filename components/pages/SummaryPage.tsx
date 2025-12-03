@@ -2,6 +2,8 @@ import React, { useMemo, useState, useEffect } from "react";
 
 import { motion } from "framer-motion";
 
+import * as XLSX from "xlsx";
+
 import FYBreakdownModal from "../modals/FYBreakdownModal";
 
 import { useData } from "../../context/DataContext";
@@ -14,7 +16,9 @@ import { calculateSummaryData, expenseSubtypes } from "../../utils/summaryCalcul
 
 import { supabase } from "../../src/lib/supabase";
 
-import type { LoanWithCustomer, SubscriptionWithCustomer, Installment, DataEntry } from "../../types";
+import { FileDownIcon } from "../../constants";
+
+import type { LoanWithCustomer, SubscriptionWithCustomer, Installment, DataEntry, Customer } from "../../types";
 
 
 
@@ -30,9 +34,17 @@ const SummaryPage = () => {
 
     dataEntries: contextDataEntries = [],
 
+    customers: contextCustomers = [],
+
     isScopedCustomer = false,
 
   } = useData();
+
+
+
+  // Export menu state
+
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
 
 
@@ -886,6 +898,212 @@ const SummaryPage = () => {
 
 
 
+  // --- Export Functions ---
+
+  const handleExportSubscriptions = () => {
+
+    const subsForExport = subscriptions.map((sub) => ({
+
+      "Customer Name": sub.customers?.name ?? "Unknown",
+
+      "Customer Phone": sub.customers?.phone ?? "N/A",
+
+      Amount: sub.amount,
+
+      Receipt: sub.receipt,
+
+      Date: formatDate(sub.date),
+
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(subsForExport);
+
+    const wb = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(wb, ws, "Subscriptions");
+
+    XLSX.writeFile(wb, "Subscriptions_Data.xlsx");
+
+    setExportMenuOpen(false);
+
+  };
+
+
+
+  const handleExportComprehensive = () => {
+
+    const customerSummaryData = contextCustomers.map(customer => {
+
+      const customerLoans = loans.filter(l => l.customer_id === customer.id);
+
+      const customerSubscriptions = subscriptions.filter(s => s.customer_id === customer.id);
+
+      const originalAmount = customerLoans.reduce((acc, loan) => acc + loan.original_amount, 0);
+
+      const interestAmount = customerLoans.reduce((acc, loan) => acc + loan.interest_amount, 0);
+
+      const totalAmount = originalAmount + interestAmount;
+
+      const subscriptionAmount = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
+
+      return {
+
+        'Name': customer.name,
+
+        'Phone Number': customer.phone,
+
+        'Original Amount': originalAmount,
+
+        'Interest Amount': interestAmount,
+
+        'Total Amount': totalAmount,
+
+        'Subscription Amount': subscriptionAmount,
+
+      };
+
+    });
+
+
+
+    const allLoansData = loans.map(loan => {
+
+      const loanInstallments = installments.filter(i => i.loan_id === loan.id)
+
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+
+
+      let amountPaid = 0;
+
+      let principalPaid = 0;
+
+      let interestCollected = 0;
+
+
+
+      for (const inst of loanInstallments) {
+
+        amountPaid += inst.amount;
+
+        if (principalPaid < loan.original_amount) {
+
+          const principalPortion = Math.min(inst.amount, loan.original_amount - principalPaid);
+
+          principalPaid += principalPortion;
+
+          const interestPortion = inst.amount - principalPortion;
+
+          interestCollected += interestPortion;
+
+        } else {
+
+          interestCollected += inst.amount;
+
+        }
+
+      }
+
+
+
+      const totalRepayable = loan.original_amount + loan.interest_amount;
+
+      const isPaidOff = amountPaid >= totalRepayable;
+
+
+
+      return {
+
+        'Loan ID': loan.id,
+
+        'Customer Name': loan.customers?.name ?? 'N/A',
+
+        'Original Amount': loan.original_amount,
+
+        'Interest Amount': loan.interest_amount,
+
+        'Total Repayable': totalRepayable,
+
+        'Amount Paid': amountPaid,
+
+        'Principal Paid': principalPaid,
+
+        'Interest Collected': interestCollected,
+
+        'Balance': totalRepayable - amountPaid,
+
+        'Loan Date': loan.payment_date,
+
+        'Installments': `${loanInstallments.length} / ${loan.total_instalments}`,
+
+        'Status': isPaidOff ? 'Paid Off' : 'In Progress',
+
+      };
+
+    });
+
+
+
+    const allSubscriptionsData = subscriptions.map(sub => ({
+
+      'Subscription ID': sub.id,
+
+      'Customer Name': sub.customers?.name ?? 'N/A',
+
+      'Amount': sub.amount,
+
+      'Date': sub.date,
+
+      'Receipt': sub.receipt,
+
+    }));
+
+
+
+    const allInstallmentsData = installments.map(inst => {
+
+      const parentLoan = loans.find(l => l.id === inst.loan_id);
+
+      return {
+
+        'Installment ID': inst.id,
+
+        'Loan ID': inst.loan_id,
+
+        'Customer Name': parentLoan?.customers?.name ?? 'N/A',
+
+        'Installment Number': inst.installment_number,
+
+        'Amount Paid': inst.amount,
+
+        'Payment Date': inst.date,
+
+        'Receipt Number': inst.receipt_number,
+
+      };
+
+    });
+
+
+
+    const wb = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(customerSummaryData), 'Customer Summary');
+
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(allLoansData), 'All Loans');
+
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(allSubscriptionsData), 'All Subscriptions');
+
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(allInstallmentsData), 'All Installments');
+
+    XLSX.writeFile(wb, 'Comprehensive_Data_Report.xlsx');
+
+    setExportMenuOpen(false);
+
+  };
+
+
+
   // --- Animation Variants (No changes here) ---
 
   const mainContainerVariants = {
@@ -973,6 +1191,80 @@ const SummaryPage = () => {
             </h2>
 
           </div>
+
+          {!isScopedCustomer && (
+
+            <div className="relative">
+
+              <motion.button
+
+                onClick={() => setExportMenuOpen(!exportMenuOpen)}
+
+                className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 transition-colors p-2 sm:p-3 rounded-lg font-semibold text-sm"
+
+                whileHover={{ scale: 1.02 }}
+
+                whileTap={{ scale: 0.98 }}
+
+              >
+
+                <FileDownIcon className="w-5 h-5" />
+
+                <span className="hidden sm:inline">Export</span>
+
+                <svg className={`w-4 h-4 transition-transform ${exportMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+
+                </svg>
+
+              </motion.button>
+
+              {exportMenuOpen && (
+
+                <>
+
+                  <div className="fixed inset-0 z-40" onClick={() => setExportMenuOpen(false)} />
+
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 py-2">
+
+                    <button
+
+                      onClick={handleExportSubscriptions}
+
+                      className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
+
+                    >
+
+                      <FileDownIcon className="w-4 h-4 text-cyan-600" />
+
+                      Export Subscriptions
+
+                    </button>
+
+                    <button
+
+                      onClick={handleExportComprehensive}
+
+                      className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
+
+                    >
+
+                      <FileDownIcon className="w-4 h-4 text-indigo-600" />
+
+                      Export Comprehensive Report
+
+                    </button>
+
+                  </div>
+
+                </>
+
+              )}
+
+            </div>
+
+          )}
 
         </div>
 

@@ -1,18 +1,12 @@
 import React from "react";
 import SubscriptionTableView from "./SubscriptionTableView";
-import { motion } from "framer-motion";
-import * as XLSX from "xlsx";
 import { useData } from "../../context/DataContext";
-import GlassCard from "../ui/GlassCard";
 import PageWrapper from "../ui/PageWrapper";
 import {
   HistoryIcon,
   Trash2Icon,
-  FileDownIcon,
-  WhatsAppIcon,
   SpinnerIcon,
 } from "../../constants";
-import { openWhatsApp } from "../../utils/whatsapp";
 import type { SubscriptionWithCustomer } from "../../types";
 import { formatDate } from "../../utils/dateFormatter";
 
@@ -56,38 +50,6 @@ const SubscriptionListPage = () => {
     }
   };
 
-  const handleSendWhatsApp = (sub: SubscriptionWithCustomer) => {
-    let message = `Hi ${sub.customers?.name || "Customer"}, your subscription payment of ₹${sub.amount.toLocaleString()} was received on ${formatDate(sub.date)}. Thank You, I J Reddy.`;
-    const phoneNumber = sub.customers?.phone;
-
-    if (phoneNumber) {
-      const ok = openWhatsApp(phoneNumber, message, { cooldownMs: 1200 });
-      if (!ok) {
-        // If opening failed, give user a fallback message
-        alert(
-          "Unable to open WhatsApp. Please try again or check the customer phone number."
-        );
-      }
-    } else {
-      alert("Customer phone number not available.");
-    }
-  };
-
-  const handleExport = () => {
-    const subsForExport = subscriptions.map((sub) => ({
-      "Customer Name": sub.customers?.name ?? "Unknown",
-      "Customer Phone": sub.customers?.phone ?? "N/A",
-      Amount: sub.amount,
-      Receipt: sub.receipt,
-      Date: formatDate(sub.date),
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(subsForExport);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Subscriptions");
-    XLSX.writeFile(wb, "Subscriptions_Data.xlsx");
-  };
-
   return (
     <PageWrapper>
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4 sm:gap-0 px-2 sm:px-0">
@@ -98,19 +60,6 @@ const SubscriptionListPage = () => {
             <SpinnerIcon className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-indigo-500" />
           )}
         </h2>
-        <div className="flex items-center gap-4">
-          {subscriptions.length > 0 && (
-            <motion.button
-              onClick={handleExport}
-              className="flex items-center justify-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 transition-colors p-2 sm:p-3 rounded-lg font-semibold w-auto"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <FileDownIcon className="w-5 h-5" />
-              <span className="hidden sm:inline">Export</span>
-            </motion.button>
-          )}
-        </div>
       </div>
 
       <SubscriptionTableView

@@ -646,7 +646,7 @@ const AddRecordPage = () => {
                           )}
                         </div>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium mb-1">
                             Payment Date
@@ -689,32 +689,29 @@ const AddRecordPage = () => {
                             </p>
                           )}
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-1">
-                            Late Fee (Optional)
-                          </label>
-                          <input
-                            type="number"
-                            {...installmentForm.register("late_fee", {
-                              valueAsNumber: true,
-                              min: {
-                                value: 0,
-                                message: "Late fee cannot be negative.",
-                              },
-                            })}
-                            placeholder="e.g., 10"
-                            className={inputStyles}
-                            disabled={isSubmittingInstallment}
-                          />
-                          {installmentForm.formState.errors.late_fee && (
-                            <p className="text-red-600 text-sm mt-1">
-                              {
-                                installmentForm.formState.errors.late_fee
-                                  .message
-                              }
-                            </p>
-                          )}
-                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Late Fee (Optional)
+                        </label>
+                        <input
+                          type="number"
+                          {...installmentForm.register("late_fee", {
+                            valueAsNumber: true,
+                            min: {
+                              value: 0,
+                              message: "Late fee cannot be negative.",
+                            },
+                          })}
+                          placeholder="e.g., 10"
+                          className={inputStyles}
+                          disabled={isSubmittingInstallment}
+                        />
+                        {installmentForm.formState.errors.late_fee && (
+                          <p className="text-red-600 text-sm mt-1">
+                            {installmentForm.formState.errors.late_fee.message}
+                          </p>
+                        )}
                       </div>
                       <motion.button
                         whileHover={{ scale: 1.05 }}

@@ -130,7 +130,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             if (!isInitialization) {
                 setIsRefreshing(true);
             }
-            
+
             // Use overrides if they are explicitly passed (even if false/null), otherwise use state
             const effectiveIsScoped = overrideIsScoped !== undefined ? overrideIsScoped : isScopedCustomer;
             const effectiveScopedId = overrideScopedId !== undefined ? overrideScopedId : scopedCustomerId;

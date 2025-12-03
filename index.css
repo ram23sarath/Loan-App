@@ -3,26 +3,53 @@
 .animate-fade-in { animation: fadeIn 0.3s ease; }
 .animate-modal-in { animation: modalIn 0.3s cubic-bezier(0.4,0,0.2,1) forwards; }
 
-/* iOS date input styling */
+/* iOS date input styling - comprehensive fix */
 input[type="date"] {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  font-size: 16px;
+  font-size: 16px; /* Prevents iOS zoom on focus */
   font-family: inherit;
   min-height: 42px;
+  height: 42px;
+  line-height: 1.5;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-color: #fff;
+  position: relative;
+  display: block;
 }
 
-/* Ensure empty date inputs show placeholder text on iOS */
-input[type="date"]:not(:valid)::-webkit-datetime-edit {
+/* iOS Safari specific - ensure date picker displays correctly */
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  padding-left: 0;
+}
+
+/* Prevent iOS from collapsing empty date inputs */
+input[type="date"]::-webkit-datetime-edit {
+  display: block;
+  padding: 0;
+  min-width: 100%;
+}
+
+input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  padding: 0;
+}
+
+/* Ensure calendar icon is visible and properly positioned on iOS */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  background: transparent;
+  bottom: 0;
   color: transparent;
-}
-
-input[type="date"]:not(:valid)::before {
-  content: attr(placeholder);
-  color: #9ca3af;
+  cursor: pointer;
+  height: auto;
+  left: 0;
   position: absolute;
-  pointer-events: none;
+  right: 0;
+  top: 0;
+  width: auto;
 }
 
 /* Print styles */

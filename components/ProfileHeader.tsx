@@ -183,11 +183,13 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
       }
 
       {/* Change Password Modal */}
-      {
-        showChangePasswordModal && (
-          <ChangePasswordModal onClose={() => setShowChangePasswordModal(false)} />
-        )
-      }
+      <AnimatePresence>
+        {
+          showChangePasswordModal && (
+            <ChangePasswordModal onClose={() => setShowChangePasswordModal(false)} />
+          )
+        }
+      </AnimatePresence>
 
       {/* Logout Confirmation Dialog (rendered into document.body via portal to ensure centering) */}
       {

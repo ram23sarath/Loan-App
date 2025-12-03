@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import { useData } from '../context/DataContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactDOM from 'react-dom';
 import ChangePasswordModal from './modals/ChangePasswordModal';
 
-const ProfileHeader = () => {
+export interface ProfileHeaderHandle {
+  openMenu: () => void;
+}
+
+const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   const { session, signOut, isScopedCustomer, customers, scopedCustomerId, updateCustomer } = useData();
   const [showMenu, setShowMenu] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
@@ -15,11 +19,16 @@ const ProfileHeader = () => {
   const menuRef = React.useRef<HTMLDivElement>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
+  // Expose openMenu method to parent via ref (must be before early return)
+  useImperativeHandle(ref, () => ({
+    openMenu: () => setShowMenu(true),
+  }));
+
   if (!session || !session.user) return null;
 
   const userEmail = session.user.email || 'User';
   // Get customer details if scoped user
-  const customerDetails = isScopedCustomer && scopedCustomerId 
+  const customerDetails = isScopedCustomer && scopedCustomerId
     ? customers.find(c => c.id === scopedCustomerId)
     : null;
 
@@ -36,36 +45,38 @@ const ProfileHeader = () => {
     }
   }, [showProfilePanel, customerDetails]);
 
-  // Close menu when clicking outside
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setShowMenu(false);
-      }
-    };
-    
-    if (showMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showMenu]);
+  // Close menu when clicking outside - DISABLED: Now using backdrop in portal
+  // React.useEffect(() => {
+  //   const handleClickOutside = (event: MouseEvent) => {
+  //     if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+  //       setShowMenu(false);
+  //     }
+  //   };
+
+  //   if (showMenu) {
+  //     document.addEventListener('mousedown', handleClickOutside);
+  //   }
+
+  //   return () => {
+  //     document.removeEventListener('mousedown', handleClickOutside);
+  //   };
+  // }, [showMenu]);
 
   const handleViewProfile = () => {
+    console.log('handleViewProfile clicked');
     setShowMenu(false);
     setShowProfilePanel(true);
   };
 
   const handleChangePassword = () => {
+    console.log('handleChangePassword clicked');
     setShowChangePasswordModal(true);
     setShowMenu(false);
   };
 
   const handleSaveStation = async () => {
     if (!isScopedCustomer || !scopedCustomerId || !customerDetails) return;
-    
+
     try {
       setIsSavingStation(true);
       await updateCustomer(scopedCustomerId, { station_name: stationName });
@@ -78,6 +89,7 @@ const ProfileHeader = () => {
   };
 
   const handleSignOut = () => {
+    console.log('handleSignOut clicked');
     // Open confirmation dialog instead of signing out immediately
     setShowLogoutConfirm(true);
   };
@@ -94,26 +106,43 @@ const ProfileHeader = () => {
     }
   };
 
-  return (
-    <div className="fixed top-2 right-6 md:top-4 md:right-6 z-[100]" ref={menuRef}>
-      <motion.button
-        onClick={() => setShowMenu(!showMenu)}
-        className="w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center justify-center shadow-lg transition-colors text-lg md:text-xl"
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        title={displayName}
-      >
-        {initials}
-      </motion.button>
 
-      <AnimatePresence>
-        {showMenu && (
+  return (
+    <>
+      <div className="fixed top-2 right-6 md:top-4 md:right-6 z-[100] hidden sm:block landscape:block" ref={menuRef}>
+        <motion.button
+          onClick={() => setShowMenu(!showMenu)}
+          className="w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center justify-center shadow-lg transition-colors text-lg md:text-xl"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          title={displayName}
+        >
+          {initials}
+        </motion.button>
+      </div>
+
+      {/* Profile Menu Dropdown (rendered as portal to show on mobile) */}
+      {showMenu && typeof document !== 'undefined' && ReactDOM.createPortal(
+        <div
+          className="fixed inset-0 z-[110] bg-black/20 flex items-center justify-center"
+          onClick={() => setShowMenu(false)}
+        >
+          {/* Menu positioned based on screen size */}
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-14 right-0 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden min-w-48 md:min-w-56 z-[101]"
+            className="absolute z-[120] bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden min-w-48 md:min-w-56"
+            style={{
+              // Position at bottom center on mobile portrait, top-right on larger screens
+              bottom: window.matchMedia('(max-width: 639px) and (orientation: portrait)').matches ? '90px' : 'auto',
+              top: window.matchMedia('(max-width: 639px) and (orientation: portrait)').matches ? 'auto' : '60px',
+              left: window.matchMedia('(max-width: 639px) and (orientation: portrait)').matches ? '50%' : 'auto',
+              right: window.matchMedia('(max-width: 639px) and (orientation: portrait)').matches ? 'auto' : '24px',
+              transform: window.matchMedia('(max-width: 639px) and (orientation: portrait)').matches ? 'translateX(-50%)' : 'none',
+            }}
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="px-3 md:px-4 py-2 md:py-3 border-b border-gray-100">
               <p className="text-xs text-gray-500">Logged in as</p>
@@ -133,7 +162,7 @@ const ProfileHeader = () => {
                 )}
               </div>
             </div>
-            
+
             <div className="py-1">
               <button
                 onClick={handleViewProfile}
@@ -156,45 +185,51 @@ const ProfileHeader = () => {
               </button>
             </div>
           </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Change Password Modal */}
-      {showChangePasswordModal && (
-        <ChangePasswordModal onClose={() => setShowChangePasswordModal(false)} />
-      )}
-
-      {/* Logout Confirmation Dialog (rendered into document.body via portal to ensure centering) */}
-      {showLogoutConfirm && typeof document !== 'undefined' && ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-4" onClick={() => setShowLogoutConfirm(false)}>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
-            transition={{ duration: 0.15 }}
-            className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-lg font-bold text-gray-800 mb-2">Confirm Logout</h2>
-            <p className="text-gray-600 mb-6">Are you sure you want to logout?</p>
-            <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-              <button
-                onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1 sm:flex-none px-6 py-3 sm:py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 active:bg-gray-100 transition-colors min-h-[44px] sm:min-h-auto"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmLogout}
-                className="flex-1 sm:flex-none px-6 py-3 sm:py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 active:bg-red-800 transition-colors min-h-[44px] sm:min-h-auto"
-              >
-                Yes, Logout
-              </button>
-            </div>
-          </motion.div>
         </div>,
         document.body
-      )}
+      )
+      }
+
+      {/* Change Password Modal */}
+      {
+        showChangePasswordModal && (
+          <ChangePasswordModal onClose={() => setShowChangePasswordModal(false)} />
+        )
+      }
+
+      {/* Logout Confirmation Dialog (rendered into document.body via portal to ensure centering) */}
+      {
+        showLogoutConfirm && typeof document !== 'undefined' && ReactDOM.createPortal(
+          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-4" onClick={() => setShowLogoutConfirm(false)}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.15 }}
+              className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="text-lg font-bold text-gray-800 mb-2">Confirm Logout</h2>
+              <p className="text-gray-600 mb-6">Are you sure you want to logout?</p>
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className="flex-1 sm:flex-none px-6 py-3 sm:py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 active:bg-gray-100 transition-colors min-h-[44px] sm:min-h-auto"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmLogout}
+                  className="flex-1 sm:flex-none px-6 py-3 sm:py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 active:bg-red-800 transition-colors min-h-[44px] sm:min-h-auto"
+                >
+                  Yes, Logout
+                </button>
+              </div>
+            </motion.div>
+          </div>,
+          document.body
+        )
+      }
 
       {/* Profile Panel */}
       <AnimatePresence>
@@ -316,8 +351,10 @@ const ProfileHeader = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
-};
+});
+
+ProfileHeader.displayName = 'ProfileHeader';
 
 export default ProfileHeader;

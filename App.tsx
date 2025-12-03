@@ -106,32 +106,36 @@ const AutoLogout = () => {
   return null;
 };
 
-const App = () => (
-  <DataProvider>
-    <AutoLogout />
-    <HashRouter>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/*" element={
-          <ProtectedRoute>
-            <div className="w-full h-screen overflow-hidden relative">
-              <ProfileHeader />
-              <div className="flex w-full h-screen overflow-hidden">
-                <Sidebar />
-                <main
-                  className="flex-1 h-full overflow-y-auto"
-                  // Use the CSS variable set by Sidebar to offset content when sidebar is visible on desktop.
-                  style={{ paddingLeft: 'var(--sidebar-offset, 0px)' }}
-                >
-                  <AnimatedRoutes />
-                </main>
+const App = () => {
+  const profileRef = React.useRef<React.ElementRef<typeof ProfileHeader>>(null);
+
+  return (
+    <DataProvider>
+      <AutoLogout />
+      <HashRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/*" element={
+            <ProtectedRoute>
+              <div className="w-full h-screen overflow-hidden relative">
+                <ProfileHeader ref={profileRef} />
+                <div className="flex w-full h-screen overflow-hidden">
+                  <Sidebar profileRef={profileRef} />
+                  <main
+                    className="flex-1 h-full overflow-y-auto"
+                    // Use the CSS variable set by Sidebar to offset content when sidebar is visible on desktop.
+                    style={{ paddingLeft: 'var(--sidebar-offset, 0px)' }}
+                  >
+                    <AnimatedRoutes />
+                  </main>
+                </div>
               </div>
-            </div>
-          </ProtectedRoute>
-        } />
-      </Routes>
-    </HashRouter>
-  </DataProvider>
-);
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </HashRouter>
+    </DataProvider>
+  );
+};
 
 export default App;

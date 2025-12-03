@@ -12,6 +12,7 @@ import {
 } from "../constants";
 import { useData } from "../context/DataContext";
 import HamburgerIcon from "./ui/HamburgerIcon";
+import { ProfileHeaderHandle } from "./ProfileHeader";
 
 const DatabaseIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -40,7 +41,11 @@ const allNavItems = [
   { path: "/summary", label: "Summary", icon: BookOpenIcon },
 ];
 
-const Sidebar = () => {
+interface SidebarProps {
+  profileRef: React.RefObject<ProfileHeaderHandle>;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
   const {
     session,
     signOut,
@@ -96,22 +101,22 @@ const Sidebar = () => {
       // Common visual constants
       const leftOffset = 16;
       const gap = 16;
-      
+
       let total = "0px";
 
       if (isLargeDesktop || isTabletPortrait) {
         const sidebarWidth = collapsed ? 80 : 256;
         total = `${sidebarWidth + leftOffset + gap}px`;
-      } 
+      }
       // Mobile Landscape
       else if (isMobileLandscape) {
-        const sidebarWidth = 80; 
+        const sidebarWidth = 80;
         total = `${sidebarWidth + leftOffset + gap}px`;
       }
 
       try {
         document.documentElement.style.setProperty("--sidebar-offset", total);
-      } catch (e) {}
+      } catch (e) { }
     };
 
     applyVar();
@@ -122,7 +127,7 @@ const Sidebar = () => {
       window.removeEventListener("orientationchange", applyVar);
       try {
         document.documentElement.style.setProperty("--sidebar-offset", "0px");
-      } catch (e) {}
+      } catch (e) { }
     };
   }, [collapsed]);
 
@@ -144,6 +149,18 @@ const Sidebar = () => {
     return () => clearCollapseTimer();
   }, []);
 
+  const handleProfileClick = () => {
+    profileRef.current?.openMenu();
+  };
+
+  // Calculate user initials for profile button (same logic as ProfileHeader)
+  const userEmail = session?.user?.email || 'User';
+  const customerDetails = isScopedCustomer && scopedCustomerId
+    ? customers.find(c => c.id === scopedCustomerId)
+    : null;
+  const displayName = isScopedCustomer && customerDetails?.name ? customerDetails.name : userEmail;
+  const initials = (displayName && displayName.trim().charAt(0).toUpperCase()) || 'U';
+
   return (
     <>
       {/* Spacer for Portrait Mobile Bottom Nav only */}
@@ -157,8 +174,7 @@ const Sidebar = () => {
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center px-2 py-1 transition-colors duration-200 whitespace-nowrap text-xs ${
-                  isActive ? "text-indigo-600" : "text-gray-500 hover:text-gray-700"
+                `flex flex-col items-center justify-center px-2 py-1 transition-colors duration-200 whitespace-nowrap text-xs ${isActive ? "text-indigo-600" : "text-gray-500 hover:text-gray-700"
                 }`
               }
             >
@@ -166,11 +182,21 @@ const Sidebar = () => {
               <span className="mt-1">{item.label}</span>
             </NavLink>
           ))}
+          {/* Profile Icon Button with Initials */}
+          <button
+            onClick={handleProfileClick}
+            className="flex flex-col items-center justify-center px-2 py-1 transition-colors duration-200 whitespace-nowrap text-xs text-gray-500 hover:text-gray-700"
+          >
+            <div className="w-5 h-5 rounded-full bg-indigo-600 text-white font-semibold flex items-center justify-center text-[10px]">
+              {initials}
+            </div>
+            <span className="mt-1">Profile</span>
+          </button>
         </div>
       </nav>
 
       {/* 2. MOBILE LANDSCAPE SIDEBAR (Left Side Floating) */}
-      <div 
+      <div
         ref={menuRef}
         className="fixed top-4 bottom-4 left-4 z-50 w-[80px] bg-white rounded-2xl border border-gray-200 shadow-sm hidden landscape:flex lg:landscape:hidden flex-col justify-between items-center py-4"
       >
@@ -187,22 +213,21 @@ const Sidebar = () => {
           {/* w-96 makes it wide enough for 2 columns. max-h-[85vh] prevents overflow. */}
           {showLandscapeMenu && (
             <div className="absolute top-0 left-full ml-4 w-96 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-left-2 duration-200">
-               <div className="px-3 py-2 border-b border-gray-100 bg-gray-50/50">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Navigate</span>
-               </div>
-               
-               {/* 2 Column Grid Layout */}
-               <nav className="max-h-[85vh] overflow-y-auto p-2 grid grid-cols-2 gap-2">
+              <div className="px-3 py-2 border-b border-gray-100 bg-gray-50/50">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Navigate</span>
+              </div>
+
+              {/* 2 Column Grid Layout */}
+              <nav className="max-h-[85vh] overflow-y-auto p-2 grid grid-cols-2 gap-2">
                 {navItems.map((item) => (
                   <NavLink
                     key={item.path}
                     to={item.path}
                     onClick={() => setShowLandscapeMenu(false)}
                     className={({ isActive }) =>
-                      `flex items-center px-3 py-2 rounded-lg text-sm transition-colors border ${
-                        isActive 
-                          ? "bg-indigo-50 border-indigo-100 text-indigo-700 font-medium" 
-                          : "border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      `flex items-center px-3 py-2 rounded-lg text-sm transition-colors border ${isActive
+                        ? "bg-indigo-50 border-indigo-100 text-indigo-700 font-medium"
+                        : "border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                       }`
                     }
                   >
@@ -232,9 +257,8 @@ const Sidebar = () => {
         className="fixed left-4 top-4 bottom-4 z-40 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col hidden sm:flex landscape:hidden lg:landscape:flex"
       >
         <div
-          className={`p-4 border-b border-gray-200 flex items-center ${
-            collapsed ? "justify-center" : "justify-between"
-          }`}
+          className={`p-4 border-b border-gray-200 flex items-center ${collapsed ? "justify-center" : "justify-between"
+            }`}
         >
           {!collapsed && (
             <h1 className="text-2xl font-bold text-gray-800">
@@ -259,8 +283,7 @@ const Sidebar = () => {
                 key={item.path}
                 to={item.path}
                 className={({ isActive }) =>
-                  `group flex items-center p-3 rounded-lg transition-colors duration-200 ${
-                    isActive ? activeLinkClass : inactiveLinkClass
+                  `group flex items-center p-3 rounded-lg transition-colors duration-200 ${isActive ? activeLinkClass : inactiveLinkClass
                   }`
                 }
               >
@@ -289,7 +312,7 @@ const Sidebar = () => {
               </NavLink>
             ))}
           </nav>
-          
+
           <div className="shrink-0">
             {!collapsed && (
               <div className="p-4 border-t border-gray-200 text-center text-xs text-gray-400">

@@ -3,6 +3,24 @@
 .animate-fade-in { animation: fadeIn 0.3s ease; }
 .animate-modal-in { animation: modalIn 0.3s cubic-bezier(0.4,0,0.2,1) forwards; }
 
+/* iOS date input styling - ensure date fields render at full width and expanded by default */
+input[type="date"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 16px;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  border-radius: 4px;
+  margin-right: 2px;
+  opacity: 0.6;
+  filter: invert(0.8);
+}
+
 /* Print styles */
 @media print {
     /* --- CORRECTED SECTION --- */

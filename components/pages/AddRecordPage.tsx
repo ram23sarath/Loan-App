@@ -353,7 +353,7 @@ const AddRecordPage = () => {
   const inputStyles =
     "w-full bg-gray-50 border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400";
   const dateInputStyles =
-    "w-full box-border max-w-full bg-gray-50 border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400 appearance-none [-webkit-appearance:none] [-webkit-user-zoom:reset] [font-size:16px]";
+    "w-full bg-gray-50 border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400";
   const selectStyles =
     "w-full bg-gray-50 border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500";
   const { isSubmitting: isSubmittingLoan } = loanForm.formState;

@@ -57,9 +57,7 @@ const SubscriptionListPage = () => {
   };
 
   const handleSendWhatsApp = (sub: SubscriptionWithCustomer) => {
-    let message = `Hello ${sub.customers?.name || "Customer"},\n\nThis is a friendly reminder about your subscription. The amount is ₹${sub.amount.toLocaleString()}. We appreciate your support!`;
-    // Append signature
-    message += " Thank You, I J Reddy.";
+    let message = `Hi ${sub.customers?.name || "Customer"}, your subscription payment of ₹${sub.amount.toLocaleString()} was received on ${formatDate(sub.date)}. Thank You, I J Reddy.`;
     const phoneNumber = sub.customers?.phone;
 
     if (phoneNumber) {

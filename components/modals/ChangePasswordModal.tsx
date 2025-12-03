@@ -103,6 +103,9 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClose }) =>
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
+      onClick={() => onClose()}
+      onMouseDown={() => onClose()}
+      onTouchStart={() => onClose()}
     >
       {toast && (
         <Toast
@@ -118,6 +121,9 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClose }) =>
         transition={{ duration: 0.2 }}
         className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 w-[90%] max-w-md relative"
         onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
       >
         <button
           onClick={onClose}

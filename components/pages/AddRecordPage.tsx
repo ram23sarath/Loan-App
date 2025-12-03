@@ -660,7 +660,7 @@ const AddRecordPage = () => {
                               })}
                               type="date"
                               className={dateInputStyles}
-                              style={{ WebkitAppearance: 'none', minWidth: 0 }}
+                              style={{ minWidth: 0 }}
                               disabled={isSubmittingInstallment}
                               min="1980-01-01"
                               max="2050-12-31"
@@ -796,7 +796,7 @@ const AddRecordPage = () => {
                             })}
                             type="date"
                             className={dateInputStyles}
-                            style={{ WebkitAppearance: 'none', minWidth: 0 }}
+                            style={{ minWidth: 0 }}
                             disabled={isSubmittingLoan}
                             min="1980-01-01"
                             max="2050-12-31"
@@ -925,7 +925,7 @@ const AddRecordPage = () => {
                               })}
                               type="date"
                               className={dateInputStyles}
-                              style={{ WebkitAppearance: 'none', minWidth: 0 }}
+                              style={{ minWidth: 0 }}
                               disabled={isSubmittingSubscription}
                               min="1980-01-01"
                               max="2050-12-31"

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
-import { useNavigate, Navigate, useLocation } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useData } from '../../context/DataContext';
 import GlassCard from '../ui/GlassCard';
@@ -16,7 +16,6 @@ type FormInputs = {
 const LoginPage = () => {
   const { session, signInWithPassword } = useData();
   const navigate = useNavigate();
-  const location = useLocation();
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormInputs>();
   const [showAnimation, setShowAnimation] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -24,8 +23,7 @@ const LoginPage = () => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [isWiggling, setIsWiggling] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
-  const from = location.state?.from?.pathname || "/";
+  const defaultLandingPath = "/";
 
   const normalizeLoginIdentifier = (value: string) => {
     const v = value.trim();
@@ -61,7 +59,7 @@ const LoginPage = () => {
   };
 
   const handleAnimationComplete = () => {
-    navigate(from, { replace: true });
+    navigate(defaultLandingPath, { replace: true });
   };
 
   // Wiggle animation variants
@@ -80,7 +78,7 @@ const LoginPage = () => {
 
   // If user is already logged in and we are not showing animation, redirect
   if (session && !showAnimation) {
-    return <Navigate to={from} replace />;
+    return <Navigate to={defaultLandingPath} replace />;
   }
 
   return (

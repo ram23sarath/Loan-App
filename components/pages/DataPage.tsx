@@ -228,7 +228,7 @@ const DataPage = () => {
 
   return (
     <div className="w-full max-w-7xl mx-auto my-8 flex justify-center">
-      <motion.div layout transition={{ type: 'spring', stiffness: 280, damping: 30 }} className={`bg-white rounded-xl shadow-md flex flex-col gap-6 border border-gray-200/80 mx-auto ${showTable ? 'max-w-full p-3 w-full' : 'p-6 md:p-8 w-[90%] max-w-md'}`}>
+      <motion.div layout transition={{ type: 'spring', stiffness: 280, damping: 30 }} className={`bg-white rounded-xl shadow-md flex flex-col gap-6 border border-gray-200/80 mx-auto ${showTable ? 'p-6 md:p-8 w-[90%] md:w-full md:max-w-full max-w-md' : 'p-6 md:p-8 w-[90%] max-w-md'}`}>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
           <h2 className="text-xl md:text-2xl font-bold text-indigo-700 md:uppercase md:tracking-widest whitespace-normal break-words">
             {showTable ? 'All Entries' : 'New Data Entry'}

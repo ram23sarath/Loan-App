@@ -311,14 +311,14 @@ const DataPage = () => {
                                   <div className={`flex-1 cursor-pointer ${!isExpanded ? 'truncate' : ''}`} onClick={() => handleNoteClick(entry.id)}>
                                     {entry.notes || '-'}
                                   </div>
-                                  <button type="button" className="p-1 rounded-full hover:bg-indigo-100 transition-colors" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
-                                    <PencilIcon className="w-4 h-4 text-indigo-600" />
+                                  <button type="button" className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
+                                    Edit
                                   </button>
                                 </div>
                                 <div className="col-span-1 flex justify-center">
-                                  <motion.button type="button" className="p-2 transition-colors duration-200 rounded-full text-red-600 hover:bg-red-100" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
-                                    <Trash2Icon className="w-5 h-5" />
-                                  </motion.button>
+                                  <button type="button" className="p-1 rounded-full hover:bg-red-500/10 transition-colors" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }}>
+                                    <Trash2Icon className="w-5 h-5 text-red-500" />
+                                  </button>
                                 </div>
                               </motion.div>
 
@@ -343,19 +343,17 @@ const DataPage = () => {
                                   <div>{formatDate(entry.date)}</div>
                                   <div className="flex items-center gap-3">
                                     {entry.receipt_number && <div className="px-2 py-1 bg-gray-100 rounded text-xs">#{entry.receipt_number}</div>}
-                                    <motion.button aria-label="Delete entry" type="button" className="p-2 rounded-md text-red-600 hover:bg-red-50" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                                    <button type="button" className="px-3 py-1 rounded bg-blue-600 text-white text-sm" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
+                                      Edit
+                                    </button>
+                                    <button aria-label="Delete entry" type="button" className="p-2 rounded-md bg-red-50 text-red-600" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }}>
                                       <Trash2Icon className="w-5 h-5" />
-                                    </motion.button>
+                                    </button>
                                   </div>
                                 </div>
                                 {entry.notes && (
                                   <div className="mt-3 pt-3 border-t border-gray-200/80">
-                                    <div className="flex justify-between items-start gap-3">
-                                      <p className="flex-1 text-sm text-gray-700 break-words">{entry.notes}</p>
-                                      <button type="button" className="p-2 -mr-2 rounded-full text-indigo-600 hover:bg-indigo-50" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
-                                        <PencilIcon className="w-4 h-4" />
-                                      </button>
-                                    </div>
+                                    <p className="text-sm text-gray-700 break-words">{entry.notes}</p>
                                   </div>
                                 )}
                               </motion.div>

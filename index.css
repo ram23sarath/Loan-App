@@ -10,6 +10,19 @@ input[type="date"] {
   box-sizing: border-box;
   font-size: 16px;
   font-family: inherit;
+  min-height: 42px;
+}
+
+/* Ensure empty date inputs show placeholder text on iOS */
+input[type="date"]:not(:valid)::-webkit-datetime-edit {
+  color: transparent;
+}
+
+input[type="date"]:not(:valid)::before {
+  content: attr(placeholder);
+  color: #9ca3af;
+  position: absolute;
+  pointer-events: none;
 }
 
 /* Print styles */

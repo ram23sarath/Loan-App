@@ -1,10 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import * as XLSX from 'xlsx';
 import { useData } from '../../context/DataContext';
 import GlassCard from '../ui/GlassCard';
 import PageWrapper from '../ui/PageWrapper';
-import { UsersIcon, Trash2Icon, FileDownIcon, SpinnerIcon } from '../../constants';
+import { UsersIcon, Trash2Icon, SpinnerIcon } from '../../constants';
 import CustomerDetailModal from '../modals/CustomerDetailModal';
 import EditModal from '../modals/EditModal';
 import type { Customer } from '../../types';
@@ -113,93 +112,6 @@ const CustomerListPage = () => {
   const cancelDeleteCustomer = () => {
         setDeleteCustomerTarget(null);
         setDeleteCounts(null);
-  };
-
-  const handleComprehensiveExport = () => {
-    const customerSummaryData = customers.map(customer => {
-      const customerLoans = loans.filter(l => l.customer_id === customer.id);
-      const customerSubscriptions = subscriptions.filter(s => s.customer_id === customer.id);
-      const originalAmount = customerLoans.reduce((acc, loan) => acc + loan.original_amount, 0);
-      const interestAmount = customerLoans.reduce((acc, loan) => acc + loan.interest_amount, 0);
-      const totalAmount = originalAmount + interestAmount;
-      const subscriptionAmount = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
-      return {
-        'Name': customer.name,
-        'Phone Number': customer.phone,
-        'Original Amount': originalAmount,
-        'Interest Amount': interestAmount,
-        'Total Amount': totalAmount,
-        'Subscription Amount': subscriptionAmount,
-      };
-    });
-
-    const allLoansData = loans.map(loan => {
-      const loanInstallments = installments.filter(i => i.loan_id === loan.id)
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-      let amountPaid = 0;
-      let principalPaid = 0;
-      let interestCollected = 0;
-
-      for (const inst of loanInstallments) {
-        amountPaid += inst.amount;
-
-        if (principalPaid < loan.original_amount) {
-          const principalPortion = Math.min(inst.amount, loan.original_amount - principalPaid);
-          principalPaid += principalPortion;
-          const interestPortion = inst.amount - principalPortion;
-          interestCollected += interestPortion;
-        } else {
-          interestCollected += inst.amount;
-        }
-      }
-
-      const totalRepayable = loan.original_amount + loan.interest_amount;
-      const isPaidOff = amountPaid >= totalRepayable;
-
-      return {
-        'Loan ID': loan.id,
-        'Customer Name': loan.customers?.name ?? 'N/A',
-        'Original Amount': loan.original_amount,
-        'Interest Amount': loan.interest_amount,
-        'Total Repayable': totalRepayable,
-        'Amount Paid': amountPaid,
-        'Principal Paid': principalPaid,
-        'Interest Collected': interestCollected,
-        'Balance': totalRepayable - amountPaid,
-        'Loan Date': loan.payment_date,
-        'Installments': `${loanInstallments.length} / ${loan.total_instalments}`,
-        'Status': isPaidOff ? 'Paid Off' : 'In Progress',
-      };
-    });
-
-    const allSubscriptionsData = subscriptions.map(sub => ({
-      'Subscription ID': sub.id,
-      'Customer Name': sub.customers?.name ?? 'N/A',
-      'Amount': sub.amount,
-      'Date': sub.date,
-      'Receipt': sub.receipt,
-    }));
-
-    const allInstallmentsData = installments.map(inst => {
-      const parentLoan = loans.find(l => l.id === inst.loan_id);
-      return {
-        'Installment ID': inst.id,
-        'Loan ID': inst.loan_id,
-        'Customer Name': parentLoan?.customers?.name ?? 'N/A',
-        'Installment Number': inst.installment_number,
-        'Amount Paid': inst.amount,
-        'Payment Date': inst.date,
-        'Receipt Number': inst.receipt_number,
-      };
-    });
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(customerSummaryData), 'Customer Summary');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(allLoansData), 'All Loans');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(allSubscriptionsData), 'All Subscriptions');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(allInstallmentsData), 'All Installments');
-    XLSX.writeFile(wb, 'Comprehensive_Data_Report.xlsx');
   };
 
   const categorizedCustomers = useMemo(() => {
@@ -351,17 +263,6 @@ const CustomerListPage = () => {
           <span className="ml-2 text-xl sm:text-4xl font-bold text-gray-400">({customers.length})</span>
           {isRefreshing && <SpinnerIcon className="w-5 h-5 sm:w-8 sm:h-8 animate-spin text-indigo-500" />}
         </h2>
-        {customers.length > 0 && (
-          <motion.button
-            onClick={handleComprehensiveExport}
-            className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 transition-colors p-2 sm:p-3 rounded-lg font-semibold text-xs sm:text-base"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <FileDownIcon className="w-5 h-5" />
-            <span className="hidden sm:inline">Export Comprehensive Report</span>
-          </motion.button>
-        )}
       </div>
 
       {customers.length > 0 && (

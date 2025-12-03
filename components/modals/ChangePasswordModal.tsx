@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { supabase } from '../../src/lib/supabase';
 import Toast from '../ui/Toast';
 
@@ -97,7 +98,12 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClose }) =>
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
+    >
       {toast && (
         <Toast
           message={toast.message}
@@ -105,7 +111,14 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClose }) =>
           onClose={() => setToast(null)}
         />
       )}
-      <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 w-[90%] max-w-md relative">
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 w-[90%] max-w-md relative"
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-2xl text-gray-500 hover:text-gray-700"
@@ -180,8 +193,8 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onClose }) =>
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

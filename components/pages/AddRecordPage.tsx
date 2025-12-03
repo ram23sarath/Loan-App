@@ -352,6 +352,8 @@ const AddRecordPage = () => {
 
   const inputStyles =
     "w-full bg-gray-50 border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400";
+  const dateInputStyles =
+    "w-full bg-gray-50 border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400 appearance-none [-webkit-appearance:none] [font-size:16px]";
   const selectStyles =
     "w-full bg-gray-50 border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500";
   const { isSubmitting: isSubmittingLoan } = loanForm.formState;
@@ -656,7 +658,7 @@ const AddRecordPage = () => {
                               required: "Date is required",
                             })}
                             type="date"
-                            className={inputStyles}
+                            className={dateInputStyles}
                             disabled={isSubmittingInstallment}
                             min="1980-01-01"
                             max="2050-12-31"
@@ -789,7 +791,7 @@ const AddRecordPage = () => {
                             required: "Payment date is required",
                           })}
                           type="date"
-                          className={inputStyles}
+                          className={dateInputStyles}
                           disabled={isSubmittingLoan}
                           min="1980-01-01"
                           max="2050-12-31"
@@ -915,7 +917,7 @@ const AddRecordPage = () => {
                               required: "Date is required",
                             })}
                             type="date"
-                            className={inputStyles}
+                            className={dateInputStyles}
                             disabled={isSubmittingSubscription}
                             min="1980-01-01"
                             max="2050-12-31"

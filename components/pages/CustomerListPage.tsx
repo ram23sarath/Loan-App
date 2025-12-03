@@ -177,7 +177,6 @@ const CustomerListPage = () => {
       'Subscription ID': sub.id,
       'Customer Name': sub.customers?.name ?? 'N/A',
       'Amount': sub.amount,
-      'Year': sub.year,
       'Date': sub.date,
       'Receipt': sub.receipt,
     }));

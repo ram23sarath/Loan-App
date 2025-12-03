@@ -78,10 +78,6 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
             aValue = a.amount;
             bValue = b.amount;
             break;
-          case "year":
-            aValue = a.year;
-            bValue = b.year;
-            break;
           case "date":
             aValue = a.date;
             bValue = b.date;
@@ -187,12 +183,6 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
             </th>
             <th
               className="px-4 py-2 border-b text-left cursor-pointer"
-              onClick={() => handleSort("year")}
-            >
-              Year
-            </th>
-            <th
-              className="px-4 py-2 border-b text-left cursor-pointer"
               onClick={() => handleSort("date")}
             >
               Date
@@ -227,7 +217,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
             ) {
               isValidPhone = true;
               message = `Hi ${customer.name}, your subscription payment of ₹${sub.amount
-                } for the year ${sub.year} was received on ${formatDate(
+                } was received on ${formatDate(
                   sub.date,
                   "whatsapp"
                 )}. Receipt: ${sub.receipt || "-"}${sub.late_fee && sub.late_fee > 0
@@ -255,7 +245,6 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                 <td className="px-4 py-2 border-b">
                   ₹{sub.amount.toLocaleString()}
                 </td>
-                <td className="px-4 py-2 border-b">{sub.year}</td>
                 <td className="px-4 py-2 border-b">
                   {sub.date ? formatDate(sub.date) : "-"}
                 </td>
@@ -325,7 +314,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
             message = `Hi ${customer.name
               }, your subscription payment of ${formatCurrencyIN(
                 sub.amount
-              )} for the year ${sub.year} was received on ${formatDate(
+              )} was received on ${formatDate(
                 sub.date,
                 "whatsapp"
               )}. Receipt: ${sub.receipt || "-"}${sub.late_fee && sub.late_fee > 0
@@ -361,7 +350,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                   <div className="text-lg font-bold">
                     {formatCurrencyIN(sub.amount)}
                   </div>
-                  <div className="text-xs text-gray-500">{sub.year}</div>
+                  <div className="text-xs text-gray-500">{sub.receipt || "-"}</div>
                 </div>
               </div>
                   <div className="mt-3 flex items-center justify-between">
@@ -499,7 +488,6 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
             try {
               const updates: any = {
                 amount: Number(updated.amount),
-                year: Number(updated.year),
                 date: updated.date || null,
                 receipt: updated.receipt || null,
                 late_fee:

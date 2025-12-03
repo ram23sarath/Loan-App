@@ -105,11 +105,11 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium mb-1">Station Name</label>
-                <input value={stationName} onChange={(e) => setStationName(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 box-border" />
+                <input value={stationName} onChange={(e) => setStationName(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Loan Type</label>
-                <select value={loanType} onChange={(e) => setLoanType(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 box-border">
+                <select value={loanType} onChange={(e) => setLoanType(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2">
                   <option value="General">General</option>
                   <option value="Medical">Medical</option>
                   <option value="Emergency">Emergency</option>
@@ -117,7 +117,7 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Requested Date</label>
-                <input value={loanRequestDate} onChange={(e) => setLoanRequestDate(e.target.value)} type="date" className="w-full min-w-0 border border-gray-300 rounded px-3 py-2 box-border" />
+                <input value={loanRequestDate} onChange={(e) => setLoanRequestDate(e.target.value)} type="date" className="w-full border border-gray-300 rounded px-3 py-2 appearance-none" style={{ WebkitAppearance: 'none' }} />
               </div>
             </div>
             <div className="mt-4 flex justify-end gap-2">

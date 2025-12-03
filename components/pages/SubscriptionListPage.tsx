@@ -57,11 +57,7 @@ const SubscriptionListPage = () => {
   };
 
   const handleSendWhatsApp = (sub: SubscriptionWithCustomer) => {
-    let message = `Hello ${
-      sub.customers?.name || "Customer"
-    },\n\nThis is a friendly reminder about your subscription for the year ${
-      sub.year
-    }. The amount is ₹${sub.amount.toLocaleString()}. We appreciate your support!`;
+    let message = `Hello ${sub.customers?.name || "Customer"},\n\nThis is a friendly reminder about your subscription. The amount is ₹${sub.amount.toLocaleString()}. We appreciate your support!`;
     // Append signature
     message += " Thank You, I J Reddy.";
     const phoneNumber = sub.customers?.phone;
@@ -83,7 +79,6 @@ const SubscriptionListPage = () => {
     const subsForExport = subscriptions.map((sub) => ({
       "Customer Name": sub.customers?.name ?? "Unknown",
       "Customer Phone": sub.customers?.phone ?? "N/A",
-      Year: sub.year,
       Amount: sub.amount,
       Receipt: sub.receipt,
       Date: formatDate(sub.date),
@@ -138,7 +133,7 @@ const SubscriptionListPage = () => {
               <span className="font-semibold">
                 {pendingDelete.customers?.name}
               </span>{" "}
-              ({pendingDelete.year})?
+              from {formatDate(pendingDelete.date)}?
             </p>
             <div className="flex gap-4 w-full justify-center">
               <button

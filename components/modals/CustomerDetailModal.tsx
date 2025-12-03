@@ -96,7 +96,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   };
 
   const handleDeleteSubscription = async (sub: SubscriptionWithCustomer) => {
-    if (window.confirm(`Are you sure you want to delete the subscription for the year ${sub.year}?`)) {
+    if (window.confirm(`Are you sure you want to delete this subscription from ${formatDate(sub.date)}?`)) {
       try {
         await deleteSubscription(sub.id);
       } catch (error: any) {
@@ -138,7 +138,6 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     const customerSubscriptionsData = subscriptions.map(sub => ({
       'Subscription ID': sub.id,
       'Amount': sub.amount,
-      'Year': sub.year,
       'Date': formatDate(sub.date),
       'Receipt': sub.receipt,
     }));
@@ -321,8 +320,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 {subscriptions.map(sub => (
                   <div key={sub.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div>
-                      <p className="font-bold">Subscription for {sub.year}</p>
-                      <p className="text-xs text-gray-500">Date: {formatDate(sub.date)} | Receipt: {sub.receipt}</p>
+                      <p className="font-bold">Subscription on {formatDate(sub.date)}</p>
+                      <p className="text-xs text-gray-500">Receipt: {sub.receipt}</p>
                     </div>
                     <div className="flex items-center gap-4">
                       <p className="text-xl font-bold text-cyan-600">{formatCurrency(sub.amount)}</p>
@@ -330,7 +329,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                         <motion.button
                           onClick={() => onEditSubscription(sub)}
                           className="p-2 transition-colors rounded-full hover:bg-blue-500/10"
-                          aria-label={`Edit subscription for ${sub.year}`}
+                          aria-label={`Edit subscription from ${formatDate(sub.date)}`}
                           whileHover={{ scale: 1.2 }}
                           whileTap={{ scale: 0.9 }}
                         >
@@ -340,7 +339,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                       <motion.button
                         onClick={() => handleDeleteSubscription(sub)}
                         className="p-2 transition-colors rounded-full hover:bg-red-500/10"
-                        aria-label={`Delete subscription for ${sub.year}`}
+                        aria-label={`Delete subscription from ${formatDate(sub.date)}`}
                         whileHover={{ scale: 1.2 }}
                         whileTap={{ scale: 0.9 }}
                       >

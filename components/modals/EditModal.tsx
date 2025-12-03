@@ -225,17 +225,6 @@ const EditModal: React.FC<EditModalProps> = ({
                   </div>
                 </div>
                 <div className="mt-3">
-                  <label className="block text-sm font-medium mb-1">Year</label>
-                  <input
-                    name="year"
-                    data-section="subscription"
-                    type="number"
-                    value={form.subscription.year || ""}
-                    onChange={handleCombinedChange}
-                    className="w-full border border-gray-300 rounded px-3 py-2"
-                  />
-                </div>
-                <div className="mt-3">
                   <label className="block text-sm font-medium mb-1">Date</label>
                   <input
                     name="date"
@@ -431,16 +420,6 @@ const EditModal: React.FC<EditModalProps> = ({
                 name="amount"
                 type="number"
                 value={form.amount || ""}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded px-3 py-2"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Year</label>
-              <input
-                name="year"
-                type="number"
-                value={form.year || ""}
                 onChange={handleChange}
                 className="w-full border border-gray-300 rounded px-3 py-2"
               />

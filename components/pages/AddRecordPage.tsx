@@ -247,7 +247,6 @@ const AddRecordPage = () => {
         data: {
           customerName: selectedCustomer?.name,
           amount: data.amount,
-          year: data.year,
           date: data.date,
           receipt: data.receipt,
           late_fee: data.late_fee,
@@ -880,53 +879,26 @@ const AddRecordPage = () => {
                       <h3 className="text-xl font-semibold text-center">
                         Subscription Details
                       </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <input
-                            {...subscriptionForm.register("amount", {
-                              required: "Amount is required",
-                              valueAsNumber: true,
-                              min: {
-                                value: 1,
-                                message: "Amount must be positive",
-                              },
-                            })}
-                            type="number"
-                            placeholder="₹ Amount"
-                            className={inputStyles}
-                            disabled={isSubmittingSubscription}
-                          />
-                          {subscriptionForm.formState.errors.amount && (
-                            <p className="text-red-600 text-sm mt-1">
-                              {subscriptionForm.formState.errors.amount.message}
-                            </p>
-                          )}
-                        </div>
-                        <div>
-                          <input
-                            {...subscriptionForm.register("year", {
-                              required: "Year is required",
-                              valueAsNumber: true,
-                              min: {
-                                value: 1990,
-                                message: "Year must be 1990 or later",
-                              },
-                              max: {
-                                value: 2050,
-                                message: "Year must be 2050 or earlier",
-                              },
-                            })}
-                            type="number"
-                            placeholder="Year"
-                            className={inputStyles}
-                            disabled={isSubmittingSubscription}
-                          />
-                          {subscriptionForm.formState.errors.year && (
-                            <p className="text-red-600 text-sm mt-1">
-                              {subscriptionForm.formState.errors.year.message}
-                            </p>
-                          )}
-                        </div>
+                      <div>
+                        <input
+                          {...subscriptionForm.register("amount", {
+                            required: "Amount is required",
+                            valueAsNumber: true,
+                            min: {
+                              value: 1,
+                              message: "Amount must be positive",
+                            },
+                          })}
+                          type="number"
+                          placeholder="₹ Amount"
+                          className={inputStyles}
+                          disabled={isSubmittingSubscription}
+                        />
+                        {subscriptionForm.formState.errors.amount && (
+                          <p className="text-red-600 text-sm mt-1">
+                            {subscriptionForm.formState.errors.amount.message}
+                          </p>
+                        )}
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -1029,7 +1001,7 @@ const AddRecordPage = () => {
                             if (lastRecordData.type === 'loan') {
                               message = `Hi ${data.customerName}, your loan of ₹${data.original_amount.toLocaleString()} with interest ₹${data.interest_amount.toLocaleString()} (Total: ₹${(data.original_amount + data.interest_amount).toLocaleString()}) has been recorded. Payment date: ${formatDate(data.payment_date)}. Total installments: ${data.total_instalments}. Thank You, I J Reddy.`;
                             } else if (lastRecordData.type === 'subscription') {
-                              message = `Hi ${data.customerName}, your subscription of ₹${data.amount.toLocaleString()} for the year ${data.year} was recorded on ${formatDate(data.date)}. Receipt: ${data.receipt}${data.late_fee && data.late_fee > 0 ? ` (Late fee: ₹${data.late_fee})` : ''}. Thank You, I J Reddy.`;
+                              message = `Hi ${data.customerName}, your subscription of ₹${data.amount.toLocaleString()} was recorded on ${formatDate(data.date)}. Receipt: ${data.receipt}${data.late_fee && data.late_fee > 0 ? ` (Late fee: ₹${data.late_fee})` : ''}. Thank You, I J Reddy.`;
                             } else if (lastRecordData.type === 'installment') {
                               message = `Hi ${data.customerName}, your installment payment of ₹${data.amount.toLocaleString()} (Installment #${data.installment_number}) has been recorded on ${formatDate(data.date)}. Receipt: ${data.receipt_number}${data.late_fee && data.late_fee > 0 ? ` (Late fee: ₹${data.late_fee})` : ''}. Thank You, I J Reddy.`;
                             }

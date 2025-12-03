@@ -33,7 +33,6 @@ export type Subscription = {
   id: string;
   customer_id: string;
   amount: number;
-  year: number;
   date: string;
   receipt: string;
   late_fee?: number | null;
@@ -43,7 +42,6 @@ export type Subscription = {
 // For react-hook-form SubscriptionInputs
 export type SubscriptionInputs = {
   amount: number;
-  year: number;
   date: string;
   receipt: string;
   late_fee?: number | null;
@@ -141,7 +139,6 @@ export type Database = {
           id: string
           customer_id: string
           amount: number
-          year: number
           date: string
           receipt: string
           created_at: string
@@ -149,13 +146,11 @@ export type Database = {
         Insert: {
           customer_id: string
           amount: number
-          year: number
           date: string
           receipt: string
         }
         Update: {
           amount?: number
-          year?: number
           date?: string
           receipt?: string
         }

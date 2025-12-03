@@ -236,13 +236,27 @@ const LoanTableView: React.FC = () => {
   return (
     <GlassCard className="overflow-x-auto">
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-4">
-        <input
-          type="text"
-          placeholder="Filter by customer or check number..."
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="border border-gray-300 rounded px-3 py-2 w-full sm:w-64 md:flex-1 bg-white/50"
-        />
+        <div className="relative w-full sm:w-64 md:flex-1">
+          <input
+            type="text"
+            placeholder="Filter by customer or check number..."
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="border border-gray-300 rounded px-3 py-2 pr-10 w-full bg-white/50"
+          />
+          {filter && (
+            <button
+              type="button"
+              onClick={() => setFilter("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+              aria-label="Clear filter"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}

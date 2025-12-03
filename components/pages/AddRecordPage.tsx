@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Toast from "../ui/Toast";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { useLocation } from "react-router-dom";
@@ -68,18 +68,23 @@ const AddRecordPage = () => {
     message: "",
   });
 
+  const customerLoans = useMemo(() => {
+    if (!selectedCustomerId) return [] as LoanWithCustomer[];
+    return loans.filter((loan) => loan.customer_id === selectedCustomerId);
+  }, [selectedCustomerId, loans]);
+
   const loanForm = useForm<LoanInputs>();
   const subscriptionForm = useForm<SubscriptionInputs>();
   const installmentForm = useForm<InstallmentInputs>();
 
-  const resetAll = () => {
+  const resetAll = useCallback(() => {
     // Reset all forms but do not touch the success banner here. The
     // success banner lifecycle is managed by showTemporarySuccess so
     // it can be displayed briefly without being immediately cleared.
     loanForm.reset({ payment_date: getTodayDateString() });
     subscriptionForm.reset();
     installmentForm.reset();
-  };
+  }, [loanForm, subscriptionForm, installmentForm]);
 
   // Helper to show a success message briefly, reset forms and optionally
   // restore a follow-up action after the banner disappears.
@@ -117,69 +122,67 @@ const AddRecordPage = () => {
   }, [location.state]);
 
   useEffect(() => {
-    // Only reset forms when customer changes, not on every loan/installment update
     if (!selectedCustomerId) {
       resetAll();
+      setActiveLoan(null);
+      setPaidInstallmentNumbers(new Set());
+      setAction(null);
+      return;
     }
 
-    if (selectedCustomerId) {
-      const customerLoans = loans.filter(
-        (l) => l.customer_id === selectedCustomerId
+    if (customerLoans.length === 0) {
+      setActiveLoan(null);
+      setPaidInstallmentNumbers(new Set());
+      setAction((prev) => (prev === "installment" ? null : prev));
+      return;
+    }
+
+    const loanInProgress = customerLoans.find((loan) => {
+      const paidCount = installments.filter((i) => i.loan_id === loan.id).length;
+      return paidCount < loan.total_instalments;
+    });
+
+    if (loanInProgress) {
+      setActiveLoan(loanInProgress);
+
+      const loanInstallments = installments.filter(
+        (i) => i.loan_id === loanInProgress.id
       );
-      const loanInProgress = customerLoans.find((loan) => {
-        const paidCount = installments.filter(
-          (i) => i.loan_id === loan.id
-        ).length;
-        return paidCount < loan.total_instalments;
-      });
+      const sortedInstallments = [...loanInstallments].sort(
+        (a, b) => b.installment_number - a.installment_number
+      );
+      const paidNumbers = new Set(
+        loanInstallments.map((i) => i.installment_number)
+      );
+      setPaidInstallmentNumbers(paidNumbers);
 
-      if (loanInProgress) {
-        setActiveLoan(loanInProgress);
-        
-        // Get all installments for this loan
-        const loanInstallments = installments.filter(
-          (i) => i.loan_id === loanInProgress.id
-        );
-        
-        // Sort installments by number to get the most recent
-        const sortedInstallments = [...loanInstallments].sort(
-          (a, b) => b.installment_number - a.installment_number
-        );
+      if (sortedInstallments.length > 0) {
+        const lastInstallment = sortedInstallments[0];
+        const nextInstallmentNumber = lastInstallment.installment_number + 1;
 
-        const paidNumbers = new Set(
-          loanInstallments.map((i) => i.installment_number)
-        );
-        setPaidInstallmentNumbers(paidNumbers);
-        
-        // Auto-fill the installment form with the next values
-        if (sortedInstallments.length > 0) {
-          const lastInstallment = sortedInstallments[0];
-          const nextInstallmentNumber = lastInstallment.installment_number + 1;
-          
-          if (nextInstallmentNumber <= loanInProgress.total_instalments) {
-            installmentForm.setValue("amount", lastInstallment.amount);
-            installmentForm.setValue("installment_number", nextInstallmentNumber);
-          }
-        } else {
-          // If no installments yet, calculate the expected monthly amount
-          const monthlyAmount = Math.round(
-            (loanInProgress.original_amount + loanInProgress.interest_amount) / 
-            loanInProgress.total_instalments
+        if (nextInstallmentNumber <= loanInProgress.total_instalments) {
+          installmentForm.setValue("amount", lastInstallment.amount);
+          installmentForm.setValue(
+            "installment_number",
+            nextInstallmentNumber
           );
-          installmentForm.setValue("amount", monthlyAmount);
-          installmentForm.setValue("installment_number", 1);
         }
-
-        setAction("installment");
       } else {
-        setActiveLoan(null);
-        setAction(null);
+        const monthlyAmount = Math.round(
+          (loanInProgress.original_amount + loanInProgress.interest_amount) /
+            loanInProgress.total_instalments
+        );
+        installmentForm.setValue("amount", monthlyAmount);
+        installmentForm.setValue("installment_number", 1);
       }
+
+      setAction((prev) => (prev === null ? "installment" : prev));
     } else {
       setActiveLoan(null);
-      setAction(null);
+      setPaidInstallmentNumbers(new Set());
+      setAction((prev) => (prev === "installment" ? null : prev));
     }
-  }, [selectedCustomerId, loans, installments]);
+  }, [selectedCustomerId, customerLoans, installments, installmentForm, resetAll]);
 
   const handleLoanSubmit: SubmitHandler<LoanInputs> = async (data) => {
     if (!selectedCustomerId) return;
@@ -354,6 +357,9 @@ const AddRecordPage = () => {
   const { isSubmitting: isSubmittingLoan } = loanForm.formState;
   const { isSubmitting: isSubmittingSubscription } = subscriptionForm.formState;
   const { isSubmitting: isSubmittingInstallment } = installmentForm.formState;
+  const hasCustomerLoans = customerLoans.length > 0;
+  const isAnySubmitting =
+    isSubmittingLoan || isSubmittingSubscription || isSubmittingInstallment;
 
   // Custom dropdown with search inside
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -383,6 +389,16 @@ const AddRecordPage = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [dropdownOpen]);
+
+  const handleSwitchCustomer = () => {
+    setSelectedCustomerId("");
+    setCustomerSearch("");
+    setAction(null);
+    setActiveLoan(null);
+    setPaidInstallmentNumbers(new Set());
+    resetAll();
+    setDropdownOpen(false);
+  };
 
   return (
     <PageWrapper>
@@ -473,29 +489,84 @@ const AddRecordPage = () => {
             </div>
 
             <AnimatePresence>
-              {selectedCustomerId && !activeLoan && action === null && (
+              {selectedCustomerId && (
                 <motion.div
                   key="action-buttons"
-                  initial={{ opacity: 0, scale: 0.8 }}
+                  initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="flex justify-center gap-4 py-4"
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="flex flex-wrap justify-center gap-3 py-4"
                 >
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setAction("loan")}
-                    className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-100 hover:bg-indigo-600 hover:text-white"
-                  >
-                    Record Loan
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setAction("subscription")}
-                    className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-100 hover:bg-indigo-600 hover:text-white"
-                  >
-                    Record Subscription
-                  </motion.button>
+                  {hasCustomerLoans ? (
+                    <>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setAction("loan")}
+                        disabled={isAnySubmitting}
+                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-indigo-50 text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Record Another Loan
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => activeLoan && setAction("installment")}
+                        disabled={!activeLoan || isAnySubmitting}
+                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-green-50 text-green-700 hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Record Installment
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setAction("subscription")}
+                        disabled={isAnySubmitting}
+                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-indigo-50 text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Record Subscription
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleSwitchCustomer}
+                        disabled={isAnySubmitting}
+                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Switch Customer
+                      </motion.button>
+                    </>
+                  ) : (
+                    <>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setAction("loan")}
+                        disabled={isAnySubmitting}
+                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-100 hover:bg-indigo-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Record Loan
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setAction("subscription")}
+                        disabled={isAnySubmitting}
+                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-100 hover:bg-indigo-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Record Subscription
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={handleSwitchCustomer}
+                        disabled={isAnySubmitting}
+                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Switch Customer
+                      </motion.button>
+                    </>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -656,33 +727,7 @@ const AddRecordPage = () => {
                           ? "Saving..."
                           : "Submit Payment"}
                       </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCustomerId('');
-                          setCustomerSearch('');
-                          setAction(null);
-                          setActiveLoan(null);
-                          resetAll();
-                        }}
-                        className="w-full mt-2 bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg"
-                        disabled={isSubmittingInstallment}
-                      >
-                        Switch Customer
-                      </motion.button>
                     </form>
-                    <div className="text-center mt-4">
-                      <button
-                        type="button"
-                        onClick={() => setAction("subscription")}
-                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-100 hover:bg-gray-200"
-                        disabled={isSubmittingInstallment}
-                      >
-                        Record Subscription Instead
-                      </button>
-                    </div>
                   </motion.div>
                 )}
 
@@ -797,22 +842,6 @@ const AddRecordPage = () => {
                       disabled={isSubmittingLoan}
                     >
                       {isSubmittingLoan ? "Saving..." : "Submit Loan"}
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      type="button"
-                      onClick={() => {
-                        setSelectedCustomerId('');
-                        setCustomerSearch('');
-                        setAction(null);
-                        setActiveLoan(null);
-                        resetAll();
-                      }}
-                      className="w-full mt-2 bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg"
-                      disabled={isSubmittingLoan}
-                    >
-                      Switch Customer
                     </motion.button>
                   </motion.form>
                 )}
@@ -954,35 +983,7 @@ const AddRecordPage = () => {
                           ? "Saving..."
                           : "Submit Subscription"}
                       </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCustomerId('');
-                          setCustomerSearch('');
-                          setAction(null);
-                          setActiveLoan(null);
-                          resetAll();
-                        }}
-                        className="w-full mt-2 bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg"
-                        disabled={isSubmittingSubscription}
-                      >
-                        Switch Customer
-                      </motion.button>
                     </form>
-                    {activeLoan && (
-                      <div className="text-center mt-4">
-                        <button
-                          type="button"
-                          onClick={() => setAction("installment")}
-                          className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-100 hover:bg-gray-200"
-                          disabled={isSubmittingSubscription}
-                        >
-                          Back to Recording Installment
-                        </button>
-                      </div>
-                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -1025,86 +1026,7 @@ const AddRecordPage = () => {
                       </div>
                     )}
 
-                    {/* Quick Action Buttons */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-4 pt-4 border-t border-green-300">
-                      {lastRecordData?.type !== 'installment' && (
-                        <>
-                          <motion.button
-                            type="button"
-                            onClick={() => {
-                              setShowSuccess(null);
-                              setAction(lastRecordData?.type === 'loan' ? 'subscription' : 'loan');
-                            }}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded-lg text-sm transition-colors"
-                          >
-                            Record {lastRecordData?.type === 'loan' ? 'Subscription' : 'Loan'}
-                          </motion.button>
-                          
-                          <motion.button
-                            type="button"
-                            onClick={() => {
-                              setShowSuccess(null);
-                              setAction(lastRecordData?.type === 'loan' ? 'loan' : 'subscription');
-                            }}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-3 rounded-lg text-sm transition-colors"
-                          >
-                            Record Another {lastRecordData?.type === 'loan' ? 'Loan' : 'Subscription'}
-                          </motion.button>
-                        </>
-                      )}
-                      
-                      {lastRecordData?.type === 'installment' && (
-                        <>
-                          <motion.button
-                            type="button"
-                            onClick={() => {
-                              setShowSuccess(null);
-                              setAction('installment');
-                            }}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-3 rounded-lg text-sm transition-colors"
-                          >
-                            Record Another Installment
-                          </motion.button>
-                          
-                          <motion.button
-                            type="button"
-                            onClick={() => {
-                              setShowSuccess(null);
-                              setAction('subscription');
-                            }}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded-lg text-sm transition-colors"
-                          >
-                            Record Subscription
-                          </motion.button>
-                        </>
-                      )}
-
-                      <motion.button
-                        type="button"
-                        onClick={() => {
-                          setShowSuccess(null);
-                          setSelectedCustomerId('');
-                          setCustomerSearch('');
-                          setAction(null);
-                          setActiveLoan(null);
-                          setLastRecordData(null);
-                          resetAll();
-                        }}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-3 rounded-lg text-sm transition-colors"
-                      >
-                        Different Customer
-                      </motion.button>
-                    </div>
+                    {/* Success actions removed now that controls live in the unified button bar */}
                   </motion.div>
                 )}
               </AnimatePresence>

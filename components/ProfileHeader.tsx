@@ -133,7 +133,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute z-[120] bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden w-64 sm:w-auto sm:min-w-56 bottom-24 left-1/2 -translate-x-1/2 landscape:top-16 landscape:right-6 landscape:bottom-auto landscape:left-auto landscape:translate-x-0 sm:top-16 sm:right-6 sm:left-auto sm:translate-x-0 sm:bottom-auto"
+            className="absolute z-[120] bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden left-4 right-4 bottom-20 w-auto sm:w-56 sm:left-auto sm:right-6 sm:top-16 sm:bottom-auto landscape:w-56 landscape:left-auto landscape:right-6 landscape:top-16 landscape:bottom-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-3 md:px-4 py-2 md:py-3 border-b border-gray-100">

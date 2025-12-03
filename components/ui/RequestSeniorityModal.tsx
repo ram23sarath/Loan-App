@@ -93,7 +93,7 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
             exit="hidden"
             variants={variants.modal}
             transition={{ duration: EXIT_DURATION / 1000 }}
-            className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-md"
+            className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-md overflow-hidden"
             onClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
@@ -105,11 +105,11 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium mb-1">Station Name</label>
-                <input value={stationName} onChange={(e) => setStationName(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2" />
+                <input value={stationName} onChange={(e) => setStationName(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 box-border" />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Loan Type</label>
-                <select value={loanType} onChange={(e) => setLoanType(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2">
+                <select value={loanType} onChange={(e) => setLoanType(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 box-border">
                   <option value="General">General</option>
                   <option value="Medical">Medical</option>
                   <option value="Emergency">Emergency</option>
@@ -117,7 +117,7 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Requested Date</label>
-                <input value={loanRequestDate} onChange={(e) => setLoanRequestDate(e.target.value)} type="date" className="w-full border border-gray-300 rounded px-3 py-2" />
+                <input value={loanRequestDate} onChange={(e) => setLoanRequestDate(e.target.value)} type="date" className="w-full min-w-0 border border-gray-300 rounded px-3 py-2 box-border" />
               </div>
             </div>
             <div className="mt-4 flex justify-end gap-2">

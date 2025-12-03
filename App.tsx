@@ -1,5 +1,5 @@
 import React from 'react';
-import { HashRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { DataProvider } from './context/DataContext';
 import Sidebar from './components/Sidebar';
@@ -112,7 +112,7 @@ const App = () => {
   return (
     <DataProvider>
       <AutoLogout />
-      <HashRouter>
+      <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/*" element={
@@ -133,7 +133,7 @@ const App = () => {
             </ProtectedRoute>
           } />
         </Routes>
-      </HashRouter>
+      </BrowserRouter>
     </DataProvider>
   );
 };

@@ -440,10 +440,10 @@ const LoanTableView: React.FC = () => {
                                   customer: loan.customers?.name ?? null,
                                 })
                               }
-                              className="p-1 rounded bg-red-600 text-white hover:bg-red-700"
+                              className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
                               title="Delete loan"
                             >
-                              <Trash2Icon className="w-5 h-5" />
+                              <Trash2Icon className="w-5 h-5 text-red-500" />
                             </button>
                           </>
                         )}
@@ -556,24 +556,12 @@ const LoanTableView: React.FC = () => {
                                                       inst.receipt_number || "",
                                                   });
                                                 }}
-                                                className="p-1 rounded-full hover:bg-blue-500/10 transition-colors ml-2"
+                                                className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700 ml-2"
                                                 aria-label={`Edit installment #${inst.installment_number}`}
-                                                whileHover={{ scale: 1.2 }}
-                                                whileTap={{ scale: 0.9 }}
+                                                whileHover={{ scale: 1.05 }}
+                                                whileTap={{ scale: 0.95 }}
                                               >
-                                                <svg
-                                                  className="w-4 h-4 text-blue-500"
-                                                  fill="none"
-                                                  stroke="currentColor"
-                                                  strokeWidth="2"
-                                                  viewBox="0 0 24 24"
-                                                >
-                                                  <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a4 4 0 01-1.414.828l-4 1a1 1 0 01-1.263-1.263l1-4a4 4 0 01.828-1.414z"
-                                                  />
-                                                </svg>
+                                                Edit
                                               </motion.button>
                                               <motion.button
                                                 onClick={() =>
@@ -758,7 +746,7 @@ const LoanTableView: React.FC = () => {
                                     receipt_number: inst.receipt_number || "",
                                   });
                                 }}
-                                className="p-1 rounded bg-blue-50 text-blue-600"
+                                className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
                               >
                                 Edit
                               </button>
@@ -769,9 +757,9 @@ const LoanTableView: React.FC = () => {
                                     number: inst.installment_number,
                                   })
                                 }
-                                className="p-1 rounded bg-red-50 text-red-600"
+                                className="p-2 rounded-md bg-red-50 text-red-600"
                               >
-                                Delete
+                                <Trash2Icon className="w-4 h-4" />
                               </button>
                             </>
                           )}

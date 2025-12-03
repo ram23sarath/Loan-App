@@ -217,11 +217,11 @@ const LoanSeniorityPage = () => {
                             setModalEditingId(entry.id);
                           }}
                             aria-label={`Edit seniority entry ${entry.id}`}
-                            className="p-2 rounded hover:bg-gray-100">
-                            <PencilIcon className="w-4 h-4 text-blue-600" />
+                            className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700">
+                            Edit
                           </button>
-                          <button onClick={() => removeFromList(entry.id)} aria-label={`Remove seniority entry ${entry.id}`} className="p-2 rounded hover:bg-gray-100">
-                            <Trash2Icon className="w-4 h-4 text-red-600" />
+                          <button onClick={() => removeFromList(entry.id)} aria-label={`Remove seniority entry ${entry.id}`} className="p-1 rounded-full hover:bg-red-500/10 transition-colors">
+                            <Trash2Icon className="w-4 h-4 text-red-500" />
                           </button>
                         </div>
                       </td>
@@ -253,11 +253,11 @@ const LoanSeniorityPage = () => {
                         setLoanType(entry.loan_type || 'General');
                         setLoanRequestDate(entry.loan_request_date || '');
                         setModalEditingId(entry.id);
-                      }} className="p-2 rounded hover:bg-gray-100" aria-label="Edit">
-                        <PencilIcon className="w-4 h-4 text-blue-600" />
+                      }} className="px-3 py-1 rounded bg-blue-600 text-white text-sm" aria-label="Edit">
+                        Edit
                       </button>
-                      <button onClick={() => removeFromList(entry.id)} className="p-2 rounded hover:bg-gray-100" aria-label="Remove">
-                        <Trash2Icon className="w-4 h-4 text-red-600" />
+                      <button onClick={() => removeFromList(entry.id)} className="p-2 rounded-md bg-red-50 text-red-600" aria-label="Remove">
+                        <Trash2Icon className="w-4 h-4" />
                       </button>
                     </div>
                   </div>

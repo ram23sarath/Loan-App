@@ -240,17 +240,17 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                           {onEditLoan && (
                             <motion.button
                               onClick={() => onEditLoan(loan)}
-                              className="p-2 transition-colors rounded-full hover:bg-blue-500/10"
+                              className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
                               aria-label={`Edit loan from ${loan.payment_date}`}
-                              whileHover={{ scale: 1.2 }}
-                              whileTap={{ scale: 0.9 }}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
                             >
-                              <span className="font-bold text-blue-600">Edit</span>
+                              Edit
                             </motion.button>
                           )}
                           <motion.button
                             onClick={() => handleDeleteLoan(loan)}
-                            className="p-2 transition-colors rounded-full hover:bg-red-500/10"
+                            className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
                             aria-label={`Delete loan from ${loan.payment_date}`}
                             whileHover={{ scale: 1.2 }}
                             whileTap={{ scale: 0.9 }}
@@ -289,7 +289,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                                 </p>
                                 <motion.button
                                   onClick={() => handleDeleteInstallment(installment)}
-                                  className="p-1 transition-colors rounded-full hover:bg-red-500/10"
+                                  className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
                                   aria-label={`Delete installment #${installment.installment_number}`}
                                   whileHover={{ scale: 1.2 }}
                                   whileTap={{ scale: 0.9 }}
@@ -328,17 +328,17 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                       {onEditSubscription && (
                         <motion.button
                           onClick={() => onEditSubscription(sub)}
-                          className="p-2 transition-colors rounded-full hover:bg-blue-500/10"
+                          className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
                           aria-label={`Edit subscription from ${formatDate(sub.date)}`}
-                          whileHover={{ scale: 1.2 }}
-                          whileTap={{ scale: 0.9 }}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
                         >
-                          <span className="font-bold text-blue-600">Edit</span>
+                          Edit
                         </motion.button>
                       )}
                       <motion.button
                         onClick={() => handleDeleteSubscription(sub)}
-                        className="p-2 transition-colors rounded-full hover:bg-red-500/10"
+                        className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
                         aria-label={`Delete subscription from ${formatDate(sub.date)}`}
                         whileHover={{ scale: 1.2 }}
                         whileTap={{ scale: 0.9 }}

@@ -1001,7 +1001,7 @@ const AddRecordPage = () => {
                             if (lastRecordData.type === 'loan') {
                               message = `Hi ${data.customerName}, your loan of ₹${data.original_amount.toLocaleString()} with interest ₹${data.interest_amount.toLocaleString()} (Total: ₹${(data.original_amount + data.interest_amount).toLocaleString()}) has been recorded. Payment date: ${formatDate(data.payment_date)}. Total installments: ${data.total_instalments}. Thank You, I J Reddy.`;
                             } else if (lastRecordData.type === 'subscription') {
-                              message = `Hi ${data.customerName}, your subscription of ₹${data.amount.toLocaleString()} was recorded on ${formatDate(data.date)}. Receipt: ${data.receipt}${data.late_fee && data.late_fee > 0 ? ` (Late fee: ₹${data.late_fee})` : ''}. Thank You, I J Reddy.`;
+                              message = `Hi ${data.customerName}, your subscription of ₹${data.amount.toLocaleString()} was recorded on ${formatDate(data.date)}${data.late_fee && data.late_fee > 0 ? ` (Late fee: ₹${data.late_fee})` : ''}. Thank You, I J Reddy.`;
                             } else if (lastRecordData.type === 'installment') {
                               message = `Hi ${data.customerName}, your installment payment of ₹${data.amount.toLocaleString()} (Installment #${data.installment_number}) has been recorded on ${formatDate(data.date)}. Receipt: ${data.receipt_number}${data.late_fee && data.late_fee > 0 ? ` (Late fee: ₹${data.late_fee})` : ''}. Thank You, I J Reddy.`;
                             }

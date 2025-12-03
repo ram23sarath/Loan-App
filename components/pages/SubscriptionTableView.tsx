@@ -217,15 +217,10 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
             ) {
               isValidPhone = true;
               message = `Hi ${customer.name}, your subscription payment of ₹${sub.amount
-                } was received on ${formatDate(
-                  sub.date,
-                  "whatsapp"
-                )}. Receipt: ${sub.receipt || "-"}${sub.late_fee && sub.late_fee > 0
-                  ? ` (including a late fee of ₹${sub.late_fee})`
+                } was received on ${formatDate(sub.date, "whatsapp")}${sub.late_fee && sub.late_fee > 0
+                  ? ` (Late fee: ₹${sub.late_fee})`
                   : ""
-                }`;
-              // Append signature
-              message += " Thank You, I J Reddy.";
+                }. Thank You, I J Reddy.`;
               whatsappUrl = `https://wa.me/${customer.phone
                 }?text=${encodeURIComponent(message)}`;
             }
@@ -311,18 +306,12 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
             /^\d{10,15}$/.test(customer.phone)
           ) {
             isValidPhone = true;
-            message = `Hi ${customer.name
-              }, your subscription payment of ${formatCurrencyIN(
+            message = `Hi ${customer.name}, your subscription payment of ${formatCurrencyIN(
                 sub.amount
-              )} was received on ${formatDate(
-                sub.date,
-                "whatsapp"
-              )}. Receipt: ${sub.receipt || "-"}${sub.late_fee && sub.late_fee > 0
-                ? ` (including a late fee of ${formatCurrencyIN(sub.late_fee)})`
+              )} was received on ${formatDate(sub.date, "whatsapp")}${sub.late_fee && sub.late_fee > 0
+                ? ` (Late fee: ${formatCurrencyIN(sub.late_fee)})`
                 : ""
-              }`;
-            // Append signature
-            message += " Thank You, I J Reddy.";
+              }. Thank You, I J Reddy.`;
             whatsappUrl = `https://wa.me/${customer.phone
               }?text=${encodeURIComponent(message)}`;
           }

@@ -1,17 +1,16 @@
 import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 
-export default defineConfig(({ mode }) => {
-    const env = loadEnv(mode, '.', '');
-    return {
-      define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
-      },
-      resolve: {
-        alias: {
-          '@': path.resolve(__dirname, '.'),
-        }
-      }
-    };
+export default defineConfig({
+  // VITE_ prefixed env variables are automatically exposed to client code
+  // via import.meta.env (e.g., import.meta.env.VITE_SUPABASE_URL)
+  // 
+  // Required environment variables:
+  //   VITE_SUPABASE_URL - Your Supabase project URL
+  //   VITE_SUPABASE_ANON_KEY - Your Supabase anon/public key
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, '.'),
+    }
+  }
 });

@@ -624,7 +624,10 @@ const LoanTableView: React.FC = () => {
               key={loan.id}
               className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm"
             >
-              <div className="flex items-start justify-between">
+              <div 
+                className="flex items-start justify-between cursor-pointer"
+                onClick={() => setExpandedRow(expandedRow === loan.id ? null : loan.id)}
+              >
                 <div className="flex-1 min-w-0">
                   <div className="text-xs text-gray-400">#{idx + 1}</div>
                   <div className="text-sm font-semibold text-indigo-700 truncate">
@@ -689,18 +692,15 @@ const LoanTableView: React.FC = () => {
                 <div className="flex items-center gap-2">
                   {!isScopedCustomer && (
                     <button
-                      onClick={() => {
-                        // delete most recent installment or open delete modal
-                        if (loanInstallments.length > 0) {
-                          setDeleteTarget({
-                            id: loanInstallments[0].id,
-                            number: loanInstallments[0].installment_number,
-                          });
-                        }
-                      }}
+                      onClick={() =>
+                        setDeleteLoanTarget({
+                          id: loan.id,
+                          customer: customer?.name ?? null,
+                        })
+                      }
                       className="p-2 rounded-md bg-red-50 text-red-600"
-                      aria-label={`Delete latest installment for ${customer?.name}`}
-                      title="Delete latest installment"
+                      aria-label={`Delete loan for ${customer?.name}`}
+                      title="Delete loan"
                     >
                       <Trash2Icon className="w-5 h-5" />
                     </button>

@@ -201,6 +201,7 @@ const LoanTableView: React.FC = () => {
   }
 
   const [expandedRow, setExpandedRow] = React.useState<string | null>(null);
+  const [draggingCardId, setDraggingCardId] = React.useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<{
     id: string;
     number: number;
@@ -613,59 +614,105 @@ const LoanTableView: React.FC = () => {
           );
           const balance = totalRepayable - paid;
           const customer = loan.customers;
+          
+          // WhatsApp message construction for loan - matches displayed fields
+          let loanMessage = "";
+          let isValidPhone = false;
+          if (customer && customer.phone && /^\d{10,15}$/.test(customer.phone)) {
+            isValidPhone = true;
+            loanMessage = `Hi ${customer.name}, this is regarding your loan.\n\nTotal Repayable: ${formatCurrencyIN(totalRepayable)}\nTotal Installments: ${loan.total_instalments}\nPaid: ${formatCurrencyIN(paid)}\nInstallments Paid: ${loanInstallments.length}\nBalance: ${formatCurrencyIN(balance)}\n\nThank You, I J Reddy.`;
+          }
+          
           return (
-            <div
-              key={loan.id}
-              className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm"
-            >
-              <div 
-                className="flex items-start justify-between cursor-pointer"
-                onClick={() => setExpandedRow(expandedRow === loan.id ? null : loan.id)}
+            <div key={loan.id} className="relative overflow-hidden rounded-lg">
+              {/* Swipe background indicators - only visible when dragging this card */}
+              {draggingCardId === loan.id && (
+                <div className="absolute inset-0 flex">
+                  <div className="w-1/2 bg-green-500 flex items-center justify-start pl-4">
+                    <WhatsAppIcon className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
+                    <Trash2Icon className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+              )}
+
+              <motion.div
+                className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3, delay: idx * 0.03 }}
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.3}
+                onDragStart={() => setDraggingCardId(loan.id)}
+                onDragEnd={(_, info) => {
+                  setDraggingCardId(null);
+                  const threshold = 100;
+                  if (info.offset.x < -threshold && !isScopedCustomer) {
+                    // Swipe left - Delete
+                    setDeleteLoanTarget({
+                      id: loan.id,
+                      customer: customer?.name ?? null,
+                    });
+                  } else if (info.offset.x > threshold && isValidPhone) {
+                    // Swipe right - WhatsApp
+                    openWhatsApp(customer?.phone, loanMessage, { cooldownMs: 1200 });
+                  }
+                }}
               >
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs text-gray-400">#{idx + 1}</div>
-                  <div className="text-sm font-semibold text-indigo-700 truncate">
-                    {customer?.name ?? "Unknown"}
+                {/* Row 1: # Name and Total Repayable */}
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-gray-400">#{idx + 1}</span>
+                    <button
+                      onClick={() => setExpandedRow(expandedRow === loan.id ? null : loan.id)}
+                      className="text-sm font-semibold text-indigo-700 truncate underline"
+                    >
+                      {customer?.name ?? "Unknown"}
+                    </button>
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {loan.source || "-"}
-                  </div>
-                </div>
-                <div className="text-right ml-3">
                   <div className="text-lg font-bold">
-                    {formatCurrencyIN(loan.original_amount)}
+                    {formatCurrencyIN(totalRepayable)}
                   </div>
-                  <div className="text-xs text-gray-500">{loan.year}</div>
                 </div>
-              </div>
 
-              <div className="mt-2 grid grid-cols-2 lg:grid-cols-4 gap-2 text-sm text-gray-700">
-                <div>
-                  Paid:{" "}
-                  <span className="font-semibold">
-                    {formatCurrencyIN(paid)}
-                  </span>
+                {/* Row 2: Total Installments */}
+                <div className="text-xs text-gray-500 mt-1">
+                  Total Installments: <span className="font-semibold text-gray-700">{loan.total_instalments}</span>
                 </div>
-                <div>
-                  Balance:{" "}
-                  <span className="font-semibold">
-                    {formatCurrencyIN(balance)}
-                  </span>
-                </div>
-                <div>
-                  Installments:{" "}
-                  <span className="font-semibold">
-                    {loanInstallments.length}
-                  </span>
-                </div>
-                <div>
-                  Receipt:{" "}
-                  <span className="font-semibold">{loan.receipt || "-"}</span>
-                </div>
-              </div>
 
-              <div className="mt-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                {/* Row 3: Paid */}
+                <div className="text-xs text-gray-500 mt-1">
+                  Paid: <span className="font-semibold text-green-600">{formatCurrencyIN(paid)}</span>
+                </div>
+
+                {/* Row 4: Installments Paid */}
+                <div className="text-xs text-gray-500 mt-1">
+                  Installments Paid: <span className="font-semibold text-gray-700">{loanInstallments.length}</span>
+                </div>
+
+                {/* Row 5: Balance */}
+                <div className="text-xs text-gray-500 mt-1">
+                  Balance: <span className="font-semibold text-red-600">{formatCurrencyIN(balance)}</span>
+                </div>
+
+                {/* Row 6: Action buttons */}
+                <div className="mt-3 flex items-center justify-evenly">
+                  <button
+                    onClick={() =>
+                      isValidPhone &&
+                      openWhatsApp(customer?.phone, loanMessage, {
+                        cooldownMs: 1200,
+                      })
+                    }
+                    className="p-2 rounded-md bg-green-50 text-green-600"
+                    disabled={!isValidPhone}
+                    aria-label={`Send loan details for ${customer?.name} on WhatsApp`}
+                  >
+                    <WhatsAppIcon className="w-5 h-5" />
+                  </button>
                   {!isScopedCustomer && (
                     <button
                       onClick={() => setEditLoanTarget(loan)}
@@ -674,16 +721,6 @@ const LoanTableView: React.FC = () => {
                       Edit
                     </button>
                   )}
-                  <button
-                    onClick={() =>
-                      setExpandedRow(expandedRow === loan.id ? null : loan.id)
-                    }
-                    className="px-3 py-1 rounded bg-gray-100 text-gray-700 text-sm"
-                  >
-                    Details
-                  </button>
-                </div>
-                <div className="flex items-center gap-2">
                   {!isScopedCustomer && (
                     <button
                       onClick={() =>
@@ -700,7 +737,7 @@ const LoanTableView: React.FC = () => {
                     </button>
                   )}
                 </div>
-              </div>
+              </motion.div>
 
               <AnimatePresence>
                 {expandedRow === loan.id && (

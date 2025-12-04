@@ -412,7 +412,7 @@ const CustomerListPage = () => {
                                   const isValidPhone = customer.phone && /^\d{10,15}$/.test(customer.phone);
                                   const message = `Hi ${customer.name},\n\nLoans: ${customerLoans.length}\nLoan Value: ${formatCurrency(loanValue)}\nSubscriptions: ${customerSubscriptions.length}\n\nThank You, I J Reddy.`;
                                   return (
-                                    <div key={customer.id} className="relative">
+                                    <div key={customer.id} className="relative overflow-hidden rounded-lg">
                                       {/* Swipe background indicators - only visible when dragging this card */}
                                       {draggingCardId === customer.id && (
                                         <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
@@ -434,6 +434,8 @@ const CustomerListPage = () => {
                                         drag="x"
                                         dragConstraints={{ left: 0, right: 0 }}
                                         dragElastic={0.3}
+                                        dragMomentum={false}
+                                        style={{ touchAction: "pan-y" }}
                                         onDragStart={() => setDraggingCardId(customer.id)}
                                         onDragEnd={(_, info) => {
                                           setDraggingCardId(null);
@@ -586,7 +588,7 @@ const CustomerListPage = () => {
                                   const isValidPhone = customer.phone && /^\d{10,15}$/.test(customer.phone);
                                   const message = `Hi ${customer.name},\n\nLoans: ${customerLoans.length}\nLoan Value: ${formatCurrency(loanValue)}\n\nThank You, I J Reddy.`;
                                   return (
-                                    <div key={customer.id} className="relative">
+                                    <div key={customer.id} className="relative overflow-hidden rounded-lg">
                                       {/* Swipe background indicators - only visible when dragging this card */}
                                       {draggingCardId === customer.id && (
                                         <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
@@ -608,6 +610,8 @@ const CustomerListPage = () => {
                                         drag="x"
                                         dragConstraints={{ left: 0, right: 0 }}
                                         dragElastic={0.3}
+                                        dragMomentum={false}
+                                        style={{ touchAction: "pan-y" }}
                                         onDragStart={() => setDraggingCardId(customer.id)}
                                         onDragEnd={(_, info) => {
                                           setDraggingCardId(null);
@@ -756,7 +760,7 @@ const CustomerListPage = () => {
                                   const isValidPhone = customer.phone && /^\d{10,15}$/.test(customer.phone);
                                   const message = `Hi ${customer.name},\n\nSubscriptions: ${customerSubscriptions.length}\nTotal Value: ${formatCurrency(subValue)}\n\nThank You, I J Reddy.`;
                                   return (
-                                    <div key={customer.id} className="relative">
+                                    <div key={customer.id} className="relative overflow-hidden rounded-lg">
                                       {/* Swipe background indicators - only visible when dragging this card */}
                                       {draggingCardId === customer.id && (
                                         <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
@@ -778,6 +782,8 @@ const CustomerListPage = () => {
                                         drag="x"
                                         dragConstraints={{ left: 0, right: 0 }}
                                         dragElastic={0.3}
+                                        dragMomentum={false}
+                                        style={{ touchAction: "pan-y" }}
                                         onDragStart={() => setDraggingCardId(customer.id)}
                                         onDragEnd={(_, info) => {
                                           setDraggingCardId(null);
@@ -918,7 +924,7 @@ const CustomerListPage = () => {
                                       const isValidPhone = customer.phone && /^\d{10,15}$/.test(customer.phone);
                                       const message = `Hi ${customer.name},\n\nThank You, I J Reddy.`;
                                       return (
-                                      <div key={customer.id} className="relative">
+                                      <div key={customer.id} className="relative overflow-hidden rounded-lg">
                                         {/* Swipe background indicators - only visible when dragging this card */}
                                         {draggingCardId === customer.id && (
                                           <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
@@ -938,8 +944,10 @@ const CustomerListPage = () => {
                                           exit={{ opacity: 0 }} 
                                           transition={{ duration: 0.3, delay: idx * 0.03 }}
                                           drag="x"
-                                          dragConstraints={{ left: 0, right: 0 }}
-                                          dragElastic={0.3}
+                                        dragConstraints={{ left: 0, right: 0 }}
+                                        dragElastic={0.3}
+                                        dragMomentum={false}
+                                        style={{ touchAction: "pan-y" }}
                                           onDragStart={() => setDraggingCardId(customer.id)}
                                           onDragEnd={(_, info) => {
                                             setDraggingCardId(null);

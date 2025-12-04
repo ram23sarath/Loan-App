@@ -646,6 +646,8 @@ const LoanTableView: React.FC = () => {
                 drag="x"
                 dragConstraints={{ left: 0, right: 0 }}
                 dragElastic={0.3}
+                dragMomentum={false}
+                style={{ touchAction: "pan-y" }}
                 onDragStart={() => setDraggingCardId(loan.id)}
                 onDragEnd={(_, info) => {
                   setDraggingCardId(null);

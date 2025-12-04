@@ -56,7 +56,6 @@ git pull
 
 - [Node.js](https://nodejs.org/) (v18+ recommended)
 - A [Supabase](https://supabase.com/) project (for authentication & database)
-- (Optional) [Gemini API Key](https://ai.google.dev/) for AI features
 
 ### Installation
 

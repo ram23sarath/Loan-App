@@ -1,21 +1,7 @@
 // src/lib/env.ts
-// Environment variables are loaded from .env file via Vite
-// VITE_ prefixed variables are exposed to client-side code
-// 
-// Create a .env file in the project root with:
-//   VITE_SUPABASE_URL=your_supabase_url
-//   VITE_SUPABASE_ANON_KEY=your_anon_key
-//
-// Note: The anon key is designed to be public, but keeping it in env vars
-// allows for easy configuration across environments without code changes.
+// Supabase configuration
+// Note: The anon key is designed to be public (client-side safe).
+// It only allows access controlled by Row Level Security (RLS) policies.
 
-export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-
-// Validate required environment variables
-if (!SUPABASE_URL) {
-  console.error('Missing VITE_SUPABASE_URL environment variable');
-}
-if (!SUPABASE_ANON_KEY) {
-  console.error('Missing VITE_SUPABASE_ANON_KEY environment variable');
-}
+export const SUPABASE_URL = 'https://lhffcmefliaptsijuyay.supabase.co';
+export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxoZmZjbWVmbGlhcHRzaWp1eWF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NjAxOTMsImV4cCI6MjA2OTQzNjE5M30.HKGrEokNOl6EJnClwTZ-oITGLkZhoIzpQ4sda2JeCxw';

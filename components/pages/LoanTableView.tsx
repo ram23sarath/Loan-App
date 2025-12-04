@@ -708,67 +708,110 @@ const LoanTableView: React.FC = () => {
                 </div>
               </div>
 
-              {expandedRow === loan.id && (
-                <div className="mt-3 border-t pt-3">
-                  <h5 className="text-sm font-semibold mb-2">Installments</h5>
-                  <ul className="space-y-2">
-                    {loanInstallments.map((inst) => (
-                      <li
-                        key={inst.id}
-                        className="flex items-center justify-between"
-                      >
-                        <div className="text-sm">
-                          <div>
-                            #{inst.installment_number} • {formatDate(inst.date)}
-                          </div>
-                          <div className="text-green-700 font-semibold">
-                            {formatCurrencyIN(inst.amount)}{" "}
-                            {inst.late_fee > 0 && (
-                              <span className="text-orange-500 text-xs">
-                                (+{formatCurrencyIN(inst.late_fee)} late)
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            Receipt: {inst.receipt_number || "-"}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {!isScopedCustomer && (
-                            <>
+              <AnimatePresence>
+                {expandedRow === loan.id && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-3 border-t pt-3">
+                      <h5 className="text-sm font-semibold mb-2">Installments</h5>
+                      <ul className="space-y-2">
+                        {loanInstallments.map((inst) => {
+                          // Build WhatsApp message for mobile view
+                          let message = "";
+                          let isValidPhone = false;
+                          if (
+                            customer &&
+                            customer.phone &&
+                            /^\d{10,15}$/.test(customer.phone)
+                          ) {
+                            isValidPhone = true;
+                            message = `Hi ${customer.name}, your installment payment of ₹${inst.amount}`;
+                            if (inst.late_fee && inst.late_fee > 0) {
+                              message += ` (including a ₹${inst.late_fee} late fee)`;
+                            }
+                            message += ` (Installment #${inst.installment_number}) was received on ${formatDate(inst.date, "whatsapp")}. Thank you.`;
+                            message += " Thank You, I J Reddy.";
+                          }
+                          return (
+                          <li
+                            key={inst.id}
+                            className="flex items-center justify-between"
+                          >
+                            <div className="text-sm">
+                              <div>
+                                #{inst.installment_number} • {formatDate(inst.date)}
+                              </div>
+                              <div className="text-green-700 font-semibold">
+                                {formatCurrencyIN(inst.amount)}{" "}
+                                {inst.late_fee > 0 && (
+                                  <span className="text-orange-500 text-xs">
+                                    (+{formatCurrencyIN(inst.late_fee)} late)
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                Receipt: {inst.receipt_number || "-"}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
                               <button
-                                onClick={() => {
-                                  setEditTarget(inst);
-                                  setEditForm({
-                                    date: inst.date,
-                                    amount: inst.amount.toString(),
-                                    late_fee: inst.late_fee?.toString() || "",
-                                    receipt_number: inst.receipt_number || "",
-                                  });
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (isValidPhone) {
+                                    openWhatsApp(customer?.phone, message, { cooldownMs: 1200 });
+                                  }
                                 }}
-                                className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+                                className="p-2 rounded-md bg-green-50 text-green-600"
+                                aria-label={`Send installment #${inst.installment_number} on WhatsApp`}
+                                disabled={!isValidPhone}
                               >
-                                Edit
+                                <WhatsAppIcon className="w-4 h-4" />
                               </button>
-                              <button
-                                onClick={() =>
-                                  setDeleteTarget({
-                                    id: inst.id,
-                                    number: inst.installment_number,
-                                  })
-                                }
-                                className="p-2 rounded-md bg-red-50 text-red-600"
-                              >
-                                <Trash2Icon className="w-4 h-4" />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                              {!isScopedCustomer && (
+                                <>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditTarget(inst);
+                                      setEditForm({
+                                        date: inst.date,
+                                        amount: inst.amount.toString(),
+                                        late_fee: inst.late_fee?.toString() || "",
+                                        receipt_number: inst.receipt_number || "",
+                                      });
+                                    }}
+                                    className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeleteTarget({
+                                        id: inst.id,
+                                        number: inst.installment_number,
+                                      });
+                                    }}
+                                    className="p-2 rounded-md bg-red-50 text-red-600"
+                                  >
+                                    <Trash2Icon className="w-4 h-4" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           );
         })}

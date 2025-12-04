@@ -884,7 +884,7 @@ const LoanTableView: React.FC = () => {
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-2"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-2"
           >
             <motion.div
               variants={modalContentVariants}
@@ -997,7 +997,7 @@ const LoanTableView: React.FC = () => {
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           >
             <motion.div
               variants={modalContentVariants}
@@ -1049,7 +1049,7 @@ const LoanTableView: React.FC = () => {
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           >
             <motion.div
               variants={modalContentVariants}

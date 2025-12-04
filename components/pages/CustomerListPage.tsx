@@ -3,11 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../../context/DataContext';
 import GlassCard from '../ui/GlassCard';
 import PageWrapper from '../ui/PageWrapper';
-import { UsersIcon, Trash2Icon, SpinnerIcon } from '../../constants';
+import { UsersIcon, Trash2Icon, SpinnerIcon, WhatsAppIcon } from '../../constants';
 import CustomerDetailModal from '../modals/CustomerDetailModal';
 import EditModal from '../modals/EditModal';
 import type { Customer } from '../../types';
 import { useDebounce } from '../../utils/useDebounce';
+import { openWhatsApp } from '../../utils/whatsapp';
 
 // --- CHANGED: Added Chevron Icon for collapsibles ---
 const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -53,6 +54,9 @@ const CustomerListPage = () => {
     subs: 1,
     neither: 1,
   });
+
+  // State for tracking which card is being swiped
+  const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
 
   const itemsPerPage = 25;
 
@@ -378,7 +382,7 @@ const CustomerListPage = () => {
                                       const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
                                       const rowNumber = (currentPages.both - 1) * itemsPerPage + idx + 1;
                                       return (
-                                          <motion.tr key={customer.id} className="bg-white hover:bg-indigo-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
+                                          <motion.tr key={customer.id} className="bg-white hover:bg-indigo-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                               {/* --- CHANGED: Reverted table row --- */}
                                               <td className="px-2 py-2 text-gray-400 text-sm">{rowNumber}</td>
                                               <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
@@ -398,33 +402,96 @@ const CustomerListPage = () => {
                                 </tbody>
                               </table>
                             </div>
-                            {/* Mobile Cards (unchanged) */}
+                            {/* Mobile Cards */}
                             <div className="sm:hidden space-y-3">
                               {paginatedCustomers.map((customer, idx) => {
                                   const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
                                   const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
                                   const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
                                   const rowNumber = (currentPages.both - 1) * itemsPerPage + idx + 1;
+                                  const isValidPhone = customer.phone && /^\d{10,15}$/.test(customer.phone);
+                                  const message = `Hi ${customer.name},\n\nLoans: ${customerLoans.length}\nLoan Value: ${formatCurrency(loanValue)}\nSubscriptions: ${customerSubscriptions.length}\n\nThank You, I J Reddy.`;
                                   return (
-                                      <motion.div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
-                                          <div className="grid grid-cols-3 gap-3 items-start">
-                                              <div className="col-span-2">
-                                                  <div className="text-base font-bold text-indigo-700"><span className="text-gray-400 font-normal mr-2">#{rowNumber}</span>{customer.name}</div>
-                                                  <div className="text-xs text-gray-500">{customer.phone}</div>
-                                                  <div className="mt-2 text-sm text-gray-700 space-y-1">
-                                                      <div className="flex justify-between"><span className="text-gray-600">Loans</span><span className="font-semibold">{customerLoans.length}</span></div>
-                                                      <div className="flex justify-between"><span className="text-gray-600">Loan Value</span><span className="font-semibold">{formatCurrency(loanValue)}</span></div>
-                                                      <div className="flex justify-between"><span className="text-gray-600">Subscriptions</span><span className="font-semibold">{customerSubscriptions.length}</span></div>
-                                                  </div>
-                                              </div>
-                                              <div className="flex flex-col items-end justify-between">
-                                                  <div className="flex gap-2">
-                                                      <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {}, subscription: customerSubscriptions[0] || {} } }); }} className="px-3 py-1 rounded bg-blue-600 text-white text-sm" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
-                                                      <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-md bg-red-50 text-red-600" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}><Trash2Icon className="w-5 h-5" /></motion.button>
-                                                  </div>
-                                              </div>
+                                    <div key={customer.id} className="relative">
+                                      {/* Swipe background indicators - only visible when dragging this card */}
+                                      {draggingCardId === customer.id && (
+                                        <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
+                                          <div className="w-1/2 bg-green-500 flex items-center justify-start pl-4">
+                                            <WhatsAppIcon className="w-6 h-6 text-white" />
                                           </div>
+                                          <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
+                                            <Trash2Icon className="w-6 h-6 text-white" />
+                                          </div>
+                                        </div>
+                                      )}
+                                      <motion.div 
+                                        className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10" 
+                                        onClick={() => setSelectedCustomer(customer)} 
+                                        initial={{ opacity: 0 }} 
+                                        animate={{ opacity: 1 }} 
+                                        exit={{ opacity: 0 }} 
+                                        transition={{ duration: 0.3, delay: idx * 0.03 }}
+                                        drag="x"
+                                        dragConstraints={{ left: 0, right: 0 }}
+                                        dragElastic={0.3}
+                                        onDragStart={() => setDraggingCardId(customer.id)}
+                                        onDragEnd={(_, info) => {
+                                          setDraggingCardId(null);
+                                          const threshold = 100;
+                                          if (info.offset.x < -threshold) {
+                                            // Swipe left - Delete
+                                            handleDeleteCustomer(customer);
+                                          } else if (info.offset.x > threshold && isValidPhone) {
+                                            // Swipe right - WhatsApp
+                                            openWhatsApp(customer.phone, message, { cooldownMs: 1200 });
+                                          }
+                                        }}
+                                      >
+                                        {/* Row 1: # Name */}
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-xs text-gray-400">#{rowNumber}</span>
+                                          <span className="text-sm font-semibold text-indigo-700 truncate">{customer.name}</span>
+                                        </div>
+                                        {/* Row 2: Phone */}
+                                        <div className="text-xs text-gray-500 mt-1">
+                                          Phone: <span className="font-semibold text-gray-700">{customer.phone}</span>
+                                        </div>
+                                        {/* Row 3: Loans */}
+                                        <div className="text-xs text-gray-500 mt-1">
+                                          Loans: <span className="font-semibold text-gray-700">{customerLoans.length}</span>
+                                        </div>
+                                        {/* Row 4: Loan Value */}
+                                        <div className="text-xs text-gray-500 mt-1">
+                                          Loan Value: <span className="font-semibold text-green-600">{formatCurrency(loanValue)}</span>
+                                        </div>
+                                        {/* Row 5: Subscriptions */}
+                                        <div className="text-xs text-gray-500 mt-1">
+                                          Subscriptions: <span className="font-semibold text-cyan-600">{customerSubscriptions.length}</span>
+                                        </div>
+                                        {/* Row 6: Action buttons */}
+                                        <div className="mt-3 flex items-center justify-evenly">
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); isValidPhone && openWhatsApp(customer.phone, message, { cooldownMs: 1200 }); }}
+                                            className="p-2 rounded-md bg-green-50 text-green-600"
+                                            disabled={!isValidPhone}
+                                          >
+                                            <WhatsAppIcon className="w-5 h-5" />
+                                          </button>
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {}, subscription: customerSubscriptions[0] || {} } }); }}
+                                            className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
+                                          >
+                                            Edit
+                                          </button>
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }}
+                                            className="p-2 rounded-md bg-red-50 text-red-600"
+                                          >
+                                            <Trash2Icon className="w-5 h-5" />
+                                          </button>
+                                        </div>
                                       </motion.div>
+                                    </div>
                                   );
                               })}
                             </div>
@@ -491,7 +558,7 @@ const CustomerListPage = () => {
                                       const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
                                       const rowNumber = (currentPages.loans - 1) * itemsPerPage + idx + 1;
                                       return (
-                                          <motion.tr key={customer.id} className="bg-white hover:bg-blue-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
+                                          <motion.tr key={customer.id} className="bg-white hover:bg-blue-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                               {/* --- CHANGED: Reverted table row --- */}
                                               <td className="px-2 py-2 text-gray-400 text-sm">{rowNumber}</td>
                                               <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
@@ -510,31 +577,91 @@ const CustomerListPage = () => {
                                 </tbody>
                               </table>
                             </div>
-                            {/* Mobile Cards (unchanged) */}
+                            {/* Mobile Cards */}
                             <div className="sm:hidden space-y-3">
                               {paginatedCustomers.map((customer, idx) => {
                                   const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
                                   const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
                                   const rowNumber = (currentPages.loans - 1) * itemsPerPage + idx + 1;
+                                  const isValidPhone = customer.phone && /^\d{10,15}$/.test(customer.phone);
+                                  const message = `Hi ${customer.name},\n\nLoans: ${customerLoans.length}\nLoan Value: ${formatCurrency(loanValue)}\n\nThank You, I J Reddy.`;
                                   return (
-                                      <motion.div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
-                                          <div className="grid grid-cols-3 gap-3 items-start">
-                                              <div className="col-span-2">
-                                                  <div className="text-base font-bold text-indigo-700"><span className="text-gray-400 font-normal mr-2">#{rowNumber}</span>{customer.name}</div>
-                                                  <div className="text-xs text-gray-500">{customer.phone}</div>
-                                                  <div className="mt-2 text-sm text-gray-700">
-                                                      <div className="flex justify-between"><span className="text-gray-600">Loans</span><span className="font-semibold">{customerLoans.length}</span></div>
-                                                      <div className="flex justify-between"><span className="text-gray-600">Loan Value</span><span className="font-semibold">{formatCurrency(loanValue)}</span></div>
-                                                  </div>
-                                              </div>
-                                              <div className="flex flex-col items-end justify-between">
-                                                  <div className="flex gap-2">
-                                                      <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {} } }); }} className="px-3 py-1 rounded bg-blue-600 text-white text-sm" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
-                                                      <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-md bg-red-50 text-red-600" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}><Trash2Icon className="w-5 h-5" /></motion.button>
-                                                  </div>
-                                              </div>
+                                    <div key={customer.id} className="relative">
+                                      {/* Swipe background indicators - only visible when dragging this card */}
+                                      {draggingCardId === customer.id && (
+                                        <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
+                                          <div className="w-1/2 bg-green-500 flex items-center justify-start pl-4">
+                                            <WhatsAppIcon className="w-6 h-6 text-white" />
                                           </div>
+                                          <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
+                                            <Trash2Icon className="w-6 h-6 text-white" />
+                                          </div>
+                                        </div>
+                                      )}
+                                      <motion.div 
+                                        className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10" 
+                                        onClick={() => setSelectedCustomer(customer)} 
+                                        initial={{ opacity: 0 }} 
+                                        animate={{ opacity: 1 }} 
+                                        exit={{ opacity: 0 }} 
+                                        transition={{ duration: 0.3, delay: idx * 0.03 }}
+                                        drag="x"
+                                        dragConstraints={{ left: 0, right: 0 }}
+                                        dragElastic={0.3}
+                                        onDragStart={() => setDraggingCardId(customer.id)}
+                                        onDragEnd={(_, info) => {
+                                          setDraggingCardId(null);
+                                          const threshold = 100;
+                                          if (info.offset.x < -threshold) {
+                                            // Swipe left - Delete
+                                            handleDeleteCustomer(customer);
+                                          } else if (info.offset.x > threshold && isValidPhone) {
+                                            // Swipe right - WhatsApp
+                                            openWhatsApp(customer.phone, message, { cooldownMs: 1200 });
+                                          }
+                                        }}
+                                      >
+                                        {/* Row 1: # Name */}
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-xs text-gray-400">#{rowNumber}</span>
+                                          <span className="text-sm font-semibold text-indigo-700 truncate">{customer.name}</span>
+                                        </div>
+                                        {/* Row 2: Phone */}
+                                        <div className="text-xs text-gray-500 mt-1">
+                                          Phone: <span className="font-semibold text-gray-700">{customer.phone}</span>
+                                        </div>
+                                        {/* Row 3: Loans */}
+                                        <div className="text-xs text-gray-500 mt-1">
+                                          Loans: <span className="font-semibold text-gray-700">{customerLoans.length}</span>
+                                        </div>
+                                        {/* Row 4: Loan Value */}
+                                        <div className="text-xs text-gray-500 mt-1">
+                                          Loan Value: <span className="font-semibold text-green-600">{formatCurrency(loanValue)}</span>
+                                        </div>
+                                        {/* Row 5: Action buttons */}
+                                        <div className="mt-3 flex items-center justify-evenly">
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); isValidPhone && openWhatsApp(customer.phone, message, { cooldownMs: 1200 }); }}
+                                            className="p-2 rounded-md bg-green-50 text-green-600"
+                                            disabled={!isValidPhone}
+                                          >
+                                            <WhatsAppIcon className="w-5 h-5" />
+                                          </button>
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {} } }); }}
+                                            className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
+                                          >
+                                            Edit
+                                          </button>
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }}
+                                            className="p-2 rounded-md bg-red-50 text-red-600"
+                                          >
+                                            <Trash2Icon className="w-5 h-5" />
+                                          </button>
+                                        </div>
                                       </motion.div>
+                                    </div>
                                   );
                               })}
                             </div>
@@ -601,7 +728,7 @@ const CustomerListPage = () => {
                                       const subValue = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
                                       const rowNumber = (currentPages.subs - 1) * itemsPerPage + idx + 1;
                                       return (
-                                          <motion.tr key={customer.id} className="bg-white hover:bg-cyan-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
+                                          <motion.tr key={customer.id} className="bg-white hover:bg-cyan-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                               {/* --- CHANGED: Reverted table row --- */}
                                               <td className="px-2 py-2 text-gray-400 text-sm">{rowNumber}</td>
                                               <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
@@ -620,31 +747,91 @@ const CustomerListPage = () => {
                                 </tbody>
                               </table>
                             </div>
-                            {/* Mobile Cards (unchanged) */}
+                            {/* Mobile Cards */}
                             <div className="sm:hidden space-y-3">
                               {paginatedCustomers.map((customer, idx) => {
                                   const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
                                   const subValue = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
                                   const rowNumber = (currentPages.subs - 1) * itemsPerPage + idx + 1;
+                                  const isValidPhone = customer.phone && /^\d{10,15}$/.test(customer.phone);
+                                  const message = `Hi ${customer.name},\n\nSubscriptions: ${customerSubscriptions.length}\nTotal Value: ${formatCurrency(subValue)}\n\nThank You, I J Reddy.`;
                                   return (
-                                      <motion.div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
-                                          <div className="grid grid-cols-3 gap-3 items-start">
-                                              <div className="col-span-2">
-                                                  <div className="text-base font-bold text-indigo-700"><span className="text-gray-400 font-normal mr-2">#{rowNumber}</span>{customer.name}</div>
-                                                  <div className="text-xs text-gray-500">{customer.phone}</div>
-                                                  <div className="mt-2 text-sm text-gray-700">
-                                                      <div className="flex justify-between"><span className="text-gray-600">Subscriptions</span><span className="font-semibold">{customerSubscriptions.length}</span></div>
-                                                      <div className="flex justify-between"><span className="text-gray-600">Total Value</span><span className="font-semibold">{formatCurrency(subValue)}</span></div>
-                                                  </div>
-                                              </div>
-                                              <div className="flex flex-col items-end justify-between">
-                                                  <div className="flex gap-2">
-                                                      <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, subscription: customerSubscriptions[0] || {} } }); }} className="px-3 py-1 rounded bg-blue-600 text-white text-sm" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
-                                                      <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-md bg-red-50 text-red-600" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}><Trash2Icon className="w-5 h-5" /></motion.button>
-                                                  </div>
-                                              </div>
+                                    <div key={customer.id} className="relative">
+                                      {/* Swipe background indicators - only visible when dragging this card */}
+                                      {draggingCardId === customer.id && (
+                                        <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
+                                          <div className="w-1/2 bg-green-500 flex items-center justify-start pl-4">
+                                            <WhatsAppIcon className="w-6 h-6 text-white" />
                                           </div>
+                                          <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
+                                            <Trash2Icon className="w-6 h-6 text-white" />
+                                          </div>
+                                        </div>
+                                      )}
+                                      <motion.div 
+                                        className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10" 
+                                        onClick={() => setSelectedCustomer(customer)} 
+                                        initial={{ opacity: 0 }} 
+                                        animate={{ opacity: 1 }} 
+                                        exit={{ opacity: 0 }} 
+                                        transition={{ duration: 0.3, delay: idx * 0.03 }}
+                                        drag="x"
+                                        dragConstraints={{ left: 0, right: 0 }}
+                                        dragElastic={0.3}
+                                        onDragStart={() => setDraggingCardId(customer.id)}
+                                        onDragEnd={(_, info) => {
+                                          setDraggingCardId(null);
+                                          const threshold = 100;
+                                          if (info.offset.x < -threshold) {
+                                            // Swipe left - Delete
+                                            handleDeleteCustomer(customer);
+                                          } else if (info.offset.x > threshold && isValidPhone) {
+                                            // Swipe right - WhatsApp
+                                            openWhatsApp(customer.phone, message, { cooldownMs: 1200 });
+                                          }
+                                        }}
+                                      >
+                                        {/* Row 1: # Name */}
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-xs text-gray-400">#{rowNumber}</span>
+                                          <span className="text-sm font-semibold text-indigo-700 truncate">{customer.name}</span>
+                                        </div>
+                                        {/* Row 2: Phone */}
+                                        <div className="text-xs text-gray-500 mt-1">
+                                          Phone: <span className="font-semibold text-gray-700">{customer.phone}</span>
+                                        </div>
+                                        {/* Row 3: Subscriptions */}
+                                        <div className="text-xs text-gray-500 mt-1">
+                                          Subscriptions: <span className="font-semibold text-cyan-600">{customerSubscriptions.length}</span>
+                                        </div>
+                                        {/* Row 4: Total Value */}
+                                        <div className="text-xs text-gray-500 mt-1">
+                                          Total Value: <span className="font-semibold text-cyan-600">{formatCurrency(subValue)}</span>
+                                        </div>
+                                        {/* Row 5: Action buttons */}
+                                        <div className="mt-3 flex items-center justify-evenly">
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); isValidPhone && openWhatsApp(customer.phone, message, { cooldownMs: 1200 }); }}
+                                            className="p-2 rounded-md bg-green-50 text-green-600"
+                                            disabled={!isValidPhone}
+                                          >
+                                            <WhatsAppIcon className="w-5 h-5" />
+                                          </button>
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, subscription: customerSubscriptions[0] || {} } }); }}
+                                            className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
+                                          >
+                                            Edit
+                                          </button>
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }}
+                                            className="p-2 rounded-md bg-red-50 text-red-600"
+                                          >
+                                            <Trash2Icon className="w-5 h-5" />
+                                          </button>
+                                        </div>
                                       </motion.div>
+                                    </div>
                                   );
                               })}
                             </div>
@@ -707,7 +894,7 @@ const CustomerListPage = () => {
                                       {paginatedCustomers.map((customer, idx) => {
                                           const rowNumber = (currentPages.neither - 1) * itemsPerPage + idx + 1;
                                           return (
-                                          <motion.tr key={customer.id} className="bg-white hover:bg-gray-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
+                                          <motion.tr key={customer.id} className="bg-white hover:bg-gray-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                               {/* --- CHANGED: Reverted table row --- */}
                                               <td className="px-2 py-2 text-gray-400 text-sm">{rowNumber}</td>
                                               <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
@@ -724,25 +911,81 @@ const CustomerListPage = () => {
                                   </tbody>
                                 </table>
                               </div>
-                              {/* Mobile Cards (unchanged) */}
+                              {/* Mobile Cards */}
                               <div className="sm:hidden space-y-3">
                                   {paginatedCustomers.map((customer, idx) => {
                                       const rowNumber = (currentPages.neither - 1) * itemsPerPage + idx + 1;
+                                      const isValidPhone = customer.phone && /^\d{10,15}$/.test(customer.phone);
+                                      const message = `Hi ${customer.name},\n\nThank You, I J Reddy.`;
                                       return (
-                                      <motion.div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
-                                          <div className="grid grid-cols-3 gap-3 items-start">
-                                              <div className="col-span-2">
-                                                  <div className="text-base font-bold text-indigo-700"><span className="text-gray-400 font-normal mr-2">#{rowNumber}</span>{customer.name}</div>
-                                                  <div className="text-xs text-gray-500">{customer.phone}</div>
-                                              </div>
-                                              <div className="flex flex-col items-end justify-between">
-                                                  <div className="flex gap-2">
-                                                      <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer } }); }} className="px-3 py-1 rounded bg-blue-600 text-white text-sm" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
-                                                      <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-2 rounded-md bg-red-50 text-red-600" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}><Trash2Icon className="w-5 h-5" /></motion.button>
-                                                  </div>
-                                              </div>
+                                      <div key={customer.id} className="relative">
+                                        {/* Swipe background indicators - only visible when dragging this card */}
+                                        {draggingCardId === customer.id && (
+                                          <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
+                                            <div className="w-1/2 bg-green-500 flex items-center justify-start pl-4">
+                                              <WhatsAppIcon className="w-6 h-6 text-white" />
+                                            </div>
+                                            <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
+                                              <Trash2Icon className="w-6 h-6 text-white" />
+                                            </div>
                                           </div>
-                                      </motion.div>
+                                        )}
+                                        <motion.div 
+                                          className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10" 
+                                          onClick={() => setSelectedCustomer(customer)} 
+                                          initial={{ opacity: 0 }} 
+                                          animate={{ opacity: 1 }} 
+                                          exit={{ opacity: 0 }} 
+                                          transition={{ duration: 0.3, delay: idx * 0.03 }}
+                                          drag="x"
+                                          dragConstraints={{ left: 0, right: 0 }}
+                                          dragElastic={0.3}
+                                          onDragStart={() => setDraggingCardId(customer.id)}
+                                          onDragEnd={(_, info) => {
+                                            setDraggingCardId(null);
+                                            const threshold = 100;
+                                            if (info.offset.x < -threshold) {
+                                              // Swipe left - Delete
+                                              handleDeleteCustomer(customer);
+                                            } else if (info.offset.x > threshold && isValidPhone) {
+                                              // Swipe right - WhatsApp
+                                              openWhatsApp(customer.phone, message, { cooldownMs: 1200 });
+                                            }
+                                          }}
+                                        >
+                                          {/* Row 1: # Name */}
+                                          <div className="flex items-center gap-1">
+                                            <span className="text-xs text-gray-400">#{rowNumber}</span>
+                                            <span className="text-sm font-semibold text-indigo-700 truncate">{customer.name}</span>
+                                          </div>
+                                          {/* Row 2: Phone */}
+                                          <div className="text-xs text-gray-500 mt-1">
+                                            Phone: <span className="font-semibold text-gray-700">{customer.phone}</span>
+                                          </div>
+                                          {/* Row 3: Action buttons */}
+                                          <div className="mt-3 flex items-center justify-evenly">
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); isValidPhone && openWhatsApp(customer.phone, message, { cooldownMs: 1200 }); }}
+                                              className="p-2 rounded-md bg-green-50 text-green-600"
+                                              disabled={!isValidPhone}
+                                            >
+                                              <WhatsAppIcon className="w-5 h-5" />
+                                            </button>
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer } }); }}
+                                              className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
+                                            >
+                                              Edit
+                                            </button>
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }}
+                                              className="p-2 rounded-md bg-red-50 text-red-600"
+                                            >
+                                              <Trash2Icon className="w-5 h-5" />
+                                            </button>
+                                          </div>
+                                        </motion.div>
+                                      </div>
                                       );
                                   })}
                               </div>

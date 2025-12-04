@@ -330,10 +330,10 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
           }
 
           return (
-            <div key={sub.id} className="relative overflow-hidden rounded-lg">
+            <div key={sub.id} className="relative">
               {/* Swipe background indicators - only visible when dragging this card */}
               {draggingCardId === sub.id && (
-                <div className="absolute inset-0 flex">
+                <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
                   <div className="w-1/2 bg-green-500 flex items-center justify-start pl-4">
                     <WhatsAppIcon className="w-6 h-6 text-white" />
                   </div>
@@ -344,7 +344,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
               )}
               
               <motion.div
-                className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative"
+                className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}

@@ -27,6 +27,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
   const debouncedFilter = useDebounce(filter, 300);
   const [currentPage, setCurrentPage] = React.useState(1);
   const itemsPerPage = 25;
+  const [draggingCardId, setDraggingCardId] = React.useState<string | null>(null);
 
   // Sorting state
   const [sortField, setSortField] = React.useState("");
@@ -329,72 +330,103 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
           }
 
           return (
-            <motion.div
-              key={sub.id}
-              className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.3, delay: idx * 0.05 }}
-            >
+            <div key={sub.id} className="relative overflow-hidden rounded-lg">
+              {/* Swipe background indicators - only visible when dragging this card */}
+              {draggingCardId === sub.id && (
+                <div className="absolute inset-0 flex">
+                  <div className="w-1/2 bg-green-500 flex items-center justify-start pl-4">
+                    <WhatsAppIcon className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
+                    <Trash2Icon className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+              )}
+              
+              <motion.div
+                className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3, delay: idx * 0.05 }}
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.3}
+                onDragStart={() => setDraggingCardId(sub.id)}
+                onDragEnd={(_, info) => {
+                  setDraggingCardId(null);
+                  const threshold = 100;
+                  if (info.offset.x < -threshold && !isScopedCustomer) {
+                    // Swipe left - Delete
+                    onDelete(sub);
+                  } else if (info.offset.x > threshold && isValidPhone) {
+                    // Swipe right - WhatsApp
+                    openWhatsApp(customer?.phone, message, { cooldownMs: 1200 });
+                  }
+                }}
+              >
+              {/* Row 1: # Name and Amount */}
               <div className="flex justify-between items-start">
-                <div>
-                  <div className="text-xs text-gray-400">#{actualIndex}</div>
-                  <div className="text-sm font-semibold text-indigo-700 truncate">
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-gray-400">#{actualIndex}</span>
+                  <span className="text-sm font-semibold text-indigo-700 truncate">
                     {customer?.name ?? "Unknown"}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {formatDate(sub.date) || "-"}
-                  </div>
+                  </span>
                 </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold">
-                    {formatCurrencyIN(sub.amount)}
-                  </div>
-                  <div className="text-xs text-gray-500">{sub.receipt || "-"}</div>
+                <div className="text-lg font-bold">
+                  {formatCurrencyIN(sub.amount)}
                 </div>
               </div>
-                  <div className="mt-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                      <button
-                        onClick={() =>
-                          isValidPhone &&
-                          openWhatsApp(customer?.phone, message, {
-                            cooldownMs: 1200,
-                          })
-                        }
-                        className="p-2 rounded-md bg-green-50 text-green-600"
-                        disabled={!isValidPhone}
-                        aria-label={`Send subscription for ${customer?.name} on WhatsApp`}
-                      >
-                        <WhatsAppIcon className="w-5 h-5" />
-                      </button>
-                      {!isScopedCustomer && (
-                        <button
-                          onClick={() => setEditSubscriptionTarget(sub)}
-                          className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
-                        >
-                          Edit
-                        </button>
-                      )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-sm text-gray-600">
-                    Receipt: {sub.receipt || "-"}
-                  </div>
-                      {!isScopedCustomer && (
-                        <button
-                          onClick={() => onDelete(sub)}
-                          className="p-2 rounded-md bg-red-50 text-red-600"
-                          aria-label={`Delete subscription for ${customer?.name}`}
-                          disabled={deletingId === sub.id}
-                        >
-                          <Trash2Icon className="w-5 h-5" />
-                        </button>
-                      )}
-                </div>
+
+              {/* Row 2: Date */}
+              <div className="text-xs text-gray-500 mt-1">
+                Date: {formatDate(sub.date) || "-"}
               </div>
-            </motion.div>
+
+              {/* Row 3: Receipt Number (and Late Fee if exists) */}
+              <div className="text-xs text-gray-500 mt-1 flex justify-between">
+                <span>Receipt: {sub.receipt || "-"}</span>
+                {typeof sub.late_fee === "number" && sub.late_fee > 0 && (
+                  <span className="text-red-500">Late Fee: {formatCurrencyIN(sub.late_fee)}</span>
+                )}
+              </div>
+
+              {/* Row 4: Action buttons */}
+              <div className="mt-3 flex items-center justify-evenly">
+                <button
+                  onClick={() =>
+                    isValidPhone &&
+                    openWhatsApp(customer?.phone, message, {
+                      cooldownMs: 1200,
+                    })
+                  }
+                  className="p-2 rounded-md bg-green-50 text-green-600"
+                  disabled={!isValidPhone}
+                  aria-label={`Send subscription for ${customer?.name} on WhatsApp`}
+                >
+                  <WhatsAppIcon className="w-5 h-5" />
+                </button>
+                {!isScopedCustomer && (
+                  <button
+                    onClick={() => setEditSubscriptionTarget(sub)}
+                    className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
+                  >
+                    Edit
+                  </button>
+                )}
+                {!isScopedCustomer && (
+                  <button
+                    onClick={() => onDelete(sub)}
+                    className="p-2 rounded-md bg-red-50 text-red-600"
+                    aria-label={`Delete subscription for ${customer?.name}`}
+                    disabled={deletingId === sub.id}
+                  >
+                    <Trash2Icon className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+              </motion.div>
+            </div>
           );
         })}
       </div>

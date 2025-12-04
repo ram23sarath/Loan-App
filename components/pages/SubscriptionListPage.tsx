@@ -1,4 +1,5 @@
 import React from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import SubscriptionTableView from "./SubscriptionTableView";
 import { useData } from "../../context/DataContext";
 import PageWrapper from "../ui/PageWrapper";
@@ -68,39 +69,52 @@ const SubscriptionListPage = () => {
       />
 
       {/* The Delete confirmation modal is moved here to be a sibling of the other views */}
-      {pendingDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 w-[90%] max-w-md flex flex-col items-center">
-            <Trash2Icon className="w-10 h-10 text-red-500 mb-2" />
-            <h3 className="text-lg font-bold mb-2 text-center">
-              Delete Subscription?
-            </h3>
-            <p className="text-gray-700 text-center mb-4">
-              Are you sure you want to delete the subscription for{" "}
-              <span className="font-semibold">
-                {pendingDelete.customers?.name}
-              </span>{" "}
-              from {formatDate(pendingDelete.date)}?
-            </p>
-            <div className="flex gap-4 w-full justify-center">
-              <button
-                onClick={() => setPendingDelete(null)}
-                className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold"
-                disabled={deleting}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold"
-                disabled={deleting}
-              >
-                {deleting ? "Deleting..." : "Delete"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {pendingDelete && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-white rounded-xl shadow-lg p-6 md:p-8 w-[90%] max-w-md flex flex-col items-center"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            >
+              <Trash2Icon className="w-10 h-10 text-red-500 mb-2" />
+              <h3 className="text-lg font-bold mb-2 text-center">
+                Delete Subscription?
+              </h3>
+              <p className="text-gray-700 text-center mb-4">
+                Are you sure you want to delete the subscription for{" "}
+                <span className="font-semibold">
+                  {pendingDelete.customers?.name}
+                </span>{" "}
+                from {formatDate(pendingDelete.date)}?
+              </p>
+              <div className="flex gap-4 w-full justify-center">
+                <button
+                  onClick={() => setPendingDelete(null)}
+                  className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold"
+                  disabled={deleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold"
+                  disabled={deleting}
+                >
+                  {deleting ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </PageWrapper>
   );
 };

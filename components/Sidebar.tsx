@@ -52,6 +52,7 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
     isScopedCustomer,
     scopedCustomerId,
     customers = [],
+    customerMap,
   } = useData();
 
   const [showLandscapeMenu, setShowLandscapeMenu] = React.useState(false);
@@ -156,7 +157,7 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
   // Calculate user initials for profile button (same logic as ProfileHeader)
   const userEmail = session?.user?.email || 'User';
   const customerDetails = isScopedCustomer && scopedCustomerId
-    ? customers.find(c => c.id === scopedCustomerId)
+    ? customerMap.get(scopedCustomerId)
     : null;
   const displayName = isScopedCustomer && customerDetails?.name ? customerDetails.name : userEmail;
   const initials = (displayName && displayName.trim().charAt(0).toUpperCase()) || 'U';

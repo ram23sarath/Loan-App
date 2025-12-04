@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 
 const LoanDetailPage: React.FC = () => {
   const { id } = useParams();
-  const { loans, installments, loading } = useData();
+  const { loans, installmentsByLoanId, loading } = useData();
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 25;
 
@@ -17,7 +17,7 @@ const LoanDetailPage: React.FC = () => {
   }
 
   const loan = loans.find(l => l.id === id);
-  const loanInstallments = installments.filter(inst => inst.loan_id === id);
+  const loanInstallments = id ? (installmentsByLoanId.get(id) || []) : [];
 
   if (!loan) {
     return <GlassCard><p>Loan not found.</p></GlassCard>;

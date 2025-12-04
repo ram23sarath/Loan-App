@@ -7,6 +7,7 @@ import { WhatsAppIcon, Trash2Icon } from "../../constants";
 import { openWhatsApp } from "../../utils/whatsapp";
 import { formatCurrencyIN } from "../../utils/numberFormatter";
 import EditModal from "../modals/EditModal";
+import { useDebounce } from "../../utils/useDebounce";
 
 // Add props for delete
 interface SubscriptionTableViewProps {
@@ -18,11 +19,12 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
   onDelete,
   deletingId,
 }) => {
-  const { subscriptions, updateSubscription, isScopedCustomer, scopedCustomerId, customers } = useData();
+  const { subscriptions, updateSubscription, isScopedCustomer, scopedCustomerId, customers, customerMap } = useData();
   const [editSubscriptionTarget, setEditSubscriptionTarget] = React.useState<
     any | null
   >(null);
   const [filter, setFilter] = React.useState("");
+  const debouncedFilter = useDebounce(filter, 300);
   const [currentPage, setCurrentPage] = React.useState(1);
   const itemsPerPage = 25;
 
@@ -32,19 +34,23 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
     "asc"
   );
 
-  // First filter by scoped customer if applicable
-  const scopedSubscriptions = isScopedCustomer && scopedCustomerId
-    ? subscriptions.filter((sub) => sub.customer_id === scopedCustomerId)
-    : subscriptions;
+  // Memoize scoped and filtered subscriptions to prevent recalculation on every render
+  const scopedSubscriptions = React.useMemo(() => {
+    return isScopedCustomer && scopedCustomerId
+      ? subscriptions.filter((sub) => sub.customer_id === scopedCustomerId)
+      : subscriptions;
+  }, [subscriptions, isScopedCustomer, scopedCustomerId]);
 
-  const filteredSubscriptions = scopedSubscriptions.filter((sub) => {
-    const customerName = sub.customers?.name?.toLowerCase() || "";
-    const receipt = (sub.receipt || "").toLowerCase();
-    return (
-      customerName.includes(filter.toLowerCase()) ||
-      receipt.includes(filter.toLowerCase())
-    );
-  });
+  const filteredSubscriptions = React.useMemo(() => {
+    return scopedSubscriptions.filter((sub) => {
+      const customerName = sub.customers?.name?.toLowerCase() || "";
+      const receipt = (sub.receipt || "").toLowerCase();
+      return (
+        customerName.includes(debouncedFilter.toLowerCase()) ||
+        receipt.includes(debouncedFilter.toLowerCase())
+      );
+    });
+  }, [scopedSubscriptions, debouncedFilter]);
 
   const sortedSubscriptions = React.useMemo(() => {
     let result = [...filteredSubscriptions];
@@ -115,7 +121,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
   if (subscriptions.length === 0) {
     const emptyMessage = isScopedCustomer && scopedCustomerId
       ? (() => {
-        const customer = customers.find(c => c.id === scopedCustomerId);
+        const customer = customerMap.get(scopedCustomerId);
         return `No Subscription Entries for ${customer?.name || 'you'}`;
       })()
       : 'No subscriptions recorded yet.';

@@ -7,6 +7,7 @@ import { UsersIcon, Trash2Icon, SpinnerIcon } from '../../constants';
 import CustomerDetailModal from '../modals/CustomerDetailModal';
 import EditModal from '../modals/EditModal';
 import type { Customer } from '../../types';
+import { useDebounce } from '../../utils/useDebounce';
 
 // --- CHANGED: Added Chevron Icon for collapsibles ---
 const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -27,10 +28,11 @@ const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 
 const CustomerListPage = () => {
-  const { customers, loans, subscriptions, installments, dataEntries, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, isRefreshing, signOut, updateCustomer, updateLoan, updateSubscription } = useData();
+  const { customers, loans, subscriptions, installments, installmentsByLoanId, dataEntries, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, isRefreshing, signOut, updateCustomer, updateLoan, updateSubscription } = useData();
     const [deleteCustomerTarget, setDeleteCustomerTarget] = React.useState<{id: string, name: string} | null>(null);
     const [deleteCounts, setDeleteCounts] = React.useState<{ dataEntries: number; loans: number; installments: number; subscriptions: number } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const [sortOption, setSortOption] = useState('date-desc');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -90,8 +92,8 @@ const CustomerListPage = () => {
         const dataEntriesCount = dataEntries.filter(d => d.customer_id === cid).length;
         const customerLoans = loans.filter(l => l.customer_id === cid);
         const loansCount = customerLoans.length;
-        const loanIds = customerLoans.map(l => l.id);
-        const installmentsCount = installments.filter(i => loanIds.includes(i.loan_id)).length;
+        const installmentsCount = customerLoans.reduce((acc, loan) => 
+          acc + (installmentsByLoanId.get(loan.id)?.length || 0), 0);
         const subscriptionsCount = subscriptions.filter(s => s.customer_id === cid).length;
         setDeleteCounts({ dataEntries: dataEntriesCount, loans: loansCount, installments: installmentsCount, subscriptions: subscriptionsCount });
         setDeleteCustomerTarget({ id: customer.id, name: customer.name });
@@ -133,10 +135,10 @@ const CustomerListPage = () => {
     });
 
     // Apply search filter
-    if (searchTerm) {
+    if (debouncedSearchTerm) {
       processedCustomers = processedCustomers.filter(customer =>
-        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.phone.includes(searchTerm)
+        customer.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        customer.phone.includes(debouncedSearchTerm)
       );
     }
 
@@ -163,7 +165,7 @@ const CustomerListPage = () => {
     });
 
         return { withOnlyLoans, withOnlySubscriptions, withBoth, withNeither };
-  }, [customers, loans, subscriptions, searchTerm, sortOption]);
+  }, [customers, loans, subscriptions, debouncedSearchTerm, sortOption]);
   
   // --- CHANGED: Removed the standardized TableHeader component ---
   

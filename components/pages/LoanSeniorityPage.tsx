@@ -60,6 +60,19 @@ const LoanSeniorityPage = () => {
   const [loanRequestDate, setLoanRequestDate] = useState('');
   const [modalEditingId, setModalEditingId] = useState<string | null>(null);
 
+  // Delete confirmation state
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await removeFromSeniority(deleteTarget.id);
+      setDeleteTarget(null);
+    } catch (err) {
+      alert((err as Error).message || 'Failed to remove customer from seniority list');
+    }
+  };
+
   const closeModal = () => {
     setModalCustomer(null);
     setStationName('');
@@ -226,7 +239,7 @@ const LoanSeniorityPage = () => {
                             className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700">
                             Edit
                           </button>
-                          <button onClick={() => removeFromList(entry.id)} aria-label={`Remove seniority entry ${entry.id}`} className="p-1 rounded-full hover:bg-red-500/10 transition-colors">
+                          <button onClick={() => setDeleteTarget({ id: entry.id, name: entry.customers?.name || 'Unknown' })} aria-label={`Remove seniority entry ${entry.id}`} className="p-1 rounded-full hover:bg-red-500/10 transition-colors">
                             <Trash2Icon className="w-4 h-4 text-red-500" />
                           </button>
                         </div>
@@ -262,7 +275,7 @@ const LoanSeniorityPage = () => {
                       }} className="px-3 py-1 rounded bg-blue-600 text-white text-sm" aria-label="Edit">
                         Edit
                       </button>
-                      <button onClick={() => removeFromList(entry.id)} className="p-2 rounded-md bg-red-50 text-red-600" aria-label="Remove">
+                      <button onClick={() => setDeleteTarget({ id: entry.id, name: entry.customers?.name || 'Unknown' })} className="p-2 rounded-md bg-red-50 text-red-600" aria-label="Remove">
                         <Trash2Icon className="w-4 h-4" />
                       </button>
                     </div>
@@ -273,6 +286,32 @@ const LoanSeniorityPage = () => {
           </>
         )}
       </GlassCard>
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md">
+            <h3 className="text-lg font-bold mb-3">Remove from Seniority List?</h3>
+            <p className="mb-4 text-sm text-gray-600">
+              Are you sure you want to remove <span className="font-semibold">{deleteTarget.name}</span> from the seniority list?
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PageWrapper>
   );
 };

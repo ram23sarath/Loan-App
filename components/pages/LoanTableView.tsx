@@ -923,11 +923,11 @@ const LoanTableView: React.FC = () => {
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-2"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4"
           >
             <motion.div
               variants={modalContentVariants}
-              className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-xs sm:max-w-sm"
+              className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md"
             >
               <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">
                 Delete Loan
@@ -975,11 +975,11 @@ const LoanTableView: React.FC = () => {
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 px-2"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4"
           >
             <motion.div
               variants={modalContentVariants}
-              className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-xs sm:max-w-sm"
+              className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md"
             >
               <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">
                 Delete Installment

@@ -71,6 +71,11 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const noteRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
+  // Delete confirmation states
+  const [deleteLoanTarget, setDeleteLoanTarget] = useState<LoanWithCustomer | null>(null);
+  const [deleteSubTarget, setDeleteSubTarget] = useState<SubscriptionWithCustomer | null>(null);
+  const [deleteInstTarget, setDeleteInstTarget] = useState<Installment | null>(null);
+
   const handleNoteClick = (id: string) => {
     setExpandedNoteId(expandedNoteId === id ? null : id);
   };
@@ -85,33 +90,33 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [expandedNoteId]);
 
-  const handleDeleteLoan = async (loan: LoanWithCustomer) => {
-    if (window.confirm(`Are you sure you want to delete the loan from ${formatDate(loan.payment_date)}? This will also delete all its installments.`)) {
-      try {
-        await deleteLoan(loan.id);
-      } catch (error: any) {
-        alert(error.message);
-      }
+  const confirmDeleteLoan = async () => {
+    if (!deleteLoanTarget) return;
+    try {
+      await deleteLoan(deleteLoanTarget.id);
+      setDeleteLoanTarget(null);
+    } catch (error: any) {
+      alert(error.message);
     }
   };
 
-  const handleDeleteSubscription = async (sub: SubscriptionWithCustomer) => {
-    if (window.confirm(`Are you sure you want to delete this subscription from ${formatDate(sub.date)}?`)) {
-      try {
-        await deleteSubscription(sub.id);
-      } catch (error: any) {
-        alert(error.message);
-      }
+  const confirmDeleteSubscription = async () => {
+    if (!deleteSubTarget) return;
+    try {
+      await deleteSubscription(deleteSubTarget.id);
+      setDeleteSubTarget(null);
+    } catch (error: any) {
+      alert(error.message);
     }
   };
 
-  const handleDeleteInstallment = async (installment: Installment) => {
-    if (window.confirm(`Are you sure you want to delete installment #${installment.installment_number}?`)) {
-      try {
-        await deleteInstallment(installment.id);
-      } catch (error: any) {
-        alert(error.message);
-      }
+  const confirmDeleteInstallment = async () => {
+    if (!deleteInstTarget) return;
+    try {
+      await deleteInstallment(deleteInstTarget.id);
+      setDeleteInstTarget(null);
+    } catch (error: any) {
+      alert(error.message);
     }
   };
 
@@ -249,7 +254,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                             </motion.button>
                           )}
                           <motion.button
-                            onClick={() => handleDeleteLoan(loan)}
+                            onClick={() => setDeleteLoanTarget(loan)}
                             className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
                             aria-label={`Delete loan from ${loan.payment_date}`}
                             whileHover={{ scale: 1.2 }}
@@ -288,7 +293,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                                   )}
                                 </p>
                                 <motion.button
-                                  onClick={() => handleDeleteInstallment(installment)}
+                                  onClick={() => setDeleteInstTarget(installment)}
                                   className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
                                   aria-label={`Delete installment #${installment.installment_number}`}
                                   whileHover={{ scale: 1.2 }}
@@ -337,7 +342,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                         </motion.button>
                       )}
                       <motion.button
-                        onClick={() => handleDeleteSubscription(sub)}
+                        onClick={() => setDeleteSubTarget(sub)}
                         className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
                         aria-label={`Delete subscription from ${formatDate(sub.date)}`}
                         whileHover={{ scale: 1.2 }}
@@ -412,6 +417,123 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
             )}
           </GlassCard>
         </div>
+
+        {/* Delete Loan Confirmation Modal */}
+        <AnimatePresence>
+          {deleteLoanTarget && (
+            <motion.div
+              variants={backdropVariants}
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
+              onClick={() => setDeleteLoanTarget(null)}
+            >
+              <motion.div
+                variants={modalVariants}
+                className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md"
+                onClick={e => e.stopPropagation()}
+              >
+                <h3 className="text-lg font-bold mb-3">Delete Loan?</h3>
+                <p className="mb-4 text-sm text-gray-600">
+                  Are you sure you want to delete the loan from <span className="font-semibold">{formatDate(deleteLoanTarget.payment_date)}</span>? This will also delete all its installments.
+                </p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setDeleteLoanTarget(null)}
+                    className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDeleteLoan}
+                    className="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                  >
+                    Delete Loan
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Delete Subscription Confirmation Modal */}
+        <AnimatePresence>
+          {deleteSubTarget && (
+            <motion.div
+              variants={backdropVariants}
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
+              onClick={() => setDeleteSubTarget(null)}
+            >
+              <motion.div
+                variants={modalVariants}
+                className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md"
+                onClick={e => e.stopPropagation()}
+              >
+                <h3 className="text-lg font-bold mb-3">Delete Subscription?</h3>
+                <p className="mb-4 text-sm text-gray-600">
+                  Are you sure you want to delete the subscription from <span className="font-semibold">{formatDate(deleteSubTarget.date)}</span>?
+                </p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setDeleteSubTarget(null)}
+                    className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDeleteSubscription}
+                    className="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Delete Installment Confirmation Modal */}
+        <AnimatePresence>
+          {deleteInstTarget && (
+            <motion.div
+              variants={backdropVariants}
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
+              onClick={() => setDeleteInstTarget(null)}
+            >
+              <motion.div
+                variants={modalVariants}
+                className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md"
+                onClick={e => e.stopPropagation()}
+              >
+                <h3 className="text-lg font-bold mb-3">Delete Installment?</h3>
+                <p className="mb-4 text-sm text-gray-600">
+                  Are you sure you want to delete installment <span className="font-semibold">#{deleteInstTarget.installment_number}</span>?
+                </p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setDeleteInstTarget(null)}
+                    className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDeleteInstallment}
+                    className="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </motion.div>
   );

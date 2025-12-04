@@ -799,8 +799,8 @@ const CustomerListPage = () => {
         />
       )}
             {deleteCustomerTarget && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-                    <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
+                    <div className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md">
                         <h3 className="text-lg font-bold mb-4">Confirm Deletion</h3>
                         <p className="mb-4">You're about to delete <span className="font-semibold">{deleteCustomerTarget.name}</span>. The following related records will be removed:</p>
                         <ul className="mb-4 list-disc list-inside text-sm text-gray-700">

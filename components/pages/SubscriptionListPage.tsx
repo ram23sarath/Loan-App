@@ -69,8 +69,8 @@ const SubscriptionListPage = () => {
 
       {/* The Delete confirmation modal is moved here to be a sibling of the other views */}
       {pendingDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl shadow-lg p-6 max-w-sm w-full flex flex-col items-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 w-[90%] max-w-md flex flex-col items-center">
             <Trash2Icon className="w-10 h-10 text-red-500 mb-2" />
             <h3 className="text-lg font-bold mb-2 text-center">
               Delete Subscription?

@@ -64,6 +64,13 @@ const CustomerListPage = () => {
     setCurrentPages(prev => ({ ...prev, [section]: page }));
   };
 
+  // Auto-expand all sections when searching
+  React.useEffect(() => {
+    if (debouncedSearchTerm) {
+      setExpandedSections({ both: true, loans: true, subs: true, neither: true });
+    }
+  }, [debouncedSearchTerm]);
+
   // Auto logout after 30 minutes of inactivity
   React.useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -355,6 +362,7 @@ const CustomerListPage = () => {
                               <table className="min-w-full divide-y divide-gray-200">
                                 <thead>
                                   <tr>
+                                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700 w-12">#</th>
                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Loans</th>
@@ -368,9 +376,11 @@ const CustomerListPage = () => {
                                       const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
                                       const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
                                       const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+                                      const rowNumber = (currentPages.both - 1) * itemsPerPage + idx + 1;
                                       return (
                                           <motion.tr key={customer.id} className="bg-white hover:bg-indigo-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                               {/* --- CHANGED: Reverted table row --- */}
+                                              <td className="px-2 py-2 text-gray-400 text-sm">{rowNumber}</td>
                                               <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
                                               <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
                                               <td className="px-4 py-2 text-gray-700">{customerLoans.length}</td>
@@ -394,11 +404,12 @@ const CustomerListPage = () => {
                                   const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
                                   const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
                                   const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+                                  const rowNumber = (currentPages.both - 1) * itemsPerPage + idx + 1;
                                   return (
                                       <motion.div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                           <div className="grid grid-cols-3 gap-3 items-start">
                                               <div className="col-span-2">
-                                                  <div className="text-base font-bold text-indigo-700">{customer.name}</div>
+                                                  <div className="text-base font-bold text-indigo-700"><span className="text-gray-400 font-normal mr-2">#{rowNumber}</span>{customer.name}</div>
                                                   <div className="text-xs text-gray-500">{customer.phone}</div>
                                                   <div className="mt-2 text-sm text-gray-700 space-y-1">
                                                       <div className="flex justify-between"><span className="text-gray-600">Loans</span><span className="font-semibold">{customerLoans.length}</span></div>
@@ -466,6 +477,7 @@ const CustomerListPage = () => {
                               <table className="min-w-full divide-y divide-gray-200">
                                 <thead>
                                   <tr>
+                                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700 w-12">#</th>
                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Loans</th>
@@ -477,9 +489,11 @@ const CustomerListPage = () => {
                                   {paginatedCustomers.map((customer, idx) => {
                                       const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
                                       const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+                                      const rowNumber = (currentPages.loans - 1) * itemsPerPage + idx + 1;
                                       return (
                                           <motion.tr key={customer.id} className="bg-white hover:bg-blue-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                               {/* --- CHANGED: Reverted table row --- */}
+                                              <td className="px-2 py-2 text-gray-400 text-sm">{rowNumber}</td>
                                               <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
                                               <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
                                               <td className="px-4 py-2 text-gray-700">{customerLoans.length}</td>
@@ -501,11 +515,12 @@ const CustomerListPage = () => {
                               {paginatedCustomers.map((customer, idx) => {
                                   const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
                                   const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+                                  const rowNumber = (currentPages.loans - 1) * itemsPerPage + idx + 1;
                                   return (
                                       <motion.div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                           <div className="grid grid-cols-3 gap-3 items-start">
                                               <div className="col-span-2">
-                                                  <div className="text-base font-bold text-indigo-700">{customer.name}</div>
+                                                  <div className="text-base font-bold text-indigo-700"><span className="text-gray-400 font-normal mr-2">#{rowNumber}</span>{customer.name}</div>
                                                   <div className="text-xs text-gray-500">{customer.phone}</div>
                                                   <div className="mt-2 text-sm text-gray-700">
                                                       <div className="flex justify-between"><span className="text-gray-600">Loans</span><span className="font-semibold">{customerLoans.length}</span></div>
@@ -572,6 +587,7 @@ const CustomerListPage = () => {
                               <table className="min-w-full divide-y divide-gray-200">
                                 <thead>
                                   <tr>
+                                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700 w-12">#</th>
                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Subscriptions</th>
@@ -583,9 +599,11 @@ const CustomerListPage = () => {
                                   {paginatedCustomers.map((customer, idx) => {
                                       const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
                                       const subValue = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
+                                      const rowNumber = (currentPages.subs - 1) * itemsPerPage + idx + 1;
                                       return (
                                           <motion.tr key={customer.id} className="bg-white hover:bg-cyan-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                               {/* --- CHANGED: Reverted table row --- */}
+                                              <td className="px-2 py-2 text-gray-400 text-sm">{rowNumber}</td>
                                               <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
                                               <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
                                               <td className="px-4 py-2 text-cyan-600">{customerSubscriptions.length}</td>
@@ -607,11 +625,12 @@ const CustomerListPage = () => {
                               {paginatedCustomers.map((customer, idx) => {
                                   const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
                                   const subValue = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
+                                  const rowNumber = (currentPages.subs - 1) * itemsPerPage + idx + 1;
                                   return (
                                       <motion.div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                           <div className="grid grid-cols-3 gap-3 items-start">
                                               <div className="col-span-2">
-                                                  <div className="text-base font-bold text-indigo-700">{customer.name}</div>
+                                                  <div className="text-base font-bold text-indigo-700"><span className="text-gray-400 font-normal mr-2">#{rowNumber}</span>{customer.name}</div>
                                                   <div className="text-xs text-gray-500">{customer.phone}</div>
                                                   <div className="mt-2 text-sm text-gray-700">
                                                       <div className="flex justify-between"><span className="text-gray-600">Subscriptions</span><span className="font-semibold">{customerSubscriptions.length}</span></div>
@@ -678,15 +697,19 @@ const CustomerListPage = () => {
                                 <table className="min-w-full divide-y divide-gray-200">
                                   <thead>
                                       <tr>
+                                          <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700 w-12">#</th>
                                           <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Name</th>
                                           <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Phone</th>
                                           <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">Actions</th>
                                       </tr>
                                   </thead>
                                   <tbody>
-                                      {paginatedCustomers.map((customer, idx) => (
+                                      {paginatedCustomers.map((customer, idx) => {
+                                          const rowNumber = (currentPages.neither - 1) * itemsPerPage + idx + 1;
+                                          return (
                                           <motion.tr key={customer.id} className="bg-white hover:bg-gray-50/50 transition cursor-pointer" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                               {/* --- CHANGED: Reverted table row --- */}
+                                              <td className="px-2 py-2 text-gray-400 text-sm">{rowNumber}</td>
                                               <td className="px-4 py-2 font-bold text-indigo-700">{customer.name}</td>
                                               <td className="px-4 py-2 text-gray-500">{customer.phone}</td>
                                               <td className="px-4 py-2">
@@ -696,17 +719,20 @@ const CustomerListPage = () => {
                                                 </div>
                                               </td>
                                           </motion.tr>
-                                      ))}
+                                          );
+                                      })}
                                   </tbody>
                                 </table>
                               </div>
                               {/* Mobile Cards (unchanged) */}
                               <div className="sm:hidden space-y-3">
-                                  {paginatedCustomers.map((customer, idx) => (
+                                  {paginatedCustomers.map((customer, idx) => {
+                                      const rowNumber = (currentPages.neither - 1) * itemsPerPage + idx + 1;
+                                      return (
                                       <motion.div key={customer.id} className="bg-white rounded-xl shadow border border-gray-100 p-3" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                           <div className="grid grid-cols-3 gap-3 items-start">
                                               <div className="col-span-2">
-                                                  <div className="text-base font-bold text-indigo-700">{customer.name}</div>
+                                                  <div className="text-base font-bold text-indigo-700"><span className="text-gray-400 font-normal mr-2">#{rowNumber}</span>{customer.name}</div>
                                                   <div className="text-xs text-gray-500">{customer.phone}</div>
                                               </div>
                                               <div className="flex flex-col items-end justify-between">
@@ -717,7 +743,8 @@ const CustomerListPage = () => {
                                               </div>
                                           </div>
                                       </motion.div>
-                                  ))}
+                                      );
+                                  })}
                               </div>
                               {/* Pagination Controls */}
                               <PaginationControls section="neither" totalItems={categorizedCustomers.withNeither.length} />

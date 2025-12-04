@@ -1,22 +1,25 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { DataProvider } from './context/DataContext';
 import Sidebar from './components/Sidebar';
 import ProfileHeader from './components/ProfileHeader';
-import AddCustomerPage from './components/pages/AddCustomerPage';
-import AddRecordPage from './components/pages/AddRecordPage';
-import CustomerListPage from './components/pages/CustomerListPage';
-import LoanListPage from './components/pages/LoanListPage';
-import LoanDetailPage from './components/pages/LoanDetailPage';
-import LoanSeniorityPage from './components/pages/LoanSeniorityPage';
-import SubscriptionListPage from './components/pages/SubscriptionListPage';
-import SummaryPage from './components/pages/SummaryPage';
-import DataPage from './components/pages/DataPage';
-import LoginPage from './components/pages/LoginPage';
-import CustomerDashboard from './components/pages/CustomerDashboard';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import LoadingSpinner from './components/ui/LoadingSpinner';
 import { useData } from './context/DataContext';
+
+// Lazy load page components for better initial bundle size
+const AddCustomerPage = React.lazy(() => import('./components/pages/AddCustomerPage'));
+const AddRecordPage = React.lazy(() => import('./components/pages/AddRecordPage'));
+const CustomerListPage = React.lazy(() => import('./components/pages/CustomerListPage'));
+const LoanListPage = React.lazy(() => import('./components/pages/LoanListPage'));
+const LoanDetailPage = React.lazy(() => import('./components/pages/LoanDetailPage'));
+const LoanSeniorityPage = React.lazy(() => import('./components/pages/LoanSeniorityPage'));
+const SubscriptionListPage = React.lazy(() => import('./components/pages/SubscriptionListPage'));
+const SummaryPage = React.lazy(() => import('./components/pages/SummaryPage'));
+const DataPage = React.lazy(() => import('./components/pages/DataPage'));
+const LoginPage = React.lazy(() => import('./components/pages/LoginPage'));
+const CustomerDashboard = React.lazy(() => import('./components/pages/CustomerDashboard'));
 
 // AdminOnlyRoute component to restrict admin-only pages
 const AdminOnlyRoute = ({ children }: { children: React.ReactNode }) => {
@@ -32,52 +35,54 @@ const AnimatedRoutes = () => {
   const location = useLocation();
   const { isScopedCustomer } = useData();
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location}>
-        <Route
-          path="/"
-          element={
-            isScopedCustomer ? (
-              <CustomerDashboard />
-            ) : (
+    <Suspense fallback={<div className="flex items-center justify-center h-full"><LoadingSpinner /></div>}>
+      <AnimatePresence mode="wait">
+        <Routes location={location}>
+          <Route
+            path="/"
+            element={
+              isScopedCustomer ? (
+                <CustomerDashboard />
+              ) : (
+                <AdminOnlyRoute>
+                  <AddCustomerPage />
+                </AdminOnlyRoute>
+              )
+            }
+          />
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/add-record"
+            element={
               <AdminOnlyRoute>
-                <AddCustomerPage />
+                <AddRecordPage />
               </AdminOnlyRoute>
-            )
-          }
-        />
-        <Route path="/login" element={<LoginPage />} />
-        <Route
-          path="/add-record"
-          element={
-            <AdminOnlyRoute>
-              <AddRecordPage />
-            </AdminOnlyRoute>
-          }
-        />
-        <Route
-          path="/customers"
-          element={
-            <AdminOnlyRoute>
-              <CustomerListPage />
-            </AdminOnlyRoute>
-          }
-        />
-        <Route path="/loans" element={<LoanListPage />} />
-        <Route
-          path="/loan-seniority"
-          element={
-            <AdminOnlyRoute>
-              <LoanSeniorityPage />
-            </AdminOnlyRoute>
-          }
-        />
-        <Route path="/loans/:id" element={<LoanDetailPage />} />
-        <Route path="/subscriptions" element={<SubscriptionListPage />} />
-        <Route path="/summary" element={<SummaryPage />} />
-        <Route path="/data" element={<DataPage />} />
-      </Routes>
-    </AnimatePresence>
+            }
+          />
+          <Route
+            path="/customers"
+            element={
+              <AdminOnlyRoute>
+                <CustomerListPage />
+              </AdminOnlyRoute>
+            }
+          />
+          <Route path="/loans" element={<LoanListPage />} />
+          <Route
+            path="/loan-seniority"
+            element={
+              <AdminOnlyRoute>
+                <LoanSeniorityPage />
+              </AdminOnlyRoute>
+            }
+          />
+          <Route path="/loans/:id" element={<LoanDetailPage />} />
+          <Route path="/subscriptions" element={<SubscriptionListPage />} />
+          <Route path="/summary" element={<SummaryPage />} />
+          <Route path="/data" element={<DataPage />} />
+        </Routes>
+      </AnimatePresence>
+    </Suspense>
   );
 }
 

@@ -113,6 +113,11 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
     currentPage * itemsPerPage
   );
 
+  // Check if any entry on the current page has a late fee
+  const hasLateFee = paginatedSubscriptions.some(
+    (sub) => typeof sub.late_fee === "number" && sub.late_fee > 0
+  );
+
   // Reset to page 1 when filter changes
   React.useEffect(() => {
     setCurrentPage(1);
@@ -188,25 +193,26 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
               Amount
             </th>
             <th
-              className="px-4 py-2 border-b text-left cursor-pointer"
+              className="px-4 py-2 border-b text-center cursor-pointer"
               onClick={() => handleSort("date")}
             >
               Date
             </th>
             <th
-              className="px-4 py-2 border-b text-left cursor-pointer"
+              className="px-4 py-2 border-b text-center cursor-pointer"
               onClick={() => handleSort("receipt")}
             >
               Receipt
             </th>
-            <th
-              className="px-4 py-2 border-b text-left cursor-pointer"
-              onClick={() => handleSort("late_fee")}
-            >
-              Late Fee
-            </th>
-            <th className="px-4 py-2 border-b text-left">Send</th>
-            <th className="px-4 py-2 border-b text-left">Actions</th>
+            {hasLateFee && (
+              <th
+                className="px-4 py-2 border-b text-center cursor-pointer"
+                onClick={() => handleSort("late_fee")}
+              >
+                Late Fee
+              </th>
+            )}
+            <th className="px-4 py-2 border-b text-center">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -246,32 +252,32 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                 <td className="px-4 py-2 border-b">
                   ₹{sub.amount.toLocaleString()}
                 </td>
-                <td className="px-4 py-2 border-b">
+                <td className="px-4 py-2 border-b text-center">
                   {sub.date ? formatDate(sub.date) : "-"}
                 </td>
-                <td className="px-4 py-2 border-b">{sub.receipt || "-"}</td>
+                <td className="px-4 py-2 border-b text-center">{sub.receipt || "-"}</td>
+                {hasLateFee && (
+                  <td className="px-4 py-2 border-b text-center">
+                    {typeof sub.late_fee === "number" && sub.late_fee > 0
+                      ? `₹${sub.late_fee}`
+                      : "-"}
+                  </td>
+                )}
                 <td className="px-4 py-2 border-b">
-                  {typeof sub.late_fee === "number" && sub.late_fee > 0
-                    ? `₹${sub.late_fee}`
-                    : "-"}
-                </td>
-                <td className="px-4 py-2 border-b">
-                  <button
-                    onClick={() =>
-                      isValidPhone &&
-                      openWhatsApp(customer?.phone, message, {
-                        cooldownMs: 1200,
-                      })
-                    }
-                    className="p-1 rounded-full hover:bg-green-500/10 transition-colors"
-                    aria-label={`Send subscription for ${customer?.name} on WhatsApp`}
-                    disabled={!isValidPhone}
-                  >
-                    <WhatsAppIcon className="w-5 h-5 text-green-500" />
-                  </button>
-                </td>
-                <td className="px-4 py-2 border-b">
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center justify-center">
+                    <button
+                      onClick={() =>
+                        isValidPhone &&
+                        openWhatsApp(customer?.phone, message, {
+                          cooldownMs: 1200,
+                        })
+                      }
+                      className="p-1 rounded-full hover:bg-green-500/10 transition-colors"
+                      aria-label={`Send subscription for ${customer?.name} on WhatsApp`}
+                      disabled={!isValidPhone}
+                    >
+                      <WhatsAppIcon className="w-5 h-5 text-green-500" />
+                    </button>
                     {!isScopedCustomer && (
                       <>
                         <button

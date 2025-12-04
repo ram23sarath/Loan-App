@@ -320,7 +320,7 @@ const CustomerDashboard = () => {
                   {Object.entries(expenseTotalsBySubtype).map(([subtype, amt]) => (
                     <div key={subtype} className="flex justify-between items-center p-2 rounded-md bg-red-50 border border-red-100 text-sm">
                       <span className="text-gray-700">{subtype}</span>
-                      <span className="font-medium text-red-700">{formatCurrencyIN(amt || 0)}</span>
+                      <span className="font-medium text-red-700">{formatCurrencyIN((amt as number) || 0)}</span>
                     </div>
                   ))}
                 </div>

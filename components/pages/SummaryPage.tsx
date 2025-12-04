@@ -1854,7 +1854,7 @@ const SummaryPage = () => {
 
                       <div className="text-sm font-medium text-red-700">
 
-                        {formatCurrencyIN(amt || 0)}
+                        {formatCurrencyIN((amt as number) || 0)}
 
                       </div>
 

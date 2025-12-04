@@ -65,6 +65,10 @@ const DataPage = () => {
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const notesRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 25;
+
   // --- LOGIC FIX & OPTIMIZATION ---
   // Create a performant customer lookup map to avoid using .find() in a loop.
   const customerMap = useMemo(() => {
@@ -78,6 +82,20 @@ const DataPage = () => {
     }
     return dataEntries;
   }, [dataEntries, isScopedCustomer, scopedCustomerId]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(displayedDataEntries.length / itemsPerPage);
+  const paginatedEntries = useMemo(() => {
+    return displayedDataEntries.slice(
+      (currentPage - 1) * itemsPerPage,
+      currentPage * itemsPerPage
+    );
+  }, [displayedDataEntries, currentPage, itemsPerPage]);
+
+  // Reset to page 1 when data changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [displayedDataEntries.length]);
 
   // Memoized list of customers for the form's dropdown
   const filteredCustomers = useMemo(() => {
@@ -262,112 +280,202 @@ const DataPage = () => {
             {showTable ? (
               <motion.div key="table" variants={viewVariants} initial="hidden" animate="visible" exit="exit">
                 <div className="w-full border border-gray-200 rounded-lg overflow-hidden">
-                  <div className="hidden md:grid grid-cols-12 gap-4 bg-indigo-50 px-6 py-3 text-left text-xs font-bold text-indigo-700 uppercase tracking-wider">
-                    <div className="col-span-2">Name</div>
-                    <div className="col-span-2">Date</div>
-                    <div className="col-span-1">Type</div>
-                    <div className="col-span-2">Subtype</div>
-                    <div className="col-span-1">Amount</div>
-                    <div className="col-span-1">Receipt #</div>
-                    <div className="col-span-2">Notes</div>
-                    <div className="col-span-1 text-center text-red-600">Delete</div>
-                  </div>
-                  <div className="bg-white">
-                    <AnimatePresence>
+                  {/* Desktop Table */}
+                  <table className="hidden md:table w-full table-fixed">
+                    <thead className="bg-indigo-50">
+                      <tr className="text-left text-xs font-bold text-indigo-700 uppercase tracking-wider">
+                        <th className="px-4 py-3 w-[4%]">#</th>
+                        <th className="px-4 py-3 w-[11%]">Name</th>
+                        <th className="px-4 py-3 w-[9%] text-center">Date</th>
+                        <th className="px-4 py-3 w-[7%] text-center">Type</th>
+                        <th className="px-4 py-3 w-[11%]">Subtype</th>
+                        <th className="px-4 py-3 w-[9%]">Amount</th>
+                        <th className="px-4 py-3 w-[7%]">Receipt #</th>
+                        <th className="px-4 py-3 w-[34%]">Notes</th>
+                        <th className="px-4 py-3 w-[8%] text-center text-red-600">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white">
                       {displayedDataEntries.length === 0 ? (
-                        <div className="text-center text-gray-500 py-16 text-base">
-                          {isScopedCustomer && scopedCustomerId
-                            ? (() => {
-                              const customerName = customerMap.get(scopedCustomerId);
-                              return `No Entries for ${customerName || 'you'} yet!`;
-                            })()
-                            : 'No data entries found.'}
-                        </div>
+                        <tr>
+                          <td colSpan={9} className="text-center text-gray-500 py-16 text-base">
+                            {isScopedCustomer && scopedCustomerId
+                              ? (() => {
+                                const customerName = customerMap.get(scopedCustomerId);
+                                return `No Entries for ${customerName || 'you'} yet!`;
+                              })()
+                              : 'No data entries found.'}
+                          </td>
+                        </tr>
                       ) : (
-                        displayedDataEntries.map(entry => {
+                        paginatedEntries.map((entry, idx) => {
                           const customerName = customerMap.get(entry.customer_id) || 'Unknown';
                           const isExpanded = expandedNoteId === entry.id;
+                          const actualIndex = (currentPage - 1) * itemsPerPage + idx + 1;
                           return (
-                            <React.Fragment key={entry.id}>
-                              {/* Desktop row (hidden on small screens) */}
-                              <motion.div
-                                layout
-                                key={`desktop-${entry.id}`}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0, height: 0, padding: 0, margin: 0, transition: { duration: 0.3 } }}
-                                transition={{ layout: { type: 'spring', stiffness: 400, damping: 40 }, opacity: { duration: 0.2 } }}
-                                className="hidden md:grid grid-cols-12 gap-4 items-center px-6 py-3 border-b border-gray-200 last:border-b-0 hover:bg-indigo-50/50 text-sm"
-                              >
-                                <div className="col-span-2 font-medium text-gray-900">{customerName}</div>
-                                <div className="col-span-2 text-gray-600">{formatDate(entry.date)}</div>
-                                <div className="col-span-1">
-                                  {entry.type === 'credit' ? (
-                                    <span className="inline-block px-3 py-1 rounded-full bg-green-100 text-green-800 font-semibold text-xs">Credit</span>
-                                  ) : (
-                                    <span className="inline-block px-3 py-1 rounded-full bg-red-100 text-red-800 font-semibold text-xs">Expenditure</span>
-                                  )}
+                            <tr
+                              key={`desktop-${entry.id}`}
+                              className="border-b border-gray-200 last:border-b-0 hover:bg-indigo-50/50 text-sm align-top"
+                            >
+                              <td className="px-4 py-3 text-gray-500 text-left">{actualIndex}</td>
+                              <td className="px-4 py-3 font-medium text-gray-900 text-left">{customerName}</td>
+                              <td className="px-4 py-3 text-gray-600 text-center">{formatDate(entry.date)}</td>
+                              <td className="px-4 py-3 text-center">
+                                {entry.type === 'credit' ? (
+                                  <span className="inline-block px-2 py-1 rounded-full bg-green-100 text-green-800 font-semibold text-xs">Credit</span>
+                                ) : (
+                                  <span className="inline-block px-2 py-1 rounded-full bg-red-100 text-red-800 font-semibold text-xs">Expense</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-gray-600 text-left">{entry.subtype || '-'}</td>
+                              <td className={`px-4 py-3 font-bold text-left ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>{entry.type === 'credit' ? '+' : '-'}₹{entry.amount.toLocaleString()}</td>
+                              <td className="px-4 py-3 text-gray-600 text-left">{entry.receipt_number || '-'}</td>
+                              <td ref={(el) => (notesRefs.current[entry.id] = el)} className="px-4 py-3 text-gray-600 text-left">
+                                <div className={`cursor-pointer break-words whitespace-pre-wrap ${!isExpanded ? 'line-clamp-2' : ''}`} onClick={() => handleNoteClick(entry.id)}>
+                                  {entry.notes || '-'}
                                 </div>
-                                <div className="col-span-2 text-gray-600">{entry.subtype || '-'}</div>
-                                <div className={`col-span-1 font-bold ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>{entry.type === 'credit' ? '+' : '-'}₹{entry.amount.toLocaleString()}</div>
-                                <div className="col-span-1 text-gray-600">{entry.receipt_number || '-'}</div>
-                                <div ref={(el) => (notesRefs.current[entry.id] = el)} className="col-span-2 text-gray-600 flex items-center gap-2">
-                                  <div className={`flex-1 cursor-pointer ${!isExpanded ? 'truncate' : ''}`} onClick={() => handleNoteClick(entry.id)}>
-                                    {entry.notes || '-'}
-                                  </div>
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <div className="flex items-center justify-center gap-2">
                                   <button type="button" className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
                                     Edit
                                   </button>
-                                </div>
-                                <div className="col-span-1 flex justify-center">
                                   <button type="button" className="p-1 rounded-full hover:bg-red-500/10 transition-colors" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }}>
                                     <Trash2Icon className="w-5 h-5 text-red-500" />
                                   </button>
                                 </div>
-                              </motion.div>
-
-                              {/* Mobile card (visible on small screens) */}
-                              <motion.div
-                                layout
-                                key={`mobile-${entry.id}`}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0, height: 0, padding: 0, margin: 0, transition: { duration: 0.2 } }}
-                                transition={{ opacity: { duration: 0.15 } }}
-                                className="md:hidden px-4 py-4 border-b last:border-b-0 hover:bg-indigo-50/30"
-                              >
-                                <div className="flex justify-between items-start gap-3">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="font-semibold text-gray-900 truncate">{customerName}</div>
-                                    <div className="text-sm text-gray-600 truncate">{entry.subtype || entry.type}</div>
-                                  </div>
-                                  <div className={`ml-2 text-right font-bold text-base ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>{entry.type === 'credit' ? '+' : '-'}₹{entry.amount.toLocaleString()}</div>
-                                </div>
-                                <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
-                                  <div>{formatDate(entry.date)}</div>
-                                  <div className="flex items-center gap-3">
-                                    {entry.receipt_number && <div className="px-2 py-1 bg-gray-100 rounded text-xs">#{entry.receipt_number}</div>}
-                                    <button type="button" className="px-3 py-1 rounded bg-blue-600 text-white text-sm" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
-                                      Edit
-                                    </button>
-                                    <button aria-label="Delete entry" type="button" className="p-2 rounded-md bg-red-50 text-red-600" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }}>
-                                      <Trash2Icon className="w-5 h-5" />
-                                    </button>
-                                  </div>
-                                </div>
-                                {entry.notes && (
-                                  <div className="mt-3 pt-3 border-t border-gray-200/80">
-                                    <p className="text-sm text-gray-700 break-words">{entry.notes}</p>
-                                  </div>
-                                )}
-                              </motion.div>
-                            </React.Fragment>
+                              </td>
+                            </tr>
                           );
                         })
                       )}
-                    </AnimatePresence>
+                    </tbody>
+                  </table>
+                  
+                  {/* Mobile Cards */}
+                  <div className="md:hidden bg-white">
+                    {displayedDataEntries.length === 0 ? (
+                      <div className="text-center text-gray-500 py-16 text-base">
+                        {isScopedCustomer && scopedCustomerId
+                          ? (() => {
+                            const customerName = customerMap.get(scopedCustomerId);
+                            return `No Entries for ${customerName || 'you'} yet!`;
+                          })()
+                          : 'No data entries found.'}
+                      </div>
+                    ) : (
+                      paginatedEntries.map((entry, idx) => {
+                        const customerName = customerMap.get(entry.customer_id) || 'Unknown';
+                        const actualIndex = (currentPage - 1) * itemsPerPage + idx + 1;
+                        return (
+                          <div
+                            key={`mobile-${entry.id}`}
+                            className="px-4 py-4 border-b last:border-b-0 hover:bg-indigo-50/30"
+                          >
+                            <div className="flex justify-between items-start gap-3">
+                              <div className="flex-1 min-w-0">
+                                <div className="font-semibold text-gray-900 truncate"><span className="text-gray-400 font-normal">#{actualIndex}</span> {customerName}</div>
+                                <div className="text-sm text-gray-600 truncate">{entry.subtype || entry.type}</div>
+                              </div>
+                              <div className={`ml-2 text-right font-bold text-base ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>{entry.type === 'credit' ? '+' : '-'}₹{entry.amount.toLocaleString()}</div>
+                            </div>
+                            <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+                              <div>{formatDate(entry.date)}</div>
+                              <div className="flex items-center gap-3">
+                                {entry.receipt_number && <div className="px-2 py-1 bg-gray-100 rounded text-xs">#{entry.receipt_number}</div>}
+                                <button type="button" className="px-3 py-1 rounded bg-blue-600 text-white text-sm" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
+                                  Edit
+                                </button>
+                                <button aria-label="Delete entry" type="button" className="p-2 rounded-md bg-red-50 text-red-600" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }}>
+                                  <Trash2Icon className="w-5 h-5" />
+                                </button>
+                              </div>
+                            </div>
+                            {entry.notes && (
+                              <div className="mt-3 pt-3 border-t border-gray-200/80">
+                                <p className="text-sm text-gray-700 break-words">{entry.notes}</p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-gray-200">
+                    <div className="text-sm text-gray-600">
+                      Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+                      {Math.min(currentPage * itemsPerPage, displayedDataEntries.length)} of{" "}
+                      {displayedDataEntries.length} entries
+                    </div>
+                    <div className="flex gap-2 flex-wrap justify-center">
+                      <button
+                        onClick={() => setCurrentPage(1)}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        First
+                      </button>
+                      <button
+                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        Previous
+                      </button>
+                      
+                      {/* Page numbers */}
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                        // Show first, last, current, and neighbors
+                        if (
+                          page === 1 ||
+                          page === totalPages ||
+                          Math.abs(page - currentPage) <= 1
+                        ) {
+                          return (
+                            <button
+                              key={page}
+                              onClick={() => setCurrentPage(page)}
+                              className={`px-3 py-1 rounded border ${
+                                currentPage === page
+                                  ? "bg-indigo-600 text-white border-indigo-600"
+                                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          );
+                        }
+                        // Show dots for skipped pages
+                        if (page === 2 && currentPage > 3) {
+                          return <span key="dots-start" className="px-2">...</span>;
+                        }
+                        if (page === totalPages - 1 && currentPage < totalPages - 2) {
+                          return <span key="dots-end" className="px-2">...</span>;
+                        }
+                        return null;
+                      })}
+                      
+                      <button
+                        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        Next
+                      </button>
+                      <button
+                        onClick={() => setCurrentPage(totalPages)}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        Last
+                      </button>
+                    </div>
+                  </div>
+                )}
               </motion.div>
             ) : (
               <motion.div key="form" variants={viewVariants} initial="hidden" animate="visible" exit="exit" className="w-full h-full">

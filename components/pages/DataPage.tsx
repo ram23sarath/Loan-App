@@ -249,8 +249,8 @@ const DataPage = () => {
   const dropdownVariants = { hidden: { opacity: 0, y: -10 }, visible: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -10 } };
 
   return (
-    <div className="w-full max-w-7xl mx-auto my-8 flex justify-center">
-      <motion.div layout transition={{ type: 'spring', stiffness: 280, damping: 30 }} className={`bg-white rounded-xl shadow-md flex flex-col gap-6 border border-gray-200/80 mx-auto ${showTable ? 'p-6 md:p-8 w-[90%] md:w-full md:max-w-full max-w-md' : 'p-6 md:p-8 w-[90%] max-w-md'}`}>
+    <div className="w-full max-w-7xl mx-auto my-8 flex justify-center md:min-h-[calc(100vh-4rem)] md:items-start">
+      <motion.div layout transition={{ type: 'spring', stiffness: 280, damping: 30 }} className={`bg-white rounded-xl shadow-md flex flex-col gap-6 border border-gray-200/80 mx-auto ${showTable ? 'p-6 md:p-8 w-[90%] md:w-full md:max-w-full max-w-md' : 'p-6 md:p-8 w-[90%] max-w-md md:max-w-2xl md:min-h-[calc(100vh-4rem)]'}`}>
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
           <h2 className="text-xl md:text-2xl font-bold text-indigo-700 md:uppercase md:tracking-widest whitespace-normal break-words">
             {showTable ? 'All Entries' : 'New Data Entry'}
@@ -275,7 +275,7 @@ const DataPage = () => {
           </div>
         </div>
 
-        <div className={`w-full min-h-[300px] md:min-h-[500px] relative ${showTable ? 'px-2' : ''}`}>
+        <div className={`w-full min-h-[300px] md:min-h-[500px] relative flex-1 flex flex-col ${showTable ? 'px-2' : ''}`}>
           <AnimatePresence mode="wait">
             {showTable ? (
               <motion.div key="table" variants={viewVariants} initial="hidden" animate="visible" exit="exit">
@@ -478,14 +478,14 @@ const DataPage = () => {
                 )}
               </motion.div>
             ) : (
-              <motion.div key="form" variants={viewVariants} initial="hidden" animate="visible" exit="exit" className="w-full h-full">
+              <motion.div key="form" variants={viewVariants} initial="hidden" animate="visible" exit="exit" className="w-full h-full flex flex-col">
                 {isScopedCustomer ? (
                   <div className="flex flex-col items-center justify-center h-full py-12 text-center">
                     <p className="text-gray-600 text-lg mb-4">You don't have permission to add data entries.</p>
                     <p className="text-gray-500">As a customer, you can only view your own entries.</p>
                   </div>
                 ) : (
-                  <form className="flex flex-col gap-4 w-full p-1 pb-6" onSubmit={handleSubmit}>
+                  <form className="flex flex-col gap-4 w-full p-1 pb-2 flex-1" onSubmit={handleSubmit}>
                     <div className="relative" ref={customerDropdownRef}>
                       <label htmlFor="customer-btn" className={labelBaseStyle}>Name</label>
                       <button id="customer-btn" type="button" className={`${inputBaseStyle} flex justify-between items-center text-left bg-white`} onClick={() => setShowCustomerDropdown(v => !v)}>
@@ -545,9 +545,9 @@ const DataPage = () => {
                     </div>
                     <div>
                       <label htmlFor="notes" className={labelBaseStyle}>Notes <span className="text-gray-400 font-normal">(Optional)</span></label>
-                      <textarea id="notes" name="notes" value={form.notes} onChange={handleChange} className={`${inputBaseStyle} min-h-[100px]`} rows={3} placeholder="Enter any notes..." />
+                      <textarea id="notes" name="notes" value={form.notes} onChange={handleChange} className={`${inputBaseStyle} min-h-[80px] resize-y`} rows={2} placeholder="Enter any notes..." />
                     </div>
-                    <button type="submit" className="w-full mt-4 bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition-colors duration-300 focus:outline-none focus:ring-4 focus:ring-indigo-300">Submit Entry</button>
+                    <button type="submit" className="w-full mt-2 bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition-colors duration-300 focus:outline-none focus:ring-4 focus:ring-indigo-300">Submit Entry</button>
                   </form>
                 )}
               </motion.div>

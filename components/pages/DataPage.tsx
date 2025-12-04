@@ -281,18 +281,18 @@ const DataPage = () => {
               <motion.div key="table" variants={viewVariants} initial="hidden" animate="visible" exit="exit">
                 <div className="w-full border border-gray-200 rounded-lg overflow-hidden">
                   {/* Desktop Table */}
-                  <table className="hidden md:table w-full table-fixed">
+                  <table className="hidden md:table w-full" style={{ tableLayout: 'auto' }}>
                     <thead className="bg-indigo-50">
                       <tr className="text-left text-xs font-bold text-indigo-700 uppercase tracking-wider">
-                        <th className="px-4 py-3 w-[4%]">#</th>
-                        <th className="px-4 py-3 w-[11%]">Name</th>
-                        <th className="px-4 py-3 w-[9%] text-center">Date</th>
-                        <th className="px-4 py-3 w-[7%] text-center">Type</th>
-                        <th className="px-4 py-3 w-[11%]">Subtype</th>
-                        <th className="px-4 py-3 w-[9%]">Amount</th>
-                        <th className="px-4 py-3 w-[7%]">Receipt #</th>
-                        <th className="px-4 py-3 w-[34%]">Notes</th>
-                        <th className="px-4 py-3 w-[8%] text-center text-red-600">Actions</th>
+                        <th className="px-4 py-3 resize-x overflow-auto cursor-col-resize" style={{ minWidth: '40px' }}>#</th>
+                        <th className="px-4 py-3 resize-x overflow-auto cursor-col-resize" style={{ minWidth: '80px' }}>Name</th>
+                        <th className="px-4 py-3 text-center resize-x overflow-auto cursor-col-resize" style={{ minWidth: '80px' }}>Date</th>
+                        <th className="px-4 py-3 text-center resize-x overflow-auto cursor-col-resize" style={{ minWidth: '60px' }}>Type</th>
+                        <th className="px-4 py-3 resize-x overflow-auto cursor-col-resize" style={{ minWidth: '80px' }}>Subtype</th>
+                        <th className="px-4 py-3 resize-x overflow-auto cursor-col-resize" style={{ minWidth: '80px' }}>Amount</th>
+                        <th className="px-4 py-3 resize-x overflow-auto cursor-col-resize" style={{ minWidth: '70px' }}>Receipt #</th>
+                        <th className="px-4 py-3 resize-x overflow-auto cursor-col-resize" style={{ minWidth: '150px' }}>Notes</th>
+                        <th className="px-4 py-3 text-center text-red-600" style={{ minWidth: '100px' }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white">
@@ -328,7 +328,7 @@ const DataPage = () => {
                                 )}
                               </td>
                               <td className="px-4 py-3 text-gray-600 text-left">{entry.subtype || '-'}</td>
-                              <td className={`px-4 py-3 font-bold text-left ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>{entry.type === 'credit' ? '+' : '-'}₹{entry.amount.toLocaleString()}</td>
+                              <td className={`px-4 py-3 font-bold text-left ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>{entry.type === 'credit' ? '+' : ''}₹{entry.amount.toLocaleString()}</td>
                               <td className="px-4 py-3 text-gray-600 text-left">{entry.receipt_number || '-'}</td>
                               <td ref={(el) => (notesRefs.current[entry.id] = el)} className="px-4 py-3 text-gray-600 text-left">
                                 <div className={`cursor-pointer break-words whitespace-pre-wrap ${!isExpanded ? 'line-clamp-2' : ''}`} onClick={() => handleNoteClick(entry.id)}>
@@ -377,7 +377,7 @@ const DataPage = () => {
                                 <div className="font-semibold text-gray-900 truncate"><span className="text-gray-400 font-normal">#{actualIndex}</span> {customerName}</div>
                                 <div className="text-sm text-gray-600 truncate">{entry.subtype || entry.type}</div>
                               </div>
-                              <div className={`ml-2 text-right font-bold text-base ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>{entry.type === 'credit' ? '+' : '-'}₹{entry.amount.toLocaleString()}</div>
+                              <div className={`ml-2 text-right font-bold text-base ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>{entry.type === 'credit' ? '+' : ''}₹{entry.amount.toLocaleString()}</div>
                             </div>
                             <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
                               <div>{formatDate(entry.date)}</div>

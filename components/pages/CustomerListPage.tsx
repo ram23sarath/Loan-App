@@ -436,6 +436,7 @@ const CustomerListPage = () => {
                                         dragElastic={0.3}
                                         dragMomentum={false}
                                         dragDirectionLock={true}
+                                        style={{ touchAction: "pan-y" }}
                                         onDragStart={() => setDraggingCardId(customer.id)}
                                         onDragEnd={(_, info) => {
                                           setDraggingCardId(null);
@@ -612,6 +613,7 @@ const CustomerListPage = () => {
                                         dragElastic={0.3}
                                         dragMomentum={false}
                                         dragDirectionLock={true}
+                                        style={{ touchAction: "pan-y" }}
                                         onDragStart={() => setDraggingCardId(customer.id)}
                                         onDragEnd={(_, info) => {
                                           setDraggingCardId(null);
@@ -784,6 +786,7 @@ const CustomerListPage = () => {
                                         dragElastic={0.3}
                                         dragMomentum={false}
                                         dragDirectionLock={true}
+                                        style={{ touchAction: "pan-y" }}
                                         onDragStart={() => setDraggingCardId(customer.id)}
                                         onDragEnd={(_, info) => {
                                           setDraggingCardId(null);
@@ -948,6 +951,7 @@ const CustomerListPage = () => {
                                         dragElastic={0.3}
                                         dragMomentum={false}
                                         dragDirectionLock={true}
+                                        style={{ touchAction: "pan-y" }}
                                           onDragStart={() => setDraggingCardId(customer.id)}
                                           onDragEnd={(_, info) => {
                                             setDraggingCardId(null);

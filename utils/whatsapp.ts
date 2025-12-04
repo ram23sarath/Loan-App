@@ -29,6 +29,44 @@ export const buildWhatsAppUrl = (phone: string, message: string) => {
 const lastOpened: Map<string, number> = new Map();
 const GLOBAL_KEY = "__GLOBAL__";
 
+const isIosDevice = (): boolean => {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  const iPadOS13Up =
+    navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  return /iPad|iPhone|iPod/.test(ua) || iPadOS13Up;
+};
+
+const isStandaloneDisplay = (): boolean => {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia?.("(display-mode: standalone)")?.matches === true ||
+    (window.navigator as any)?.standalone === true
+  );
+};
+
+const shouldUseDirectNavigation = (): boolean => {
+  if (typeof navigator === "undefined") return false;
+  const isSafari = /Safari/.test(navigator.userAgent) &&
+    !/Chrome|CriOS|FxiOS/.test(navigator.userAgent);
+  return isIosDevice() || (isSafari && isStandaloneDisplay());
+};
+
+const navigateSameTab = (url: string): boolean => {
+  if (typeof window === "undefined") return false;
+  try {
+    window.location.assign(url);
+    return true;
+  } catch (err) {
+    try {
+      window.location.href = url;
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+};
+
 export const openWhatsApp = (
   phone: string | undefined | null,
   message: string,
@@ -49,6 +87,13 @@ export const openWhatsApp = (
 
   const url = buildWhatsAppUrl(s, message);
   if (!url) return false;
+
+  if (shouldUseDirectNavigation()) {
+    const navigated = navigateSameTab(url);
+    if (navigated) {
+      return true;
+    }
+  }
 
   // open using an anchor with rel noopener to avoid some cross-origin issues
   try {

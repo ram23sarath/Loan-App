@@ -3,6 +3,7 @@ import { PencilIcon, Trash2Icon } from '../../constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../../context/DataContext';
 import { formatDate } from '../../utils/dateFormatter';
+import { useDebounce } from '../../utils/useDebounce';
 
 const DataPage = () => {
   const { customers = [], dataEntries = [], addDataEntry, deleteDataEntry, updateDataEntry, isScopedCustomer, scopedCustomerId } = useData();
@@ -41,6 +42,7 @@ const DataPage = () => {
 
   // State for the customer filter/dropdown in the form
   const [customerFilter, setCustomerFilter] = useState('');
+  const debouncedCustomerFilter = useDebounce(customerFilter, 300);
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const customerDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -79,9 +81,9 @@ const DataPage = () => {
 
   // Memoized list of customers for the form's dropdown
   const filteredCustomers = useMemo(() => {
-    if (!customerFilter) return customers;
-    return customers.filter(c => c.name.toLowerCase().includes(customerFilter.toLowerCase()));
-  }, [customers, customerFilter]);
+    if (!debouncedCustomerFilter) return customers;
+    return customers.filter(c => c.name.toLowerCase().includes(debouncedCustomerFilter.toLowerCase()));
+  }, [customers, debouncedCustomerFilter]);
 
   // Note: `filteredEntries` is removed as the table will now just show all `dataEntries`
   // Filtering is now handled by a dedicated search bar if needed, or not at all.
@@ -276,8 +278,8 @@ const DataPage = () => {
                         <div className="text-center text-gray-500 py-16 text-base">
                           {isScopedCustomer && scopedCustomerId
                             ? (() => {
-                              const customer = customers.find(c => c.id === scopedCustomerId);
-                              return `No Entries for ${customer?.name || 'you'} yet!`;
+                              const customerName = customerMap.get(scopedCustomerId);
+                              return `No Entries for ${customerName || 'you'} yet!`;
                             })()
                             : 'No data entries found.'}
                         </div>

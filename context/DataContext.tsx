@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../src/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import type { Customer, Loan, Subscription, Installment, NewCustomer, NewLoan, NewSubscription, NewInstallment, LoanWithCustomer, SubscriptionWithCustomer, DataEntry, NewDataEntry } from '../types';
@@ -34,6 +34,9 @@ interface DataContextType {
     isRefreshing: boolean;
     isScopedCustomer: boolean;
     scopedCustomerId: string | null;
+    // Lookup maps for O(1) access
+    customerMap: Map<string, Customer>;
+    installmentsByLoanId: Map<string, Installment[]>;
     signInWithPassword: (email: string, pass: string) => Promise<void>;
     signOut: () => Promise<void>;
     addCustomer: (customer: Omit<NewCustomer, 'user_id'>) => Promise<Customer>;
@@ -118,6 +121,26 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const [dataEntries, setDataEntries] = useState<DataEntry[]>([]);
     const [isScopedCustomer, setIsScopedCustomer] = useState(false);
     const [scopedCustomerId, setScopedCustomerId] = useState<string | null>(null);
+
+    // Lookup maps for O(1) access - improves performance from O(n) to O(1)
+    const customerMap = useMemo(() => {
+        return new Map(customers.map(c => [c.id, c]));
+    }, [customers]);
+
+    const installmentsByLoanId = useMemo(() => {
+        const map = new Map<string, Installment[]>();
+        installments.forEach(inst => {
+            const existing = map.get(inst.loan_id) || [];
+            existing.push(inst);
+            map.set(inst.loan_id, existing);
+        });
+        // Sort each loan's installments by date (newest first) for consistency
+        map.forEach((insts, loanId) => {
+            insts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            map.set(loanId, insts);
+        });
+        return map;
+    }, [installments]);
 
     // UPDATED: Accepts optional arguments. If provided, uses them; otherwise falls back to state.
     // This allows the useEffect to call it with calculated values before state updates commit.
@@ -1036,7 +1059,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
 
     return (
-        <DataContext.Provider value={{ session, customers, loans, subscriptions, installments, dataEntries, loading, isRefreshing, isScopedCustomer, scopedCustomerId, signInWithPassword, signOut, addCustomer, updateCustomer, addLoan, updateLoan, addSubscription, updateSubscription, addInstallment, updateInstallment, addDataEntry, updateDataEntry, deleteDataEntry, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, adjustSubscriptionForMisc, seniorityList, fetchSeniorityList, addToSeniority, updateSeniority, removeFromSeniority }}>
+        <DataContext.Provider value={{ session, customers, loans, subscriptions, installments, dataEntries, loading, isRefreshing, isScopedCustomer, scopedCustomerId, customerMap, installmentsByLoanId, signInWithPassword, signOut, addCustomer, updateCustomer, addLoan, updateLoan, addSubscription, updateSubscription, addInstallment, updateInstallment, addDataEntry, updateDataEntry, deleteDataEntry, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, adjustSubscriptionForMisc, seniorityList, fetchSeniorityList, addToSeniority, updateSeniority, removeFromSeniority }}>
             {children}
         </DataContext.Provider>
     );

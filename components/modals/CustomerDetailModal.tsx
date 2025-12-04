@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { motion, Variants, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
 import type { Customer, LoanWithCustomer, SubscriptionWithCustomer, Installment, DataEntry } from '../../types';
@@ -71,6 +71,17 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const noteRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
+  // Lookup map for O(1) installment access by loan_id
+  const installmentsByLoanId = useMemo(() => {
+    const map = new Map<string, Installment[]>();
+    installments.forEach(inst => {
+      const existing = map.get(inst.loan_id) || [];
+      existing.push(inst);
+      map.set(inst.loan_id, existing);
+    });
+    return map;
+  }, [installments]);
+
   // Delete confirmation states
   const [deleteLoanTarget, setDeleteLoanTarget] = useState<LoanWithCustomer | null>(null);
   const [deleteSubTarget, setDeleteSubTarget] = useState<SubscriptionWithCustomer | null>(null);
@@ -122,7 +133,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
   const handleIndividualExport = () => {
     const customerLoansData = loans.map(loan => {
-      const loanInstallments = installments.filter(i => i.loan_id === loan.id);
+      const loanInstallments = installmentsByLoanId.get(loan.id) || [];
       const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
       const lateFeesPaid = loanInstallments.reduce((acc, inst) => acc + (inst.late_fee || 0), 0);
       const totalRepayable = loan.original_amount + loan.interest_amount;
@@ -219,7 +230,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
             {loans.length > 0 ? (
               <div className="space-y-4">
                 {loans.map(loan => {
-                  const loanInstallments = installments.filter(i => i.loan_id === loan.id);
+                  const loanInstallments = installmentsByLoanId.get(loan.id) || [];
                   const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
                   const totalRepayable = loan.original_amount + loan.interest_amount;
                   const progress = totalRepayable > 0 ? (amountPaid / totalRepayable) * 100 : 0;

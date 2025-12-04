@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useData } from "../../context/DataContext";
 import GlassCard from "../ui/GlassCard";
 import PageWrapper from "../ui/PageWrapper";
+import { useDebounce } from "../../utils/useDebounce";
 import type {
   LoanWithCustomer,
   NewLoan,
@@ -40,14 +41,17 @@ const getTodayDateString = (): string => {
 const AddRecordPage = () => {
   const {
     customers,
+    customerMap,
     loans,
     installments,
+    installmentsByLoanId,
     addLoan,
     addSubscription,
     addInstallment,
   } = useData();
   const location = useLocation();
   const [customerSearch, setCustomerSearch] = useState("");
+  const debouncedCustomerSearch = useDebounce(customerSearch, 300);
 
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [action, setAction] = useState<
@@ -138,16 +142,14 @@ const AddRecordPage = () => {
     }
 
     const loanInProgress = customerLoans.find((loan) => {
-      const paidCount = installments.filter((i) => i.loan_id === loan.id).length;
+      const paidCount = (installmentsByLoanId.get(loan.id) || []).length;
       return paidCount < loan.total_instalments;
     });
 
     if (loanInProgress) {
       setActiveLoan(loanInProgress);
 
-      const loanInstallments = installments.filter(
-        (i) => i.loan_id === loanInProgress.id
-      );
+      const loanInstallments = installmentsByLoanId.get(loanInProgress.id) || [];
       const sortedInstallments = [...loanInstallments].sort(
         (a, b) => b.installment_number - a.installment_number
       );
@@ -208,7 +210,7 @@ const AddRecordPage = () => {
 
     try {
       await addLoan(newLoanData);
-      const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+      const selectedCustomer = customerMap.get(selectedCustomerId);
       // Store record data for WhatsApp sharing
       setLastRecordData({
         type: 'loan',
@@ -239,7 +241,7 @@ const AddRecordPage = () => {
 
     try {
       await addSubscription(newSubscriptionData);
-      const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+      const selectedCustomer = customerMap.get(selectedCustomerId);
       // Store record data for WhatsApp sharing
       setLastRecordData({
         type: 'subscription',
@@ -269,9 +271,7 @@ const AddRecordPage = () => {
     if (!activeLoan) return;
 
     // Calculate total paid so far for this loan
-    const loanInstallments = installments.filter(
-      (i) => i.loan_id === activeLoan.id
-    );
+    const loanInstallments = installmentsByLoanId.get(activeLoan.id) || [];
     const totalPaid = loanInstallments.reduce(
       (sum, inst) => sum + inst.amount,
       0
@@ -302,7 +302,7 @@ const AddRecordPage = () => {
     try {
       const newInstallment = await addInstallment(installmentPayload);
       // Store record data for WhatsApp sharing
-      const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+      const selectedCustomer = customerMap.get(selectedCustomerId);
       setLastRecordData({
         type: 'installment',
         customerPhone: selectedCustomer?.phone,
@@ -366,11 +366,15 @@ const AddRecordPage = () => {
   // Custom dropdown with search inside
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
-  const filteredCustomers = customers.filter(
-    (c) =>
-      c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
-      c.phone.includes(customerSearch)
-  );
+  
+  // Memoize filtered customers to prevent recalculation on every render
+  const filteredCustomers = useMemo(() => {
+    return customers.filter(
+      (c) =>
+        c.name.toLowerCase().includes(debouncedCustomerSearch.toLowerCase()) ||
+        c.phone.includes(debouncedCustomerSearch)
+    );
+  }, [customers, debouncedCustomerSearch]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -428,9 +432,7 @@ const AddRecordPage = () => {
                 >
                   {selectedCustomerId
                     ? (() => {
-                        const selected = customers.find(
-                          (c) => c.id === selectedCustomerId
-                        );
+                        const selected = customerMap.get(selectedCustomerId);
                         return selected
                           ? `${selected.name} (${selected.phone})`
                           : "Select...";

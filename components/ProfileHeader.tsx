@@ -9,7 +9,7 @@ export interface ProfileHeaderHandle {
 }
 
 const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
-  const { session, signOut, isScopedCustomer, customers, scopedCustomerId, updateCustomer } = useData();
+  const { session, signOut, isScopedCustomer, customers, customerMap, scopedCustomerId, updateCustomer } = useData();
   const [showMenu, setShowMenu] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showProfilePanel, setShowProfilePanel] = useState(false);
@@ -29,7 +29,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   const userEmail = session.user.email || 'User';
   // Get customer details if scoped user
   const customerDetails = isScopedCustomer && scopedCustomerId
-    ? customers.find(c => c.id === scopedCustomerId)
+    ? customerMap.get(scopedCustomerId)
     : null;
 
   // Prefer the customer's name for display when scoped; fall back to email for admins

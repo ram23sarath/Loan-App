@@ -40,6 +40,8 @@ const SummaryPage = () => {
 
     isScopedCustomer = false,
 
+    installmentsByLoanId: contextInstallmentsByLoanId,
+
   } = useData();
 
 
@@ -131,6 +133,18 @@ const SummaryPage = () => {
   const subscriptions = isScopedCustomer ? subscriptionsForSummary : contextSubscriptions;
 
   const dataEntries = isScopedCustomer ? dataEntriesForSummary : contextDataEntries;
+
+  
+  // Lookup map for O(1) installment access by loan_id
+  const localInstallmentsByLoanId = useMemo(() => {
+    const map = new Map<string, Installment[]>();
+    installments.forEach(inst => {
+      const existing = map.get(inst.loan_id) || [];
+      existing.push(inst);
+      map.set(inst.loan_id, existing);
+    });
+    return map;
+  }, [installments]);
 
 
 
@@ -402,7 +416,7 @@ const SummaryPage = () => {
 
   const fyPrincipalRecovered = loans.reduce((acc, loan) => {
 
-    const instsForLoan = installments.filter((i) => i.loan_id === loan.id);
+    const instsForLoan = localInstallmentsByLoanId.get(loan.id) || [];
 
     const paidUntilEnd = instsForLoan
 
@@ -450,7 +464,7 @@ const SummaryPage = () => {
 
   const fyInterestCollected = loans.reduce((acc, loan) => {
 
-    const instsForLoan = installments.filter((i) => i.loan_id === loan.id);
+    const instsForLoan = localInstallmentsByLoanId.get(loan.id) || [];
 
     const paidUntilEnd = instsForLoan
 
@@ -630,9 +644,9 @@ const SummaryPage = () => {
 
       loans.forEach((loan) => {
 
-        const insts = installments.filter(
+        const insts = (localInstallmentsByLoanId.get(loan.id) || []).filter(
 
-          (i) => i.loan_id === loan.id && within(i.date)
+          (i) => within(i.date)
 
         );
 
@@ -674,7 +688,7 @@ const SummaryPage = () => {
 
         .map((loan) => {
 
-          const insts = installments.filter((i) => i.loan_id === loan.id);
+          const insts = localInstallmentsByLoanId.get(loan.id) || [];
 
           const instsInFY = insts.filter((i) => within(i.date));
 
@@ -970,7 +984,7 @@ const SummaryPage = () => {
 
     const allLoansData = loans.map(loan => {
 
-      const loanInstallments = installments.filter(i => i.loan_id === loan.id)
+      const loanInstallments = (localInstallmentsByLoanId.get(loan.id) || [])
 
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
@@ -1110,7 +1124,7 @@ const SummaryPage = () => {
 
     const loansData = loans.map(loan => {
 
-      const loanInstallments = installments.filter(i => i.loan_id === loan.id)
+      const loanInstallments = (localInstallmentsByLoanId.get(loan.id) || [])
 
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 

@@ -11,7 +11,7 @@ import { supabase } from '../../src/lib/supabase';
 import type { LoanWithCustomer, SubscriptionWithCustomer, Installment, DataEntry } from '../../types';
 
 const CustomerDashboard = () => {
-  const { customers, loans: contextLoans, installments: contextInstallments, subscriptions: contextSubscriptions, dataEntries: contextDataEntries, isScopedCustomer, scopedCustomerId } = useData();
+  const { customers, customerMap, loans: contextLoans, installments: contextInstallments, subscriptions: contextSubscriptions, dataEntries: contextDataEntries, isScopedCustomer, scopedCustomerId } = useData();
   const navigate = useNavigate();
   const { addToSeniority } = useData();
 
@@ -65,7 +65,7 @@ const CustomerDashboard = () => {
 
   // Get the current customer's data
   const customer = isScopedCustomer && scopedCustomerId 
-    ? customers.find(c => c.id === scopedCustomerId)
+    ? customerMap.get(scopedCustomerId)
     : customers.length > 0 ? customers[0] : null;
 
   // --- Summary Data Calculations using shared utility ---

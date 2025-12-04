@@ -8,6 +8,7 @@ import GlassCard from "../ui/GlassCard";
 import { formatDate } from "../../utils/dateFormatter";
 import type { LoanWithCustomer, Installment } from "../../types";
 import EditModal from "../modals/EditModal";
+import { useDebounce } from "../../utils/useDebounce";
 
 // ... (All animation variants remain unchanged) ...
 const containerVariants = {
@@ -45,6 +46,8 @@ const LoanTableView: React.FC = () => {
   const {
     loans,
     installments,
+    installmentsByLoanId,
+    customerMap,
     deleteInstallment,
     deleteLoan,
     updateInstallment,
@@ -54,33 +57,40 @@ const LoanTableView: React.FC = () => {
     scopedCustomerId,
   } = useData();
   const [filter, setFilter] = React.useState("");
+  const debouncedFilter = useDebounce(filter, 300);
   const [statusFilter, setStatusFilter] = React.useState("");
   // Default to sorting by status so "In Progress" loans appear first
   const [sortField, setSortField] = React.useState("status");
   const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("asc");
 
-  // ... (All existing logic for filtering and sorting remains unchanged)
-  const filteredLoans = loans.filter((loan) => {
-    // Filter by scoped customer if applicable
-    if (isScopedCustomer && scopedCustomerId && loan.customer_id !== scopedCustomerId) {
-      return false;
-    }
+  // Helper function for O(1) installment lookup
+  const getLoanInstallments = React.useCallback((loanId: string) => {
+    return installmentsByLoanId.get(loanId) || [];
+  }, [installmentsByLoanId]);
 
-    const customerName = loan.customers?.name?.toLowerCase() || "";
-    const checkNumber = (loan.check_number || "").toLowerCase();
-    const status = (() => {
-      const totalRepayable = loan.original_amount + loan.interest_amount;
-      const paid = installments
-        .filter((inst) => inst.loan_id === loan.id)
-        .reduce((acc, inst) => acc + inst.amount, 0);
-      return paid >= totalRepayable ? "Paid Off" : "In Progress";
-    })();
-    const matchesText =
-      customerName.includes(filter.toLowerCase()) ||
-      checkNumber.includes(filter.toLowerCase());
-    const matchesStatus = statusFilter === "" || status === statusFilter;
-    return matchesText && matchesStatus;
-  });
+  // Memoize filtered loans to prevent recalculation on every render
+  const filteredLoans = React.useMemo(() => {
+    return loans.filter((loan) => {
+      // Filter by scoped customer if applicable
+      if (isScopedCustomer && scopedCustomerId && loan.customer_id !== scopedCustomerId) {
+        return false;
+      }
+
+      const customerName = loan.customers?.name?.toLowerCase() || "";
+      const checkNumber = (loan.check_number || "").toLowerCase();
+      const status = (() => {
+        const totalRepayable = loan.original_amount + loan.interest_amount;
+        const loanInsts = getLoanInstallments(loan.id);
+        const paid = loanInsts.reduce((acc, inst) => acc + inst.amount, 0);
+        return paid >= totalRepayable ? "Paid Off" : "In Progress";
+      })();
+      const matchesText =
+        customerName.includes(debouncedFilter.toLowerCase()) ||
+        checkNumber.includes(debouncedFilter.toLowerCase());
+      const matchesStatus = statusFilter === "" || status === statusFilter;
+      return matchesText && matchesStatus;
+    });
+  }, [loans, debouncedFilter, statusFilter, isScopedCustomer, scopedCustomerId, getLoanInstallments]);
 
   const sortedLoans = React.useMemo(() => {
     if (!sortField) return filteredLoans;
@@ -98,6 +108,9 @@ const LoanTableView: React.FC = () => {
         // fallback to locale compare
         return xs.localeCompare(ys);
       };
+      // Use O(1) lookup instead of O(n) filter
+      const aInsts = getLoanInstallments(a.id);
+      const bInsts = getLoanInstallments(b.id);
       switch (sortField) {
         case "customer":
           aValue = a.customers?.name || "";
@@ -116,34 +129,26 @@ const LoanTableView: React.FC = () => {
           bValue = b.original_amount + b.interest_amount;
           break;
         case "paid":
-          aValue = installments
-            .filter((inst) => inst.loan_id === a.id)
-            .reduce((acc, inst) => acc + inst.amount, 0);
-          bValue = installments
-            .filter((inst) => inst.loan_id === b.id)
-            .reduce((acc, inst) => acc + inst.amount, 0);
+          aValue = aInsts.reduce((acc, inst) => acc + inst.amount, 0);
+          bValue = bInsts.reduce((acc, inst) => acc + inst.amount, 0);
           break;
         case "balance":
           aValue =
             a.original_amount +
             a.interest_amount -
-            installments
-              .filter((inst) => inst.loan_id === a.id)
-              .reduce((acc, inst) => acc + inst.amount, 0);
+            aInsts.reduce((acc, inst) => acc + inst.amount, 0);
           bValue =
             b.original_amount +
             b.interest_amount -
-            installments
-              .filter((inst) => inst.loan_id === b.id)
-              .reduce((acc, inst) => acc + inst.amount, 0);
+            bInsts.reduce((acc, inst) => acc + inst.amount, 0);
           break;
         case "check_number":
           aValue = a.check_number || "";
           bValue = b.check_number || "";
           break;
         case "installments":
-          aValue = installments.filter((inst) => inst.loan_id === a.id).length;
-          bValue = installments.filter((inst) => inst.loan_id === b.id).length;
+          aValue = aInsts.length;
+          bValue = bInsts.length;
           break;
         case "total_installments":
           aValue = a.total_instalments;
@@ -156,16 +161,12 @@ const LoanTableView: React.FC = () => {
         case "status":
           aValue = (() => {
             const totalRepayable = a.original_amount + a.interest_amount;
-            const paid = installments
-              .filter((inst) => inst.loan_id === a.id)
-              .reduce((acc, inst) => acc + inst.amount, 0);
+            const paid = aInsts.reduce((acc, inst) => acc + inst.amount, 0);
             return paid >= totalRepayable ? "Paid Off" : "In Progress";
           })();
           bValue = (() => {
             const totalRepayable = b.original_amount + b.interest_amount;
-            const paid = installments
-              .filter((inst) => inst.loan_id === b.id)
-              .reduce((acc, inst) => acc + inst.amount, 0);
+            const paid = bInsts.reduce((acc, inst) => acc + inst.amount, 0);
             return paid >= totalRepayable ? "Paid Off" : "In Progress";
           })();
           break;
@@ -182,12 +183,12 @@ const LoanTableView: React.FC = () => {
       const cmp = compareMaybeNumeric(aValue, bValue);
       return sortDirection === "asc" ? cmp : -cmp;
     });
-  }, [filteredLoans, sortField, sortDirection, installments]);
+  }, [filteredLoans, sortField, sortDirection, getLoanInstallments]);
 
   if (loans.length === 0) {
     const emptyMessage = isScopedCustomer && scopedCustomerId
       ? (() => {
-        const customer = customers.find(c => c.id === scopedCustomerId);
+        const customer = customerMap.get(scopedCustomerId);
         return `No Loan Entries for ${customer?.name || 'you'}`;
       })()
       : 'No loans recorded yet.';
@@ -355,12 +356,8 @@ const LoanTableView: React.FC = () => {
         >
           <AnimatePresence>
             {sortedLoans.map((loan: LoanWithCustomer, idx: number) => {
-              const loanInstallments = installments
-                .filter((inst) => inst.loan_id === loan.id)
-                .sort(
-                  (a, b) =>
-                    new Date(b.date).getTime() - new Date(a.date).getTime()
-                );
+              // Use O(1) lookup - installments already sorted by date in the map
+              const loanInstallments = getLoanInstallments(loan.id);
               const totalRepayable =
                 loan.original_amount + loan.interest_amount;
               const paid = loanInstallments.reduce(
@@ -607,11 +604,8 @@ const LoanTableView: React.FC = () => {
       {/* This `md:hidden` class is correct. It hides this view on desktop */}
       <div className="md:hidden mt-4 space-y-3">
         {sortedLoans.map((loan, idx) => {
-          const loanInstallments = installments
-            .filter((inst) => inst.loan_id === loan.id)
-            .sort(
-              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-            );
+          // Use O(1) lookup - installments already sorted by date in the map
+          const loanInstallments = getLoanInstallments(loan.id);
           const totalRepayable = loan.original_amount + loan.interest_amount;
           const paid = loanInstallments.reduce(
             (acc, inst) => acc + inst.amount,

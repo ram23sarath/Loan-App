@@ -26,11 +26,20 @@ export const calculateSummaryData = (
   loans: LoanWithCustomer[],
   installments: Installment[],
   subscriptions: SubscriptionWithCustomer[],
-  dataEntries: DataEntry[]
+  dataEntries: DataEntry[],
+  installmentsByLoanId?: Map<string, Installment[]>
 ): SummaryData => {
+  // Helper to get installments for a loan (uses map if available, falls back to filter)
+  const getInstallmentsForLoan = (loanId: string): Installment[] => {
+    if (installmentsByLoanId) {
+      return installmentsByLoanId.get(loanId) || [];
+    }
+    return installments.filter((i) => i.loan_id === loanId);
+  };
+
   // Calculate Total Interest Collected
   const totalInterestCollected = loans.reduce((acc, loan) => {
-    const loanInstallments = installments.filter((i) => i.loan_id === loan.id);
+    const loanInstallments = getInstallmentsForLoan(loan.id);
     const totalPaidForLoan = loanInstallments.reduce(
       (sum, inst) => sum + inst.amount,
       0
@@ -119,7 +128,7 @@ export const calculateSummaryData = (
 
   // Calculate Total Principal Recovered
   const totalPrincipalRecovered = loans.reduce((acc, loan) => {
-    const loanInstallments = installments.filter((i) => i.loan_id === loan.id);
+    const loanInstallments = getInstallmentsForLoan(loan.id);
     const totalPaidForLoan = loanInstallments.reduce(
       (sum, inst) => sum + (inst.amount || 0),
       0

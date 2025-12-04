@@ -6,17 +6,19 @@ import { useData } from '../../context/DataContext';
 import type { Customer } from '../../types';
 import { Trash2Icon, PencilIcon } from '../../constants';
 import { formatDate } from '../../utils/dateFormatter';
+import { useDebounce } from '../../utils/useDebounce';
 
 const LoanSeniorityPage = () => {
   const { customers, loans, subscriptions, seniorityList, fetchSeniorityList, addToSeniority, updateSeniority, removeFromSeniority } = useData();
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   useEffect(() => {
     fetchSeniorityList().catch(err => console.error('Failed to load seniority list', err));
   }, [fetchSeniorityList]);
 
   const filtered = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
+    const term = debouncedSearchTerm.trim().toLowerCase();
 
     // Build a set of customer IDs already in the seniority list to exclude them from suggestions
     const existingIds = new Set<string>((seniorityList || []).map((e: any) => e.customer_id));
@@ -36,7 +38,7 @@ const LoanSeniorityPage = () => {
     return customers
       .filter(c => !existingIds.has(c.id))
       .filter(c => c.name.toLowerCase().includes(term) || String(c.phone).toLowerCase().includes(term));
-  }, [customers, loans, subscriptions, searchTerm, seniorityList]);
+  }, [customers, loans, subscriptions, debouncedSearchTerm, seniorityList]);
 
 
   const addCustomerToList = async (customer: Customer) => {

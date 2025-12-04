@@ -628,12 +628,16 @@ const LoanTableView: React.FC = () => {
               {/* Swipe background indicators - only visible when dragging this card */}
               {draggingCardId === loan.id && (
                 <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
-                  <div className="w-1/2 bg-green-500 flex items-center justify-start pl-4">
+                  <div
+                    className={`${isScopedCustomer ? "w-full" : "w-1/2"} bg-green-500 flex items-center justify-start pl-4`}
+                  >
                     <WhatsAppIcon className="w-6 h-6 text-white" />
                   </div>
-                  <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
-                    <Trash2Icon className="w-6 h-6 text-white" />
-                  </div>
+                  {!isScopedCustomer && (
+                    <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
+                      <Trash2Icon className="w-6 h-6 text-white" />
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -649,7 +653,12 @@ const LoanTableView: React.FC = () => {
                 dragMomentum={false}
                 dragDirectionLock={true}
                 style={{ touchAction: "pan-y" }}
-                onDragStart={() => setDraggingCardId(loan.id)}
+                onDragStart={() => {
+                  setDraggingCardId(loan.id);
+                  if (expandedRow === loan.id) {
+                    setExpandedRow(null);
+                  }
+                }}
                 onDragEnd={(_, info) => {
                   setDraggingCardId(null);
                   const threshold = 100;

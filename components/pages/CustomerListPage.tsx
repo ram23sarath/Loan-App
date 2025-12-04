@@ -29,7 +29,7 @@ const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 
 const CustomerListPage = () => {
-  const { customers, loans, subscriptions, installments, installmentsByLoanId, dataEntries, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, isRefreshing, signOut, updateCustomer, updateLoan, updateSubscription } = useData();
+  const { customers, loans, subscriptions, installments, installmentsByLoanId, dataEntries, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, isRefreshing, signOut, updateCustomer, updateLoan, updateSubscription, isScopedCustomer } = useData();
     const [deleteCustomerTarget, setDeleteCustomerTarget] = React.useState<{id: string, name: string} | null>(null);
     const [deleteCounts, setDeleteCounts] = React.useState<{ dataEntries: number; loans: number; installments: number; subscriptions: number } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -416,12 +416,16 @@ const CustomerListPage = () => {
                                       {/* Swipe background indicators - only visible when dragging this card */}
                                       {draggingCardId === customer.id && (
                                         <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
-                                          <div className="w-1/2 bg-green-500 flex items-center justify-start pl-4">
+                                          <div
+                                            className={`${isScopedCustomer ? "w-full" : "w-1/2"} bg-green-500 flex items-center justify-start pl-4`}
+                                          >
                                             <WhatsAppIcon className="w-6 h-6 text-white" />
                                           </div>
-                                          <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
-                                            <Trash2Icon className="w-6 h-6 text-white" />
-                                          </div>
+                                          {!isScopedCustomer && (
+                                            <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
+                                              <Trash2Icon className="w-6 h-6 text-white" />
+                                            </div>
+                                          )}
                                         </div>
                                       )}
                                       <motion.div 
@@ -441,7 +445,7 @@ const CustomerListPage = () => {
                                         onDragEnd={(_, info) => {
                                           setDraggingCardId(null);
                                           const threshold = 100;
-                                          if (info.offset.x < -threshold) {
+                                          if (!isScopedCustomer && info.offset.x < -threshold) {
                                             // Swipe left - Delete
                                             handleDeleteCustomer(customer);
                                           } else if (info.offset.x > threshold && isValidPhone) {
@@ -593,12 +597,16 @@ const CustomerListPage = () => {
                                       {/* Swipe background indicators - only visible when dragging this card */}
                                       {draggingCardId === customer.id && (
                                         <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
-                                          <div className="w-1/2 bg-green-500 flex items-center justify-start pl-4">
+                                          <div
+                                            className={`${isScopedCustomer ? "w-full" : "w-1/2"} bg-green-500 flex items-center justify-start pl-4`}
+                                          >
                                             <WhatsAppIcon className="w-6 h-6 text-white" />
                                           </div>
-                                          <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
-                                            <Trash2Icon className="w-6 h-6 text-white" />
-                                          </div>
+                                          {!isScopedCustomer && (
+                                            <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
+                                              <Trash2Icon className="w-6 h-6 text-white" />
+                                            </div>
+                                          )}
                                         </div>
                                       )}
                                       <motion.div 
@@ -618,7 +626,7 @@ const CustomerListPage = () => {
                                         onDragEnd={(_, info) => {
                                           setDraggingCardId(null);
                                           const threshold = 100;
-                                          if (info.offset.x < -threshold) {
+                                          if (!isScopedCustomer && info.offset.x < -threshold) {
                                             // Swipe left - Delete
                                             handleDeleteCustomer(customer);
                                           } else if (info.offset.x > threshold && isValidPhone) {
@@ -766,12 +774,16 @@ const CustomerListPage = () => {
                                       {/* Swipe background indicators - only visible when dragging this card */}
                                       {draggingCardId === customer.id && (
                                         <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
-                                          <div className="w-1/2 bg-green-500 flex items-center justify-start pl-4">
+                                          <div
+                                            className={`${isScopedCustomer ? "w-full" : "w-1/2"} bg-green-500 flex items-center justify-start pl-4`}
+                                          >
                                             <WhatsAppIcon className="w-6 h-6 text-white" />
                                           </div>
-                                          <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
-                                            <Trash2Icon className="w-6 h-6 text-white" />
-                                          </div>
+                                          {!isScopedCustomer && (
+                                            <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
+                                              <Trash2Icon className="w-6 h-6 text-white" />
+                                            </div>
+                                          )}
                                         </div>
                                       )}
                                       <motion.div 
@@ -791,7 +803,7 @@ const CustomerListPage = () => {
                                         onDragEnd={(_, info) => {
                                           setDraggingCardId(null);
                                           const threshold = 100;
-                                          if (info.offset.x < -threshold) {
+                                          if (!isScopedCustomer && info.offset.x < -threshold) {
                                             // Swipe left - Delete
                                             handleDeleteCustomer(customer);
                                           } else if (info.offset.x > threshold && isValidPhone) {
@@ -931,12 +943,16 @@ const CustomerListPage = () => {
                                         {/* Swipe background indicators - only visible when dragging this card */}
                                         {draggingCardId === customer.id && (
                                           <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
-                                            <div className="w-1/2 bg-green-500 flex items-center justify-start pl-4">
+                                            <div
+                                              className={`${isScopedCustomer ? "w-full" : "w-1/2"} bg-green-500 flex items-center justify-start pl-4`}
+                                            >
                                               <WhatsAppIcon className="w-6 h-6 text-white" />
                                             </div>
-                                            <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
-                                              <Trash2Icon className="w-6 h-6 text-white" />
-                                            </div>
+                                            {!isScopedCustomer && (
+                                              <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
+                                                <Trash2Icon className="w-6 h-6 text-white" />
+                                              </div>
+                                            )}
                                           </div>
                                         )}
                                         <motion.div 
@@ -956,7 +972,7 @@ const CustomerListPage = () => {
                                           onDragEnd={(_, info) => {
                                             setDraggingCardId(null);
                                             const threshold = 100;
-                                            if (info.offset.x < -threshold) {
+                                            if (!isScopedCustomer && info.offset.x < -threshold) {
                                               // Swipe left - Delete
                                               handleDeleteCustomer(customer);
                                             } else if (info.offset.x > threshold && isValidPhone) {
@@ -1106,3 +1122,4 @@ const CustomerListPage = () => {
 };
 
 export default CustomerListPage;
+

@@ -353,7 +353,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                 dragConstraints={{ left: 0, right: 0 }}
                 dragElastic={0.3}
                 dragMomentum={false}
-                style={{ touchAction: "pan-y" }}
+                dragDirectionLock={true}
                 onDragStart={() => setDraggingCardId(sub.id)}
                 onDragEnd={(_, info) => {
                   setDraggingCardId(null);

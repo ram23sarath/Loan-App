@@ -141,6 +141,7 @@ export type Database = {
           amount: number
           date: string
           receipt: string
+          late_fee?: number | null
           created_at: string
         }
         Insert: {
@@ -148,11 +149,13 @@ export type Database = {
           amount: number
           date: string
           receipt: string
+          late_fee?: number | null
         }
         Update: {
           amount?: number
           date?: string
           receipt?: string
+          late_fee?: number | null
         }
         Relationships: [
           {

@@ -234,8 +234,11 @@ const AddRecordPage = () => {
     data
   ) => {
     if (!selectedCustomerId) return;
+    // Sanitize late_fee: convert NaN or undefined to null
+    const sanitizedLateFee = (data.late_fee != null && !isNaN(data.late_fee)) ? data.late_fee : null;
     const newSubscriptionData: NewSubscription = {
       ...data,
+      late_fee: sanitizedLateFee,
       customer_id: selectedCustomerId,
     };
 

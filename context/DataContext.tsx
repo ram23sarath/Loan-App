@@ -63,6 +63,29 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
+// Helper function to fetch all records from a table (handles pagination automatically)
+const BATCH_SIZE = 1000;
+const fetchAllRecords = async <T,>(
+    queryBuilder: () => ReturnType<ReturnType<typeof supabase.from>['select']>
+): Promise<T[]> => {
+    const allRecords: T[] = [];
+    let from = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+        const { data, error } = await queryBuilder().range(from, from + BATCH_SIZE - 1);
+        if (error) throw error;
+        if (data && data.length > 0) {
+            allRecords.push(...(data as T[]));
+            from += BATCH_SIZE;
+            hasMore = data.length === BATCH_SIZE;
+        } else {
+            hasMore = false;
+        }
+    }
+    return allRecords;
+};
+
 // Cache helper functions
 const getCachedData = (key: string) => {
     try {
@@ -191,27 +214,33 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 if (dataEntriesError) throw dataEntriesError;
                 setDataEntries((dataEntriesData as DataEntry[]) || []);
             } else {
-                // Full fetch for admin/users with no scoped customer
-                const { data: customersData, error: customersError } = await supabase.from('customers').select('*').order('created_at', { ascending: false });
-                if (customersError) throw customersError;
-                setCustomers((customersData as unknown as Customer[]) || []);
+                // Full fetch for admin/users with no scoped customer - uses pagination to get ALL records
+                const customersData = await fetchAllRecords<Customer>(
+                    () => supabase.from('customers').select('*').order('created_at', { ascending: false })
+                );
+                setCustomers(customersData);
 
-                const { data: loansData, error: loansError } = await supabase.from('loans').select('*, customers(name, phone)');
-                if (loansError) throw loansError;
-                setLoans((loansData as unknown as LoanWithCustomer[]) || []);
+                const loansData = await fetchAllRecords<LoanWithCustomer>(
+                    () => supabase.from('loans').select('*, customers(name, phone)').order('created_at', { ascending: false })
+                );
+                setLoans(loansData);
 
-                const { data: subscriptionsData, error: subscriptionsError } = await supabase.from('subscriptions').select('*, customers(name, phone)');
-                if (subscriptionsError) throw subscriptionsError;
-                setSubscriptions((subscriptionsData as unknown as SubscriptionWithCustomer[]) || []);
+                const subscriptionsData = await fetchAllRecords<SubscriptionWithCustomer>(
+                    () => supabase.from('subscriptions').select('*, customers(name, phone)').order('created_at', { ascending: false })
+                );
+                console.log('📋 Fetched subscriptions:', { count: subscriptionsData?.length });
+                setSubscriptions(subscriptionsData);
 
-                const { data: installmentsData, error: installmentsError } = await supabase.from('installments').select('*');
-                if (installmentsError) throw installmentsError;
-                setInstallments((installmentsData as unknown as Installment[]) || []);
+                const installmentsData = await fetchAllRecords<Installment>(
+                    () => supabase.from('installments').select('*').order('created_at', { ascending: false })
+                );
+                setInstallments(installmentsData);
 
                 // Fetch data entries
-                const { data: dataEntriesData, error: dataEntriesError } = await supabase.from('data_entries').select('*');
-                if (dataEntriesError) throw dataEntriesError;
-                setDataEntries((dataEntriesData as DataEntry[]) || []);
+                const dataEntriesData = await fetchAllRecords<DataEntry>(
+                    () => supabase.from('data_entries').select('*').order('created_at', { ascending: false })
+                );
+                setDataEntries(dataEntriesData);
             }
 
         } catch (error: any) {
@@ -931,7 +960,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const addSubscription = async (subscriptionData: NewSubscription): Promise<Subscription> => {
         if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot add subscriptions');
         try {
+            console.log('📝 Adding subscription:', subscriptionData);
             const { data, error } = await supabase.from('subscriptions').insert([subscriptionData] as any).select().single();
+            console.log('📝 Insert result:', { data, error });
             if (error || !data) throw error;
             try {
                 if (session?.user?.id && data.customer_id) {
@@ -940,9 +971,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             } catch (e) {
                 console.error('Failed to cleanup loan_seniority after subscription create', e);
             }
+            console.log('📝 Calling fetchData after subscription insert...');
             await fetchData();
+            console.log('📝 fetchData complete, subscriptions count:', subscriptions.length);
             return data as Subscription;
         } catch (error) {
+            console.error('📝 Subscription error:', error);
             throw new Error(parseSupabaseError(error, 'adding subscription'));
         }
     };

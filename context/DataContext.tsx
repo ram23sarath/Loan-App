@@ -66,14 +66,18 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 // Helper function to fetch all records from a table (handles pagination automatically)
 const BATCH_SIZE = 1000;
 const fetchAllRecords = async <T,>(
-    queryBuilder: () => ReturnType<ReturnType<typeof supabase.from>['select']>
+    queryBuilder: () => ReturnType<ReturnType<typeof supabase.from>['select']>,
+    tableName?: string
 ): Promise<T[]> => {
     const allRecords: T[] = [];
     let from = 0;
     let hasMore = true;
+    let batchNum = 0;
 
     while (hasMore) {
+        batchNum++;
         const { data, error } = await queryBuilder().range(from, from + BATCH_SIZE - 1);
+        console.log(`📦 ${tableName || 'table'} batch ${batchNum}: fetched ${data?.length || 0} records (from ${from})`);
         if (error) throw error;
         if (data && data.length > 0) {
             allRecords.push(...(data as T[]));
@@ -83,6 +87,7 @@ const fetchAllRecords = async <T,>(
             hasMore = false;
         }
     }
+    console.log(`📦 ${tableName || 'table'} TOTAL: ${allRecords.length} records`);
     return allRecords;
 };
 
@@ -216,29 +221,34 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             } else {
                 // Full fetch for admin/users with no scoped customer - uses pagination to get ALL records
                 const customersData = await fetchAllRecords<Customer>(
-                    () => supabase.from('customers').select('*').order('created_at', { ascending: false })
+                    () => supabase.from('customers').select('*').order('created_at', { ascending: false }),
+                    'customers'
                 );
                 setCustomers(customersData);
 
                 const loansData = await fetchAllRecords<LoanWithCustomer>(
-                    () => supabase.from('loans').select('*, customers(name, phone)').order('created_at', { ascending: false })
+                    () => supabase.from('loans').select('*, customers(name, phone)').order('created_at', { ascending: false }),
+                    'loans'
                 );
                 setLoans(loansData);
 
                 const subscriptionsData = await fetchAllRecords<SubscriptionWithCustomer>(
-                    () => supabase.from('subscriptions').select('*, customers(name, phone)').order('created_at', { ascending: false })
+                    () => supabase.from('subscriptions').select('*, customers(name, phone)').order('created_at', { ascending: false }),
+                    'subscriptions'
                 );
-                console.log('📋 Fetched subscriptions:', { count: subscriptionsData?.length });
+                console.log('📋 Fetched subscriptions:', { count: subscriptionsData?.length, first3: subscriptionsData?.slice(0, 3) });
                 setSubscriptions(subscriptionsData);
 
                 const installmentsData = await fetchAllRecords<Installment>(
-                    () => supabase.from('installments').select('*').order('created_at', { ascending: false })
+                    () => supabase.from('installments').select('*').order('created_at', { ascending: false }),
+                    'installments'
                 );
                 setInstallments(installmentsData);
 
                 // Fetch data entries
                 const dataEntriesData = await fetchAllRecords<DataEntry>(
-                    () => supabase.from('data_entries').select('*').order('created_at', { ascending: false })
+                    () => supabase.from('data_entries').select('*').order('date', { ascending: false }),
+                    'data_entries'
                 );
                 setDataEntries(dataEntriesData);
             }
@@ -594,28 +604,35 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                                 seniorityList: [] // Will be set below
                             });
                         } else {
-                            // Admin/full data fetch
-                            const [customersRes, loansRes, subsRes, installmentsRes, dataEntriesRes] = await Promise.all([
-                                supabase.from('customers').select('*').order('created_at', { ascending: false }),
-                                supabase.from('loans').select('*, customers(name, phone)'),
-                                supabase.from('subscriptions').select('*, customers(name, phone)'),
-                                supabase.from('installments').select('*'),
-                                supabase.from('data_entries').select('*'),
-                            ]);
+                            // Admin/full data fetch - use pagination to get ALL records
+                            console.log('🔄 Admin init: fetching all data with pagination...');
+                            
+                            const customersData = await fetchAllRecords<Customer>(
+                                () => supabase.from('customers').select('*').order('created_at', { ascending: false }),
+                                'customers'
+                            );
+                            
+                            const loansData = await fetchAllRecords<LoanWithCustomer>(
+                                () => supabase.from('loans').select('*, customers(name, phone)').order('created_at', { ascending: false }),
+                                'loans'
+                            );
+                            
+                            const subscriptionsData = await fetchAllRecords<SubscriptionWithCustomer>(
+                                () => supabase.from('subscriptions').select('*, customers(name, phone)').order('created_at', { ascending: false }),
+                                'subscriptions'
+                            );
+                            
+                            const installmentsData = await fetchAllRecords<Installment>(
+                                () => supabase.from('installments').select('*').order('created_at', { ascending: false }),
+                                'installments'
+                            );
+                            
+                            const dataEntriesData = await fetchAllRecords<DataEntry>(
+                                () => supabase.from('data_entries').select('*').order('date', { ascending: false }),
+                                'data_entries'
+                            );
 
                             if (!isMounted) return;
-
-                            if (customersRes.error) throw customersRes.error;
-                            if (loansRes.error) throw loansRes.error;
-                            if (subsRes.error) throw subsRes.error;
-                            if (installmentsRes.error) throw installmentsRes.error;
-                            if (dataEntriesRes.error) throw dataEntriesRes.error;
-
-                            const customersData = (customersRes.data as unknown as Customer[]) || [];
-                            const loansData = (loansRes.data as unknown as LoanWithCustomer[]) || [];
-                            const subscriptionsData = (subsRes.data as unknown as SubscriptionWithCustomer[]) || [];
-                            const installmentsData = (installmentsRes.data as unknown as Installment[]) || [];
-                            const dataEntriesData = (dataEntriesRes.data as DataEntry[]) || [];
 
                             setCustomers(customersData);
                             setLoans(loansData);
@@ -796,36 +813,49 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                         setDataEntries(cachedData.dataEntries || []);
                     }
 
-                    // Admin/full data fetch
-                    const [customersRes, loansRes, subsRes, installmentsRes, dataEntriesRes] = await Promise.all([
-                        supabase.from('customers').select('*').order('created_at', { ascending: false }),
-                        supabase.from('loans').select('*, customers(name, phone)'),
-                        supabase.from('subscriptions').select('*, customers(name, phone)'),
-                        supabase.from('installments').select('*'),
-                        supabase.from('data_entries').select('*'),
-                    ]);
+                    // Admin/full data fetch - use pagination to get ALL records
+                    console.log('🔄 Admin refetch: fetching all data with pagination...');
+                    
+                    const customersData = await fetchAllRecords<Customer>(
+                        () => supabase.from('customers').select('*').order('created_at', { ascending: false }),
+                        'customers'
+                    );
+                    
+                    const loansData = await fetchAllRecords<LoanWithCustomer>(
+                        () => supabase.from('loans').select('*, customers(name, phone)').order('created_at', { ascending: false }),
+                        'loans'
+                    );
+                    
+                    const subscriptionsData = await fetchAllRecords<SubscriptionWithCustomer>(
+                        () => supabase.from('subscriptions').select('*, customers(name, phone)').order('created_at', { ascending: false }),
+                        'subscriptions'
+                    );
+                    
+                    const installmentsData = await fetchAllRecords<Installment>(
+                        () => supabase.from('installments').select('*').order('created_at', { ascending: false }),
+                        'installments'
+                    );
+                    
+                    const dataEntriesData = await fetchAllRecords<DataEntry>(
+                        () => supabase.from('data_entries').select('*').order('date', { ascending: false }),
+                        'data_entries'
+                    );
 
                     if (!isMounted) return;
 
-                    if (customersRes.error) throw customersRes.error;
-                    if (loansRes.error) throw loansRes.error;
-                    if (subsRes.error) throw subsRes.error;
-                    if (installmentsRes.error) throw installmentsRes.error;
-                    if (dataEntriesRes.error) throw dataEntriesRes.error;
-
-                    setCustomers((customersRes.data as unknown as Customer[]) || []);
-                    setLoans((loansRes.data as unknown as LoanWithCustomer[]) || []);
-                    setSubscriptions((subsRes.data as unknown as SubscriptionWithCustomer[]) || []);
-                    setInstallments((installmentsRes.data as unknown as Installment[]) || []);
-                    setDataEntries((dataEntriesRes.data as DataEntry[]) || []);
+                    setCustomers(customersData);
+                    setLoans(loansData);
+                    setSubscriptions(subscriptionsData);
+                    setInstallments(installmentsData);
+                    setDataEntries(dataEntriesData);
 
                     // Cache admin data
                     setCachedData('loan_app_cache_data_admin', {
-                        customers: (customersRes.data as unknown as Customer[]) || [],
-                        loans: (loansRes.data as unknown as LoanWithCustomer[]) || [],
-                        subscriptions: (subsRes.data as unknown as SubscriptionWithCustomer[]) || [],
-                        installments: (installmentsRes.data as unknown as Installment[]) || [],
-                        dataEntries: (dataEntriesRes.data as DataEntry[]) || [],
+                        customers: customersData,
+                        loans: loansData,
+                        subscriptions: subscriptionsData,
+                        installments: installmentsData,
+                        dataEntries: dataEntriesData,
                         seniorityList: [],
                     });
                 }

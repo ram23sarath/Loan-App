@@ -1049,11 +1049,12 @@ const CustomerListPage = () => {
       />
         )}
       </AnimatePresence>
-      {editModal && (
-        <EditModal
-          type={editModal.type}
-          data={editModal.data}
-          onSave={async (updated) => {
+      <AnimatePresence>
+        {editModal && (
+          <EditModal
+            type={editModal.type}
+            data={editModal.data}
+            onSave={async (updated) => {
             try {
               if (editModal.type === 'customer') {
                 await updateCustomer(updated.id, { name: updated.name, phone: updated.phone });
@@ -1097,29 +1098,47 @@ const CustomerListPage = () => {
           }}
           onClose={() => setEditModal(null)}
         />
-      )}
-            {deleteCustomerTarget && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 p-4">
-                    <div className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md">
-                        <h3 className="text-lg font-bold mb-4">Confirm Deletion</h3>
-                        <p className="mb-4">You're about to delete <span className="font-semibold">{deleteCustomerTarget.name}</span>. The following related records will be removed:</p>
-                        <ul className="mb-4 list-disc list-inside text-sm text-gray-700">
-                            <li>Data entries: <span className="font-semibold">{deleteCounts?.dataEntries ?? 0}</span></li>
-                            <li>Loans: <span className="font-semibold">{deleteCounts?.loans ?? 0}</span></li>
-                            <li>Installments (for loans above): <span className="font-semibold">{deleteCounts?.installments ?? 0}</span></li>
-                            <li>Subscriptions: <span className="font-semibold">{deleteCounts?.subscriptions ?? 0}</span></li>
-                        </ul>
-                        <p className="text-sm text-red-600 mb-4">This action is irreversible. Please ensure you have a backup if needed.</p>
-                        <div className="flex justify-end gap-2">
-                            <button onClick={cancelDeleteCustomer} className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">Cancel</button>
-                            <button onClick={confirmDeleteCustomer} className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Delete</button>
-                        </div>
-                    </div>
-                </div>
-            )}
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {deleteCustomerTarget && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: { opacity: 1 },
+            }}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            onClick={cancelDeleteCustomer}
+          >
+            <motion.div
+              className="bg-white rounded-lg shadow-lg p-5 w-[90%] max-w-sm"
+              variants={{
+                hidden: { opacity: 0, y: 50, scale: 0.9 },
+                visible: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 100 } },
+                exit: { opacity: 0, y: 50, scale: 0.9 },
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-base font-bold mb-3">Delete {deleteCustomerTarget.name} customer permanently?</h3>
+              <div className="text-sm text-gray-600 mb-3 space-y-1">
+                <p><span className="font-medium">{deleteCounts?.loans ?? 0}</span> Loans</p>
+                <p><span className="font-medium">{deleteCounts?.installments ?? 0}</span> Installments</p>
+                <p><span className="font-medium">{deleteCounts?.subscriptions ?? 0}</span> Subscriptions</p>
+              </div>
+              <p className="text-xs text-red-600 mb-4">This is permanent delete, cannot be undone.</p>
+              <div className="flex justify-end gap-2">
+                <button onClick={cancelDeleteCustomer} className="px-3 py-1.5 rounded bg-gray-200 hover:bg-gray-300 text-sm">Cancel</button>
+                <button onClick={confirmDeleteCustomer} className="px-3 py-1.5 rounded bg-red-600 text-white hover:bg-red-700 text-sm">Delete</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </PageWrapper>
   );
 };
 
 export default CustomerListPage;
-

@@ -863,30 +863,32 @@ const LoanTableView: React.FC = () => {
       {/* ... (All modal logic remains unchanged) ... */}
 
       {/* Loan Edit Modal */}
-      {editLoanTarget && (
-        <EditModal
-          type="loan"
-          data={editLoanTarget}
-          onClose={() => setEditLoanTarget(null)}
-          onSave={async (updated) => {
-            try {
-              // build updates object - ensure numeric fields are numbers
-              const updates: any = {
-                original_amount: Number(updated.original_amount),
-                interest_amount: Number(updated.interest_amount),
-                check_number: updated.check_number || null,
-                total_instalments: Number(updated.total_instalments) || null,
-                payment_date: updated.payment_date || null,
-              };
-              await updateLoan(editLoanTarget.id, updates);
-            } catch (err: any) {
-              alert(err.message || String(err));
-            } finally {
-              setEditLoanTarget(null);
-            }
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {editLoanTarget && (
+          <EditModal
+            type="loan"
+            data={editLoanTarget}
+            onClose={() => setEditLoanTarget(null)}
+            onSave={async (updated) => {
+              try {
+                // build updates object - ensure numeric fields are numbers
+                const updates: any = {
+                  original_amount: Number(updated.original_amount),
+                  interest_amount: Number(updated.interest_amount),
+                  check_number: updated.check_number || null,
+                  total_instalments: Number(updated.total_instalments) || null,
+                  payment_date: updated.payment_date || null,
+                };
+                await updateLoan(editLoanTarget.id, updates);
+              } catch (err: any) {
+                alert(err.message || String(err));
+              } finally {
+                setEditLoanTarget(null);
+              }
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Installment Edit Modal */}
       <AnimatePresence>

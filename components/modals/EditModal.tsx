@@ -1,4 +1,5 @@
 import React from "react";
+import { motion, Variants } from "framer-motion";
 import type {
   Customer,
   LoanWithCustomer,
@@ -11,6 +12,17 @@ interface EditModalProps {
   onSave: (updated: any) => void;
   onClose: () => void;
 }
+
+const backdropVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
+};
+
+const modalVariants: Variants = {
+  hidden: { opacity: 0, y: 50, scale: 0.9 },
+  visible: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 100 } },
+  exit: { opacity: 0, y: 50, scale: 0.9 },
+};
 
 const EditModal: React.FC<EditModalProps> = ({
   type,
@@ -40,8 +52,19 @@ const EditModal: React.FC<EditModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto relative flex flex-col items-center">
+    <motion.div
+      className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+      variants={backdropVariants}
+      initial="hidden"
+      animate="visible"
+      exit="hidden"
+      onClick={onClose}
+    >
+      <motion.div
+        className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto relative flex flex-col items-center"
+        variants={modalVariants}
+        onClick={(e) => e.stopPropagation()}
+      >
         <button
           onClick={onClose}
           className="absolute top-3 right-3 text-xl text-gray-500 hover:text-gray-700"
@@ -461,8 +484,8 @@ const EditModal: React.FC<EditModalProps> = ({
             </div>
           </form>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

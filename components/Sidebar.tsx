@@ -262,8 +262,9 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
             }`}
         >
           {!collapsed && (
-            <h1 className="text-2xl font-bold text-gray-800">
-              Loan Management
+            <h1 className="text-xl lg:text-2xl font-bold text-gray-800 truncate">
+              <span className="hidden lg:inline">Loan Management</span>
+              <span className="lg:hidden">Loans</span>
             </h1>
           )}
           <button
@@ -271,7 +272,7 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
               setCollapsed(!collapsed);
               clearCollapseTimer();
             }}
-            className="p-2 rounded-md hover:bg-gray-100"
+            className="p-2 rounded-md hover:bg-gray-100 shrink-0"
           >
             <HamburgerIcon className="w-5 h-5 text-gray-700" />
           </button>

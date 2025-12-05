@@ -1,5 +1,5 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useData } from "../../context/DataContext";
 import GlassCard from "../ui/GlassCard";
 import { formatDate } from "../../utils/dateFormatter";
@@ -519,31 +519,33 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
         </motion.div>
       )}
 
-      {editSubscriptionTarget && (
-        <EditModal
-          type="subscription"
-          data={editSubscriptionTarget}
-          onClose={() => setEditSubscriptionTarget(null)}
-          onSave={async (updated) => {
-            try {
-              const updates: any = {
-                amount: Number(updated.amount),
-                date: updated.date || null,
-                receipt: updated.receipt || null,
-                late_fee:
-                  updated.late_fee !== undefined && updated.late_fee !== ""
-                    ? Number(updated.late_fee)
-                    : null,
-              };
-              await updateSubscription(editSubscriptionTarget.id, updates);
-            } catch (err: any) {
-              alert(err.message || String(err));
-            } finally {
-              setEditSubscriptionTarget(null);
-            }
-          }}
-        />
-      )}
+      <AnimatePresence>
+        {editSubscriptionTarget && (
+          <EditModal
+            type="subscription"
+            data={editSubscriptionTarget}
+            onClose={() => setEditSubscriptionTarget(null)}
+            onSave={async (updated) => {
+              try {
+                const updates: any = {
+                  amount: Number(updated.amount),
+                  date: updated.date || null,
+                  receipt: updated.receipt || null,
+                  late_fee:
+                    updated.late_fee !== undefined && updated.late_fee !== ""
+                      ? Number(updated.late_fee)
+                      : null,
+                };
+                await updateSubscription(editSubscriptionTarget.id, updates);
+              } catch (err: any) {
+                alert(err.message || String(err));
+              } finally {
+                setEditSubscriptionTarget(null);
+              }
+            }}
+          />
+        )}
+      </AnimatePresence>
     </GlassCard>
   );
 };

@@ -195,19 +195,19 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
         onClick={e => e.stopPropagation()}
       >
         <GlassCard className="!p-0 w-full flex-shrink-0">
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between p-3 sm:p-6 border-b border-gray-200">
             <div>
-              <h2 className="text-3xl font-bold">{customer.name}</h2>
-              <p className="text-gray-500">{customer.phone}</p>
+              <h2 className="text-xl sm:text-3xl font-bold">{customer.name}</h2>
+              <p className="text-sm sm:text-base text-gray-500">{customer.phone}</p>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <motion.button
                 onClick={handleIndividualExport}
-                className="flex items-center gap-2 p-3 font-semibold transition-colors bg-gray-100 rounded-lg hover:bg-gray-200"
+                className="flex items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-base font-semibold transition-colors bg-gray-100 rounded-lg hover:bg-gray-200"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                <FileDownIcon className="w-5 h-5" /> Export Details
+                <FileDownIcon className="w-4 h-4 sm:w-5 sm:h-5" /> <span className="hidden sm:inline">Export Details</span><span className="sm:hidden">Export</span>
               </motion.button>
               <motion.button
                 onClick={onClose}
@@ -221,14 +221,14 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           </div>
         </GlassCard>
 
-        <div className="mt-4 space-y-6 overflow-y-auto">
+        <div className="mt-2 sm:mt-4 space-y-3 sm:space-y-6 overflow-y-auto">
           {/* Loans Section */}
-          <GlassCard className="w-full">
-            <h3 className="flex items-center gap-3 mb-4 text-2xl font-semibold">
-              <LandmarkIcon /> Loans
+          <GlassCard className="w-full !p-3 sm:!p-6">
+            <h3 className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-lg sm:text-2xl font-semibold">
+              <LandmarkIcon className="w-5 h-5 sm:w-6 sm:h-6" /> Loans
             </h3>
             {loans.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-2 sm:space-y-4">
                 {loans.map(loan => {
                   const loanInstallments = installmentsByLoanId.get(loan.id) || [];
                   const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
@@ -239,10 +239,10 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   const interestCollected = amountPaid > loan.original_amount ? Math.min(amountPaid - loan.original_amount, loan.interest_amount) : 0;
                   
                   return (
-                    <div key={loan.id} className="p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-start justify-between">
+                    <div key={loan.id} className="p-3 sm:p-4 bg-gray-50 rounded-lg">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-0">
                         <div>
-                          <p className="text-lg font-bold">Loan from {formatDate(loan.payment_date)}</p>
+                          <p className="text-sm sm:text-lg font-bold">Loan from {formatDate(loan.payment_date)}</p>
                           <p className="text-xs text-gray-500">
                             Total: {formatCurrency(totalRepayable)} ({formatCurrency(loan.original_amount)} + {formatCurrency(loan.interest_amount)} interest)
                           </p>
@@ -252,11 +252,11 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                             Interest Collected: {formatCurrency(interestCollected)}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 self-end sm:self-auto">
                           {onEditLoan && (
                             <motion.button
                               onClick={() => onEditLoan(loan)}
-                              className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
+                              className="px-2 py-1 rounded bg-blue-600 text-white text-xs sm:text-sm hover:bg-blue-700"
                               aria-label={`Edit loan from ${loan.payment_date}`}
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
@@ -271,7 +271,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                             whileHover={{ scale: 1.2 }}
                             whileTap={{ scale: 0.9 }}
                           >
-                            <Trash2Icon className="w-5 h-5 text-red-500" />
+                            <Trash2Icon className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
                           </motion.button>
                         </div>
                       </div>
@@ -327,24 +327,33 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           </GlassCard>
 
           {/* Subscriptions Section */}
-          <GlassCard className="w-full">
-            <h3 className="flex items-center gap-3 mb-4 text-2xl font-semibold">
-              <HistoryIcon /> Subscriptions
+          <GlassCard className="w-full !p-3 sm:!p-6">
+            <h3 className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-lg sm:text-2xl font-semibold">
+              <HistoryIcon className="w-5 h-5 sm:w-6 sm:h-6" /> Subscriptions
             </h3>
             {subscriptions.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-2 sm:space-y-4">
                 {subscriptions.map(sub => (
-                  <div key={sub.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-bold">Subscription on {formatDate(sub.date)}</p>
-                      <p className="text-xs text-gray-500">Receipt: {sub.receipt}</p>
+                  <div key={sub.id} className="flex justify-between p-3 sm:p-4 bg-gray-50 rounded-lg">
+                    {/* Left: Info */}
+                    <div className="flex-1">
+                      {/* Row 1: Subscription Date */}
+                      <p className="text-sm sm:text-lg font-bold">Subscription Date - {formatDate(sub.date)}</p>
+                      {/* Row 2: Amount */}
+                      <p className="text-xs text-gray-500 mt-1">
+                        Amount: <span className="font-semibold text-cyan-600">{formatCurrency(sub.amount)}</span>
+                      </p>
+                      {/* Row 3: Receipt Number */}
+                      <p className="text-xs text-gray-500 mt-1">
+                        Receipt Number: <span className="font-semibold text-gray-700">{sub.receipt || '-'}</span>
+                      </p>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <p className="text-xl font-bold text-cyan-600">{formatCurrency(sub.amount)}</p>
+                    {/* Right: Actions - Stacked vertically */}
+                    <div className="flex flex-col items-center justify-center gap-2 ml-3">
                       {onEditSubscription && (
                         <motion.button
                           onClick={() => onEditSubscription(sub)}
-                          className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
+                          className="px-3 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
                           aria-label={`Edit subscription from ${formatDate(sub.date)}`}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
@@ -354,12 +363,12 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                       )}
                       <motion.button
                         onClick={() => setDeleteSubTarget(sub)}
-                        className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                        className="p-2 rounded-md bg-red-50 text-red-600"
                         aria-label={`Delete subscription from ${formatDate(sub.date)}`}
-                        whileHover={{ scale: 1.2 }}
+                        whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                       >
-                        <Trash2Icon className="w-5 h-5 text-red-500" />
+                        <Trash2Icon className="w-5 h-5" />
                       </motion.button>
                     </div>
                   </div>

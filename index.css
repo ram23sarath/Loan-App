@@ -21,6 +21,7 @@ input[type="date"] {
   background-color: #fff;
   position: relative;
   display: block;
+  padding-right: 40px; /* Space for calendar icon */
 }
 
 /* iOS Safari specific - ensure date picker displays correctly */
@@ -33,25 +34,34 @@ input[type="date"]::-webkit-date-and-time-value {
 input[type="date"]::-webkit-datetime-edit {
   display: block;
   padding: 0;
-  min-width: 100%;
 }
 
 input[type="date"]::-webkit-datetime-edit-fields-wrapper {
   padding: 0;
 }
 
-/* Ensure calendar icon is visible and properly positioned on iOS */
+/* Show calendar icon on the right side */
 input[type="date"]::-webkit-calendar-picker-indicator {
-  background: transparent;
-  bottom: 0;
-  color: transparent;
   cursor: pointer;
-  height: auto;
-  left: 0;
+  opacity: 0.6;
   position: absolute;
-  right: 0;
-  top: 0;
-  width: auto;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Firefox date picker icon */
+input[type="date"]::-moz-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+input[type="date"]::-moz-calendar-picker-indicator:hover {
+  opacity: 1;
 }
 
 /* Print styles */

@@ -253,9 +253,9 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
         }
       </AnimatePresence>
 
-      {/* Tools Modal - Admin Only */}
-      <AnimatePresence>
-        {showToolsModal && (
+      {/* Tools Modal - Admin Only (rendered via portal for proper centering) */}
+      {showToolsModal && typeof document !== 'undefined' && ReactDOM.createPortal(
+        <AnimatePresence>
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -572,8 +572,9 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
               )}
             </motion.div>
           </motion.div>
-        )}
-      </AnimatePresence>
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* Logout Confirmation Dialog (rendered into document.body via portal to ensure centering) */}
       {

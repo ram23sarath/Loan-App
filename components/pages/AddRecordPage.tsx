@@ -320,9 +320,29 @@ const AddRecordPage = () => {
           totalRepayable: activeLoan.original_amount + activeLoan.interest_amount,
         }
       });
-      // After successful submission, show success message and prepare next installment
+      
+      // Show success message
+      setShowSuccess(`Installment #${data.installment_number} recorded!`);
+      
+      // Update paid installment numbers
+      const updatedPaidNumbers = new Set(paidInstallmentNumbers);
+      updatedPaidNumbers.add(data.installment_number);
+      setPaidInstallmentNumbers(updatedPaidNumbers);
+      
+      // Prepare form for next installment
       const nextInstallmentNumber = data.installment_number + 1;
-      showTemporarySuccess(`Installment #${data.installment_number} recorded!`);
+      if (nextInstallmentNumber <= activeLoan.total_instalments) {
+        // Prefill with same amount and next installment number
+        installmentForm.setValue("amount", data.amount);
+        installmentForm.setValue("installment_number", nextInstallmentNumber);
+        installmentForm.setValue("receipt_number", "");
+        installmentForm.setValue("late_fee", 0);
+        installmentForm.setValue("date", getTodayDateString());
+      } else {
+        // All installments paid - reset form
+        installmentForm.reset();
+        setAction(null);
+      }
     } catch (error: any) {
       setToast({ show: true, message: error.message || "An error occurred." });
     }

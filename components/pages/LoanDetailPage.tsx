@@ -13,48 +13,48 @@ const LoanDetailPage: React.FC = () => {
   const itemsPerPage = 25;
 
   if (loading) {
-    return <GlassCard><p>Loading...</p></GlassCard>;
+    return <GlassCard><p className="dark:text-dark-text">Loading...</p></GlassCard>;
   }
 
   const loan = loans.find(l => l.id === id);
   const loanInstallments = id ? (installmentsByLoanId.get(id) || []) : [];
 
   if (!loan) {
-    return <GlassCard><p>Loan not found.</p></GlassCard>;
+    return <GlassCard><p className="dark:text-dark-muted">Loan not found.</p></GlassCard>;
   }
 
   return (
     <GlassCard className="max-w-2xl mx-auto mt-8">
-      <h2 className="text-2xl font-bold mb-4">Loan Details</h2>
+      <h2 className="text-2xl font-bold mb-4 dark:text-dark-text">Loan Details</h2>
       <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="bg-white border border-gray-100 rounded-lg p-3">
-          <div className="text-sm text-gray-500">Customer</div>
-          <div className="font-semibold text-indigo-700">{loan.customers?.name ?? 'Unknown'}</div>
+        <div className="bg-white border border-gray-100 rounded-lg p-3 dark:bg-slate-700 dark:border-dark-border">
+          <div className="text-sm text-gray-500 dark:text-dark-muted">Customer</div>
+          <div className="font-semibold text-indigo-700 dark:text-indigo-400">{loan.customers?.name ?? 'Unknown'}</div>
         </div>
-        <div className="bg-white border border-gray-100 rounded-lg p-3">
-          <div className="text-sm text-gray-500">Payment Date</div>
-          <div className="font-semibold">{loan.payment_date ? formatDate(loan.payment_date) : '-'}</div>
-        </div>
-
-        <div className="bg-white border border-gray-100 rounded-lg p-3">
-          <div className="text-sm text-gray-500">Original Amount</div>
-          <div className="font-semibold text-green-700">₹{loan.original_amount.toLocaleString()}</div>
-        </div>
-        <div className="bg-white border border-gray-100 rounded-lg p-3">
-          <div className="text-sm text-gray-500">Interest Amount</div>
-          <div className="font-semibold text-green-700">₹{loan.interest_amount.toLocaleString()}</div>
+        <div className="bg-white border border-gray-100 rounded-lg p-3 dark:bg-slate-700 dark:border-dark-border">
+          <div className="text-sm text-gray-500 dark:text-dark-muted">Payment Date</div>
+          <div className="font-semibold dark:text-dark-text">{loan.payment_date ? formatDate(loan.payment_date) : '-'}</div>
         </div>
 
-        <div className="bg-white border border-gray-100 rounded-lg p-3">
-          <div className="text-sm text-gray-500">Total Repayable</div>
-          <div className="font-semibold text-indigo-800">₹{(loan.original_amount + loan.interest_amount).toLocaleString()}</div>
+        <div className="bg-white border border-gray-100 rounded-lg p-3 dark:bg-slate-700 dark:border-dark-border">
+          <div className="text-sm text-gray-500 dark:text-dark-muted">Original Amount</div>
+          <div className="font-semibold text-green-700 dark:text-green-400">₹{loan.original_amount.toLocaleString()}</div>
         </div>
-        <div className="bg-white border border-gray-100 rounded-lg p-3">
-          <div className="text-sm text-gray-500">Check Number</div>
-          <div className="font-semibold">{loan.check_number || '-'}</div>
+        <div className="bg-white border border-gray-100 rounded-lg p-3 dark:bg-slate-700 dark:border-dark-border">
+          <div className="text-sm text-gray-500 dark:text-dark-muted">Interest Amount</div>
+          <div className="font-semibold text-green-700 dark:text-green-400">₹{loan.interest_amount.toLocaleString()}</div>
+        </div>
+
+        <div className="bg-white border border-gray-100 rounded-lg p-3 dark:bg-slate-700 dark:border-dark-border">
+          <div className="text-sm text-gray-500 dark:text-dark-muted">Total Repayable</div>
+          <div className="font-semibold text-indigo-800 dark:text-indigo-400">₹{(loan.original_amount + loan.interest_amount).toLocaleString()}</div>
+        </div>
+        <div className="bg-white border border-gray-100 rounded-lg p-3 dark:bg-slate-700 dark:border-dark-border">
+          <div className="text-sm text-gray-500 dark:text-dark-muted">Check Number</div>
+          <div className="font-semibold dark:text-dark-text">{loan.check_number || '-'}</div>
         </div>
       </div>
-      <h3 className="text-lg font-semibold mb-3">Installments Paid</h3>
+      <h3 className="text-lg font-semibold mb-3 dark:text-dark-text">Installments Paid</h3>
       {loanInstallments.length > 0 ? (
         <>
           {(() => {
@@ -64,8 +64,8 @@ const LoanDetailPage: React.FC = () => {
             const paginatedInstallments = loanInstallments.slice(start, end);
             return (
               <>
-                <div className="overflow-x-auto border border-gray-100 rounded-lg">
-                  <div className="grid grid-cols-2 md:grid-cols-6 gap-2 md:gap-4 bg-indigo-50 text-xs font-semibold text-indigo-700 p-3">
+                <div className="overflow-x-auto border border-gray-100 rounded-lg dark:border-dark-border">
+                  <div className="grid grid-cols-2 md:grid-cols-6 gap-2 md:gap-4 bg-indigo-50 text-xs font-semibold text-indigo-700 p-3 dark:bg-indigo-900/30 dark:text-indigo-400">
                     <div>#</div>
                     <div className="hidden md:block">Date</div>
                     <div className="text-right md:text-right">Amount</div>
@@ -73,15 +73,15 @@ const LoanDetailPage: React.FC = () => {
                     <div className="hidden md:block">Receipt</div>
                     <div className="hidden md:block md:text-right">Notes</div>
                   </div>
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y divide-gray-100 dark:divide-dark-border">
                     {paginatedInstallments.map(inst => (
-                      <div key={inst.id} className="grid grid-cols-2 md:grid-cols-6 gap-2 md:gap-4 items-center p-3 bg-white">
-                        <div className="text-sm text-gray-700">#{inst.installment_number}</div>
-                        <div className="hidden md:block text-sm text-gray-600">{formatDate(inst.date)}</div>
-                        <div className="text-sm font-semibold text-green-700 text-right">₹{inst.amount.toLocaleString()}</div>
-                        <div className="hidden md:block text-sm text-gray-700 md:text-right">{inst.late_fee ? `₹${inst.late_fee}` : '-'}</div>
-                        <div className="hidden md:block text-sm text-gray-600">{inst.receipt_number || '-'}</div>
-                        <div className="hidden md:block text-sm text-gray-500 md:text-right">{inst.notes || '-'}</div>
+                      <div key={inst.id} className="grid grid-cols-2 md:grid-cols-6 gap-2 md:gap-4 items-center p-3 bg-white dark:bg-dark-card">
+                        <div className="text-sm text-gray-700 dark:text-dark-text">#{inst.installment_number}</div>
+                        <div className="hidden md:block text-sm text-gray-600 dark:text-dark-muted">{formatDate(inst.date)}</div>
+                        <div className="text-sm font-semibold text-green-700 text-right dark:text-green-400">₹{inst.amount.toLocaleString()}</div>
+                        <div className="hidden md:block text-sm text-gray-700 md:text-right dark:text-dark-text">{inst.late_fee ? `₹${inst.late_fee}` : '-'}</div>
+                        <div className="hidden md:block text-sm text-gray-600 dark:text-dark-muted">{inst.receipt_number || '-'}</div>
+                        <div className="hidden md:block text-sm text-gray-500 md:text-right dark:text-dark-muted">{inst.notes || '-'}</div>
                       </div>
                     ))}
                   </div>
@@ -90,12 +90,12 @@ const LoanDetailPage: React.FC = () => {
                 {/* Pagination Controls */}
                 {totalPages > 1 && (
                   <motion.div
-                    className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-200"
+                    className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-dark-border"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-600 dark:text-dark-muted">
                       Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
                       {Math.min(currentPage * itemsPerPage, loanInstallments.length)} of{" "}
                       {loanInstallments.length} installments
@@ -104,14 +104,14 @@ const LoanDetailPage: React.FC = () => {
                       <button
                         onClick={() => setCurrentPage(1)}
                         disabled={currentPage === 1}
-                        className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700"
                       >
                         First
                       </button>
                       <button
                         onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                         disabled={currentPage === 1}
-                        className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700"
                       >
                         Previous
                       </button>
@@ -130,7 +130,7 @@ const LoanDetailPage: React.FC = () => {
                               className={`px-3 py-1 rounded border ${
                                 currentPage === page
                                   ? "bg-indigo-600 text-white border-indigo-600"
-                                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                                  : "border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700"
                               }`}
                             >
                               {page}
@@ -138,10 +138,10 @@ const LoanDetailPage: React.FC = () => {
                           );
                         }
                         if (page === 2 && currentPage > 3) {
-                          return <span key="dots-start" className="px-2">...</span>;
+                          return <span key="dots-start" className="px-2 dark:text-dark-muted">...</span>;
                         }
                         if (page === totalPages - 1 && currentPage < totalPages - 2) {
-                          return <span key="dots-end" className="px-2">...</span>;
+                          return <span key="dots-end" className="px-2 dark:text-dark-muted">...</span>;
                         }
                         return null;
                       })}
@@ -149,14 +149,14 @@ const LoanDetailPage: React.FC = () => {
                       <button
                         onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                         disabled={currentPage === totalPages}
-                        className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700"
                       >
                         Next
                       </button>
                       <button
                         onClick={() => setCurrentPage(totalPages)}
                         disabled={currentPage === totalPages}
-                        className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                        className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700"
                       >
                         Last
                       </button>
@@ -168,7 +168,7 @@ const LoanDetailPage: React.FC = () => {
           })()}
         </>
       ) : (
-        <p className="text-gray-500">No installments have been paid for this loan yet.</p>
+        <p className="text-gray-500 dark:text-dark-muted">No installments have been paid for this loan yet.</p>
       )}
     </GlassCard>
   );

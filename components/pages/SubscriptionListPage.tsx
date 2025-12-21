@@ -54,7 +54,7 @@ const SubscriptionListPage = () => {
   return (
     <PageWrapper>
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4 sm:gap-0 px-2 sm:px-0">
-        <h2 className="text-2xl sm:text-4xl font-bold flex items-center gap-3 sm:gap-4">
+        <h2 className="text-2xl sm:text-4xl font-bold flex items-center gap-3 sm:gap-4 text-gray-800 dark:text-dark-text">
           <HistoryIcon className="w-8 h-8 sm:w-10 sm:h-10" />
           <span>Subscription Details</span>
           {isRefreshing && (
@@ -78,17 +78,17 @@ const SubscriptionListPage = () => {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-white rounded-xl shadow-lg p-6 md:p-8 w-[90%] max-w-md flex flex-col items-center"
+              className="bg-white rounded-xl shadow-lg p-6 md:p-8 w-[90%] max-w-md flex flex-col items-center dark:bg-dark-card dark:border dark:border-dark-border"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
             >
               <Trash2Icon className="w-10 h-10 text-red-500 mb-2" />
-              <h3 className="text-lg font-bold mb-2 text-center">
+              <h3 className="text-lg font-bold mb-2 text-center text-gray-800 dark:text-dark-text">
                 Delete Subscription?
               </h3>
-              <p className="text-gray-700 text-center mb-4">
+              <p className="text-gray-700 text-center mb-4 dark:text-dark-muted">
                 Are you sure you want to delete the subscription for{" "}
                 <span className="font-semibold">
                   {pendingDelete.customers?.name}
@@ -98,7 +98,7 @@ const SubscriptionListPage = () => {
               <div className="flex gap-4 w-full justify-center">
                 <button
                   onClick={() => setPendingDelete(null)}
-                  className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold"
+                  className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
                   disabled={deleting}
                 >
                   Cancel

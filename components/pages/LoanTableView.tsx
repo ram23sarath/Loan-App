@@ -195,7 +195,7 @@ const LoanTableView: React.FC = () => {
 
     return (
       <GlassCard>
-        <p className="text-center text-gray-500">{emptyMessage}</p>
+        <p className="text-center text-gray-500 dark:text-dark-muted">{emptyMessage}</p>
       </GlassCard>
     );
   }
@@ -244,13 +244,13 @@ const LoanTableView: React.FC = () => {
             placeholder="Filter by customer or check number..."
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-2 pr-10 w-full bg-white/50"
+            className="border border-gray-300 rounded px-3 py-2 pr-10 w-full bg-white/50 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted"
           />
           {filter && (
             <button
               type="button"
               onClick={() => setFilter("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 dark:text-dark-muted dark:hover:text-dark-text"
               aria-label="Clear filter"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -262,7 +262,7 @@ const LoanTableView: React.FC = () => {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="border border-gray-300 rounded px-3 py-2 w-full sm:w-48 md:w-auto bg-white/50"
+          className="border border-gray-300 rounded px-3 py-2 w-full sm:w-48 md:w-auto bg-white/50 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text"
         >
           <option value="">All Statuses</option>
           <option value="Paid Off">Paid Off</option>
@@ -274,75 +274,75 @@ const LoanTableView: React.FC = () => {
       {/* Added `hidden md:table` to hide on mobile and show on desktop */}
       <table className="min-w-full border-collapse hidden md:table">
         <thead>
-          <tr className="bg-gray-100/70">
-            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">#</th>
+          <tr className="bg-gray-100/70 dark:bg-slate-700">
+            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 dark:border-dark-border dark:text-dark-text">#</th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("customer")}
             >
               Customer
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("loan_amount")}
             >
               Loan Amount
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("interest")}
             >
               Interest
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("total_repayable")}
             >
               Total Repayable
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("paid")}
             >
               Paid
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("balance")}
             >
               Balance
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("check_number")}
             >
               Check Number
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("installments")}
             >
               Installment #
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("total_installments")}
             >
               Total Installments
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("payment_date")}
             >
               Payment Date
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("status")}
             >
               Status
             </th>
-            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">
+            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 dark:border-dark-border dark:text-dark-text">
               Actions
             </th>
           </tr>
@@ -374,12 +374,12 @@ const LoanTableView: React.FC = () => {
                     layout
                     variants={itemVariants}
                     exit="exit"
-                    className="even:bg-gray-50/50 hover:bg-indigo-50/50 transition-colors"
+                    className="even:bg-gray-50/50 hover:bg-indigo-50/50 transition-colors dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50"
                   >
-                    <td className="px-4 py-2 border-b font-medium text-sm text-gray-700">{idx + 1}</td>
-                    <td className="px-4 py-2 border-b">
+                    <td className="px-4 py-2 border-b font-medium text-sm text-gray-700 dark:border-dark-border dark:text-dark-muted">{idx + 1}</td>
+                    <td className="px-4 py-2 border-b dark:border-dark-border">
                       <button
-                        className="font-bold text-indigo-700 hover:underline focus:outline-none text-left"
+                        className="font-bold text-indigo-700 hover:underline focus:outline-none text-left dark:text-indigo-400"
                         onClick={() =>
                           setExpandedRow(isExpanded ? null : loan.id)
                         }
@@ -388,40 +388,40 @@ const LoanTableView: React.FC = () => {
                         {loan.customers?.name ?? "Unknown"}
                       </button>
                     </td>
-                    <td className="px-4 py-2 border-b">
+                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
                       {formatCurrencyIN(loan.original_amount)}
                     </td>
-                    <td className="px-4 py-2 border-b">
+                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
                       {formatCurrencyIN(loan.interest_amount)}
                     </td>
-                    <td className="px-4 py-2 border-b">
+                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
                       {formatCurrencyIN(totalRepayable)}
                     </td>
-                    <td className="px-4 py-2 border-b">
+                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
                       {formatCurrencyIN(paid)}
                     </td>
-                    <td className="px-4 py-2 border-b">
+                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
                       {formatCurrencyIN(balance)}
                     </td>
-                    <td className="px-4 py-2 border-b">
+                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
                       {loan.check_number || "-"}
                     </td>
-                    <td className="px-4 py-2 border-b">
+                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
                       {loanInstallments.length}
                     </td>
-                    <td className="px-4 py-2 border-b">
+                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
                       {loan.total_instalments || "-"}
                     </td>
-                    <td className="px-4 py-2 border-b">
+                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
                       {loan.payment_date ? formatDate(loan.payment_date) : "-"}
                     </td>
                     <td
-                      className={`px-4 py-2 border-b font-semibold ${isPaidOff ? "text-green-600" : "text-orange-600"
+                      className={`px-4 py-2 border-b font-semibold dark:border-dark-border ${isPaidOff ? "text-green-600" : "text-orange-600"
                         }`}
                     >
                       {isPaidOff ? "Paid Off" : "In Progress"}
                     </td>
-                    <td className="px-4 py-2 border-b">
+                    <td className="px-4 py-2 border-b dark:border-dark-border">
                       <div className="flex gap-2">
                         {!isScopedCustomer && (
                           <>
@@ -451,8 +451,8 @@ const LoanTableView: React.FC = () => {
 
                   <AnimatePresence>
                     {isExpanded && (
-                      <tr className="bg-gray-50/20">
-                        <td colSpan={12} className="p-0 border-b">
+                      <tr className="bg-gray-50/20 dark:bg-slate-800/20">
+                        <td colSpan={12} className="p-0 border-b dark:border-dark-border">
                           <motion.div
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: "auto", opacity: 1 }}
@@ -460,8 +460,8 @@ const LoanTableView: React.FC = () => {
                             transition={{ duration: 0.3, ease: "easeInOut" }}
                             className="overflow-hidden"
                           >
-                            <div className="p-3 border rounded-lg bg-white/80">
-                              <h4 className="font-semibold text-gray-700 mb-2">
+                            <div className="p-3 border rounded-lg bg-white/80 dark:bg-dark-card dark:border-dark-border">
+                              <h4 className="font-semibold text-gray-700 mb-2 dark:text-dark-text">
                                 Installments Paid
                               </h4>
                               {loanInstallments.length > 0 ? (
@@ -500,16 +500,16 @@ const LoanTableView: React.FC = () => {
                                     return (
                                       <li
                                         key={inst.id}
-                                        className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gray-50 rounded px-3 py-2 border border-gray-200 gap-2"
+                                        className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gray-50 rounded px-3 py-2 border border-gray-200 gap-2 dark:bg-slate-700 dark:border-dark-border"
                                       >
                                         <div>
-                                          <span className="font-medium">
+                                          <span className="font-medium dark:text-dark-text">
                                             #{inst.installment_number}
                                           </span>
-                                          <span className="ml-2 text-gray-600">
+                                          <span className="ml-2 text-gray-600 dark:text-dark-muted">
                                             {formatDate(inst.date)}
                                           </span>
-                                          <span className="ml-2 text-green-700 font-semibold">
+                                          <span className="ml-2 text-green-700 font-semibold dark:text-green-400">
                                             {formatCurrencyIN(inst.amount)}
                                           </span>
                                           {inst.late_fee > 0 && (
@@ -517,7 +517,7 @@ const LoanTableView: React.FC = () => {
                                               (+₹{inst.late_fee} late)
                                             </span>
                                           )}
-                                          <span className="ml-2 text-gray-500 text-xs">
+                                          <span className="ml-2 text-gray-500 text-xs dark:text-dark-muted">
                                             Receipt: {inst.receipt_number}
                                           </span>
                                         </div>
@@ -583,7 +583,7 @@ const LoanTableView: React.FC = () => {
                                   })}
                                 </ul>
                               ) : (
-                                <p className="text-center text-gray-500 py-4">
+                                <p className="text-center text-gray-500 py-4 dark:text-dark-muted">
                                   No installments have been paid for this loan
                                   yet.
                                 </p>
@@ -642,7 +642,7 @@ const LoanTableView: React.FC = () => {
               )}
 
               <motion.div
-                className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10"
+                className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
@@ -677,37 +677,37 @@ const LoanTableView: React.FC = () => {
                 {/* Row 1: # Name and Total Repayable */}
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-1">
-                    <span className="text-xs text-gray-400">#{idx + 1}</span>
+                    <span className="text-xs text-gray-400 dark:text-dark-muted">#{idx + 1}</span>
                     <button
                       onClick={() => setExpandedRow(expandedRow === loan.id ? null : loan.id)}
-                      className="text-sm font-semibold text-indigo-700 truncate underline"
+                      className="text-sm font-semibold text-indigo-700 truncate underline dark:text-indigo-400"
                     >
                       {customer?.name ?? "Unknown"}
                     </button>
                   </div>
-                  <div className="text-lg font-bold">
+                  <div className="text-lg font-bold dark:text-dark-text">
                     {formatCurrencyIN(totalRepayable)}
                   </div>
                 </div>
 
                 {/* Row 2: Total Installments */}
-                <div className="text-xs text-gray-500 mt-1">
-                  Total Installments: <span className="font-semibold text-gray-700">{loan.total_instalments}</span>
+                <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                  Total Installments: <span className="font-semibold text-gray-700 dark:text-dark-text">{loan.total_instalments}</span>
                 </div>
 
                 {/* Row 3: Paid */}
-                <div className="text-xs text-gray-500 mt-1">
-                  Paid: <span className="font-semibold text-green-600">{formatCurrencyIN(paid)}</span>
+                <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                  Paid: <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrencyIN(paid)}</span>
                 </div>
 
                 {/* Row 4: Installments Paid */}
-                <div className="text-xs text-gray-500 mt-1">
-                  Installments Paid: <span className="font-semibold text-gray-700">{loanInstallments.length}</span>
+                <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                  Installments Paid: <span className="font-semibold text-gray-700 dark:text-dark-text">{loanInstallments.length}</span>
                 </div>
 
                 {/* Row 5: Balance */}
-                <div className="text-xs text-gray-500 mt-1">
-                  Balance: <span className="font-semibold text-red-600">{formatCurrencyIN(balance)}</span>
+                <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                  Balance: <span className="font-semibold text-red-600 dark:text-red-400">{formatCurrencyIN(balance)}</span>
                 </div>
 
                 {/* Row 6: Action buttons */}
@@ -719,7 +719,7 @@ const LoanTableView: React.FC = () => {
                         cooldownMs: 1200,
                       })
                     }
-                    className="p-2 rounded-md bg-green-50 text-green-600"
+                    className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
                     disabled={!isValidPhone}
                     aria-label={`Send loan details for ${customer?.name} on WhatsApp`}
                   >
@@ -741,7 +741,7 @@ const LoanTableView: React.FC = () => {
                           customer: customer?.name ?? null,
                         })
                       }
-                      className="p-2 rounded-md bg-red-50 text-red-600"
+                      className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
                       aria-label={`Delete loan for ${customer?.name}`}
                       title="Delete loan"
                     >
@@ -760,8 +760,8 @@ const LoanTableView: React.FC = () => {
                     transition={{ duration: 0.3, ease: "easeInOut" }}
                     className="overflow-hidden"
                   >
-                    <div className="mt-3 border-t pt-3">
-                      <h5 className="text-sm font-semibold mb-2">Installments</h5>
+                    <div className="mt-3 border-t pt-3 dark:border-dark-border">
+                      <h5 className="text-sm font-semibold mb-2 dark:text-dark-text">Installments</h5>
                       <ul className="space-y-2">
                         {loanInstallments.map((inst) => {
                           // Build WhatsApp message for mobile view
@@ -786,10 +786,10 @@ const LoanTableView: React.FC = () => {
                             className="flex items-center justify-between"
                           >
                             <div className="text-sm">
-                              <div>
+                              <div className="dark:text-dark-text">
                                 #{inst.installment_number} • {formatDate(inst.date)}
                               </div>
-                              <div className="text-green-700 font-semibold">
+                              <div className="text-green-700 font-semibold dark:text-green-400">
                                 {formatCurrencyIN(inst.amount)}{" "}
                                 {inst.late_fee > 0 && (
                                   <span className="text-orange-500 text-xs">
@@ -797,7 +797,7 @@ const LoanTableView: React.FC = () => {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-xs text-gray-500">
+                              <div className="text-xs text-gray-500 dark:text-dark-muted">
                                 Receipt: {inst.receipt_number || "-"}
                               </div>
                             </div>
@@ -809,7 +809,7 @@ const LoanTableView: React.FC = () => {
                                     openWhatsApp(customer?.phone, message, { cooldownMs: 1200 });
                                   }
                                 }}
-                                className="p-2 rounded-md bg-green-50 text-green-600"
+                                className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
                                 aria-label={`Send installment #${inst.installment_number} on WhatsApp`}
                                 disabled={!isValidPhone}
                               >
@@ -840,7 +840,7 @@ const LoanTableView: React.FC = () => {
                                         number: inst.installment_number,
                                       });
                                     }}
-                                    className="p-2 rounded-md bg-red-50 text-red-600"
+                                    className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
                                   >
                                     <Trash2Icon className="w-4 h-4" />
                                   </button>
@@ -902,9 +902,9 @@ const LoanTableView: React.FC = () => {
           >
             <motion.div
               variants={modalContentVariants}
-              className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-xs sm:max-w-sm"
+              className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-xs sm:max-w-sm dark:bg-dark-card dark:border dark:border-dark-border"
             >
-              <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">
+              <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 dark:text-dark-text">
                 Edit Installment #{editTarget.installment_number}
               </h3>
               <form
@@ -923,10 +923,10 @@ const LoanTableView: React.FC = () => {
                 className="space-y-3"
               >
                 <div>
-                  <label className="block text-sm font-medium mb-1">Date</label>
+                  <label className="block text-sm font-medium mb-1 dark:text-dark-text">Date</label>
                   <input
                     type="date"
-                    className="border rounded px-2 py-1 w-full text-base bg-white block"
+                    className="border rounded px-2 py-1 w-full text-base bg-white block dark:bg-slate-700 dark:border-dark-border dark:text-dark-text"
                     style={{ minHeight: '42px', WebkitAppearance: 'none' }}
                     value={editForm.date}
                     onChange={(e) =>
@@ -938,12 +938,12 @@ const LoanTableView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">
+                  <label className="block text-sm font-medium mb-1 dark:text-dark-text">
                     Amount
                   </label>
                   <input
                     type="number"
-                    className="border rounded px-2 py-1 w-full"
+                    className="border rounded px-2 py-1 w-full dark:bg-slate-700 dark:border-dark-border dark:text-dark-text"
                     value={editForm.amount}
                     onChange={(e) =>
                       setEditForm((f) => ({ ...f, amount: e.target.value }))
@@ -953,12 +953,12 @@ const LoanTableView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">
+                  <label className="block text-sm font-medium mb-1 dark:text-dark-text">
                     Late Fee
                   </label>
                   <input
                     type="number"
-                    className="border rounded px-2 py-1 w-full"
+                    className="border rounded px-2 py-1 w-full dark:bg-slate-700 dark:border-dark-border dark:text-dark-text"
                     value={editForm.late_fee}
                     onChange={(e) =>
                       setEditForm((f) => ({ ...f, late_fee: e.target.value }))
@@ -967,12 +967,12 @@ const LoanTableView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">
+                  <label className="block text-sm font-medium mb-1 dark:text-dark-text">
                     Receipt Number
                   </label>
                   <input
                     type="text"
-                    className="border rounded px-2 py-1 w-full"
+                    className="border rounded px-2 py-1 w-full dark:bg-slate-700 dark:border-dark-border dark:text-dark-text"
                     value={editForm.receipt_number}
                     onChange={(e) =>
                       setEditForm((f) => ({
@@ -986,7 +986,7 @@ const LoanTableView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setEditTarget(null)}
-                    className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300"
+                    className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
                   >
                     Cancel
                   </button>
@@ -1015,12 +1015,12 @@ const LoanTableView: React.FC = () => {
           >
             <motion.div
               variants={modalContentVariants}
-              className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md"
+              className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border"
             >
-              <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">
+              <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 dark:text-dark-text">
                 Delete Loan
               </h3>
-              <p className="mb-4 sm:mb-6 text-sm sm:text-base">
+              <p className="mb-4 sm:mb-6 text-sm sm:text-base dark:text-dark-muted">
                 Are you sure you want to delete the entire loan for{' '}
                 <span className="font-semibold">
                   {deleteLoanTarget.customer ?? "this customer"}
@@ -1030,7 +1030,7 @@ const LoanTableView: React.FC = () => {
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setDeleteLoanTarget(null)}
-                  className="px-3 py-2 rounded text-xs sm:text-base bg-gray-200 hover:bg-gray-300"
+                  className="px-3 py-2 rounded text-xs sm:text-base bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
                 >
                   Cancel
                 </button>
@@ -1067,19 +1067,19 @@ const LoanTableView: React.FC = () => {
           >
             <motion.div
               variants={modalContentVariants}
-              className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md"
+              className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border"
             >
-              <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4">
+              <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 dark:text-dark-text">
                 Delete Installment
               </h3>
-              <p className="mb-4 sm:mb-6 text-sm sm:text-base">
+              <p className="mb-4 sm:mb-6 text-sm sm:text-base dark:text-dark-muted">
                 Are you sure you want to delete installment #
                 {deleteTarget.number}?
               </p>
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setDeleteTarget(null)}
-                  className="px-3 py-2 rounded text-xs sm:text-base bg-gray-200 hover:bg-gray-300"
+                  className="px-3 py-2 rounded text-xs sm:text-base bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
                 >
                   Cancel
                 </button>

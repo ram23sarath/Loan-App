@@ -2,9 +2,14 @@ import React, { createContext, useContext, useState, useEffect, useRef, ReactNod
 
 type Theme = 'light' | 'dark';
 
+interface ThemeToggleOrigin {
+  x: number;
+  y: number;
+}
+
 interface ThemeContextType {
   theme: Theme;
-  toggleTheme: (event?: React.MouseEvent) => void;
+  toggleTheme: (origin?: ThemeToggleOrigin) => void;
   setTheme: (theme: Theme) => void;
 }
 
@@ -40,15 +45,15 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [theme]);
 
-  const toggleTheme = (event?: React.MouseEvent) => {
+  const toggleTheme = (origin?: ThemeToggleOrigin) => {
     // Prevent multiple rapid toggles
     if (isAnimating.current) return;
 
     const newTheme = theme === 'light' ? 'dark' : 'light';
     
-    // Get click coordinates or use center of screen
-    const x = event?.clientX ?? window.innerWidth / 2;
-    const y = event?.clientY ?? window.innerHeight / 2;
+    // Get passed coordinates or fall back to center of the viewport
+    const x = origin?.x ?? window.innerWidth / 2;
+    const y = origin?.y ?? window.innerHeight / 2;
     
     // Calculate the max radius needed to cover the entire screen
     const maxRadius = Math.hypot(
@@ -64,12 +69,17 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
       document.documentElement.style.setProperty('--theme-toggle-x', `${x}px`);
       document.documentElement.style.setProperty('--theme-toggle-y', `${y}px`);
       document.documentElement.style.setProperty('--theme-toggle-radius', `${maxRadius}px`);
+      
+      // Set transition direction BEFORE starting (this is key!)
+      // If currently dark, we're going to light mode
+      document.documentElement.setAttribute('data-theme-transition', theme === 'dark' ? 'to-light' : 'to-dark');
 
       const transition = document.startViewTransition(() => {
         setThemeState(newTheme);
       });
 
       transition.finished.finally(() => {
+        document.documentElement.removeAttribute('data-theme-transition');
         isAnimating.current = false;
       });
     } else {
@@ -79,6 +89,9 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
       
       const overlay = document.createElement('div');
       overlay.className = 'theme-transition-overlay';
+      overlay.style.setProperty('--theme-toggle-x', `${x}px`);
+      overlay.style.setProperty('--theme-toggle-y', `${y}px`);
+      overlay.style.setProperty('--theme-toggle-radius', `${maxRadius}px`);
       overlay.style.setProperty('--x', `${x}px`);
       overlay.style.setProperty('--y', `${y}px`);
       overlay.style.setProperty('--radius', `${maxRadius}px`);

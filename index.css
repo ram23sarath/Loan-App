@@ -17,24 +17,24 @@ body {
   mix-blend-mode: normal;
 }
 
-::view-transition-old(root) {
+/* Going TO dark mode: dark sphere expands over light */
+html[data-theme-transition="to-dark"]::view-transition-old(root) {
   z-index: 1;
 }
 
-::view-transition-new(root) {
+html[data-theme-transition="to-dark"]::view-transition-new(root) {
   z-index: 9999;
   animation: sphere-reveal 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-/* Reverse animation when going to light mode */
-.dark::view-transition-old(root) {
+/* Going TO light mode: dark shrinks to reveal light underneath */
+html[data-theme-transition="to-light"]::view-transition-old(root) {
   z-index: 9999;
-  animation: sphere-reveal 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: sphere-shrink 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-.dark::view-transition-new(root) {
+html[data-theme-transition="to-light"]::view-transition-new(root) {
   z-index: 1;
-  animation: none;
 }
 
 @keyframes sphere-reveal {
@@ -43,6 +43,15 @@ body {
   }
   to {
     clip-path: circle(var(--theme-toggle-radius, 150vmax) at var(--theme-toggle-x, 50%) var(--theme-toggle-y, 50%));
+  }
+}
+
+@keyframes sphere-shrink {
+  from {
+    clip-path: circle(var(--theme-toggle-radius, 150vmax) at var(--theme-toggle-x, 50%) var(--theme-toggle-y, 50%));
+  }
+  to {
+    clip-path: circle(0px at var(--theme-toggle-x, 50%) var(--theme-toggle-y, 50%));
   }
 }
 
@@ -55,12 +64,12 @@ body {
   height: 100vh;
   z-index: 99999;
   pointer-events: none;
-  clip-path: circle(0px at var(--x, 50%) var(--y, 50%));
+  clip-path: circle(0px at var(--theme-toggle-x, var(--x, 50%)) var(--theme-toggle-y, var(--y, 50%)));
   transition: clip-path 0.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .theme-transition-overlay.animate {
-  clip-path: circle(var(--radius, 150vmax) at var(--x, 50%) var(--y, 50%));
+  clip-path: circle(var(--theme-toggle-radius, var(--radius, 150vmax)) at var(--theme-toggle-x, var(--x, 50%)) var(--theme-toggle-y, var(--y, 50%)));
 }
 
 /* ===== END THEME TRANSITION ===== */

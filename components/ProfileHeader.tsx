@@ -11,6 +11,14 @@ export interface ProfileHeaderHandle {
   openMenu: () => void;
 }
 
+const getButtonCenter = (button: HTMLElement) => {
+  const rect = button.getBoundingClientRect();
+  return {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+  };
+};
+
 const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   const { session, signOut, isScopedCustomer, customers, customerMap, scopedCustomerId, updateCustomer } = useData();
   const { theme, toggleTheme } = useTheme();
@@ -160,7 +168,26 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
 
   return (
     <>
-      <div className="fixed top-2 right-6 md:top-4 md:right-6 z-[100] hidden sm:block landscape:block" ref={menuRef}>
+      <div className="fixed top-2 right-6 md:top-4 md:right-6 z-[100] hidden sm:flex landscape:flex items-center gap-2" ref={menuRef}>
+        {/* Dark Mode Toggle Button */}
+        <motion.button
+          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+            const coords = getButtonCenter(e.currentTarget);
+            toggleTheme(coords);
+          }}
+          className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-white dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-yellow-400 flex items-center justify-center shadow-lg transition-colors border border-gray-200 dark:border-slate-600"
+          whileHover={{ scale: 1.05, rotate: 15 }}
+          whileTap={{ scale: 0.95 }}
+          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+        >
+          {theme === 'dark' ? (
+            <SunIcon className="w-5 h-5 md:w-6 md:h-6" />
+          ) : (
+            <MoonIcon className="w-5 h-5 md:w-6 md:h-6" />
+          )}
+        </motion.button>
+        
+        {/* Profile Avatar Button */}
         <motion.button
           onClick={() => setShowMenu(!showMenu)}
           className="w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center justify-center shadow-lg transition-colors text-lg md:text-xl"
@@ -214,10 +241,11 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                 👤 View Profile
               </button>
               <button
-                onClick={(e) => {
+                onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                  const coords = getButtonCenter(e.currentTarget);
                   setShowMenu(false);
                   // Small delay to let menu close before animation
-                  setTimeout(() => toggleTheme(e), 50);
+                  setTimeout(() => toggleTheme(coords), 50);
                 }}
                 className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2 dark:text-dark-text dark:hover:bg-slate-700 dark:active:bg-slate-600"
               >

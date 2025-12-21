@@ -180,7 +180,7 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
               }
             >
               <item.icon className="w-6 h-6 flex-shrink-0" />
-              <span className="mt-1 text-center leading-tight break-words hyphens-auto" style={{ wordBreak: 'break-word' }}>{item.label}</span>
+              <span className="mt-1 text-center leading-tight">{item.label}</span>
             </NavLink>
           ))}
           {/* Profile Icon Button with Initials */}
@@ -191,7 +191,7 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
             <div className="w-6 h-6 flex-shrink-0 rounded-full bg-indigo-600 text-white font-semibold flex items-center justify-center text-xs">
               {initials}
             </div>
-            <span className="mt-1 text-center leading-tight break-words hyphens-auto" style={{ wordBreak: 'break-word' }}>Profile</span>
+            <span className="mt-1 text-center leading-tight">Profile</span>
           </button>
         </div>
       </nav>

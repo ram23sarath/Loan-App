@@ -8,6 +8,63 @@ body {
   @apply transition-colors duration-200;
 }
 
+/* ===== SPHERE/CIRCULAR THEME TRANSITION ===== */
+
+/* View Transitions API - Modern browsers */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 9999;
+  animation: sphere-reveal 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Reverse animation when going to light mode */
+.dark::view-transition-old(root) {
+  z-index: 9999;
+  animation: sphere-reveal 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.dark::view-transition-new(root) {
+  z-index: 1;
+  animation: none;
+}
+
+@keyframes sphere-reveal {
+  from {
+    clip-path: circle(0px at var(--theme-toggle-x, 50%) var(--theme-toggle-y, 50%));
+  }
+  to {
+    clip-path: circle(var(--theme-toggle-radius, 150vmax) at var(--theme-toggle-x, 50%) var(--theme-toggle-y, 50%));
+  }
+}
+
+/* Fallback overlay for browsers without View Transitions API */
+.theme-transition-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 99999;
+  pointer-events: none;
+  clip-path: circle(0px at var(--x, 50%) var(--y, 50%));
+  transition: clip-path 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.theme-transition-overlay.animate {
+  clip-path: circle(var(--radius, 150vmax) at var(--x, 50%) var(--y, 50%));
+}
+
+/* ===== END THEME TRANSITION ===== */
+
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes modalIn { from { opacity: 0; transform: scale(0.95);} to { opacity: 1; transform: scale(1);} }
 .animate-fade-in { animation: fadeIn 0.3s ease; }

@@ -184,22 +184,22 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute z-[120] bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden left-4 right-4 bottom-20 w-auto sm:w-56 sm:left-auto sm:right-6 sm:top-16 sm:bottom-auto landscape:w-56 landscape:left-auto landscape:right-6 landscape:top-16 landscape:bottom-auto"
+            className="absolute z-[120] bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden left-4 right-4 bottom-20 w-auto sm:w-56 sm:left-auto sm:right-6 sm:top-16 sm:bottom-auto landscape:w-56 landscape:left-auto landscape:right-6 landscape:top-16 landscape:bottom-auto dark:bg-dark-card dark:border-dark-border"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-3 md:px-4 py-2 md:py-3 border-b border-gray-100">
-              <p className="text-xs text-gray-500">Logged in as</p>
+            <div className="px-3 md:px-4 py-2 md:py-3 border-b border-gray-100 dark:border-dark-border">
+              <p className="text-xs text-gray-500 dark:text-dark-muted">Logged in as</p>
               <div className="flex items-center justify-between gap-1 md:gap-2 mt-1">
-                <p className="text-xs md:text-sm font-semibold text-gray-800 truncate">
+                <p className="text-xs md:text-sm font-semibold text-gray-800 truncate dark:text-dark-text">
                   {isScopedCustomer && customerDetails ? customerDetails.name : userEmail}
                 </p>
                 {isScopedCustomer && (
-                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full whitespace-nowrap">
+                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full whitespace-nowrap dark:bg-blue-900/30 dark:text-blue-400">
                     Customer
                   </span>
                 )}
                 {!isScopedCustomer && (
-                  <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full whitespace-nowrap">
+                  <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full whitespace-nowrap dark:bg-purple-900/30 dark:text-purple-400">
                     Admin
                   </span>
                 )}
@@ -209,13 +209,17 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
             <div className="py-1">
               <button
                 onClick={handleViewProfile}
-                className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2"
+                className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2 dark:text-dark-text dark:hover:bg-slate-700 dark:active:bg-slate-600"
               >
                 👤 View Profile
               </button>
               <button
-                onClick={toggleTheme}
-                className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2"
+                onClick={(e) => {
+                  setShowMenu(false);
+                  // Small delay to let menu close before animation
+                  setTimeout(() => toggleTheme(e), 50);
+                }}
+                className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2 dark:text-dark-text dark:hover:bg-slate-700 dark:active:bg-slate-600"
               >
                 {theme === 'dark' ? (
                   <SunIcon className="w-4 h-4" />
@@ -233,21 +237,21 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                     setToolsMessage(null);
                     setShowToolsModal(true);
                   }}
-                  className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2"
+                  className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2 dark:text-dark-text dark:hover:bg-slate-700 dark:active:bg-slate-600"
                 >
                   🛠️ Tools
                 </button>
               )}
               <button
                 onClick={handleChangePassword}
-                className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2"
+                className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2 dark:text-dark-text dark:hover:bg-slate-700 dark:active:bg-slate-600"
               >
                 🔑 Change Password
               </button>
-              <div className="border-t border-gray-100 my-1" />
+              <div className="border-t border-gray-100 my-1 dark:border-dark-border" />
               <button
                 onClick={handleSignOut}
-                className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors font-medium flex items-center gap-2"
+                className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors font-medium flex items-center gap-2 dark:text-red-400 dark:hover:bg-red-900/20 dark:active:bg-red-900/30"
               >
                 🚪 Sign Out
               </button>
@@ -284,7 +288,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="bg-white rounded-2xl shadow-2xl p-4 md:p-6 w-[92%] max-w-md max-h-[85vh] overflow-y-auto"
+              className="bg-white rounded-2xl shadow-2xl p-4 md:p-6 w-[92%] max-w-md max-h-[85vh] overflow-y-auto dark:bg-dark-card dark:border dark:border-dark-border"
               onClick={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
@@ -294,10 +298,10 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
               {toolsView === 'menu' && (
                 <>
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-base md:text-lg font-bold text-gray-800">🛠️ Admin Tools</h2>
+                    <h2 className="text-base md:text-lg font-bold text-gray-800 dark:text-dark-text">🛠️ Admin Tools</h2>
                     <button
                       onClick={() => setShowToolsModal(false)}
-                      className="text-gray-400 hover:text-gray-600 text-2xl transition-colors p-1 -mr-1"
+                      className="text-gray-400 hover:text-gray-600 text-2xl transition-colors p-1 -mr-1 dark:text-dark-muted dark:hover:text-dark-text"
                     >
                       ✕
                     </button>
@@ -313,12 +317,12 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                         setCreateUserPhone('');
                         setCreateUserIsAdmin(false);
                       }}
-                      className="w-full px-4 py-4 md:py-3 bg-indigo-50 hover:bg-indigo-100 active:bg-indigo-200 text-indigo-700 font-medium rounded-lg transition-colors flex items-center gap-3"
+                      className="w-full px-4 py-4 md:py-3 bg-indigo-50 hover:bg-indigo-100 active:bg-indigo-200 text-indigo-700 font-medium rounded-lg transition-colors flex items-center gap-3 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 dark:text-indigo-400"
                     >
                       <span className="text-xl">👤</span>
                       <div className="text-left">
                         <div className="font-semibold text-sm md:text-base">Create User</div>
-                        <div className="text-xs text-indigo-500">Create a new auth user account</div>
+                        <div className="text-xs text-indigo-500 dark:text-indigo-400/70">Create a new auth user account</div>
                       </div>
                     </button>
                     <button
@@ -328,12 +332,12 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                         setChangePasswordEmail('');
                         setChangePasswordNew('');
                       }}
-                      className="w-full px-4 py-4 md:py-3 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 text-amber-700 font-medium rounded-lg transition-colors flex items-center gap-3"
+                      className="w-full px-4 py-4 md:py-3 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 text-amber-700 font-medium rounded-lg transition-colors flex items-center gap-3 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 dark:text-amber-400"
                     >
                       <span className="text-xl">🔑</span>
                       <div className="text-left">
                         <div className="font-semibold text-sm md:text-base">Change Password for User</div>
-                        <div className="text-xs text-amber-500">Reset password for any user</div>
+                        <div className="text-xs text-amber-500 dark:text-amber-400/70">Reset password for any user</div>
                       </div>
                     </button>
                   </div>
@@ -346,14 +350,14 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                   <div className="flex items-center gap-3 mb-4">
                     <button
                       onClick={() => setToolsView('menu')}
-                      className="text-gray-500 hover:text-gray-700 transition-colors p-1 -ml-1"
+                      className="text-gray-500 hover:text-gray-700 transition-colors p-1 -ml-1 dark:text-dark-muted dark:hover:text-dark-text"
                     >
                       <span className="text-xl">←</span>
                     </button>
-                    <h2 className="text-base md:text-lg font-bold text-gray-800">Create User</h2>
+                    <h2 className="text-base md:text-lg font-bold text-gray-800 dark:text-dark-text">Create User</h2>
                   </div>
                   {toolsMessage && (
-                    <div className={`mb-4 p-3 rounded-lg text-sm ${toolsMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    <div className={`mb-4 p-3 rounded-lg text-sm ${toolsMessage.type === 'success' ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
                       {toolsMessage.text}
                     </div>
                   )}
@@ -403,10 +407,10 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                     className="space-y-4"
                   >
                     {/* Admin Toggle - Moved to top */}
-                    <div className="flex items-center justify-between p-3 md:p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between p-3 md:p-4 bg-gray-50 rounded-lg dark:bg-slate-700">
                       <div>
-                        <label className="text-sm md:text-base font-medium text-gray-700">Admin User</label>
-                        <p className="text-xs md:text-sm text-gray-500">{createUserIsAdmin ? 'Full access to all data' : 'Scoped to their own data'}</p>
+                        <label className="text-sm md:text-base font-medium text-gray-700 dark:text-dark-text">Admin User</label>
+                        <p className="text-xs md:text-sm text-gray-500 dark:text-dark-muted">{createUserIsAdmin ? 'Full access to all data' : 'Scoped to their own data'}</p>
                       </div>
                       <button
                         type="button"
@@ -421,14 +425,14 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
 
                     {/* Name field - shown for both */}
                     <div>
-                      <label className="block text-sm md:text-base font-medium text-gray-700 mb-1">Name {!createUserIsAdmin && <span className="text-red-500">*</span>}</label>
+                      <label className="block text-sm md:text-base font-medium text-gray-700 mb-1 dark:text-dark-text">Name {!createUserIsAdmin && <span className="text-red-500">*</span>}</label>
                       <input
                         type="text"
                         value={createUserName}
                         onChange={(e) => setCreateUserName(e.target.value)}
                         required={!createUserIsAdmin}
                         placeholder="User's display name"
-                        className="w-full px-3 py-2.5 md:py-2 text-base md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2.5 md:py-2 text-base md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted"
                       />
                     </div>
 
@@ -469,7 +473,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                       <>
                         {/* Scoped User: Phone Number only */}
                         <div>
-                          <label className="block text-sm md:text-base font-medium text-gray-700 mb-1">Phone Number <span className="text-red-500">*</span></label>
+                          <label className="block text-sm md:text-base font-medium text-gray-700 mb-1 dark:text-dark-text">Phone Number <span className="text-red-500">*</span></label>
                           <input
                             type="tel"
                             value={createUserPhone}
@@ -477,14 +481,14 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                             required
                             maxLength={10}
                             placeholder="10-digit phone number"
-                            className="w-full px-3 py-2.5 md:py-2 text-base md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            className="w-full px-3 py-2.5 md:py-2 text-base md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted"
                           />
                           {createUserPhone && createUserPhone.length !== 10 && (
                             <p className="text-xs text-red-500 mt-1">Phone number must be exactly 10 digits</p>
                           )}
                         </div>
-                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                          <p className="text-xs text-blue-700">
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-900/20 dark:border-blue-800">
+                          <p className="text-xs text-blue-700 dark:text-blue-400">
                             ℹ️ Login credentials will be:<br/>
                             <strong>Email:</strong> {createUserPhone || '(phone)'}@gmail.com<br/>
                             <strong>Password:</strong> {createUserPhone || '(phone number)'}
@@ -510,14 +514,14 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                   <div className="flex items-center gap-3 mb-4">
                     <button
                       onClick={() => setToolsView('menu')}
-                      className="text-gray-500 hover:text-gray-700 transition-colors p-1 -ml-1"
+                      className="text-gray-500 hover:text-gray-700 transition-colors p-1 -ml-1 dark:text-dark-muted dark:hover:text-dark-text"
                     >
                       <span className="text-xl">←</span>
                     </button>
-                    <h2 className="text-base md:text-lg font-bold text-gray-800">Change Password for User</h2>
+                    <h2 className="text-base md:text-lg font-bold text-gray-800 dark:text-dark-text">Change Password for User</h2>
                   </div>
                   {toolsMessage && (
-                    <div className={`mb-4 p-3 rounded-lg text-sm ${toolsMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    <div className={`mb-4 p-3 rounded-lg text-sm ${toolsMessage.type === 'success' ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
                       {toolsMessage.text}
                     </div>
                   )}
@@ -552,18 +556,18 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                     className="space-y-4"
                   >
                     <div>
-                      <label className="block text-sm md:text-base font-medium text-gray-700 mb-1">User Email</label>
+                      <label className="block text-sm md:text-base font-medium text-gray-700 mb-1 dark:text-dark-text">User Email</label>
                       <input
                         type="email"
                         value={changePasswordEmail}
                         onChange={(e) => setChangePasswordEmail(e.target.value)}
                         required
                         placeholder="user@example.com"
-                        className="w-full px-3 py-2.5 md:py-2 text-base md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                        className="w-full px-3 py-2.5 md:py-2 text-base md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm md:text-base font-medium text-gray-700 mb-1">New Password</label>
+                      <label className="block text-sm md:text-base font-medium text-gray-700 mb-1 dark:text-dark-text">New Password</label>
                       <input
                         type="password"
                         value={changePasswordNew}
@@ -571,7 +575,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                         required
                         minLength={6}
                         placeholder="Min 6 characters"
-                        className="w-full px-3 py-2.5 md:py-2 text-base md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                        className="w-full px-3 py-2.5 md:py-2 text-base md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted"
                       />
                     </div>
                     <button
@@ -599,15 +603,15 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.15 }}
-              className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm"
+              className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm dark:bg-dark-card dark:border dark:border-dark-border"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="text-lg font-bold text-gray-800 mb-2">Confirm Logout</h2>
-              <p className="text-gray-600 mb-6">Are you sure you want to logout?</p>
+              <h2 className="text-lg font-bold text-gray-800 mb-2 dark:text-dark-text">Confirm Logout</h2>
+              <p className="text-gray-600 mb-6 dark:text-dark-muted">Are you sure you want to logout?</p>
               <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
                 <button
                   onClick={() => setShowLogoutConfirm(false)}
-                  className="flex-1 sm:flex-none px-6 py-3 sm:py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 active:bg-gray-100 transition-colors min-h-[44px] sm:min-h-auto"
+                  className="flex-1 sm:flex-none px-6 py-3 sm:py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 active:bg-gray-100 transition-colors min-h-[44px] sm:min-h-auto dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700 dark:active:bg-slate-600"
                 >
                   Cancel
                 </button>
@@ -640,14 +644,14 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="bg-white rounded-lg shadow-xl p-4 md:p-6 w-full max-w-sm md:max-w-md max-h-[90vh] overflow-y-auto z-[100]"
+              className="bg-white rounded-lg shadow-xl p-4 md:p-6 w-full max-w-sm md:max-w-md max-h-[90vh] overflow-y-auto z-[100] dark:bg-dark-card dark:border dark:border-dark-border"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg md:text-2xl font-bold text-gray-800">Profile</h2>
+                <h2 className="text-lg md:text-2xl font-bold text-gray-800 dark:text-dark-text">Profile</h2>
                 <button
                   onClick={() => setShowProfilePanel(false)}
-                  className="text-gray-400 hover:text-gray-600 text-xl md:text-2xl transition-colors"
+                  className="text-gray-400 hover:text-gray-600 text-xl md:text-2xl transition-colors dark:text-dark-muted dark:hover:text-dark-text"
                 >
                   ✕
                 </button>
@@ -655,46 +659,46 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
 
               <div className="space-y-3 md:space-y-4">
                 {/* Account Type */}
-                <div className="border-b border-gray-200 pb-3 md:pb-4">
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">Account Type</label>
-                  <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1">
+                <div className="border-b border-gray-200 pb-3 md:pb-4 dark:border-dark-border">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide dark:text-dark-muted">Account Type</label>
+                  <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1 dark:text-dark-text">
                     {isScopedCustomer ? 'Customer' : 'Admin'}
                   </p>
                 </div>
 
                 {/* Email */}
-                <div className="border-b border-gray-200 pb-3 md:pb-4">
-                  <label className="text-xs text-gray-500 uppercase tracking-wide">Email</label>
-                  <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1 break-all">{userEmail}</p>
+                <div className="border-b border-gray-200 pb-3 md:pb-4 dark:border-dark-border">
+                  <label className="text-xs text-gray-500 uppercase tracking-wide dark:text-dark-muted">Email</label>
+                  <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1 break-all dark:text-dark-text">{userEmail}</p>
                 </div>
 
                 {/* Customer Details (if scoped user) */}
                 {isScopedCustomer && customerDetails ? (
                   <>
-                    <div className="border-b border-gray-200 pb-3 md:pb-4">
-                      <label className="text-xs text-gray-500 uppercase tracking-wide">Customer Name</label>
-                      <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1">{customerDetails.name || '—'}</p>
+                    <div className="border-b border-gray-200 pb-3 md:pb-4 dark:border-dark-border">
+                      <label className="text-xs text-gray-500 uppercase tracking-wide dark:text-dark-muted">Customer Name</label>
+                      <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1 dark:text-dark-text">{customerDetails.name || '—'}</p>
                     </div>
 
-                    <div className="border-b border-gray-200 pb-3 md:pb-4">
-                      <label className="text-xs text-gray-500 uppercase tracking-wide">Phone Number</label>
-                      <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1">{customerDetails.phone || '—'}</p>
+                    <div className="border-b border-gray-200 pb-3 md:pb-4 dark:border-dark-border">
+                      <label className="text-xs text-gray-500 uppercase tracking-wide dark:text-dark-muted">Phone Number</label>
+                      <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1 dark:text-dark-text">{customerDetails.phone || '—'}</p>
                     </div>
 
                     {customerDetails.address && (
-                      <div className="border-b border-gray-200 pb-3 md:pb-4">
-                        <label className="text-xs text-gray-500 uppercase tracking-wide">Address</label>
-                        <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1 break-words">{customerDetails.address}</p>
+                      <div className="border-b border-gray-200 pb-3 md:pb-4 dark:border-dark-border">
+                        <label className="text-xs text-gray-500 uppercase tracking-wide dark:text-dark-muted">Address</label>
+                        <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1 break-words dark:text-dark-text">{customerDetails.address}</p>
                       </div>
                     )}
 
                     {/* Station Name - Editable */}
-                    <div className="border-b border-gray-200 pb-3 md:pb-4">
+                    <div className="border-b border-gray-200 pb-3 md:pb-4 dark:border-dark-border">
                       <div className="flex items-center justify-between gap-2 mb-2">
-                        <label className="text-xs text-gray-500 uppercase tracking-wide">Station Name</label>
+                        <label className="text-xs text-gray-500 uppercase tracking-wide dark:text-dark-muted">Station Name</label>
                         <button
                           onClick={() => setIsEditingStation(!isEditingStation)}
-                          className="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors"
+                          className="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
                         >
                           {isEditingStation ? 'Cancel' : 'Edit'}
                         </button>
@@ -706,7 +710,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                             value={stationName}
                             onChange={(e) => setStationName(e.target.value)}
                             placeholder="Enter station name"
-                            className="w-full bg-gray-50 border border-gray-300 rounded px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            className="w-full bg-gray-50 border border-gray-300 rounded px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted"
                           />
                           <button
                             onClick={handleSaveStation}
@@ -717,22 +721,22 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                           </button>
                         </div>
                       ) : (
-                        <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1">{stationName || '—'}</p>
+                        <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1 dark:text-dark-text">{stationName || '—'}</p>
                       )}
                     </div>
                   </>
                 ) : isScopedCustomer ? (
                   <div className="text-center py-4">
-                    <p className="text-xs md:text-sm text-gray-500">Customer details not found</p>
+                    <p className="text-xs md:text-sm text-gray-500 dark:text-dark-muted">Customer details not found</p>
                   </div>
                 ) : (
                   /* Admin Name - Editable */
-                  <div className="border-b border-gray-200 pb-3 md:pb-4">
+                  <div className="border-b border-gray-200 pb-3 md:pb-4 dark:border-dark-border">
                     <div className="flex items-center justify-between gap-2 mb-2">
-                      <label className="text-xs text-gray-500 uppercase tracking-wide">Display Name</label>
+                      <label className="text-xs text-gray-500 uppercase tracking-wide dark:text-dark-muted">Display Name</label>
                       <button
                         onClick={() => setIsEditingAdminName(!isEditingAdminName)}
-                        className="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors"
+                        className="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
                       >
                         {isEditingAdminName ? 'Cancel' : 'Edit'}
                       </button>
@@ -744,7 +748,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                           value={adminName}
                           onChange={(e) => setAdminName(e.target.value)}
                           placeholder="Enter your name"
-                          className="w-full bg-gray-50 border border-gray-300 rounded px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          className="w-full bg-gray-50 border border-gray-300 rounded px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted"
                         />
                         <button
                           onClick={handleSaveAdminName}
@@ -755,7 +759,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                         </button>
                       </div>
                     ) : (
-                      <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1">{adminNameFromMeta || '—'}</p>
+                      <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1 dark:text-dark-text">{adminNameFromMeta || '—'}</p>
                     )}
                   </div>
                 )}
@@ -764,7 +768,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
               <div className="mt-4 md:mt-6 flex gap-2">
                 <button
                   onClick={() => setShowProfilePanel(false)}
-                  className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm md:text-base font-medium rounded-lg transition-colors"
+                  className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm md:text-base font-medium rounded-lg transition-colors dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
                 >
                   Close
                 </button>

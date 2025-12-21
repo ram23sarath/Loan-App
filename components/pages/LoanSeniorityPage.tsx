@@ -104,7 +104,7 @@ const LoanSeniorityPage = () => {
   return (
     <PageWrapper>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold flex items-center gap-3">
+        <h2 className="text-2xl font-bold flex items-center gap-3 text-gray-800 dark:text-dark-text">
           <UsersIcon className="w-8 h-8" />
           Loan Seniority
         </h2>
@@ -114,7 +114,7 @@ const LoanSeniorityPage = () => {
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <input
-              className="w-full bg-white border border-gray-300 rounded-lg py-2 px-3 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full bg-white dark:bg-dark-bg border border-gray-300 dark:border-dark-border rounded-lg py-2 px-3 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 dark:text-dark-text placeholder:text-gray-400 dark:placeholder:text-dark-muted"
               placeholder="Search customers by name or phone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -123,7 +123,7 @@ const LoanSeniorityPage = () => {
               <button
                 type="button"
                 onClick={() => setSearchTerm("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-dark-muted hover:text-gray-600 dark:hover:text-dark-text p-1"
                 aria-label="Clear search"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -135,16 +135,16 @@ const LoanSeniorityPage = () => {
         </div>
 
         <div className="mt-4">
-          <h3 className="text-lg font-semibold mb-2">Search results</h3>
+          <h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-dark-text">Search results</h3>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {filtered.length === 0 ? (
-              <div className="text-sm text-gray-500">No customers found.</div>
+              <div className="text-sm text-gray-500 dark:text-dark-muted">No customers found.</div>
             ) : (
               filtered.map(c => (
-                <div key={c.id} className="flex items-center justify-between bg-white border border-gray-100 rounded p-2">
+                <div key={c.id} className="flex items-center justify-between bg-white dark:bg-dark-bg border border-gray-100 dark:border-dark-border rounded p-2">
                   <div className="min-w-0 mr-2">
-                    <div className="font-semibold text-indigo-700 truncate">{c.name}</div>
-                    <div className="text-sm text-gray-500">{c.phone}</div>
+                    <div className="font-semibold text-indigo-700 dark:text-indigo-400 truncate">{c.name}</div>
+                    <div className="text-sm text-gray-500 dark:text-dark-muted">{c.phone}</div>
                   </div>
                   <button
                     onClick={() => addCustomerToList(c)}
@@ -162,71 +162,71 @@ const LoanSeniorityPage = () => {
       {/* Entry modal */}
       {modalCustomer && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-md">
+          <div className="bg-white dark:bg-dark-card rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-md">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Add Seniority Entry for {modalCustomer.name}</h3>
-              <button onClick={closeModal} className="text-gray-500">✕</button>
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-dark-text">Add Seniority Entry for {modalCustomer.name}</h3>
+              <button onClick={closeModal} className="text-gray-500 dark:text-dark-muted hover:text-gray-700 dark:hover:text-dark-text">✕</button>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium mb-1">Station Name</label>
-                <input value={stationName} onChange={(e) => setStationName(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2" />
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">Station Name</label>
+                <input value={stationName} onChange={(e) => setStationName(e.target.value)} className="w-full border border-gray-300 dark:border-dark-border rounded px-3 py-2 bg-white dark:bg-dark-bg text-gray-800 dark:text-dark-text" />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Loan Type</label>
-                <select value={loanType} onChange={(e) => setLoanType(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2">
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">Loan Type</label>
+                <select value={loanType} onChange={(e) => setLoanType(e.target.value)} className="w-full border border-gray-300 dark:border-dark-border rounded px-3 py-2 bg-white dark:bg-dark-bg text-gray-800 dark:text-dark-text">
                   <option value="General">General</option>
                   <option value="Medical">Medical</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Loan Request Date</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">Loan Request Date</label>
                 <input 
                   value={loanRequestDate} 
                   onChange={(e) => setLoanRequestDate(e.target.value)} 
                   type="date" 
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-base bg-white block"
+                  className="w-full border border-gray-300 dark:border-dark-border rounded px-3 py-2 text-base bg-white dark:bg-dark-bg block text-gray-800 dark:text-dark-text"
                   style={{ minHeight: '42px', WebkitAppearance: 'none' }}
                 />
               </div>
             </div>
             <div className="mt-4 flex justify-end gap-2">
-              <button onClick={closeModal} className="px-3 py-2 rounded bg-gray-200">Cancel</button>
-              <button onClick={saveModalEntry} className="px-3 py-2 rounded bg-indigo-600 text-white">Save</button>
+              <button onClick={closeModal} className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-dark-text">Cancel</button>
+              <button onClick={saveModalEntry} className="px-3 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white">Save</button>
             </div>
           </div>
         </div>
       )}
 
       <GlassCard className="!p-4">
-        <h3 className="text-xl font-bold mb-3">Loan Seniority List</h3>
+        <h3 className="text-xl font-bold mb-3 text-gray-800 dark:text-dark-text">Loan Seniority List</h3>
         {(!seniorityList || seniorityList.length === 0) ? (
-          <div className="text-sm text-gray-500">No customers added yet. Search above and click Add to include a customer.</div>
+          <div className="text-sm text-gray-500 dark:text-dark-muted">No customers added yet. Search above and click Add to include a customer.</div>
         ) : (
           <>
             {/* Desktop table */}
             <div className="hidden md:block overflow-x-auto">
               <table className="min-w-full border-collapse">
                 <thead>
-                  <tr className="bg-gray-100">
-                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">#</th>
-                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Customer</th>
-                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Phone</th>
-                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Station</th>
-                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Loan Type</th>
-                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Requested</th>
-                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Actions</th>
+                  <tr className="bg-gray-100 dark:bg-gray-800">
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">#</th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Customer</th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Phone</th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Station</th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Loan Type</th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Requested</th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {seniorityList.map((entry: any, idx: number) => (
-                    <tr key={entry.id} className="even:bg-gray-50">
-                      <td className="px-4 py-3">{idx + 1}</td>
-                      <td className="px-4 py-3 font-semibold text-indigo-700">{entry.customers?.name || 'Unknown'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{entry.customers?.phone || ''}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{entry.station_name || '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{entry.loan_type || '-'}</td>
-                      <td className="px-4 py-3 text-sm text-gray-700">{entry.loan_request_date ? formatDate(entry.loan_request_date) : '-'}</td>
+                    <tr key={entry.id} className="even:bg-gray-50 dark:even:bg-gray-800/50">
+                      <td className="px-4 py-3 text-gray-800 dark:text-dark-text">{idx + 1}</td>
+                      <td className="px-4 py-3 font-semibold text-indigo-700 dark:text-indigo-400">{entry.customers?.name || 'Unknown'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-dark-muted">{entry.customers?.phone || ''}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-dark-text">{entry.station_name || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-dark-text">{entry.loan_type || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-700 dark:text-dark-text">{entry.loan_request_date ? formatDate(entry.loan_request_date) : '-'}</td>
                       <td className="px-4 py-3">
                         <div className="flex gap-2">
                           <button onClick={() => {
@@ -255,16 +255,16 @@ const LoanSeniorityPage = () => {
             {/* Mobile cards */}
             <div className="md:hidden space-y-3">
               {seniorityList.map((entry: any, idx: number) => (
-                <div key={entry.id} className="bg-white border border-gray-100 rounded p-3">
+                <div key={entry.id} className="bg-white dark:bg-dark-bg border border-gray-100 dark:border-dark-border rounded p-3">
                   <div className="flex items-start justify-between">
                     <div className="min-w-0">
-                      <div className="text-xs text-gray-400">#{idx + 1}</div>
-                      <div className="font-semibold text-indigo-700 truncate">{entry.customers?.name || 'Unknown'}</div>
-                      <div className="text-sm text-gray-500">{entry.customers?.phone || ''}</div>
-                      <div className="mt-2 text-sm text-gray-600 space-y-1">
-                        {entry.station_name && <div>Station: <span className="font-medium text-gray-800">{entry.station_name}</span></div>}
-                        {entry.loan_type && <div>Loan Type: <span className="font-medium text-gray-800">{entry.loan_type}</span></div>}
-                        {entry.loan_request_date && <div>Requested: <span className="font-medium text-gray-800">{formatDate(entry.loan_request_date)}</span></div>}
+                      <div className="text-xs text-gray-400 dark:text-dark-muted">#{idx + 1}</div>
+                      <div className="font-semibold text-indigo-700 dark:text-indigo-400 truncate">{entry.customers?.name || 'Unknown'}</div>
+                      <div className="text-sm text-gray-500 dark:text-dark-muted">{entry.customers?.phone || ''}</div>
+                      <div className="mt-2 text-sm text-gray-600 dark:text-dark-muted space-y-1">
+                        {entry.station_name && <div>Station: <span className="font-medium text-gray-800 dark:text-dark-text">{entry.station_name}</span></div>}
+                        {entry.loan_type && <div>Loan Type: <span className="font-medium text-gray-800 dark:text-dark-text">{entry.loan_type}</span></div>}
+                        {entry.loan_request_date && <div>Requested: <span className="font-medium text-gray-800 dark:text-dark-text">{formatDate(entry.loan_request_date)}</span></div>}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 ml-3">
@@ -277,7 +277,7 @@ const LoanSeniorityPage = () => {
                       }} className="px-3 py-1 rounded bg-blue-600 text-white text-sm" aria-label="Edit">
                         Edit
                       </button>
-                      <button onClick={() => setDeleteTarget({ id: entry.id, name: entry.customers?.name || 'Unknown' })} className="p-2 rounded-md bg-red-50 text-red-600" aria-label="Remove">
+                      <button onClick={() => setDeleteTarget({ id: entry.id, name: entry.customers?.name || 'Unknown' })} className="p-2 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" aria-label="Remove">
                         <Trash2Icon className="w-4 h-4" />
                       </button>
                     </div>
@@ -292,15 +292,15 @@ const LoanSeniorityPage = () => {
       {/* Delete Confirmation Modal */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md">
-            <h3 className="text-lg font-bold mb-3">Remove from Seniority List?</h3>
-            <p className="mb-4 text-sm text-gray-600">
-              Are you sure you want to remove <span className="font-semibold">{deleteTarget.name}</span> from the seniority list?
+          <div className="bg-white dark:bg-dark-card rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md">
+            <h3 className="text-lg font-bold mb-3 text-gray-800 dark:text-dark-text">Remove from Seniority List?</h3>
+            <p className="mb-4 text-sm text-gray-600 dark:text-dark-muted">
+              Are you sure you want to remove <span className="font-semibold text-gray-800 dark:text-dark-text">{deleteTarget.name}</span> from the seniority list?
             </p>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setDeleteTarget(null)}
-                className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300"
+                className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-dark-text"
               >
                 Cancel
               </button>

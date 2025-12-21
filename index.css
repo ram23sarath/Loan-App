@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Dark mode background transition */
+body {
+  @apply transition-colors duration-200;
+}
+
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes modalIn { from { opacity: 0; transform: scale(0.95);} to { opacity: 1; transform: scale(1);} }
 .animate-fade-in { animation: fadeIn 0.3s ease; }
@@ -22,6 +27,13 @@ input[type="date"] {
   position: relative;
   display: block;
   padding-right: 40px; /* Space for calendar icon */
+}
+
+/* Dark mode date input */
+.dark input[type="date"] {
+  background-color: #1e293b;
+  color: #e2e8f0;
+  border-color: #334155;
 }
 
 /* iOS Safari specific - ensure date picker displays correctly */
@@ -66,6 +78,15 @@ input[type="date"]::-moz-calendar-picker-indicator:hover {
 
 /* Print styles */
 @media print {
+    /* Force light mode for printing */
+    html {
+        color-scheme: light !important;
+    }
+    * {
+        background: white !important;
+        color: black !important;
+    }
+    
     /* --- CORRECTED SECTION --- */
     /* Reset root and layout containers to prevent cropping */
     html, body, main, #app, #root, .content-wrapper, .flex, .h-screen, .h-full, .overflow-hidden {

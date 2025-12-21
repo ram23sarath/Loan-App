@@ -9,7 +9,7 @@ type GlassCardProps = {
 const GlassCard: React.FC<GlassCardProps> = ({ children, className = '', ...props }) => {
   return (
     <motion.div
-      className={`bg-white rounded-2xl border border-gray-200 shadow-sm p-6 ${className}`}
+      className={`bg-white dark:bg-dark-card rounded-2xl border border-gray-200 dark:border-dark-border shadow-sm p-6 ${className}`}
       {...props}
     >
       {children}

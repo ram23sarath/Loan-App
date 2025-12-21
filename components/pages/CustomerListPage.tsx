@@ -198,7 +198,7 @@ const CustomerListPage = () => {
     if (totalPages <= 1) return null;
 
     return (
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-200">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4 pb-4 border-b border-gray-200">
         <div className="text-sm text-gray-600">
           Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
           {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} customers
@@ -360,6 +360,9 @@ const CustomerListPage = () => {
                         const paginatedCustomers = categorizedCustomers.withBoth.slice(start, end);
                         return (
                           <>
+                            {/* Pagination Controls - Top */}
+                            <PaginationControls section="both" totalItems={categorizedCustomers.withBoth.length} />
+
                             {/* Desktop Table */}
                             <div className="hidden sm:block">
                               {/* --- CHANGED: Reverted table header --- */}
@@ -502,8 +505,6 @@ const CustomerListPage = () => {
                                   );
                               })}
                             </div>
-                            {/* Pagination Controls */}
-                            <PaginationControls section="both" totalItems={categorizedCustomers.withBoth.length} />
                           </>
                         );
                       })()}
@@ -545,6 +546,9 @@ const CustomerListPage = () => {
                         const paginatedCustomers = categorizedCustomers.withOnlyLoans.slice(start, end);
                         return (
                           <>
+                            {/* Pagination Controls - Top */}
+                            <PaginationControls section="loans" totalItems={categorizedCustomers.withOnlyLoans.length} />
+
                             {/* Desktop Table */}
                             <div className="hidden sm:block">
                               {/* --- CHANGED: Reverted table header --- */}
@@ -679,8 +683,6 @@ const CustomerListPage = () => {
                                   );
                               })}
                             </div>
-                            {/* Pagination Controls */}
-                            <PaginationControls section="loans" totalItems={categorizedCustomers.withOnlyLoans.length} />
                           </>
                         );
                       })()}
@@ -722,6 +724,9 @@ const CustomerListPage = () => {
                         const paginatedCustomers = categorizedCustomers.withOnlySubscriptions.slice(start, end);
                         return (
                           <>
+                            {/* Pagination Controls - Top */}
+                            <PaginationControls section="subs" totalItems={categorizedCustomers.withOnlySubscriptions.length} />
+
                             {/* Desktop Table */}
                             <div className="hidden sm:block">
                               {/* --- CHANGED: Reverted table header --- */}
@@ -856,8 +861,6 @@ const CustomerListPage = () => {
                                   );
                               })}
                             </div>
-                            {/* Pagination Controls */}
-                            <PaginationControls section="subs" totalItems={categorizedCustomers.withOnlySubscriptions.length} />
                           </>
                         );
                       })()}
@@ -899,6 +902,9 @@ const CustomerListPage = () => {
                           const paginatedCustomers = categorizedCustomers.withNeither.slice(start, end);
                           return (
                             <>
+                              {/* Pagination Controls - Top */}
+                              <PaginationControls section="neither" totalItems={categorizedCustomers.withNeither.length} />
+
                               {/* Desktop Table */}
                               <div className="hidden sm:block">
                                 {/* --- CHANGED: Reverted table header --- */}
@@ -1017,8 +1023,6 @@ const CustomerListPage = () => {
                                       );
                                   })}
                               </div>
-                              {/* Pagination Controls */}
-                              <PaginationControls section="neither" totalItems={categorizedCustomers.withNeither.length} />
                             </>
                           );
                         })()}

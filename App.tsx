@@ -117,29 +117,31 @@ const App = () => {
 
   return (
     <DataProvider>
-      <AutoLogout />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/*" element={
-            <ProtectedRoute>
-              <div className="w-full h-screen overflow-hidden relative">
-                <ProfileHeader ref={profileRef} />
-                <div className="flex w-full h-screen overflow-hidden">
-                  <Sidebar profileRef={profileRef} />
-                  <main
-                    className="flex-1 h-full overflow-y-auto"
-                    // Use the CSS variable set by Sidebar to offset content when sidebar is visible on desktop.
-                    style={{ paddingLeft: 'var(--sidebar-offset, 0px)' }}
-                  >
-                    <AnimatedRoutes />
-                  </main>
+      <ThemeProvider>
+        <AutoLogout />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/*" element={
+              <ProtectedRoute>
+                <div className="w-full h-screen overflow-hidden relative">
+                  <ProfileHeader ref={profileRef} />
+                  <div className="flex w-full h-screen overflow-hidden">
+                    <Sidebar profileRef={profileRef} />
+                    <main
+                      className="flex-1 h-full overflow-y-auto"
+                      // Use the CSS variable set by Sidebar to offset content when sidebar is visible on desktop.
+                      style={{ paddingLeft: 'var(--sidebar-offset, 0px)' }}
+                    >
+                      <AnimatedRoutes />
+                    </main>
+                  </div>
                 </div>
-              </div>
-            </ProtectedRoute>
-          } />
-        </Routes>
-      </BrowserRouter>
+              </ProtectedRoute>
+            } />
+          </Routes>
+        </BrowserRouter>
+      </ThemeProvider>
     </DataProvider>
   );
 };

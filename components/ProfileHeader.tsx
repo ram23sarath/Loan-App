@@ -1,5 +1,7 @@
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import { useData } from '../context/DataContext';
+import { useTheme } from '../context/ThemeContext';
+import { MoonIcon, SunIcon } from '../constants';
 import { supabase } from '../src/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactDOM from 'react-dom';
@@ -11,6 +13,7 @@ export interface ProfileHeaderHandle {
 
 const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   const { session, signOut, isScopedCustomer, customers, customerMap, scopedCustomerId, updateCustomer } = useData();
+  const { theme, toggleTheme } = useTheme();
   const [showMenu, setShowMenu] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showProfilePanel, setShowProfilePanel] = useState(false);
@@ -209,6 +212,17 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                 className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2"
               >
                 👤 View Profile
+              </button>
+              <button
+                onClick={toggleTheme}
+                className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2"
+              >
+                {theme === 'dark' ? (
+                  <SunIcon className="w-4 h-4" />
+                ) : (
+                  <MoonIcon className="w-4 h-4" />
+                )}
+                {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
               </button>
               {/* Tools - Admin Only */}
               {!isScopedCustomer && (

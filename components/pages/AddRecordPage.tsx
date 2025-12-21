@@ -373,12 +373,12 @@ const AddRecordPage = () => {
     : [];
 
   const inputStyles =
-    "w-full bg-gray-50 border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400";
+    "w-full bg-gray-50 dark:bg-dark-bg border border-gray-300 dark:border-dark-border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400 dark:placeholder-dark-muted text-gray-800 dark:text-dark-text";
   const dateInputStyles =
-    "w-full bg-white border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400 text-base block";
+    "w-full bg-white dark:bg-dark-bg border border-gray-300 dark:border-dark-border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400 dark:placeholder-dark-muted text-gray-800 dark:text-dark-text text-base block";
   const dateInputInlineStyles = { minHeight: '42px', WebkitAppearance: 'none' as const };
   const selectStyles =
-    "w-full bg-gray-50 border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500";
+    "w-full bg-gray-50 dark:bg-dark-bg border border-gray-300 dark:border-dark-border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-800 dark:text-dark-text";
   const { isSubmitting: isSubmittingLoan } = loanForm.formState;
   const { isSubmitting: isSubmittingSubscription } = subscriptionForm.formState;
   const { isSubmitting: isSubmittingInstallment } = installmentForm.formState;
@@ -439,18 +439,18 @@ const AddRecordPage = () => {
       />
       <div className="flex items-center justify-center min-h-[60vh] px-2 sm:px-0">
         <GlassCard className="w-full max-w-xs sm:max-w-2xl !p-4 sm:!p-8 mx-auto">
-          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-4 sm:mb-6">
+          <h2 className="text-2xl sm:text-3xl font-bold text-center mb-4 sm:mb-6 text-gray-800 dark:text-dark-text">
             Record an Action
           </h2>
           <div className="space-y-4 sm:space-y-6">
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">
+              <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">
                 Select Customer
               </label>
               <div className="relative" ref={dropdownRef}>
                 <button
                   type="button"
-                  className="w-full bg-white border border-gray-300 rounded-lg py-2 px-4 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 flex justify-between items-center"
+                  className="w-full bg-white dark:bg-dark-bg border border-gray-300 dark:border-dark-border rounded-lg py-2 px-4 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 flex justify-between items-center text-gray-800 dark:text-dark-text"
                   onClick={() => setDropdownOpen((open) => !open)}
                 >
                   {selectedCustomerId
@@ -478,7 +478,7 @@ const AddRecordPage = () => {
                   </svg>
                 </button>
                 {dropdownOpen && (
-                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto animate-fadeIn">
+                  <div className="absolute z-10 mt-1 w-full bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border rounded-lg shadow-lg max-h-60 overflow-auto animate-fadeIn">
                     <div className="relative">
                       <input
                         type="text"
@@ -486,13 +486,13 @@ const AddRecordPage = () => {
                         placeholder="Search by name or phone..."
                         value={customerSearch}
                         onChange={(e) => setCustomerSearch(e.target.value)}
-                        className="w-full bg-white border-b border-gray-200 rounded-t-lg py-2 px-4 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-400"
+                        className="w-full bg-white dark:bg-dark-bg border-b border-gray-200 dark:border-dark-border rounded-t-lg py-2 px-4 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-400 dark:placeholder-dark-muted text-gray-800 dark:text-dark-text"
                       />
                       {customerSearch && (
                         <button
                           type="button"
                           onClick={() => setCustomerSearch("")}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-dark-muted hover:text-gray-600 dark:hover:text-dark-text p-1"
                           aria-label="Clear search"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -503,16 +503,16 @@ const AddRecordPage = () => {
                     </div>
                     <ul>
                       {filteredCustomers.length === 0 && (
-                        <li className="px-4 py-2 text-gray-400">
+                        <li className="px-4 py-2 text-gray-400 dark:text-dark-muted">
                           No customers found
                         </li>
                       )}
                       {filteredCustomers.map((customer) => (
                         <li
                           key={customer.id}
-                          className={`px-4 py-2 cursor-pointer hover:bg-indigo-100 ${
+                          className={`px-4 py-2 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-gray-800 dark:text-dark-text ${
                             selectedCustomerId === customer.id
-                              ? "bg-indigo-50 font-bold"
+                              ? "bg-indigo-50 dark:bg-indigo-900/50 font-bold"
                               : ""
                           }`}
                           onClick={() => {
@@ -545,7 +545,7 @@ const AddRecordPage = () => {
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setAction("loan")}
                         disabled={isAnySubmitting}
-                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-indigo-50 text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Record Another Loan
                       </motion.button>
@@ -554,7 +554,7 @@ const AddRecordPage = () => {
                         whileTap={{ scale: 0.95 }}
                         onClick={() => activeLoan && setAction("installment")}
                         disabled={!activeLoan || isAnySubmitting}
-                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-green-50 text-green-700 hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/50 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Record Installment
                       </motion.button>
@@ -563,7 +563,7 @@ const AddRecordPage = () => {
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setAction("subscription")}
                         disabled={isAnySubmitting}
-                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-indigo-50 text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Record Subscription
                       </motion.button>
@@ -572,7 +572,7 @@ const AddRecordPage = () => {
                         whileTap={{ scale: 0.95 }}
                         onClick={handleSwitchCustomer}
                         disabled={isAnySubmitting}
-                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Switch Customer
                       </motion.button>
@@ -584,7 +584,7 @@ const AddRecordPage = () => {
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setAction("loan")}
                         disabled={isAnySubmitting}
-                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-100 hover:bg-indigo-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-100 dark:bg-gray-700 hover:bg-indigo-600 hover:text-white text-gray-800 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Record Loan
                       </motion.button>
@@ -593,7 +593,7 @@ const AddRecordPage = () => {
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setAction("subscription")}
                         disabled={isAnySubmitting}
-                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-100 hover:bg-indigo-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-100 dark:bg-gray-700 hover:bg-indigo-600 hover:text-white text-gray-800 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Record Subscription
                       </motion.button>
@@ -602,7 +602,7 @@ const AddRecordPage = () => {
                         whileTap={{ scale: 0.95 }}
                         onClick={handleSwitchCustomer}
                         disabled={isAnySubmitting}
-                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Switch Customer
                       </motion.button>
@@ -621,7 +621,7 @@ const AddRecordPage = () => {
                     initial="hidden"
                     animate="visible"
                     exit="exit"
-                    className="border-t border-gray-200 pt-6 mt-6"
+                    className="border-t border-gray-200 dark:border-dark-border pt-6 mt-6"
                   >
                     <form
                       onSubmit={installmentForm.handleSubmit(
@@ -629,12 +629,12 @@ const AddRecordPage = () => {
                       )}
                       className="space-y-4 overflow-hidden"
                     >
-                      <h3 className="text-xl font-semibold text-center">
+                      <h3 className="text-xl font-semibold text-center text-gray-800 dark:text-dark-text">
                         Record Installment for {activeLoan.customers?.name}
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium mb-1">
+                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">
                             Installment Amount
                           </label>
                           <input
@@ -652,13 +652,13 @@ const AddRecordPage = () => {
                             disabled={isSubmittingInstallment}
                           />
                           {installmentForm.formState.errors.amount && (
-                            <p className="text-red-600 text-sm mt-1">
+                            <p className="text-red-600 dark:text-red-400 text-sm mt-1">
                               {installmentForm.formState.errors.amount.message}
                             </p>
                           )}
                         </div>
                         <div>
-                          <label className="block text-sm font-medium mb-1">
+                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">
                             Installment Number
                           </label>
                           <select
@@ -678,7 +678,7 @@ const AddRecordPage = () => {
                           </select>
                           {installmentForm.formState.errors
                             .installment_number && (
-                            <p className="text-red-600 text-sm mt-1">
+                            <p className="text-red-600 dark:text-red-400 text-sm mt-1">
                               {
                                 installmentForm.formState.errors
                                   .installment_number.message
@@ -689,7 +689,7 @@ const AddRecordPage = () => {
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium mb-1">
+                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">
                             Payment Date
                           </label>
                           <div className="overflow-hidden rounded-lg">
@@ -706,13 +706,13 @@ const AddRecordPage = () => {
                             />
                           </div>
                           {installmentForm.formState.errors.date && (
-                            <p className="text-red-600 text-sm mt-1">
+                            <p className="text-red-600 dark:text-red-400 text-sm mt-1">
                               {installmentForm.formState.errors.date.message}
                             </p>
                           )}
                         </div>
                         <div>
-                          <label className="block text-sm font-medium mb-1">
+                          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">
                             Receipt Number
                           </label>
                           <input
@@ -725,7 +725,7 @@ const AddRecordPage = () => {
                             disabled={isSubmittingInstallment}
                           />
                           {installmentForm.formState.errors.receipt_number && (
-                            <p className="text-red-600 text-sm mt-1">
+                            <p className="text-red-600 dark:text-red-400 text-sm mt-1">
                               {
                                 installmentForm.formState.errors.receipt_number
                                   .message
@@ -735,7 +735,7 @@ const AddRecordPage = () => {
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">
+                        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">
                           Late Fee (Optional)
                         </label>
                         <input
@@ -752,7 +752,7 @@ const AddRecordPage = () => {
                           disabled={isSubmittingInstallment}
                         />
                         {installmentForm.formState.errors.late_fee && (
-                          <p className="text-red-600 text-sm mt-1">
+                          <p className="text-red-600 dark:text-red-400 text-sm mt-1">
                             {installmentForm.formState.errors.late_fee.message}
                           </p>
                         )}
@@ -782,7 +782,7 @@ const AddRecordPage = () => {
                     onSubmit={loanForm.handleSubmit(handleLoanSubmit)}
                     className="space-y-4 overflow-hidden"
                   >
-                    <h3 className="text-xl font-semibold text-center">
+                    <h3 className="text-xl font-semibold text-center text-gray-800 dark:text-dark-text">
                       Loan Details
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -802,7 +802,7 @@ const AddRecordPage = () => {
                           disabled={isSubmittingLoan}
                         />
                         {loanForm.formState.errors.original_amount && (
-                          <p className="text-red-600 text-sm mt-1">
+                          <p className="text-red-600 dark:text-red-400 text-sm mt-1">
                             {loanForm.formState.errors.original_amount.message}
                           </p>
                         )}
@@ -819,7 +819,7 @@ const AddRecordPage = () => {
                           disabled={isSubmittingLoan}
                         />
                         {loanForm.formState.errors.totalRepayableAmount && (
-                          <p className="text-red-600 text-sm mt-1">
+                          <p className="text-red-600 dark:text-red-400 text-sm mt-1">
                             {
                               loanForm.formState.errors.totalRepayableAmount
                                 .message
@@ -842,7 +842,7 @@ const AddRecordPage = () => {
                           />
                         </div>
                         {loanForm.formState.errors.payment_date && (
-                          <p className="text-red-600 text-sm mt-1">
+                          <p className="text-red-600 dark:text-red-400 text-sm mt-1">
                             {loanForm.formState.errors.payment_date.message}
                           </p>
                         )}
@@ -860,7 +860,7 @@ const AddRecordPage = () => {
                           disabled={isSubmittingLoan}
                         />
                         {loanForm.formState.errors.total_instalments && (
-                          <p className="text-red-600 text-sm mt-1">
+                          <p className="text-red-600 dark:text-red-400 text-sm mt-1">
                             {
                               loanForm.formState.errors.total_instalments
                                 .message
@@ -896,7 +896,7 @@ const AddRecordPage = () => {
                     initial="hidden"
                     animate="visible"
                     exit="exit"
-                    className="border-t border-gray-200 pt-6 mt-6"
+                    className="border-t border-gray-200 dark:border-dark-border pt-6 mt-6"
                   >
                     <form
                       onSubmit={subscriptionForm.handleSubmit(
@@ -904,7 +904,7 @@ const AddRecordPage = () => {
                       )}
                       className="space-y-4 overflow-hidden"
                     >
-                      <h3 className="text-xl font-semibold text-center">
+                      <h3 className="text-xl font-semibold text-center text-gray-800 dark:text-dark-text">
                         Subscription Details
                       </h3>
                       <div>
@@ -923,7 +923,7 @@ const AddRecordPage = () => {
                           disabled={isSubmittingSubscription}
                         />
                         {subscriptionForm.formState.errors.amount && (
-                          <p className="text-red-600 text-sm mt-1">
+                          <p className="text-red-600 dark:text-red-400 text-sm mt-1">
                             {subscriptionForm.formState.errors.amount.message}
                           </p>
                         )}
@@ -944,7 +944,7 @@ const AddRecordPage = () => {
                             />
                           </div>
                           {subscriptionForm.formState.errors.date && (
-                            <p className="text-red-600 text-sm mt-1">
+                            <p className="text-red-600 dark:text-red-400 text-sm mt-1">
                               {subscriptionForm.formState.errors.date.message}
                             </p>
                           )}
@@ -960,7 +960,7 @@ const AddRecordPage = () => {
                             disabled={isSubmittingSubscription}
                           />
                           {subscriptionForm.formState.errors.receipt && (
-                            <p className="text-red-600 text-sm mt-1">
+                            <p className="text-red-600 dark:text-red-400 text-sm mt-1">
                               {
                                 subscriptionForm.formState.errors.receipt
                                   .message
@@ -970,7 +970,7 @@ const AddRecordPage = () => {
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">
+                        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">
                           Late Fee (Optional)
                         </label>
                         <input
@@ -987,7 +987,7 @@ const AddRecordPage = () => {
                           disabled={isSubmittingSubscription}
                         />
                         {subscriptionForm.formState.errors.late_fee && (
-                          <p className="text-red-600 text-sm mt-1">
+                          <p className="text-red-600 dark:text-red-400 text-sm mt-1">
                             {subscriptionForm.formState.errors.late_fee.message}
                           </p>
                         )}
@@ -1013,7 +1013,7 @@ const AddRecordPage = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 20 }}
-                    className="mt-4 p-4 bg-green-100 text-green-800 rounded-lg"
+                    className="mt-4 p-4 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-lg"
                   >
                     <div className="text-center mb-4">
                       <span className="font-semibold text-lg">{showSuccess}</span>

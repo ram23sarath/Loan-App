@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Tailwind v4: Source the config and enable class-based dark mode */
+@config "./tailwind.config.js";
+
 /* Dark mode background transition */
 body {
   @apply transition-colors duration-200;

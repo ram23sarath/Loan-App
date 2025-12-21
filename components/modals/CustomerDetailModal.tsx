@@ -277,6 +277,11 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           <GlassCard className="w-full !p-3 sm:!p-6">
             <h3 className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-lg sm:text-2xl font-semibold">
               <LandmarkIcon className="w-5 h-5 sm:w-6 sm:h-6" /> Loans
+              {loans.length > 0 && (
+                <span className="text-base sm:text-lg font-normal text-green-600">
+                  (Total: {formatCurrency(loans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0))})
+                </span>
+              )}
             </h3>
             {loans.length > 0 ? (
               <div className="overflow-x-auto">
@@ -539,6 +544,11 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           <GlassCard className="w-full !p-3 sm:!p-6">
             <h3 className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-lg sm:text-2xl font-semibold">
               <HistoryIcon className="w-5 h-5 sm:w-6 sm:h-6" /> Subscriptions
+              {subscriptions.length > 0 && (
+                <span className="text-base sm:text-lg font-normal text-cyan-600">
+                  (Total: {formatCurrency(subscriptions.reduce((acc, sub) => acc + sub.amount, 0))})
+                </span>
+              )}
             </h3>
             {subscriptions.length > 0 ? (
               <div className="overflow-x-auto">
@@ -640,57 +650,114 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           </GlassCard>
 
           {/* Data Entries Section */}
-          <GlassCard className="w-full">
-            <div className="mb-4">
-              <h3 className="flex items-center gap-3 text-2xl font-semibold text-pink-700">Misc Data Entries</h3>
+          <GlassCard className="w-full !p-3 sm:!p-6">
+            <div className="mb-3 sm:mb-4">
+              <h3 className="flex items-center gap-2 sm:gap-3 text-lg sm:text-2xl font-semibold text-pink-700">Misc Data Entries</h3>
             </div>
             {dataEntries.length > 0 ? (
-              <div className="space-y-2">
-                {/* Header */}
-                <div className="grid grid-cols-12 gap-4 px-4 py-2 text-xs font-bold tracking-wider text-pink-700 uppercase bg-pink-50 rounded-lg w-full">
-                  <div className="col-span-2 text-left">Date</div>
-                  <div className="col-span-2 text-center">Type</div>
-                  <div className="col-span-2 text-right">Amount</div>
-                  <div className="col-span-2 text-center">Receipt #</div>
-                  <div className="col-span-4 text-left">Notes</div>
-                </div>
-                {/* Rows */}
-                {dataEntries.map(entry => (
-                  <div
-                    key={entry.id}
-                    className="grid grid-cols-12 gap-4 px-4 py-2 text-sm items-start border-b border-pink-100 last:border-b-0 w-full"
-                  >
-                    <div className="col-span-2 text-left text-gray-700">{formatDate(entry.date)}</div>
-                    <div className="col-span-2 text-center">
-                      {entry.type === 'credit' ? (
-                        <span className="inline-block px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">Credit</span>
-                      ) : (
-                        <span className="inline-block px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full">Expenditure</span>
-                      )}
-                    </div>
-                    <div className={`col-span-2 font-bold text-right ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>
-                      {entry.type === 'credit' ? '+' : '-'}
-                      {formatCurrency(entry.amount)}
-                    </div>
-                    <div className="col-span-2 text-center text-gray-600">{entry.receipt_number}</div>
-                    <div className="col-span-4 text-left text-gray-600">
-                      <div
-                        ref={(el) => (noteRefs.current[entry.id] = el)}
-                        onClick={() => handleNoteClick(entry.id)}
-                        className="cursor-pointer"
-                      >
-                        <motion.p
-                          initial="collapsed"
-                          animate={expandedNoteId === entry.id ? 'expanded' : 'collapsed'}
-                          variants={noteVariants}
-                          className={expandedNoteId !== entry.id ? 'truncate' : ''}
+              <div>
+                {/* Desktop Table/Grid View */}
+                <div className="hidden md:block space-y-2">
+                  {/* Header */}
+                  <div className="grid grid-cols-12 gap-4 px-4 py-2 text-xs font-bold tracking-wider text-pink-700 uppercase bg-pink-50 rounded-lg w-full">
+                    <div className="col-span-2 text-left">Date</div>
+                    <div className="col-span-2 text-center">Type</div>
+                    <div className="col-span-2 text-right">Amount</div>
+                    <div className="col-span-2 text-center">Receipt #</div>
+                    <div className="col-span-4 text-left">Notes</div>
+                  </div>
+                  {/* Rows */}
+                  {dataEntries.map(entry => (
+                    <div
+                      key={entry.id}
+                      className="grid grid-cols-12 gap-4 px-4 py-2 text-sm items-start border-b border-pink-100 last:border-b-0 w-full"
+                    >
+                      <div className="col-span-2 text-left text-gray-700">{formatDate(entry.date)}</div>
+                      <div className="col-span-2 text-center">
+                        {entry.type === 'credit' ? (
+                          <span className="inline-block px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">Credit</span>
+                        ) : (
+                          <span className="inline-block px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full">Expenditure</span>
+                        )}
+                      </div>
+                      <div className={`col-span-2 font-bold text-right ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>
+                        {entry.type === 'credit' ? '+' : '-'}
+                        {formatCurrency(entry.amount)}
+                      </div>
+                      <div className="col-span-2 text-center text-gray-600">{entry.receipt_number}</div>
+                      <div className="col-span-4 text-left text-gray-600">
+                        <div
+                          ref={(el) => (noteRefs.current[entry.id] = el)}
+                          onClick={() => handleNoteClick(entry.id)}
+                          className="cursor-pointer"
                         >
-                          {entry.notes || '-'}
-                        </motion.p>
+                          <motion.p
+                            initial="collapsed"
+                            animate={expandedNoteId === entry.id ? 'expanded' : 'collapsed'}
+                            variants={noteVariants}
+                            className={expandedNoteId !== entry.id ? 'truncate' : ''}
+                          >
+                            {entry.notes || '-'}
+                          </motion.p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+
+                {/* Mobile Cards View */}
+                <div className="md:hidden space-y-3">
+                  {dataEntries.map((entry, idx) => (
+                    <div key={entry.id} className="p-3 bg-pink-50 rounded-lg border border-pink-200">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="text-xs text-gray-500">#{idx + 1}</div>
+                        <div>
+                          {entry.type === 'credit' ? (
+                            <span className="inline-block px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">Credit</span>
+                          ) : (
+                            <span className="inline-block px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full">Expenditure</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Date:</span>
+                          <span className="font-medium">{formatDate(entry.date)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Amount:</span>
+                          <span className={`font-bold ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>
+                            {entry.type === 'credit' ? '+' : '-'}
+                            {formatCurrency(entry.amount)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Receipt #:</span>
+                          <span className="font-medium">{entry.receipt_number}</span>
+                        </div>
+                        {entry.notes && (
+                          <div className="pt-2 border-t border-pink-200">
+                            <span className="text-gray-600 text-xs font-semibold">Notes:</span>
+                            <div
+                              ref={(el) => (noteRefs.current[entry.id] = el)}
+                              onClick={() => handleNoteClick(entry.id)}
+                              className="cursor-pointer mt-1"
+                            >
+                              <motion.p
+                                initial="collapsed"
+                                animate={expandedNoteId === entry.id ? 'expanded' : 'collapsed'}
+                                variants={noteVariants}
+                                className={`text-gray-700 text-sm ${expandedNoteId !== entry.id ? 'line-clamp-2' : ''}`}
+                              >
+                                {entry.notes}
+                              </motion.p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
               <p className="text-gray-500">No data entries for this customer.</p>

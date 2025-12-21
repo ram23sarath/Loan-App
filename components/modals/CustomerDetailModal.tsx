@@ -55,6 +55,46 @@ const noteVariants: Variants = {
   },
 };
 
+const installmentRowVariants: Variants = {
+  hidden: { 
+    opacity: 0,
+    height: 0,
+    transition: {
+      duration: 0.2,
+      ease: 'easeOut'
+    }
+  },
+  visible: { 
+    opacity: 1,
+    height: 'auto',
+    transition: {
+      duration: 0.3,
+      ease: 'easeIn'
+    }
+  },
+};
+
+const installmentCardVariants: Variants = {
+  hidden: { 
+    opacity: 0,
+    height: 0,
+    marginTop: 0,
+    transition: {
+      duration: 0.2,
+      ease: 'easeOut'
+    }
+  },
+  visible: { 
+    opacity: 1,
+    height: 'auto',
+    marginTop: '0.75rem',
+    transition: {
+      duration: 0.3,
+      ease: 'easeIn'
+    }
+  },
+};
+
 const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   customer,
   loans,
@@ -69,6 +109,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   onEditSubscription,
 }) => {
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
+  const [expandedLoanId, setExpandedLoanId] = useState<string | null>(null);
   const noteRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   // Lookup map for O(1) installment access by loan_id
@@ -100,6 +141,16 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [expandedNoteId]);
+
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
 
   const confirmDeleteLoan = async () => {
     if (!deleteLoanTarget) return;
@@ -228,98 +279,256 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               <LandmarkIcon className="w-5 h-5 sm:w-6 sm:h-6" /> Loans
             </h3>
             {loans.length > 0 ? (
-              <div className="space-y-2 sm:space-y-4">
-                {loans.map(loan => {
-                  const loanInstallments = installmentsByLoanId.get(loan.id) || [];
-                  const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
-                  const totalRepayable = loan.original_amount + loan.interest_amount;
-                  const progress = totalRepayable > 0 ? (amountPaid / totalRepayable) * 100 : 0;
-                  const isPaidOff = amountPaid >= totalRepayable;
-                  const principalPaid = Math.min(amountPaid, loan.original_amount);
-                  const interestCollected = amountPaid > loan.original_amount ? Math.min(amountPaid - loan.original_amount, loan.interest_amount) : 0;
-                  
-                  return (
-                    <div key={loan.id} className="p-3 sm:p-4 bg-gray-50 rounded-lg">
-                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-0">
-                        <div>
-                          <p className="text-sm sm:text-lg font-bold">Loan from {formatDate(loan.payment_date)}</p>
-                          <p className="text-xs text-gray-500">
-                            Total: {formatCurrency(totalRepayable)} ({formatCurrency(loan.original_amount)} + {formatCurrency(loan.interest_amount)} interest)
-                          </p>
-                          <p className="mt-1 text-xs text-gray-500">
-                            Principal Paid: {formatCurrency(principalPaid)}
-                            <br />
-                            Interest Collected: {formatCurrency(interestCollected)}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 self-end sm:self-auto">
-                          {onEditLoan && (
-                            <motion.button
-                              onClick={() => onEditLoan(loan)}
-                              className="px-2 py-1 rounded bg-blue-600 text-white text-xs sm:text-sm hover:bg-blue-700"
-                              aria-label={`Edit loan from ${loan.payment_date}`}
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                            >
-                              Edit
-                            </motion.button>
-                          )}
-                          <motion.button
-                            onClick={() => setDeleteLoanTarget(loan)}
-                            className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
-                            aria-label={`Delete loan from ${loan.payment_date}`}
-                            whileHover={{ scale: 1.2 }}
-                            whileTap={{ scale: 0.9 }}
-                          >
-                            <Trash2Icon className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
-                          </motion.button>
-                        </div>
-                      </div>
-                      <div className="w-full h-2 my-2 rounded-full bg-gray-200">
-                        <div
-                          className={`h-2 rounded-full ${isPaidOff ? 'bg-green-500' : 'bg-indigo-500'}`}
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-xs text-gray-500">
-                        <span>Paid: {formatCurrency(amountPaid)}</span>
-                        <span>Installments: {loanInstallments.length}/{loan.total_instalments}</span>
-                      </div>
-                      {loanInstallments.length > 0 && (
-                        <div className="mt-4 space-y-2 border-t border-gray-200 pt-3">
-                          <h4 className="mb-1 text-sm font-semibold text-gray-600">Recorded Installments:</h4>
-                          {loanInstallments.map(installment => (
-                            <div key={installment.id} className="flex items-center justify-between p-2 bg-gray-100 rounded-md">
-                              <div>
-                                <p className="text-sm font-medium">Installment #{installment.installment_number}</p>
-                                <p className="text-xs text-gray-500">
-                                  Date: {formatDate(installment.date)} | Receipt: {installment.receipt_number}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <p className="font-semibold text-green-600">
-                                  {formatCurrency(installment.amount)}
-                                  {installment.late_fee && installment.late_fee > 0 && (
-                                    <span className="ml-1 text-xs text-orange-500">(+{formatCurrency(installment.late_fee)} late)</span>
-                                  )}
-                                </p>
-                                <motion.button
-                                  onClick={() => setDeleteInstTarget(installment)}
+              <div className="overflow-x-auto">
+                {/* Desktop Table */}
+                <table className="min-w-full border-collapse hidden md:table">
+                  <thead>
+                    <tr className="bg-gray-100/70">
+                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">#</th>
+                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Loan Amount</th>
+                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Interest</th>
+                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Total Repayable</th>
+                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Paid</th>
+                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Balance</th>
+                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Check #</th>
+                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Installments</th>
+                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Date</th>
+                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Status</th>
+                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loans.map((loan, idx) => {
+                      const loanInstallments = installmentsByLoanId.get(loan.id) || [];
+                      const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
+                      const totalRepayable = loan.original_amount + loan.interest_amount;
+                      const balance = totalRepayable - amountPaid;
+                      const isPaidOff = amountPaid >= totalRepayable;
+                      const isExpanded = expandedLoanId === loan.id;
+                      
+                      return (
+                        <React.Fragment key={loan.id}>
+                          <tr className="even:bg-gray-50/50 hover:bg-indigo-50/50 transition-colors">
+                            <td className="px-4 py-2 border-b font-medium text-sm text-gray-700">
+                              <button
+                                onClick={() => setExpandedLoanId(isExpanded ? null : loan.id)}
+                                className="flex items-center gap-1 hover:text-indigo-600"
+                              >
+                                <span>{isExpanded ? '▼' : '▶'}</span>
+                                <span>{idx + 1}</span>
+                              </button>
+                            </td>
+                            <td className="px-4 py-2 border-b">{formatCurrency(loan.original_amount)}</td>
+                            <td className="px-4 py-2 border-b">{formatCurrency(loan.interest_amount)}</td>
+                            <td className="px-4 py-2 border-b font-semibold">{formatCurrency(totalRepayable)}</td>
+                            <td className="px-4 py-2 border-b text-green-600">{formatCurrency(amountPaid)}</td>
+                            <td className="px-4 py-2 border-b text-red-600">{formatCurrency(balance)}</td>
+                            <td className="px-4 py-2 border-b">{loan.check_number || '-'}</td>
+                            <td className="px-4 py-2 border-b">{loanInstallments.length}/{loan.total_instalments}</td>
+                            <td className="px-4 py-2 border-b">{formatDate(loan.payment_date)}</td>
+                            <td className={`px-4 py-2 border-b font-semibold ${isPaidOff ? 'text-green-600' : 'text-orange-600'}`}>
+                              {isPaidOff ? 'Paid Off' : 'In Progress'}
+                            </td>
+                            <td className="px-4 py-2 border-b">
+                              <div className="flex gap-2">
+                                {onEditLoan && (
+                                  <button
+                                    onClick={() => onEditLoan(loan)}
+                                    className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+                                  >
+                                    Edit
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => setDeleteLoanTarget(loan)}
                                   className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
-                                  aria-label={`Delete installment #${installment.installment_number}`}
-                                  whileHover={{ scale: 1.2 }}
-                                  whileTap={{ scale: 0.9 }}
                                 >
                                   <Trash2Icon className="w-4 h-4 text-red-500" />
-                                </motion.button>
+                                </button>
                               </div>
-                            </div>
-                          ))}
+                            </td>
+                          </tr>
+                          <AnimatePresence>
+                            {isExpanded && loanInstallments.length > 0 && (
+                              <motion.tr
+                                initial="hidden"
+                                animate="visible"
+                                exit="hidden"
+                                variants={installmentRowVariants}
+                              >
+                                <td colSpan={11} className="px-4 py-3 bg-indigo-50/30">
+                                  <motion.div 
+                                    className="space-y-2"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 0.1 }}
+                                  >
+                                  <h5 className="text-sm font-semibold text-gray-700 mb-2">Installments Paid:</h5>
+                                  <div className="space-y-1">
+                                    {loanInstallments.map(inst => (
+                                      <div key={inst.id} className="flex items-center justify-between p-2 bg-white rounded border border-gray-200 text-sm">
+                                        <div className="flex items-center gap-4">
+                                          <span className="font-medium text-gray-700">#{inst.installment_number}</span>
+                                          <span className="text-gray-600">{formatDate(inst.date)}</span>
+                                          <span className="text-gray-600">Receipt: {inst.receipt_number}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                          <span className="font-semibold text-green-600">
+                                            {formatCurrency(inst.amount)}
+                                            {inst.late_fee && inst.late_fee > 0 && (
+                                              <span className="ml-1 text-xs text-orange-500">(+{formatCurrency(inst.late_fee)} late)</span>
+                                            )}
+                                          </span>
+                                          <motion.button
+                                            onClick={() => setDeleteInstTarget(inst)}
+                                            className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                                            whileHover={{ scale: 1.2 }}
+                                            whileTap={{ scale: 0.9 }}
+                                          >
+                                            <Trash2Icon className="w-4 h-4 text-red-500" />
+                                          </motion.button>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  </motion.div>
+                                </td>
+                              </motion.tr>
+                            )}
+                          </AnimatePresence>
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+
+                {/* Mobile Cards */}
+                <div className="md:hidden space-y-3">
+                  {loans.map((loan, idx) => {
+                    const loanInstallments = installmentsByLoanId.get(loan.id) || [];
+                    const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
+                    const totalRepayable = loan.original_amount + loan.interest_amount;
+                    const balance = totalRepayable - amountPaid;
+                    const isPaidOff = amountPaid >= totalRepayable;
+                    const isExpanded = expandedLoanId === loan.id;
+                    
+                    return (
+                      <div key={loan.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex justify-between items-start mb-2">
+                          <button
+                            onClick={() => setExpandedLoanId(isExpanded ? null : loan.id)}
+                            className="text-xs text-gray-500 flex items-center gap-1"
+                          >
+                            <span>{isExpanded ? '▼' : '▶'}</span>
+                            <span>#{idx + 1}</span>
+                          </button>
+                          <div className={`text-xs font-semibold px-2 py-1 rounded ${isPaidOff ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                            {isPaidOff ? 'Paid Off' : 'In Progress'}
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Date:</span>
+                            <span className="font-medium">{formatDate(loan.payment_date)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Loan Amount:</span>
+                            <span className="font-medium">{formatCurrency(loan.original_amount)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Interest:</span>
+                            <span className="font-medium">{formatCurrency(loan.interest_amount)}</span>
+                          </div>
+                          <div className="flex justify-between border-t pt-2">
+                            <span className="text-gray-600 font-semibold">Total Repayable:</span>
+                            <span className="font-bold">{formatCurrency(totalRepayable)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Paid:</span>
+                            <span className="font-medium text-green-600">{formatCurrency(amountPaid)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Balance:</span>
+                            <span className="font-medium text-red-600">{formatCurrency(balance)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Installments:</span>
+                            <span className="font-medium">{loanInstallments.length}/{loan.total_instalments}</span>
+                          </div>
+                          {loan.check_number && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Check #:</span>
+                              <span className="font-medium">{loan.check_number}</span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <AnimatePresence>
+                          {isExpanded && loanInstallments.length > 0 && (
+                            <motion.div 
+                              className="mt-3 pt-3 border-t space-y-2"
+                              initial="hidden"
+                              animate="visible"
+                              exit="hidden"
+                              variants={installmentCardVariants}
+                            >
+                              <h5 className="text-xs font-semibold text-gray-700">Installments Paid:</h5>
+                              <motion.div 
+                                className="space-y-1"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.1 }}
+                              >
+                              {loanInstallments.map(inst => (
+                                <div key={inst.id} className="flex items-start justify-between p-2 bg-white rounded border border-gray-200 text-xs">
+                                  <div className="flex-1">
+                                    <div className="font-medium text-gray-700">Installment #{inst.installment_number}</div>
+                                    <div className="text-gray-600 mt-1">{formatDate(inst.date)}</div>
+                                    <div className="text-gray-600">Receipt: {inst.receipt_number}</div>
+                                  </div>
+                                  <div className="flex flex-col items-end gap-1">
+                                    <span className="font-semibold text-green-600">
+                                      {formatCurrency(inst.amount)}
+                                    </span>
+                                    {inst.late_fee && inst.late_fee > 0 && (
+                                      <span className="text-xs text-orange-500">+{formatCurrency(inst.late_fee)} late</span>
+                                    )}
+                                    <motion.button
+                                      onClick={() => setDeleteInstTarget(inst)}
+                                      className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                                      whileHover={{ scale: 1.2 }}
+                                      whileTap={{ scale: 0.9 }}
+                                    >
+                                      <Trash2Icon className="w-3 h-3 text-red-500" />
+                                    </motion.button>
+                                  </div>
+                                </div>
+                              ))}
+                              </motion.div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                        
+                        <div className="flex gap-2 mt-3 pt-3 border-t">
+                          {onEditLoan && (
+                            <button
+                              onClick={() => onEditLoan(loan)}
+                              className="flex-1 px-3 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
+                            >
+                              Edit
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setDeleteLoanTarget(loan)}
+                            className="px-3 py-2 rounded-md bg-red-50 text-red-600"
+                          >
+                            <Trash2Icon className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             ) : (
               <p className="text-gray-500">No loan records for this customer.</p>
@@ -332,47 +541,98 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               <HistoryIcon className="w-5 h-5 sm:w-6 sm:h-6" /> Subscriptions
             </h3>
             {subscriptions.length > 0 ? (
-              <div className="space-y-2 sm:space-y-4">
-                {subscriptions.map(sub => (
-                  <div key={sub.id} className="flex justify-between p-3 sm:p-4 bg-gray-50 rounded-lg">
-                    {/* Left: Info */}
-                    <div className="flex-1">
-                      {/* Row 1: Subscription Date */}
-                      <p className="text-sm sm:text-lg font-bold">Subscription Date - {formatDate(sub.date)}</p>
-                      {/* Row 2: Amount */}
-                      <p className="text-xs text-gray-500 mt-1">
-                        Amount: <span className="font-semibold text-cyan-600">{formatCurrency(sub.amount)}</span>
-                      </p>
-                      {/* Row 3: Receipt Number */}
-                      <p className="text-xs text-gray-500 mt-1">
-                        Receipt Number: <span className="font-semibold text-gray-700">{sub.receipt || '-'}</span>
-                      </p>
-                    </div>
-                    {/* Right: Actions - Stacked vertically */}
-                    <div className="flex flex-col items-center justify-center gap-2 ml-3">
-                      {onEditSubscription && (
-                        <motion.button
-                          onClick={() => onEditSubscription(sub)}
-                          className="px-3 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
-                          aria-label={`Edit subscription from ${formatDate(sub.date)}`}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
+              <div className="overflow-x-auto">
+                {/* Desktop Table */}
+                <table className="min-w-full border-collapse hidden md:table">
+                  <thead>
+                    <tr className="bg-gray-100/70">
+                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">#</th>
+                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Date</th>
+                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Amount</th>
+                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Late Fee</th>
+                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Receipt #</th>
+                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {subscriptions.map((sub, idx) => (
+                      <tr key={sub.id} className="even:bg-gray-50/50 hover:bg-cyan-50/50 transition-colors">
+                        <td className="px-4 py-2 border-b font-medium text-sm text-gray-700">{idx + 1}</td>
+                        <td className="px-4 py-2 border-b">{formatDate(sub.date)}</td>
+                        <td className="px-4 py-2 border-b font-semibold text-cyan-600">{formatCurrency(sub.amount)}</td>
+                        <td className="px-4 py-2 border-b text-orange-600">
+                          {sub.late_fee ? formatCurrency(sub.late_fee) : '-'}
+                        </td>
+                        <td className="px-4 py-2 border-b">{sub.receipt || '-'}</td>
+                        <td className="px-4 py-2 border-b">
+                          <div className="flex gap-2">
+                            {onEditSubscription && (
+                              <button
+                                onClick={() => onEditSubscription(sub)}
+                                className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+                              >
+                                Edit
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setDeleteSubTarget(sub)}
+                              className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                            >
+                              <Trash2Icon className="w-4 h-4 text-red-500" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Mobile Cards */}
+                <div className="md:hidden space-y-3">
+                  {subscriptions.map((sub, idx) => (
+                    <div key={sub.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="text-xs text-gray-500">#{idx + 1}</div>
+                      </div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Date:</span>
+                          <span className="font-medium">{formatDate(sub.date)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Amount:</span>
+                          <span className="font-semibold text-cyan-600">{formatCurrency(sub.amount)}</span>
+                        </div>
+                        {sub.late_fee && sub.late_fee > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Late Fee:</span>
+                            <span className="font-medium text-orange-600">{formatCurrency(sub.late_fee)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Receipt #:</span>
+                          <span className="font-medium">{sub.receipt || '-'}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 mt-3 pt-3 border-t">
+                        {onEditSubscription && (
+                          <button
+                            onClick={() => onEditSubscription(sub)}
+                            className="flex-1 px-3 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
+                          >
+                            Edit
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setDeleteSubTarget(sub)}
+                          className="px-3 py-2 rounded-md bg-red-50 text-red-600"
                         >
-                          Edit
-                        </motion.button>
-                      )}
-                      <motion.button
-                        onClick={() => setDeleteSubTarget(sub)}
-                        className="p-2 rounded-md bg-red-50 text-red-600"
-                        aria-label={`Delete subscription from ${formatDate(sub.date)}`}
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                      >
-                        <Trash2Icon className="w-5 h-5" />
-                      </motion.button>
+                          <Trash2Icon className="w-5 h-5" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             ) : (
               <p className="text-gray-500">No subscription records for this customer.</p>

@@ -279,6 +279,80 @@ const DataPage = () => {
           <AnimatePresence mode="wait">
             {showTable ? (
               <motion.div key="table" variants={viewVariants} initial="hidden" animate="visible" exit="exit">
+                {/* Pagination Controls - Top */}
+                {totalPages > 1 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4 pb-4 border-b border-gray-200">
+                    <div className="text-sm text-gray-600">
+                      Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+                      {Math.min(currentPage * itemsPerPage, displayedDataEntries.length)} of{" "}
+                      {displayedDataEntries.length} entries
+                    </div>
+                    <div className="flex gap-2 flex-wrap justify-center">
+                      <button
+                        onClick={() => setCurrentPage(1)}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        First
+                      </button>
+                      <button
+                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        Previous
+                      </button>
+                      
+                      {/* Page numbers */}
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                        // Show first, last, current, and neighbors
+                        if (
+                          page === 1 ||
+                          page === totalPages ||
+                          Math.abs(page - currentPage) <= 1
+                        ) {
+                          return (
+                            <button
+                              key={page}
+                              onClick={() => setCurrentPage(page)}
+                              className={`px-3 py-1 rounded border ${
+                                currentPage === page
+                                  ? "bg-indigo-600 text-white border-indigo-600"
+                                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          );
+                        }
+                        // Show dots for skipped pages
+                        if (page === 2 && currentPage > 3) {
+                          return <span key="dots-start" className="px-2">...</span>;
+                        }
+                        if (page === totalPages - 1 && currentPage < totalPages - 2) {
+                          return <span key="dots-end" className="px-2">...</span>;
+                        }
+                        return null;
+                      })}
+                      
+                      <button
+                        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        Next
+                      </button>
+                      <button
+                        onClick={() => setCurrentPage(totalPages)}
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                      >
+                        Last
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="w-full border border-gray-200 rounded-lg overflow-hidden">
                   {/* Desktop Table */}
                   <table className="hidden md:table w-full" style={{ tableLayout: 'auto' }}>
@@ -402,80 +476,6 @@ const DataPage = () => {
                     )}
                   </div>
                 </div>
-
-                {/* Pagination Controls */}
-                {totalPages > 1 && (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-gray-200">
-                    <div className="text-sm text-gray-600">
-                      Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-                      {Math.min(currentPage * itemsPerPage, displayedDataEntries.length)} of{" "}
-                      {displayedDataEntries.length} entries
-                    </div>
-                    <div className="flex gap-2 flex-wrap justify-center">
-                      <button
-                        onClick={() => setCurrentPage(1)}
-                        disabled={currentPage === 1}
-                        className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                      >
-                        First
-                      </button>
-                      <button
-                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                        disabled={currentPage === 1}
-                        className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                      >
-                        Previous
-                      </button>
-                      
-                      {/* Page numbers */}
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                        // Show first, last, current, and neighbors
-                        if (
-                          page === 1 ||
-                          page === totalPages ||
-                          Math.abs(page - currentPage) <= 1
-                        ) {
-                          return (
-                            <button
-                              key={page}
-                              onClick={() => setCurrentPage(page)}
-                              className={`px-3 py-1 rounded border ${
-                                currentPage === page
-                                  ? "bg-indigo-600 text-white border-indigo-600"
-                                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
-                              }`}
-                            >
-                              {page}
-                            </button>
-                          );
-                        }
-                        // Show dots for skipped pages
-                        if (page === 2 && currentPage > 3) {
-                          return <span key="dots-start" className="px-2">...</span>;
-                        }
-                        if (page === totalPages - 1 && currentPage < totalPages - 2) {
-                          return <span key="dots-end" className="px-2">...</span>;
-                        }
-                        return null;
-                      })}
-                      
-                      <button
-                        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                        disabled={currentPage === totalPages}
-                        className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                      >
-                        Next
-                      </button>
-                      <button
-                        onClick={() => setCurrentPage(totalPages)}
-                        disabled={currentPage === totalPages}
-                        className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                      >
-                        Last
-                      </button>
-                    </div>
-                  </div>
-                )}
               </motion.div>
             ) : (
               <motion.div key="form" variants={viewVariants} initial="hidden" animate="visible" exit="exit" className="w-full h-full flex flex-col">

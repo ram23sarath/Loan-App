@@ -232,7 +232,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
       variants={backdropVariants}
       initial="hidden"
       animate="visible"
@@ -245,16 +245,16 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
         exit="exit"
         onClick={e => e.stopPropagation()}
       >
-        <GlassCard className="!p-0 w-full flex-shrink-0">
-          <div className="flex items-center justify-between p-3 sm:p-6 border-b border-gray-200">
+        <GlassCard className="!p-0 w-full flex-shrink-0 dark:bg-dark-card dark:border-dark-border">
+          <div className="flex items-center justify-between p-3 sm:p-6 border-b border-gray-200 dark:border-dark-border">
             <div>
-              <h2 className="text-xl sm:text-3xl font-bold">{customer.name}</h2>
-              <p className="text-sm sm:text-base text-gray-500">{customer.phone}</p>
+              <h2 className="text-xl sm:text-3xl font-bold dark:text-dark-text">{customer.name}</h2>
+              <p className="text-sm sm:text-base text-gray-500 dark:text-dark-muted">{customer.phone}</p>
             </div>
             <div className="flex items-center gap-2 sm:gap-4">
               <motion.button
                 onClick={handleIndividualExport}
-                className="flex items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-base font-semibold transition-colors bg-gray-100 rounded-lg hover:bg-gray-200"
+                className="flex items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-base font-semibold transition-colors bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -262,7 +262,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               </motion.button>
               <motion.button
                 onClick={onClose}
-                className="p-2 rounded-full hover:bg-gray-200"
+                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-700 dark:text-dark-text"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
               >
@@ -274,11 +274,11 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
         <div className="mt-2 sm:mt-4 space-y-3 sm:space-y-6 overflow-y-auto">
           {/* Loans Section */}
-          <GlassCard className="w-full !p-3 sm:!p-6">
-            <h3 className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-lg sm:text-2xl font-semibold">
+          <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border">
+            <h3 className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-lg sm:text-2xl font-semibold dark:text-dark-text">
               <LandmarkIcon className="w-5 h-5 sm:w-6 sm:h-6" /> Loans
               {loans.length > 0 && (
-                <span className="text-base sm:text-lg font-normal text-green-600">
+                <span className="text-base sm:text-lg font-normal text-green-600 dark:text-green-400">
                   (Total: {formatCurrency(loans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0))})
                 </span>
               )}
@@ -288,18 +288,18 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 {/* Desktop Table */}
                 <table className="min-w-full border-collapse hidden md:table">
                   <thead>
-                    <tr className="bg-gray-100/70">
-                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">#</th>
-                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Loan Amount</th>
-                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Interest</th>
-                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Total Repayable</th>
-                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Paid</th>
-                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Balance</th>
-                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Check #</th>
-                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Installments</th>
-                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Date</th>
-                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Status</th>
-                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Actions</th>
+                    <tr className="bg-gray-100/70 dark:bg-slate-700">
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">#</th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Loan Amount</th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Interest</th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Total Repayable</th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Paid</th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Balance</th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Check #</th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Installments</th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Date</th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Status</th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -313,40 +313,40 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                       
                       return (
                         <React.Fragment key={loan.id}>
-                          <tr className="even:bg-gray-50/50 hover:bg-indigo-50/50 transition-colors">
-                            <td className="px-4 py-2 border-b font-medium text-sm text-gray-700">
+                          <tr className="even:bg-gray-50/50 hover:bg-indigo-50/50 transition-colors dark:even:bg-slate-700/50 dark:hover:bg-indigo-900/30">
+                            <td className="px-4 py-2 border-b dark:border-dark-border font-medium text-sm text-gray-700 dark:text-dark-text">
                               <button
                                 onClick={() => setExpandedLoanId(isExpanded ? null : loan.id)}
-                                className="flex items-center gap-1 hover:text-indigo-600"
+                                className="flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400"
                               >
                                 <span>{isExpanded ? '▼' : '▶'}</span>
                                 <span>{idx + 1}</span>
                               </button>
                             </td>
-                            <td className="px-4 py-2 border-b">{formatCurrency(loan.original_amount)}</td>
-                            <td className="px-4 py-2 border-b">{formatCurrency(loan.interest_amount)}</td>
-                            <td className="px-4 py-2 border-b font-semibold">{formatCurrency(totalRepayable)}</td>
-                            <td className="px-4 py-2 border-b text-green-600">{formatCurrency(amountPaid)}</td>
-                            <td className="px-4 py-2 border-b text-red-600">{formatCurrency(balance)}</td>
-                            <td className="px-4 py-2 border-b">{loan.check_number || '-'}</td>
-                            <td className="px-4 py-2 border-b">{loanInstallments.length}/{loan.total_instalments}</td>
-                            <td className="px-4 py-2 border-b">{formatDate(loan.payment_date)}</td>
-                            <td className={`px-4 py-2 border-b font-semibold ${isPaidOff ? 'text-green-600' : 'text-orange-600'}`}>
+                            <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">{formatCurrency(loan.original_amount)}</td>
+                            <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">{formatCurrency(loan.interest_amount)}</td>
+                            <td className="px-4 py-2 border-b dark:border-dark-border font-semibold dark:text-dark-text">{formatCurrency(totalRepayable)}</td>
+                            <td className="px-4 py-2 border-b dark:border-dark-border text-green-600 dark:text-green-400">{formatCurrency(amountPaid)}</td>
+                            <td className="px-4 py-2 border-b dark:border-dark-border text-red-600 dark:text-red-400">{formatCurrency(balance)}</td>
+                            <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">{loan.check_number || '-'}</td>
+                            <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">{loanInstallments.length}/{loan.total_instalments}</td>
+                            <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">{formatDate(loan.payment_date)}</td>
+                            <td className={`px-4 py-2 border-b dark:border-dark-border font-semibold ${isPaidOff ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
                               {isPaidOff ? 'Paid Off' : 'In Progress'}
                             </td>
-                            <td className="px-4 py-2 border-b">
+                            <td className="px-4 py-2 border-b dark:border-dark-border">
                               <div className="flex gap-2">
                                 {onEditLoan && (
                                   <button
                                     onClick={() => onEditLoan(loan)}
-                                    className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+                                    className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700 dark:hover:bg-blue-500"
                                   >
                                     Edit
                                   </button>
                                 )}
                                 <button
                                   onClick={() => setDeleteLoanTarget(loan)}
-                                  className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                                  className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors"
                                 >
                                   <Trash2Icon className="w-4 h-4 text-red-500" />
                                 </button>
@@ -361,24 +361,24 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                                 exit="hidden"
                                 variants={installmentRowVariants}
                               >
-                                <td colSpan={11} className="px-4 py-3 bg-indigo-50/30">
+                                <td colSpan={11} className="px-4 py-3 bg-indigo-50/30 dark:bg-indigo-900/20">
                                   <motion.div 
                                     className="space-y-2"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     transition={{ delay: 0.1 }}
                                   >
-                                  <h5 className="text-sm font-semibold text-gray-700 mb-2">Installments Paid:</h5>
+                                  <h5 className="text-sm font-semibold text-gray-700 dark:text-dark-text mb-2">Installments Paid:</h5>
                                   <div className="space-y-1">
                                     {loanInstallments.map(inst => (
-                                      <div key={inst.id} className="flex items-center justify-between p-2 bg-white rounded border border-gray-200 text-sm">
+                                      <div key={inst.id} className="flex items-center justify-between p-2 bg-white dark:bg-slate-800 rounded border border-gray-200 dark:border-dark-border text-sm">
                                         <div className="flex items-center gap-4">
-                                          <span className="font-medium text-gray-700">#{inst.installment_number}</span>
-                                          <span className="text-gray-600">{formatDate(inst.date)}</span>
-                                          <span className="text-gray-600">Receipt: {inst.receipt_number}</span>
+                                          <span className="font-medium text-gray-700 dark:text-dark-text">#{inst.installment_number}</span>
+                                          <span className="text-gray-600 dark:text-dark-muted">{formatDate(inst.date)}</span>
+                                          <span className="text-gray-600 dark:text-dark-muted">Receipt: {inst.receipt_number}</span>
                                         </div>
                                         <div className="flex items-center gap-3">
-                                          <span className="font-semibold text-green-600">
+                                          <span className="font-semibold text-green-600 dark:text-green-400">
                                             {formatCurrency(inst.amount)}
                                             {inst.late_fee && inst.late_fee > 0 && (
                                               <span className="ml-1 text-xs text-orange-500">(+{formatCurrency(inst.late_fee)} late)</span>
@@ -386,7 +386,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                                           </span>
                                           <motion.button
                                             onClick={() => setDeleteInstTarget(inst)}
-                                            className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                                            className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors"
                                             whileHover={{ scale: 1.2 }}
                                             whileTap={{ scale: 0.9 }}
                                           >
@@ -418,52 +418,52 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                     const isExpanded = expandedLoanId === loan.id;
                     
                     return (
-                      <div key={loan.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div key={loan.id} className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-dark-border">
                         <div className="flex justify-between items-start mb-2">
                           <button
                             onClick={() => setExpandedLoanId(isExpanded ? null : loan.id)}
-                            className="text-xs text-gray-500 flex items-center gap-1"
+                            className="text-xs text-gray-500 dark:text-dark-muted flex items-center gap-1"
                           >
                             <span>{isExpanded ? '▼' : '▶'}</span>
                             <span>#{idx + 1}</span>
                           </button>
-                          <div className={`text-xs font-semibold px-2 py-1 rounded ${isPaidOff ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                          <div className={`text-xs font-semibold px-2 py-1 rounded ${isPaidOff ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'}`}>
                             {isPaidOff ? 'Paid Off' : 'In Progress'}
                           </div>
                         </div>
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Date:</span>
-                            <span className="font-medium">{formatDate(loan.payment_date)}</span>
+                            <span className="text-gray-600 dark:text-dark-muted">Date:</span>
+                            <span className="font-medium dark:text-dark-text">{formatDate(loan.payment_date)}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Loan Amount:</span>
-                            <span className="font-medium">{formatCurrency(loan.original_amount)}</span>
+                            <span className="text-gray-600 dark:text-dark-muted">Loan Amount:</span>
+                            <span className="font-medium dark:text-dark-text">{formatCurrency(loan.original_amount)}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Interest:</span>
-                            <span className="font-medium">{formatCurrency(loan.interest_amount)}</span>
+                            <span className="text-gray-600 dark:text-dark-muted">Interest:</span>
+                            <span className="font-medium dark:text-dark-text">{formatCurrency(loan.interest_amount)}</span>
                           </div>
-                          <div className="flex justify-between border-t pt-2">
-                            <span className="text-gray-600 font-semibold">Total Repayable:</span>
-                            <span className="font-bold">{formatCurrency(totalRepayable)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Paid:</span>
-                            <span className="font-medium text-green-600">{formatCurrency(amountPaid)}</span>
+                          <div className="flex justify-between border-t dark:border-dark-border pt-2">
+                            <span className="text-gray-600 dark:text-dark-muted font-semibold">Total Repayable:</span>
+                            <span className="font-bold dark:text-dark-text">{formatCurrency(totalRepayable)}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Balance:</span>
-                            <span className="font-medium text-red-600">{formatCurrency(balance)}</span>
+                            <span className="text-gray-600 dark:text-dark-muted">Paid:</span>
+                            <span className="font-medium text-green-600 dark:text-green-400">{formatCurrency(amountPaid)}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Installments:</span>
-                            <span className="font-medium">{loanInstallments.length}/{loan.total_instalments}</span>
+                            <span className="text-gray-600 dark:text-dark-muted">Balance:</span>
+                            <span className="font-medium text-red-600 dark:text-red-400">{formatCurrency(balance)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-dark-muted">Installments:</span>
+                            <span className="font-medium dark:text-dark-text">{loanInstallments.length}/{loan.total_instalments}</span>
                           </div>
                           {loan.check_number && (
                             <div className="flex justify-between">
-                              <span className="text-gray-600">Check #:</span>
-                              <span className="font-medium">{loan.check_number}</span>
+                              <span className="text-gray-600 dark:text-dark-muted">Check #:</span>
+                              <span className="font-medium dark:text-dark-text">{loan.check_number}</span>
                             </div>
                           )}
                         </div>
@@ -471,13 +471,13 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                         <AnimatePresence>
                           {isExpanded && loanInstallments.length > 0 && (
                             <motion.div 
-                              className="mt-3 pt-3 border-t space-y-2"
+                              className="mt-3 pt-3 border-t dark:border-dark-border space-y-2"
                               initial="hidden"
                               animate="visible"
                               exit="hidden"
                               variants={installmentCardVariants}
                             >
-                              <h5 className="text-xs font-semibold text-gray-700">Installments Paid:</h5>
+                              <h5 className="text-xs font-semibold text-gray-700 dark:text-dark-text">Installments Paid:</h5>
                               <motion.div 
                                 className="space-y-1"
                                 initial={{ opacity: 0 }}
@@ -485,14 +485,14 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                                 transition={{ delay: 0.1 }}
                               >
                               {loanInstallments.map(inst => (
-                                <div key={inst.id} className="flex items-start justify-between p-2 bg-white rounded border border-gray-200 text-xs">
+                                <div key={inst.id} className="flex items-start justify-between p-2 bg-white dark:bg-slate-700/50 rounded border border-gray-200 dark:border-dark-border text-xs">
                                   <div className="flex-1">
-                                    <div className="font-medium text-gray-700">Installment #{inst.installment_number}</div>
-                                    <div className="text-gray-600 mt-1">{formatDate(inst.date)}</div>
-                                    <div className="text-gray-600">Receipt: {inst.receipt_number}</div>
+                                    <div className="font-medium text-gray-700 dark:text-dark-text">Installment #{inst.installment_number}</div>
+                                    <div className="text-gray-600 dark:text-dark-muted mt-1">{formatDate(inst.date)}</div>
+                                    <div className="text-gray-600 dark:text-dark-muted">Receipt: {inst.receipt_number}</div>
                                   </div>
                                   <div className="flex flex-col items-end gap-1">
-                                    <span className="font-semibold text-green-600">
+                                    <span className="font-semibold text-green-600 dark:text-green-400">
                                       {formatCurrency(inst.amount)}
                                     </span>
                                     {inst.late_fee && inst.late_fee > 0 && (
@@ -500,7 +500,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                                     )}
                                     <motion.button
                                       onClick={() => setDeleteInstTarget(inst)}
-                                      className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                                      className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors"
                                       whileHover={{ scale: 1.2 }}
                                       whileTap={{ scale: 0.9 }}
                                     >
@@ -514,18 +514,18 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                           )}
                         </AnimatePresence>
                         
-                        <div className="flex gap-2 mt-3 pt-3 border-t">
+                        <div className="flex gap-2 mt-3 pt-3 border-t dark:border-dark-border">
                           {onEditLoan && (
                             <button
                               onClick={() => onEditLoan(loan)}
-                              className="flex-1 px-3 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
+                              className="flex-1 px-3 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500"
                             >
                               Edit
                             </button>
                           )}
                           <button
                             onClick={() => setDeleteLoanTarget(loan)}
-                            className="px-3 py-2 rounded-md bg-red-50 text-red-600"
+                            className="px-3 py-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
                           >
                             <Trash2Icon className="w-5 h-5" />
                           </button>
@@ -536,16 +536,16 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 </div>
               </div>
             ) : (
-              <p className="text-gray-500">No loan records for this customer.</p>
+              <p className="text-gray-500 dark:text-dark-muted">No loan records for this customer.</p>
             )}
           </GlassCard>
 
           {/* Subscriptions Section */}
-          <GlassCard className="w-full !p-3 sm:!p-6">
-            <h3 className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-lg sm:text-2xl font-semibold">
+          <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border">
+            <h3 className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-lg sm:text-2xl font-semibold dark:text-dark-text">
               <HistoryIcon className="w-5 h-5 sm:w-6 sm:h-6" /> Subscriptions
               {subscriptions.length > 0 && (
-                <span className="text-base sm:text-lg font-normal text-cyan-600">
+                <span className="text-base sm:text-lg font-normal text-cyan-600 dark:text-cyan-400">
                   (Total: {formatCurrency(subscriptions.reduce((acc, sub) => acc + sub.amount, 0))})
                 </span>
               )}
@@ -555,38 +555,38 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 {/* Desktop Table */}
                 <table className="min-w-full border-collapse hidden md:table">
                   <thead>
-                    <tr className="bg-gray-100/70">
-                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">#</th>
-                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Date</th>
-                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Amount</th>
-                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Late Fee</th>
-                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Receipt #</th>
-                      <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600">Actions</th>
+                    <tr className="bg-gray-100/70 dark:bg-slate-700">
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">#</th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Date</th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Amount</th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Late Fee</th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Receipt #</th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {subscriptions.map((sub, idx) => (
-                      <tr key={sub.id} className="even:bg-gray-50/50 hover:bg-cyan-50/50 transition-colors">
-                        <td className="px-4 py-2 border-b font-medium text-sm text-gray-700">{idx + 1}</td>
-                        <td className="px-4 py-2 border-b">{formatDate(sub.date)}</td>
-                        <td className="px-4 py-2 border-b font-semibold text-cyan-600">{formatCurrency(sub.amount)}</td>
-                        <td className="px-4 py-2 border-b text-orange-600">
+                      <tr key={sub.id} className="even:bg-gray-50/50 hover:bg-cyan-50/50 transition-colors dark:even:bg-slate-700/50 dark:hover:bg-cyan-900/30">
+                        <td className="px-4 py-2 border-b dark:border-dark-border font-medium text-sm text-gray-700 dark:text-dark-text">{idx + 1}</td>
+                        <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">{formatDate(sub.date)}</td>
+                        <td className="px-4 py-2 border-b dark:border-dark-border font-semibold text-cyan-600 dark:text-cyan-400">{formatCurrency(sub.amount)}</td>
+                        <td className="px-4 py-2 border-b dark:border-dark-border text-orange-600 dark:text-orange-400">
                           {sub.late_fee ? formatCurrency(sub.late_fee) : '-'}
                         </td>
-                        <td className="px-4 py-2 border-b">{sub.receipt || '-'}</td>
-                        <td className="px-4 py-2 border-b">
+                        <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">{sub.receipt || '-'}</td>
+                        <td className="px-4 py-2 border-b dark:border-dark-border">
                           <div className="flex gap-2">
                             {onEditSubscription && (
                               <button
                                 onClick={() => onEditSubscription(sub)}
-                                className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+                                className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700 dark:hover:bg-blue-500"
                               >
                                 Edit
                               </button>
                             )}
                             <button
                               onClick={() => setDeleteSubTarget(sub)}
-                              className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                              className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors"
                             >
                               <Trash2Icon className="w-4 h-4 text-red-500" />
                             </button>
@@ -600,42 +600,42 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 {/* Mobile Cards */}
                 <div className="md:hidden space-y-3">
                   {subscriptions.map((sub, idx) => (
-                    <div key={sub.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div key={sub.id} className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-dark-border">
                       <div className="flex justify-between items-start mb-2">
-                        <div className="text-xs text-gray-500">#{idx + 1}</div>
+                        <div className="text-xs text-gray-500 dark:text-dark-muted">#{idx + 1}</div>
                       </div>
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Date:</span>
-                          <span className="font-medium">{formatDate(sub.date)}</span>
+                          <span className="text-gray-600 dark:text-dark-muted">Date:</span>
+                          <span className="font-medium dark:text-dark-text">{formatDate(sub.date)}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Amount:</span>
-                          <span className="font-semibold text-cyan-600">{formatCurrency(sub.amount)}</span>
+                          <span className="text-gray-600 dark:text-dark-muted">Amount:</span>
+                          <span className="font-semibold text-cyan-600 dark:text-cyan-400">{formatCurrency(sub.amount)}</span>
                         </div>
                         {sub.late_fee && sub.late_fee > 0 && (
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Late Fee:</span>
-                            <span className="font-medium text-orange-600">{formatCurrency(sub.late_fee)}</span>
+                            <span className="text-gray-600 dark:text-dark-muted">Late Fee:</span>
+                            <span className="font-medium text-orange-600 dark:text-orange-400">{formatCurrency(sub.late_fee)}</span>
                           </div>
                         )}
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Receipt #:</span>
-                          <span className="font-medium">{sub.receipt || '-'}</span>
+                          <span className="text-gray-600 dark:text-dark-muted">Receipt #:</span>
+                          <span className="font-medium dark:text-dark-text">{sub.receipt || '-'}</span>
                         </div>
                       </div>
-                      <div className="flex gap-2 mt-3 pt-3 border-t">
+                      <div className="flex gap-2 mt-3 pt-3 border-t dark:border-dark-border">
                         {onEditSubscription && (
                           <button
                             onClick={() => onEditSubscription(sub)}
-                            className="flex-1 px-3 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
+                            className="flex-1 px-3 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500"
                           >
                             Edit
                           </button>
                         )}
                         <button
                           onClick={() => setDeleteSubTarget(sub)}
-                          className="px-3 py-2 rounded-md bg-red-50 text-red-600"
+                          className="px-3 py-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
                         >
                           <Trash2Icon className="w-5 h-5" />
                         </button>
@@ -645,21 +645,21 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 </div>
               </div>
             ) : (
-              <p className="text-gray-500">No subscription records for this customer.</p>
+              <p className="text-gray-500 dark:text-dark-muted">No subscription records for this customer.</p>
             )}
           </GlassCard>
 
           {/* Data Entries Section */}
-          <GlassCard className="w-full !p-3 sm:!p-6">
+          <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border">
             <div className="mb-3 sm:mb-4">
-              <h3 className="flex items-center gap-2 sm:gap-3 text-lg sm:text-2xl font-semibold text-pink-700">Misc Data Entries</h3>
+              <h3 className="flex items-center gap-2 sm:gap-3 text-lg sm:text-2xl font-semibold text-pink-700 dark:text-pink-400">Misc Data Entries</h3>
             </div>
             {dataEntries.length > 0 ? (
               <div>
                 {/* Desktop Table/Grid View */}
                 <div className="hidden md:block space-y-2">
                   {/* Header */}
-                  <div className="grid grid-cols-12 gap-4 px-4 py-2 text-xs font-bold tracking-wider text-pink-700 uppercase bg-pink-50 rounded-lg w-full">
+                  <div className="grid grid-cols-12 gap-4 px-4 py-2 text-xs font-bold tracking-wider text-pink-700 dark:text-pink-400 uppercase bg-pink-50 dark:bg-pink-900/20 rounded-lg w-full">
                     <div className="col-span-2 text-left">Date</div>
                     <div className="col-span-2 text-center">Type</div>
                     <div className="col-span-2 text-right">Amount</div>
@@ -670,22 +670,22 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   {dataEntries.map(entry => (
                     <div
                       key={entry.id}
-                      className="grid grid-cols-12 gap-4 px-4 py-2 text-sm items-start border-b border-pink-100 last:border-b-0 w-full"
+                      className="grid grid-cols-12 gap-4 px-4 py-2 text-sm items-start border-b border-pink-100 dark:border-pink-900/30 last:border-b-0 w-full"
                     >
-                      <div className="col-span-2 text-left text-gray-700">{formatDate(entry.date)}</div>
+                      <div className="col-span-2 text-left text-gray-700 dark:text-dark-text">{formatDate(entry.date)}</div>
                       <div className="col-span-2 text-center">
                         {entry.type === 'credit' ? (
-                          <span className="inline-block px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">Credit</span>
+                          <span className="inline-block px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full dark:bg-green-900/30 dark:text-green-400">Credit</span>
                         ) : (
-                          <span className="inline-block px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full">Expenditure</span>
+                          <span className="inline-block px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full dark:bg-red-900/30 dark:text-red-400">Expenditure</span>
                         )}
                       </div>
-                      <div className={`col-span-2 font-bold text-right ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>
+                      <div className={`col-span-2 font-bold text-right ${entry.type === 'credit' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
                         {entry.type === 'credit' ? '+' : '-'}
                         {formatCurrency(entry.amount)}
                       </div>
-                      <div className="col-span-2 text-center text-gray-600">{entry.receipt_number}</div>
-                      <div className="col-span-4 text-left text-gray-600">
+                      <div className="col-span-2 text-center text-gray-600 dark:text-dark-muted">{entry.receipt_number}</div>
+                      <div className="col-span-4 text-left text-gray-600 dark:text-dark-muted">
                         <div
                           ref={(el) => (noteRefs.current[entry.id] = el)}
                           onClick={() => handleNoteClick(entry.id)}
@@ -708,36 +708,36 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 {/* Mobile Cards View */}
                 <div className="md:hidden space-y-3">
                   {dataEntries.map((entry, idx) => (
-                    <div key={entry.id} className="p-3 bg-pink-50 rounded-lg border border-pink-200">
+                    <div key={entry.id} className="p-3 bg-pink-50 dark:bg-pink-900/10 rounded-lg border border-pink-200 dark:border-pink-900/30">
                       <div className="flex justify-between items-start mb-2">
-                        <div className="text-xs text-gray-500">#{idx + 1}</div>
+                        <div className="text-xs text-gray-500 dark:text-dark-muted">#{idx + 1}</div>
                         <div>
                           {entry.type === 'credit' ? (
-                            <span className="inline-block px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full">Credit</span>
+                            <span className="inline-block px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full dark:bg-green-900/30 dark:text-green-400">Credit</span>
                           ) : (
-                            <span className="inline-block px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full">Expenditure</span>
+                            <span className="inline-block px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full dark:bg-red-900/30 dark:text-red-400">Expenditure</span>
                           )}
                         </div>
                       </div>
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Date:</span>
-                          <span className="font-medium">{formatDate(entry.date)}</span>
+                          <span className="text-gray-600 dark:text-dark-muted">Date:</span>
+                          <span className="font-medium dark:text-dark-text">{formatDate(entry.date)}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Amount:</span>
-                          <span className={`font-bold ${entry.type === 'credit' ? 'text-green-700' : 'text-red-700'}`}>
+                          <span className="text-gray-600 dark:text-dark-muted">Amount:</span>
+                          <span className={`font-bold ${entry.type === 'credit' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
                             {entry.type === 'credit' ? '+' : '-'}
                             {formatCurrency(entry.amount)}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Receipt #:</span>
-                          <span className="font-medium">{entry.receipt_number}</span>
+                          <span className="text-gray-600 dark:text-dark-muted">Receipt #:</span>
+                          <span className="font-medium dark:text-dark-text">{entry.receipt_number}</span>
                         </div>
                         {entry.notes && (
-                          <div className="pt-2 border-t border-pink-200">
-                            <span className="text-gray-600 text-xs font-semibold">Notes:</span>
+                          <div className="pt-2 border-t border-pink-200 dark:border-pink-900/30">
+                            <span className="text-gray-600 dark:text-dark-muted text-xs font-semibold">Notes:</span>
                             <div
                               ref={(el) => (noteRefs.current[entry.id] = el)}
                               onClick={() => handleNoteClick(entry.id)}
@@ -747,7 +747,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                                 initial="collapsed"
                                 animate={expandedNoteId === entry.id ? 'expanded' : 'collapsed'}
                                 variants={noteVariants}
-                                className={`text-gray-700 text-sm ${expandedNoteId !== entry.id ? 'line-clamp-2' : ''}`}
+                                className={`text-gray-700 dark:text-dark-text text-sm ${expandedNoteId !== entry.id ? 'line-clamp-2' : ''}`}
                               >
                                 {entry.notes}
                               </motion.p>
@@ -760,7 +760,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 </div>
               </div>
             ) : (
-              <p className="text-gray-500">No data entries for this customer.</p>
+              <p className="text-gray-500 dark:text-dark-muted">No data entries for this customer.</p>
             )}
           </GlassCard>
         </div>
@@ -778,17 +778,17 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
             >
               <motion.div
                 variants={modalVariants}
-                className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md"
+                className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border"
                 onClick={e => e.stopPropagation()}
               >
-                <h3 className="text-lg font-bold mb-3">Delete Loan?</h3>
-                <p className="mb-4 text-sm text-gray-600">
-                  Are you sure you want to delete the loan from <span className="font-semibold">{formatDate(deleteLoanTarget.payment_date)}</span>? This will also delete all its installments.
+                <h3 className="text-lg font-bold mb-3 dark:text-dark-text">Delete Loan?</h3>
+                <p className="mb-4 text-sm text-gray-600 dark:text-dark-muted">
+                  Are you sure you want to delete the loan from <span className="font-semibold dark:text-dark-text">{formatDate(deleteLoanTarget.payment_date)}</span>? This will also delete all its installments.
                 </p>
                 <div className="flex justify-end gap-2">
                   <button
                     onClick={() => setDeleteLoanTarget(null)}
-                    className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300"
+                    className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
                   >
                     Cancel
                   </button>
@@ -817,17 +817,17 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
             >
               <motion.div
                 variants={modalVariants}
-                className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md"
+                className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border"
                 onClick={e => e.stopPropagation()}
               >
-                <h3 className="text-lg font-bold mb-3">Delete Subscription?</h3>
-                <p className="mb-4 text-sm text-gray-600">
-                  Are you sure you want to delete the subscription from <span className="font-semibold">{formatDate(deleteSubTarget.date)}</span>?
+                <h3 className="text-lg font-bold mb-3 dark:text-dark-text">Delete Subscription?</h3>
+                <p className="mb-4 text-sm text-gray-600 dark:text-dark-muted">
+                  Are you sure you want to delete the subscription from <span className="font-semibold dark:text-dark-text">{formatDate(deleteSubTarget.date)}</span>?
                 </p>
                 <div className="flex justify-end gap-2">
                   <button
                     onClick={() => setDeleteSubTarget(null)}
-                    className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300"
+                    className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
                   >
                     Cancel
                   </button>
@@ -856,17 +856,17 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
             >
               <motion.div
                 variants={modalVariants}
-                className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md"
+                className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border"
                 onClick={e => e.stopPropagation()}
               >
-                <h3 className="text-lg font-bold mb-3">Delete Installment?</h3>
-                <p className="mb-4 text-sm text-gray-600">
-                  Are you sure you want to delete installment <span className="font-semibold">#{deleteInstTarget.installment_number}</span>?
+                <h3 className="text-lg font-bold mb-3 dark:text-dark-text">Delete Installment?</h3>
+                <p className="mb-4 text-sm text-gray-600 dark:text-dark-muted">
+                  Are you sure you want to delete installment <span className="font-semibold dark:text-dark-text">#{deleteInstTarget.installment_number}</span>?
                 </p>
                 <div className="flex justify-end gap-2">
                   <button
                     onClick={() => setDeleteInstTarget(null)}
-                    className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300"
+                    className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
                   >
                     Cancel
                   </button>

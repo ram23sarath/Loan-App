@@ -70,8 +70,8 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
       navItems.unshift(homeItem);
     }
   }
-  const activeLinkClass = "bg-indigo-50 text-indigo-600 font-semibold";
-  const inactiveLinkClass = "text-gray-600 hover:bg-gray-100 hover:text-gray-900";
+  const activeLinkClass = "bg-indigo-50 text-indigo-600 font-semibold dark:bg-indigo-900/30 dark:text-indigo-400";
+  const inactiveLinkClass = "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-dark-muted dark:hover:bg-slate-700 dark:hover:text-dark-text";
 
   const [collapsed, setCollapsed] = React.useState(true);
 
@@ -168,14 +168,14 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
       <div className="h-28 sm:hidden landscape:hidden" aria-hidden="true" />
 
       {/* 1. PORTRAIT MOBILE NAV (Bottom Bar) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 sm:hidden landscape:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 sm:hidden landscape:hidden dark:bg-dark-card dark:border-dark-border">
         <div className="flex justify-around items-center py-2 overflow-x-auto w-full gap-1">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center px-2 py-1.5 min-w-[60px] max-w-[80px] flex-shrink-0 transition-colors duration-200 text-[10px] ${isActive ? "text-indigo-600" : "text-gray-500 hover:text-gray-700"
+                `flex flex-col items-center justify-center px-2 py-1.5 min-w-[60px] max-w-[80px] flex-shrink-0 transition-colors duration-200 text-[10px] ${isActive ? "text-indigo-600 dark:text-indigo-400" : "text-gray-500 hover:text-gray-700 dark:text-dark-muted dark:hover:text-dark-text"
                 }`
               }
             >
@@ -186,7 +186,7 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
           {/* Profile Icon Button with Initials */}
           <button
             onClick={handleProfileClick}
-            className="flex flex-col items-center justify-center px-2 py-1.5 min-w-[60px] max-w-[80px] flex-shrink-0 transition-colors duration-200 text-[10px] text-gray-500 hover:text-gray-700"
+            className="flex flex-col items-center justify-center px-2 py-1.5 min-w-[60px] max-w-[80px] flex-shrink-0 transition-colors duration-200 text-[10px] text-gray-500 hover:text-gray-700 dark:text-dark-muted dark:hover:text-dark-text"
           >
             <div className="w-6 h-6 flex-shrink-0 rounded-full bg-indigo-600 text-white font-semibold flex items-center justify-center text-xs">
               {initials}
@@ -199,13 +199,13 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
       {/* 2. MOBILE LANDSCAPE SIDEBAR (Left Side Floating) */}
       <div
         ref={menuRef}
-        className="fixed top-4 bottom-4 left-4 z-50 w-[96px] bg-white rounded-2xl border border-gray-200 shadow-sm hidden landscape:flex lg:landscape:hidden flex-col justify-between items-center py-4"
+        className="fixed top-4 bottom-4 left-4 z-50 w-[96px] bg-white rounded-2xl border border-gray-200 shadow-sm hidden landscape:flex lg:landscape:hidden flex-col justify-between items-center py-4 dark:bg-dark-card dark:border-dark-border"
       >
         {/* Top: Hamburger */}
         <div className="relative flex justify-center w-full">
           <button
             onClick={() => setShowLandscapeMenu(!showLandscapeMenu)}
-            className={`p-4 rounded-xl transition-colors ${showLandscapeMenu ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:bg-gray-100'}`}
+            className={`p-4 rounded-xl transition-colors ${showLandscapeMenu ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' : 'text-gray-600 hover:bg-gray-100 dark:text-dark-muted dark:hover:bg-slate-700'}`}
           >
             <HamburgerIcon className="w-7 h-7" />
           </button>
@@ -213,9 +213,9 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
           {/* --- CHANGED: 2-COLUMN GRID DROPDOWN --- */}
           {/* w-96 makes it wide enough for 2 columns. max-h-[85vh] prevents overflow. */}
           {showLandscapeMenu && (
-            <div className="absolute top-0 left-full ml-4 w-96 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-left-2 duration-200">
-              <div className="px-3 py-2 border-b border-gray-100 bg-gray-50/50">
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Navigate</span>
+            <div className="absolute top-0 left-full ml-4 w-96 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-left-2 duration-200 dark:bg-dark-card dark:border-dark-border">
+              <div className="px-3 py-2 border-b border-gray-100 bg-gray-50/50 dark:border-dark-border dark:bg-slate-800/50">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-dark-muted">Navigate</span>
               </div>
 
               {/* 2 Column Grid Layout */}
@@ -227,8 +227,8 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
                     onClick={() => setShowLandscapeMenu(false)}
                     className={({ isActive }) =>
                       `flex items-center px-3 py-2 rounded-lg text-sm transition-colors border ${isActive
-                        ? "bg-indigo-50 border-indigo-100 text-indigo-700 font-medium"
-                        : "border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        ? "bg-indigo-50 border-indigo-100 text-indigo-700 font-medium dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-400"
+                        : "border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-dark-muted dark:hover:bg-slate-700 dark:hover:text-dark-text"
                       }`
                     }
                   >
@@ -255,14 +255,14 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
           width: collapsed ? 80 : 256,
           transition: "width 260ms cubic-bezier(0.2, 0.8, 0.2, 1)",
         }}
-        className="fixed left-4 top-4 bottom-4 z-40 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col hidden sm:flex landscape:hidden lg:landscape:flex"
+        className="fixed left-4 top-4 bottom-4 z-40 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col hidden sm:flex landscape:hidden lg:landscape:flex dark:bg-dark-card dark:border-dark-border"
       >
         <div
-          className={`p-4 border-b border-gray-200 flex items-center ${collapsed ? "justify-center" : "justify-between"
+          className={`p-4 border-b border-gray-200 flex items-center dark:border-dark-border ${collapsed ? "justify-center" : "justify-between"
             }`}
         >
           {!collapsed && (
-            <h1 className="text-xl lg:text-2xl font-bold text-gray-800 truncate">
+            <h1 className="text-xl lg:text-2xl font-bold text-gray-800 truncate dark:text-dark-text">
               <span className="hidden lg:inline">Loan Management</span>
               <span className="lg:hidden">Loans</span>
             </h1>
@@ -272,9 +272,9 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
               setCollapsed(!collapsed);
               clearCollapseTimer();
             }}
-            className="p-2 rounded-md hover:bg-gray-100 shrink-0"
+            className="p-2 rounded-md hover:bg-gray-100 shrink-0 dark:hover:bg-slate-700"
           >
-            <HamburgerIcon className="w-5 h-5 text-gray-700" />
+            <HamburgerIcon className="w-5 h-5 text-gray-700 dark:text-dark-muted" />
           </button>
         </div>
 
@@ -305,7 +305,7 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
                   </span>
                   {collapsed && (
                     <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 pointer-events-none hidden group-hover:block">
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap dark:bg-slate-600">
                         {item.label}
                       </div>
                     </div>
@@ -317,7 +317,7 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
 
           <div className="shrink-0">
             {!collapsed && (
-              <div className="p-4 border-t border-gray-200 text-center text-xs text-gray-400">
+              <div className="p-4 border-t border-gray-200 text-center text-xs text-gray-400 dark:border-dark-border dark:text-dark-muted">
                 <p>&copy; {new Date().getFullYear()} I J Reddy Loan App</p>
               </div>
             )}

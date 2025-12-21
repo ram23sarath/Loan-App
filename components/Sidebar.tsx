@@ -111,7 +111,7 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
       }
       // Mobile Landscape
       else if (isMobileLandscape) {
-        const sidebarWidth = 80;
+        const sidebarWidth = 96;
         total = `${sidebarWidth + leftOffset + gap}px`;
       }
 
@@ -165,33 +165,33 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
   return (
     <>
       {/* Spacer for Portrait Mobile Bottom Nav only */}
-      <div className="h-20 sm:hidden landscape:hidden" aria-hidden="true" />
+      <div className="h-28 sm:hidden landscape:hidden" aria-hidden="true" />
 
       {/* 1. PORTRAIT MOBILE NAV (Bottom Bar) */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 sm:hidden landscape:hidden">
-        <div className="flex justify-around items-center py-2 overflow-x-auto w-full">
+        <div className="flex justify-around items-center py-2 overflow-x-auto w-full gap-1">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center px-2 py-1 transition-colors duration-200 whitespace-nowrap text-xs ${isActive ? "text-indigo-600" : "text-gray-500 hover:text-gray-700"
+                `flex flex-col items-center justify-center px-2 py-1.5 min-w-[60px] max-w-[80px] flex-shrink-0 transition-colors duration-200 text-[10px] ${isActive ? "text-indigo-600" : "text-gray-500 hover:text-gray-700"
                 }`
               }
             >
-              <item.icon className="w-5 h-5" />
-              <span className="mt-1">{item.label}</span>
+              <item.icon className="w-6 h-6 flex-shrink-0" />
+              <span className="mt-1 text-center leading-tight break-words hyphens-auto" style={{ wordBreak: 'break-word' }}>{item.label}</span>
             </NavLink>
           ))}
           {/* Profile Icon Button with Initials */}
           <button
             onClick={handleProfileClick}
-            className="flex flex-col items-center justify-center px-2 py-1 transition-colors duration-200 whitespace-nowrap text-xs text-gray-500 hover:text-gray-700"
+            className="flex flex-col items-center justify-center px-2 py-1.5 min-w-[60px] max-w-[80px] flex-shrink-0 transition-colors duration-200 text-[10px] text-gray-500 hover:text-gray-700"
           >
-            <div className="w-5 h-5 rounded-full bg-indigo-600 text-white font-semibold flex items-center justify-center text-[10px]">
+            <div className="w-6 h-6 flex-shrink-0 rounded-full bg-indigo-600 text-white font-semibold flex items-center justify-center text-xs">
               {initials}
             </div>
-            <span className="mt-1">Profile</span>
+            <span className="mt-1 text-center leading-tight break-words hyphens-auto" style={{ wordBreak: 'break-word' }}>Profile</span>
           </button>
         </div>
       </nav>
@@ -199,15 +199,15 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
       {/* 2. MOBILE LANDSCAPE SIDEBAR (Left Side Floating) */}
       <div
         ref={menuRef}
-        className="fixed top-4 bottom-4 left-4 z-50 w-[80px] bg-white rounded-2xl border border-gray-200 shadow-sm hidden landscape:flex lg:landscape:hidden flex-col justify-between items-center py-4"
+        className="fixed top-4 bottom-4 left-4 z-50 w-[96px] bg-white rounded-2xl border border-gray-200 shadow-sm hidden landscape:flex lg:landscape:hidden flex-col justify-between items-center py-4"
       >
         {/* Top: Hamburger */}
-        <div className="relative">
+        <div className="relative flex justify-center w-full">
           <button
             onClick={() => setShowLandscapeMenu(!showLandscapeMenu)}
-            className={`p-3 rounded-xl transition-colors ${showLandscapeMenu ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:bg-gray-100'}`}
+            className={`p-4 rounded-xl transition-colors ${showLandscapeMenu ? 'bg-indigo-50 text-indigo-600' : 'text-gray-600 hover:bg-gray-100'}`}
           >
-            <HamburgerIcon className="w-6 h-6" />
+            <HamburgerIcon className="w-7 h-7" />
           </button>
 
           {/* --- CHANGED: 2-COLUMN GRID DROPDOWN --- */}

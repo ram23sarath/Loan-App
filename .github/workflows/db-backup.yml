@@ -21,9 +21,34 @@ jobs:
       - name: Install pg_dump
         run: sudo apt-get update -y && sudo apt-get install -y postgresql-client
 
-      - name: Dump database
+      - name: Resolve IPv4 for Supabase host
         env:
           DB_URL: ${{ env.DB_URL }}
+        run: |
+          set -euo pipefail
+          HOST=$(python - <<'PY'
+import sys
+from urllib.parse import urlparse
+u = urlparse(sys.argv[1])
+print(u.hostname)
+PY
+"$DB_URL")
+          IPV4=$(getent ahostsv4 "$HOST" | awk 'NR==1 {print $1}')
+          if [ -z "$IPV4" ]; then
+            echo "Failed to resolve IPv4 for $HOST" >&2
+            exit 1
+          fi
+          # Append hostaddr to force IPv4 while keeping host for TLS verification
+          if [[ "$DB_URL" == *\?* ]]; then
+            echo "DB_URL_EFFECTIVE=${DB_URL}&hostaddr=${IPV4}" >> "$GITHUB_ENV"
+          else
+            echo "DB_URL_EFFECTIVE=${DB_URL}?hostaddr=${IPV4}" >> "$GITHUB_ENV"
+          fi
+          echo "Resolved $HOST to $IPV4"
+
+      - name: Dump database
+        env:
+          DB_URL: ${{ env.DB_URL_EFFECTIVE }}
         run: |
           set -euo pipefail
           mkdir -p dumps

@@ -36,6 +36,50 @@ jobs:
           gzip "$FILE"
           echo "Created backup: ${FILE}.gz"
 
+      - name: Convert .dump.gz -> .backup
+        run: |
+          set -euo pipefail
+          # find latest dump.gz
+          F=$(ls -1t dumps/*.dump.gz | head -n1)
+          if [ -z "$F" ]; then
+            echo "No dump.gz found" >&2
+            exit 1
+          fi
+          BASENAME=$(basename "$F" .dump.gz)
+          # produce uncompressed .backup
+          gunzip -c "$F" > "dumps/${BASENAME}.backup"
+          echo "Produced dumps/${BASENAME}.backup"
+
+      - name: Install rclone
+        run: |
+          curl -fsSL https://rclone.org/install.sh | sudo bash
+
+      - name: Configure rclone (service account)
+        env:
+          GDRIVE_SA_JSON: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/rclone-sa
+          echo "$GDRIVE_SA_JSON" > /tmp/rclone-sa/sa.json
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf <<EOF
+[gdrive]
+type = drive
+service_account_file = /tmp/rclone-sa/sa.json
+EOF
+
+      - name: Upload .backup to Google Drive
+        run: |
+          set -euo pipefail
+          # copy the latest .backup to Drive:/Backups/LoanApp
+          B=$(ls -1t dumps/*.backup | head -n1)
+          if [ -z "$B" ]; then
+            echo "No .backup found" >&2
+            exit 1
+          fi
+          rclone copy "$B" gdrive:Backups/LoanApp --drive-chunk-size=64M --transfers=1
+          echo "Uploaded $B to Google Drive:Backups/LoanApp"
+
       - name: Upload artifact (14-day retention)
         uses: actions/upload-artifact@v4
         with:

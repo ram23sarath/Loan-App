@@ -36,6 +36,10 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   const [toolsView, setToolsView] = useState<'menu' | 'createUser' | 'changeUserPassword'>('menu');
   const [toolsLoading, setToolsLoading] = useState(false);
   const [toolsMessage, setToolsMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [backupRunning, setBackupRunning] = useState(false);
+  const [backupStartTs, setBackupStartTs] = useState<number | null>(null);
+  const [backupElapsed, setBackupElapsed] = useState('00:00');
+  const backupTimerRef = React.useRef<number | null>(null);
   const [createUserEmail, setCreateUserEmail] = useState('');
   const [createUserPassword, setCreateUserPassword] = useState('');
   const [createUserName, setCreateUserName] = useState('');
@@ -372,30 +376,60 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                       onClick={async () => {
                         setToolsLoading(true);
                         setToolsMessage(null);
+                        // start local progress UI
+                        setBackupRunning(true);
+                        setBackupStartTs(Date.now());
+                        setBackupElapsed('00:00');
+                        backupTimerRef.current = window.setInterval(() => {
+                          if (!backupStartTs) return;
+                          const diff = Date.now() - backupStartTs;
+                          const s = Math.floor(diff / 1000);
+                          const hh = Math.floor(s / 3600);
+                          const mm = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
+                          const ss = (s % 60).toString().padStart(2, '0');
+                          setBackupElapsed(hh > 0 ? `${hh}:${mm}:${ss}` : `${mm}:${ss}`);
+                        }, 1000) as unknown as number;
                         try {
                           const res = await fetch('/.netlify/functions/trigger-backup', { method: 'POST' });
                           if (!res.ok) {
                             const txt = await res.text();
                             throw new Error(txt || 'Backup failed');
                           }
-                          const blob = await res.blob();
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url;
-                          // attempt to read filename from response headers
-                          const disp = res.headers.get('content-disposition') || '';
-                          const m = /filename\*=UTF-8''(.+)|filename="?([^";]+)"?/.exec(disp);
-                          const filename = m ? (m[1] || m[2]) : `db-backup-${new Date().toISOString()}.zip`;
-                          a.download = decodeURIComponent(filename);
-                          document.body.appendChild(a);
-                          a.click();
-                          a.remove();
-                          URL.revokeObjectURL(url);
-                          setToolsMessage({ type: 'success', text: 'Backup downloaded' });
+                          const contentType = res.headers.get('content-type') || '';
+                          if (contentType.includes('application/json')) {
+                            const data = await res.json();
+                            const msg = data.message || 'Workflow dispatched';
+                            const link = data.runsUrl || data.workflowUrl || null;
+                            setToolsMessage({ type: 'success', text: `${msg}${link ? ' — ' + link : ''}` });
+                          } else {
+                            // assume binary ZIP
+                            const blob = await res.blob();
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            // attempt to read filename from response headers
+                            const disp = res.headers.get('content-disposition') || '';
+                            const m = /filename\*=UTF-8''(.+)|filename="?([^";]+)"?/.exec(disp);
+                            const filename = m ? (m[1] || m[2]) : `db-backup-${new Date().toISOString()}.zip`;
+                            a.download = decodeURIComponent(filename);
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+                            URL.revokeObjectURL(url);
+                              setToolsMessage({ type: 'success', text: 'Backup downloaded' });
+                          }
                         } catch (err: any) {
                           setToolsMessage({ type: 'error', text: err.message || 'Backup failed' });
                         } finally {
-                          setToolsLoading(false);
+                            setToolsLoading(false);
+                            // stop local progress UI
+                            if (backupTimerRef.current) {
+                              clearInterval(backupTimerRef.current as unknown as number);
+                              backupTimerRef.current = null;
+                            }
+                            setBackupRunning(false);
+                            setBackupStartTs(null);
+                            setBackupElapsed('00:00');
                         }
                       }}
                       className="w-full px-4 py-4 md:py-3 bg-green-50 hover:bg-green-100 active:bg-green-200 text-green-700 font-medium rounded-lg transition-colors flex items-center gap-3 dark:bg-green-900/30 dark:hover:bg-green-900/50 dark:text-green-400"
@@ -404,7 +438,18 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                       <span className="text-xl">💾</span>
                       <div className="text-left">
                         <div className="font-semibold text-sm md:text-base">Backup Database</div>
-                        <div className="text-xs text-green-500 dark:text-green-400/70">Trigger a DB backup and download artifact</div>
+                        <div className="text-xs text-green-500 dark:text-green-400/70 flex items-center gap-2">
+                          <span>Trigger a DB backup</span>
+                          {backupRunning && (
+                            <>
+                              <svg className="w-4 h-4 animate-spin text-green-600" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                              </svg>
+                              <span className="text-xs text-green-600">{backupElapsed}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </button>
                   </div>

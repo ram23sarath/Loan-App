@@ -26,13 +26,12 @@ jobs:
           DB_URL: ${{ env.DB_URL }}
         run: |
           set -euo pipefail
-          HOST=$(python - <<'PY'
+          HOST=$(python - "$DB_URL" <<'PY'
 import sys
 from urllib.parse import urlparse
-u = urlparse(sys.argv[1])
-print(u.hostname)
+print(urlparse(sys.argv[1]).hostname)
 PY
-"$DB_URL")
+)
           IPV4=$(getent ahostsv4 "$HOST" | awk 'NR==1 {print $1}')
           if [ -z "$IPV4" ]; then
             echo "Failed to resolve IPv4 for $HOST" >&2

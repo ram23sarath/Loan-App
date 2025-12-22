@@ -1,0 +1,40 @@
+name: Database Backup
+
+on:
+  schedule:
+    # Daily at 03:00 UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Why run a manual backup?'
+        required: false
+        type: string
+
+env:
+  DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install pg_dump
+        run: sudo apt-get update -y && sudo apt-get install -y postgresql-client
+
+      - name: Dump database
+        env:
+          DB_URL: ${{ env.DB_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -p dumps
+          TS=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
+          FILE="dumps/backup-${TS}.dump"
+          pg_dump "$DB_URL" -Fc -f "$FILE"
+          gzip "$FILE"
+
+      - name: Upload artifact (14-day retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: dumps/*.dump.gz
+          retention-days: 14

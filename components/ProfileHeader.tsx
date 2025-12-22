@@ -63,15 +63,15 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   const userEmail = session.user.email || 'User';
   // Get admin name from user metadata
   const adminNameFromMeta = session.user.user_metadata?.name || '';
-  
+
   // Get customer details if scoped user
   const customerDetails = isScopedCustomer && scopedCustomerId
     ? customerMap.get(scopedCustomerId)
     : null;
 
   // Prefer the customer's name for display when scoped; use metadata name for admins; fall back to email
-  const displayName = isScopedCustomer && customerDetails?.name 
-    ? customerDetails.name 
+  const displayName = isScopedCustomer && customerDetails?.name
+    ? customerDetails.name
     : (adminNameFromMeta || userEmail);
   const initials = (displayName && displayName.trim().charAt(0).toUpperCase()) || 'U';
 
@@ -190,7 +190,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
             <MoonIcon className="w-5 h-5 md:w-6 md:h-6" />
           )}
         </motion.button>
-        
+
         {/* Profile Avatar Button */}
         <motion.button
           onClick={() => setShowMenu(!showMenu)}
@@ -372,7 +372,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                         <div className="text-xs text-amber-500 dark:text-amber-400/70">Reset password for any user</div>
                       </div>
                     </button>
-                      <button
+                    <button
                       onClick={async () => {
                         setToolsLoading(true);
                         setToolsMessage(null);
@@ -416,20 +416,20 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                             a.click();
                             a.remove();
                             URL.revokeObjectURL(url);
-                              setToolsMessage({ type: 'success', text: 'Backup downloaded' });
+                            setToolsMessage({ type: 'success', text: 'Backup downloaded' });
                           }
                         } catch (err: any) {
                           setToolsMessage({ type: 'error', text: err.message || 'Backup failed' });
                         } finally {
-                            setToolsLoading(false);
-                            // stop local progress UI
-                            if (backupTimerRef.current) {
-                              clearInterval(backupTimerRef.current as unknown as number);
-                              backupTimerRef.current = null;
-                            }
-                            setBackupRunning(false);
-                            setBackupStartTs(null);
-                            setBackupElapsed('00:00');
+                          setToolsLoading(false);
+                          // stop local progress UI
+                          if (backupTimerRef.current) {
+                            clearInterval(backupTimerRef.current as unknown as number);
+                            backupTimerRef.current = null;
+                          }
+                          setBackupRunning(false);
+                          setBackupStartTs(null);
+                          setBackupElapsed('00:00');
                         }
                       }}
                       className="w-full px-4 py-4 md:py-3 bg-green-50 hover:bg-green-100 active:bg-green-200 text-green-700 font-medium rounded-lg transition-colors flex items-center gap-3 dark:bg-green-900/30 dark:hover:bg-green-900/50 dark:text-green-400"
@@ -483,7 +483,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                         // For admin users: use provided email and password
                         const email = createUserIsAdmin ? createUserEmail : `${createUserPhone}@gmail.com`;
                         const password = createUserIsAdmin ? createUserPassword : createUserPhone;
-                        
+
                         const response = await fetch('/.netlify/functions/create-auth-user', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
@@ -498,8 +498,8 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                         const result = await response.json();
                         if (response.ok && result.success) {
                           const userType = createUserIsAdmin ? 'Admin user' : 'Scoped user';
-                          const loginInfo = createUserIsAdmin 
-                            ? `Email: ${createUserEmail}` 
+                          const loginInfo = createUserIsAdmin
+                            ? `Email: ${createUserEmail}`
                             : `Email: ${createUserPhone}@gmail.com, Password: ${createUserPhone}`;
                           setToolsMessage({ type: 'success', text: `${userType} created successfully!\n${loginInfo}` });
                           setCreateUserEmail('');
@@ -601,8 +601,8 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                         </div>
                         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-900/20 dark:border-blue-800">
                           <p className="text-xs text-blue-700 dark:text-blue-400">
-                            ℹ️ Login credentials will be:<br/>
-                            <strong>Email:</strong> {createUserPhone || '(phone)'}@gmail.com<br/>
+                            ℹ️ Login credentials will be:<br />
+                            <strong>Email:</strong> {createUserPhone || '(phone)'}@gmail.com<br />
                             <strong>Password:</strong> {createUserPhone || '(phone number)'}
                           </p>
                         </div>

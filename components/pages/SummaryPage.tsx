@@ -134,7 +134,7 @@ const SummaryPage = () => {
 
   const dataEntries = isScopedCustomer ? dataEntriesForSummary : contextDataEntries;
 
-  
+
   // Lookup map for O(1) installment access by loan_id
   const localInstallmentsByLoanId = useMemo(() => {
     const map = new Map<string, Installment[]>();
@@ -746,9 +746,9 @@ const SummaryPage = () => {
 
             ? instsInFY.reduce((a, b) =>
 
-                new Date(a.date) > new Date(b.date) ? a : b
+              new Date(a.date) > new Date(b.date) ? a : b
 
-              ).date
+            ).date
 
             : null;
 
@@ -1320,7 +1320,7 @@ const SummaryPage = () => {
 
     <div className="w-full max-w-7xl mx-auto my-8 printable-summary">
 
-      <div className="bg-white rounded-xl shadow-md flex flex-col gap-8 p-6 border border-gray-200/80">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md flex flex-col gap-8 p-6 border border-gray-200/80 dark:border-gray-700">
 
         <div className="flex justify-between items-center mb-2">
 
@@ -1342,7 +1342,7 @@ const SummaryPage = () => {
 
                 onClick={() => setExportMenuOpen(!exportMenuOpen)}
 
-                className="flex items-center gap-2 bg-white border border-gray-300 hover:bg-gray-50 transition-colors p-2 sm:p-3 rounded-lg font-semibold text-sm"
+                className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors p-2 sm:p-3 rounded-lg font-semibold text-sm dark:text-gray-200"
 
                 whileHover={{ scale: 1.02 }}
 
@@ -1368,7 +1368,7 @@ const SummaryPage = () => {
 
                   <div className="fixed inset-0 z-40" onClick={() => setExportMenuOpen(false)} />
 
-                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 py-2">
+                  <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 py-2">
 
                     <button
 
@@ -1458,7 +1458,7 @@ const SummaryPage = () => {
 
           <motion.div
 
-            className="lg:col-span-1 bg-white/60 border border-indigo-100 rounded-2xl p-5 flex flex-col gap-4 shadow-sm h-full"
+            className="lg:col-span-1 bg-white/60 dark:bg-slate-800/60 border border-indigo-100 dark:border-indigo-800 rounded-2xl p-5 flex flex-col gap-4 shadow-sm h-full"
 
             variants={mainCardVariants}
 
@@ -1468,7 +1468,7 @@ const SummaryPage = () => {
 
               <div className="flex items-center gap-3">
 
-                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 font-bold">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold">
 
                   ₹
 
@@ -1476,7 +1476,7 @@ const SummaryPage = () => {
 
                 <div>
 
-                  <div className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                  <div className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
 
                     Income
 
@@ -1498,13 +1498,13 @@ const SummaryPage = () => {
 
             <div className="flex flex-col items-center">
 
-              <span className="text-base font-medium text-indigo-800 uppercase tracking-wider">
+              <span className="text-base font-medium text-indigo-800 dark:text-indigo-300 uppercase tracking-wider">
 
                 Total Collected
 
               </span>
 
-              <span className="text-4xl font-bold text-indigo-700 mt-1">
+              <span className="text-4xl font-bold text-indigo-700 dark:text-indigo-400 mt-1">
 
                 {formatCurrencyIN(totalAllCollected)}
 
@@ -1518,19 +1518,19 @@ const SummaryPage = () => {
 
             <div className="w-full mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
 
-              <div className="p-3 rounded-lg bg-blue-50 border border-blue-100 flex flex-col items-start">
+              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 flex flex-col items-start">
 
-                <div className="text-xs text-gray-600">Loan Balance</div>
+                <div className="text-xs text-gray-600 dark:text-blue-300">Loan Balance</div>
 
-                <div className="text-lg font-bold text-blue-800 mt-1">{formatCurrencyIN(loanBalance)}</div>
+                <div className="text-lg font-bold text-blue-800 dark:text-blue-200 mt-1">{formatCurrencyIN(loanBalance)}</div>
 
               </div>
 
-              <div className="p-3 rounded-lg bg-cyan-50 border border-cyan-100 flex flex-col items-start">
+              <div className="p-3 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-100 dark:border-cyan-800 flex flex-col items-start">
 
-                <div className="text-xs text-gray-600">Subscription Balance</div>
+                <div className="text-xs text-gray-600 dark:text-cyan-300">Subscription Balance</div>
 
-                <div className="text-lg font-bold text-cyan-800 mt-1">{formatCurrencyIN(subscriptionBalance)}</div>
+                <div className="text-lg font-bold text-cyan-800 dark:text-cyan-200 mt-1">{formatCurrencyIN(subscriptionBalance)}</div>
 
               </div>
 
@@ -1550,15 +1550,15 @@ const SummaryPage = () => {
 
                 {/* Loan Recovery (Principal) */}
 
-                <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-blue-50 border border-blue-200">
+                <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
 
-                  <span className="text-sm font-medium text-blue-700">
+                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
 
                     Loan Recovery (Principal)
 
                   </span>
 
-                  <span className="text-lg font-bold text-blue-800">
+                  <span className="text-lg font-bold text-blue-800 dark:text-blue-200">
 
                     {formatCurrencyIN(totalPrincipalRecovered)}
 
@@ -1574,17 +1574,17 @@ const SummaryPage = () => {
 
                     key={card.label}
 
-                    className={`flex items-center justify-between px-4 py-3 rounded-lg bg-${card.color}-50 border border-${card.color}-200`}
+                    className={`flex items-center justify-between px-4 py-3 rounded-lg bg-${card.color}-50 dark:bg-${card.color}-900/20 border border-${card.color}-200 dark:border-${card.color}-800`}
 
                   >
 
-                    <span className={`text-sm font-medium text-${card.color}-700`}>
+                    <span className={`text-sm font-medium text-${card.color}-700 dark:text-${card.color}-300`}>
 
                       {card.label}
 
                     </span>
 
-                    <span className={`text-lg font-bold text-${card.color}-800`}>
+                    <span className={`text-lg font-bold text-${card.color}-800 dark:text-${card.color}-200`}>
 
                       {formatCurrencyIN(card.value)}
 
@@ -1602,17 +1602,17 @@ const SummaryPage = () => {
 
             <div className="w-full mt-4">
 
-              <div className="flex items-center justify-between p-4 rounded-lg bg-cyan-50 border border-cyan-200">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800">
 
                 <div>
 
-                  <div className="text-sm font-medium text-cyan-700">
+                  <div className="text-sm font-medium text-cyan-700 dark:text-cyan-300">
 
                     Subscriptions Balance
 
                   </div>
 
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
 
                     Subscriptions - Subscription Return = Balance
 
@@ -1624,11 +1624,11 @@ const SummaryPage = () => {
 
               <div className="mt-3 space-y-2">
 
-                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-cyan-25/30">
+                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-cyan-25/30 dark:bg-cyan-900/30">
 
-                  <div className="text-sm text-gray-700">Subscriptions</div>
+                  <div className="text-sm text-gray-700 dark:text-gray-300">Subscriptions</div>
 
-                  <div className="text-sm font-medium text-cyan-700">
+                  <div className="text-sm font-medium text-cyan-700 dark:text-cyan-300">
 
                     {formatCurrencyIN(totalSubscriptionCollected)}
 
@@ -1636,15 +1636,15 @@ const SummaryPage = () => {
 
                 </div>
 
-                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-cyan-25/30">
+                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-cyan-25/30 dark:bg-cyan-900/30">
 
-                  <div className="text-sm text-gray-700">
+                  <div className="text-sm text-gray-700 dark:text-gray-300">
 
                     Subscription Return
 
                   </div>
 
-                  <div className="text-sm font-medium text-cyan-700">
+                  <div className="text-sm font-medium text-cyan-700 dark:text-cyan-300">
 
                     {formatCurrencyIN(subscriptionReturnTotal)}
 
@@ -1652,9 +1652,9 @@ const SummaryPage = () => {
 
                 </div>
 
-                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-cyan-25/30">
+                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-cyan-25/30 dark:bg-cyan-900/30">
 
-                  <div className="text-sm font-medium text-cyan-700">
+                  <div className="text-sm font-medium text-cyan-700 dark:text-cyan-300">
 
                     Balance
 
@@ -1662,11 +1662,9 @@ const SummaryPage = () => {
 
                   <div
 
-                    className={`text-sm font-bold ${
+                    className={`text-sm font-bold ${subscriptionBalance < 0 ? "text-red-600 dark:text-red-400" : "text-cyan-800 dark:text-cyan-200"
 
-                      subscriptionBalance < 0 ? "text-red-600" : "text-cyan-800"
-
-                    }`}
+                      }`}
 
                   >
 
@@ -1684,11 +1682,11 @@ const SummaryPage = () => {
 
             <div className="w-full mt-4">
 
-              <div className="flex items-center justify-between p-4 rounded-lg bg-blue-50 border border-blue-200">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
 
                 <div>
 
-                  <div className="text-sm font-medium text-blue-700">
+                  <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
 
                     Loans Summary
 
@@ -1700,11 +1698,11 @@ const SummaryPage = () => {
 
               <div className="mt-3 space-y-2">
 
-                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-blue-25/30">
+                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-blue-25/30 dark:bg-blue-900/30">
 
-                  <div className="text-sm text-gray-700">Total Loans Given</div>
+                  <div className="text-sm text-gray-700 dark:text-gray-300">Total Loans Given</div>
 
-                  <div className="text-sm font-medium text-blue-700">
+                  <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
 
                     {formatCurrencyIN(totalLoansGiven)}
 
@@ -1712,15 +1710,15 @@ const SummaryPage = () => {
 
                 </div>
 
-                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-blue-25/30">
+                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-blue-25/30 dark:bg-blue-900/30">
 
-                  <div className="text-sm text-gray-700">
+                  <div className="text-sm text-gray-700 dark:text-gray-300">
 
                     Loan Recovery (Principal)
 
                   </div>
 
-                  <div className="text-sm font-medium text-blue-700">
+                  <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
 
                     {formatCurrencyIN(totalPrincipalRecovered)}
 
@@ -1728,11 +1726,11 @@ const SummaryPage = () => {
 
                 </div>
 
-                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-blue-25/30 border-t border-blue-100">
+                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-blue-25/30 dark:bg-blue-900/30 border-t border-blue-100 dark:border-blue-800">
 
-                  <div className="text-sm font-medium text-blue-700">Balance</div>
+                  <div className="text-sm font-medium text-blue-700 dark:text-blue-300">Balance</div>
 
-                  <div className={`text-sm font-bold ${loanBalance < 0 ? "text-red-600" : "text-blue-800"}`}>
+                  <div className={`text-sm font-bold ${loanBalance < 0 ? "text-red-600 dark:text-red-400" : "text-blue-800 dark:text-blue-200"}`}>
 
                     {formatCurrencyIN(loanBalance)}
 
@@ -1754,7 +1752,7 @@ const SummaryPage = () => {
 
           <motion.div
 
-            className="lg:col-span-1 bg-white/60 border border-red-100 rounded-2xl p-5 flex flex-col gap-4 shadow-sm h-full"
+            className="lg:col-span-1 bg-white/60 dark:bg-slate-800/60 border border-red-100 dark:border-red-800 rounded-2xl p-5 flex flex-col gap-4 shadow-sm h-full"
 
             variants={mainCardVariants}
 
@@ -1762,7 +1760,7 @@ const SummaryPage = () => {
 
             <div className="w-full flex items-center gap-3 mb-3">
 
-              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-red-100 text-red-700 font-bold">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 font-bold">
 
                 -
 
@@ -1770,7 +1768,7 @@ const SummaryPage = () => {
 
               <div className="text-sm">
 
-                <div className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                <div className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
 
                   Expenses
 
@@ -1790,13 +1788,13 @@ const SummaryPage = () => {
 
             <div className="flex flex-col items-center">
 
-              <span className="text-base font-medium text-blue-800 uppercase tracking-wider">
+              <span className="text-base font-medium text-blue-800 dark:text-blue-300 uppercase tracking-wider">
 
                 Total Loans Given
 
               </span>
 
-              <span className="text-4xl font-bold text-blue-700 mt-1">
+              <span className="text-4xl font-bold text-blue-700 dark:text-blue-400 mt-1">
 
                 {formatCurrencyIN(totalLoansGiven)}
 
@@ -1812,19 +1810,19 @@ const SummaryPage = () => {
 
               <div
 
-                className={`flex items-center justify-between p-4 rounded-lg bg-red-50 border border-red-200`}
+                className={`flex items-center justify-between p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800`}
 
               >
 
                 <div>
 
-                  <div className={`text-sm font-medium text-red-700`}>
+                  <div className={`text-sm font-medium text-red-700 dark:text-red-300`}>
 
                     Expenses
 
                   </div>
 
-                  <div className={`text-lg font-bold text-red-800 mt-1`}>
+                  <div className={`text-lg font-bold text-red-800 dark:text-red-200 mt-1`}>
 
                     {formatCurrencyIN(totalExpenses)}
 
@@ -1846,13 +1844,13 @@ const SummaryPage = () => {
 
                       key={subtype}
 
-                      className="flex items-center justify-between px-3 py-1 rounded-md bg-red-25/30"
+                      className="flex items-center justify-between px-3 py-1 rounded-md bg-red-25/30 dark:bg-red-900/30"
 
                     >
 
-                      <div className="text-sm text-gray-700">{subtype}</div>
+                      <div className="text-sm text-gray-700 dark:text-gray-300">{subtype}</div>
 
-                      <div className="text-sm font-medium text-red-700">
+                      <div className="text-sm font-medium text-red-700 dark:text-red-300">
 
                         {formatCurrencyIN((amt as number) || 0)}
 
@@ -1878,13 +1876,13 @@ const SummaryPage = () => {
 
         {!isScopedCustomer && (
 
-          <div className="w-full mt-6 bg-gray-50 rounded-lg p-4 border border-gray-100">
+          <div className="w-full mt-6 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-gray-700 rounded-lg p-4">
 
             <div className="flex items-center justify-between mb-3">
 
               <div>
 
-                <div className="text-2xl font-bold text-gray-700 uppercase">
+                <div className="text-2xl font-bold text-gray-700 dark:text-gray-200 uppercase">
 
                   Financial Year Summary — FY {fyLabel(selectedFYStart)}
 
@@ -1906,7 +1904,7 @@ const SummaryPage = () => {
 
                   onChange={(e) => setSelectedFYStart(Number(e.target.value))}
 
-                  className="px-5 py-2 rounded border bg-white text-base"
+                  className="px-5 py-2 rounded border bg-white dark:bg-slate-700 text-base dark:text-white dark:border-slate-600"
 
                   style={{ minWidth: 150 }}
 
@@ -1932,183 +1930,183 @@ const SummaryPage = () => {
 
             <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
 
-              <div className="p-4 rounded-xl bg-cyan-50 border border-cyan-200 flex flex-col items-start">
+              <div className="p-4 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 flex flex-col items-start">
 
-              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center justify-between w-full">
 
-                <div className="text-xs text-gray-600">Subscriptions (FY)</div>
+                  <div className="text-xs text-gray-600">Subscriptions (FY)</div>
 
-                <button
+                  <button
 
-                  onClick={() => openBreakdown("subscriptions")}
+                    onClick={() => openBreakdown("subscriptions")}
 
-                  className="text-xs text-indigo-600 underline"
-
-                >
-
-                  Details
-
-                </button>
-
-              </div>
-
-              <div className="text-xl font-bold text-cyan-800 mt-2">
-
-                {formatCurrencyIN(fySubscriptionCollected)}
-
-              </div>
-
-            </div>
-
-            <div className="p-4 rounded-xl bg-green-50 border border-green-200 flex flex-col items-start">
-
-              <div className="flex items-center justify-between w-full">
-
-                <div className="text-xs text-gray-600">Interest (FY)</div>
-
-                <button
-
-                  onClick={() => openBreakdown("interest")}
-
-                  className="text-xs text-indigo-600 underline"
-
-                >
-
-                  Details
-
-                </button>
-
-              </div>
-
-              <div className="text-xl font-bold text-green-800 mt-2">
-
-                {formatCurrencyIN(fyInterestCollected)}
-
-              </div>
-
-            </div>
-
-            <div className="p-4 rounded-xl bg-orange-50 border border-orange-200 flex flex-col items-start">
-
-              <div className="flex items-center justify-between w-full">
-
-                <div className="text-xs text-gray-600">Late Fees (FY)</div>
-
-                <button
-
-                  onClick={() => openBreakdown("latefees")}
-
-                  className="text-xs text-indigo-600 underline"
-
-                >
-
-                  Details
-
-                </button>
-
-              </div>
-
-              <div className="text-xl font-bold text-orange-800 mt-2">
-
-                {formatCurrencyIN(fyLateFees)}
-
-              </div>
-
-            </div>
-
-            <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 flex flex-col items-start">
-
-              <div className="flex items-center justify-between w-full">
-
-                <div className="text-xs text-gray-600">
-
-                  Loan Recovery (Principal) (FY)
-
-                </div>
-
-                <button
-
-                  onClick={() => openBreakdown("principal")}
-
-                  className="text-xs text-indigo-600 underline"
-
-                >
-
-                  Details
-
-                </button>
-
-              </div>
-
-              <div className="text-xl font-bold text-blue-800 mt-2">
-
-                {formatCurrencyIN(fyPrincipalRecovered)}
-
-              </div>
-
-            </div>
-
-            {/* FY Loans Given vs Recovery Balance */}
-
-            <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 flex flex-col items-start">
-
-              <div className="flex items-center justify-between w-full">
-
-                <div className="text-xs text-gray-600">Loans Given (FY)</div>
-
-                <div className="text-xs text-gray-600">Balance (FY)</div>
-
-              </div>
-
-              <div className="mt-2 w-full">
-
-                <div className="flex items-center justify-between">
-
-                  <div className="text-sm text-gray-700">Total Loans Given</div>
-
-                  <div className="text-sm font-medium text-blue-700">
-
-                    {formatCurrencyIN(fyLoansGiven)}
-
-                  </div>
-
-                </div>
-
-                <div className="flex items-center justify-between mt-1">
-
-                  <div className="text-sm text-gray-700">
-
-                    Loan Recovery (Principal)
-
-                  </div>
-
-                  <div className="text-sm font-medium text-blue-700">
-
-                    {formatCurrencyIN(fyPrincipalRecovered)}
-
-                  </div>
-
-                </div>
-
-                <div className="flex items-center justify-between mt-2">
-
-                  <div className="text-sm font-medium text-blue-700">
-
-                    Balance
-
-                  </div>
-
-                  <div
-
-                    className={`text-sm font-bold ${
-
-                      fyLoanBalance < 0 ? "text-red-600" : "text-blue-800"
-
-                    }`}
+                    className="text-xs text-indigo-600 underline"
 
                   >
 
-                    {formatCurrencyIN(fyLoanBalance)}
+                    Details
+
+                  </button>
+
+                </div>
+
+                <div className="text-xl font-bold text-cyan-800 dark:text-cyan-200 mt-2">
+
+                  {formatCurrencyIN(fySubscriptionCollected)}
+
+                </div>
+
+              </div>
+
+              <div className="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 flex flex-col items-start">
+
+                <div className="flex items-center justify-between w-full">
+
+                  <div className="text-xs text-gray-600">Interest (FY)</div>
+
+                  <button
+
+                    onClick={() => openBreakdown("interest")}
+
+                    className="text-xs text-indigo-600 underline"
+
+                  >
+
+                    Details
+
+                  </button>
+
+                </div>
+
+                <div className="text-xl font-bold text-green-800 dark:text-green-200 mt-2">
+
+                  {formatCurrencyIN(fyInterestCollected)}
+
+                </div>
+
+              </div>
+
+              <div className="p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 flex flex-col items-start">
+
+                <div className="flex items-center justify-between w-full">
+
+                  <div className="text-xs text-gray-600">Late Fees (FY)</div>
+
+                  <button
+
+                    onClick={() => openBreakdown("latefees")}
+
+                    className="text-xs text-indigo-600 underline"
+
+                  >
+
+                    Details
+
+                  </button>
+
+                </div>
+
+                <div className="text-xl font-bold text-orange-800 dark:text-orange-200 mt-2">
+
+                  {formatCurrencyIN(fyLateFees)}
+
+                </div>
+
+              </div>
+
+              <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 flex flex-col items-start">
+
+                <div className="flex items-center justify-between w-full">
+
+                  <div className="text-xs text-gray-600">
+
+                    Loan Recovery (Principal) (FY)
+
+                  </div>
+
+                  <button
+
+                    onClick={() => openBreakdown("principal")}
+
+                    className="text-xs text-indigo-600 underline"
+
+                  >
+
+                    Details
+
+                  </button>
+
+                </div>
+
+                <div className="text-xl font-bold text-blue-800 dark:text-blue-200 mt-2">
+
+                  {formatCurrencyIN(fyPrincipalRecovered)}
+
+                </div>
+
+              </div>
+
+              {/* FY Loans Given vs Recovery Balance */}
+
+              <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 flex flex-col items-start">
+
+                <div className="flex items-center justify-between w-full">
+
+                  <div className="text-xs text-gray-600">Loans Given (FY)</div>
+
+                  <div className="text-xs text-gray-600">Balance (FY)</div>
+
+                </div>
+
+                <div className="mt-2 w-full">
+
+                  <div className="flex items-center justify-between">
+
+                    <div className="text-sm text-gray-700">Total Loans Given</div>
+
+                    <div className="text-sm font-medium text-blue-700">
+
+                      {formatCurrencyIN(fyLoansGiven)}
+
+                    </div>
+
+                  </div>
+
+                  <div className="flex items-center justify-between mt-1">
+
+                    <div className="text-sm text-gray-700">
+
+                      Loan Recovery (Principal)
+
+                    </div>
+
+                    <div className="text-sm font-medium text-blue-700">
+
+                      {formatCurrencyIN(fyPrincipalRecovered)}
+
+                    </div>
+
+                  </div>
+
+                  <div className="flex items-center justify-between mt-2">
+
+                    <div className="text-sm font-medium text-blue-700">
+
+                      Balance
+
+                    </div>
+
+                    <div
+
+                      className={`text-sm font-bold ${fyLoanBalance < 0 ? "text-red-600" : "text-blue-800"
+
+                        }`}
+
+                    >
+
+                      {formatCurrencyIN(fyLoanBalance)}
+
+                    </div>
 
                   </div>
 
@@ -2116,33 +2114,31 @@ const SummaryPage = () => {
 
               </div>
 
-            </div>
+              <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 flex flex-col items-start">
 
-            <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200 flex flex-col items-start">
+                <div className="flex items-center justify-between w-full">
 
-              <div className="flex items-center justify-between w-full">
+                  <div className="text-xs text-gray-600">Total (FY)</div>
 
-                <div className="text-xs text-gray-600">Total (FY)</div>
+                  <button
 
-                <button
+                    onClick={() => openBreakdown("total")}
 
-                  onClick={() => openBreakdown("total")}
+                    className="text-xs text-indigo-600 underline"
 
-                  className="text-xs text-indigo-600 underline"
+                  >
 
-                >
+                    Details
 
-                  Details
+                  </button>
 
-                </button>
+                </div>
 
-              </div>
+                <div className="text-xl font-bold text-indigo-800 dark:text-indigo-200 mt-2">
 
-              <div className="text-xl font-bold text-indigo-800 mt-2">
+                  {formatCurrencyIN(
 
-                {formatCurrencyIN(
-
-                  fySubscriptionCollected +
+                    fySubscriptionCollected +
 
                     fyInterestCollected +
 
@@ -2150,77 +2146,77 @@ const SummaryPage = () => {
 
                     fyPrincipalRecovered
 
-                )}
-
-              </div>
-
-            </div>
-
-            {/* FY Expenses card (deductible) */}
-
-            <div className="p-4 rounded-xl bg-red-50 border border-red-200 flex flex-col items-start">
-
-              <div className="flex items-center justify-between w-full">
-
-                <div className="text-xs text-gray-600">
-
-                  FY Expenses (selected subtypes)
+                  )}
 
                 </div>
 
               </div>
 
-              <div className="text-xl font-bold text-red-800 mt-2">
+              {/* FY Expenses card (deductible) */}
 
-                {formatCurrencyIN(fyExpensesTotal)}
+              <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex flex-col items-start">
 
-              </div>
+                <div className="flex items-center justify-between w-full">
 
-              <div className="mt-2 text-sm text-gray-600">Breakdown:</div>
+                  <div className="text-xs text-gray-600">
 
-              <div className="mt-2 space-y-1 w-full">
-
-                {fyExpenseSubtypes.map((s) => (
-
-                  <div
-
-                    key={s}
-
-                    className="flex items-center justify-between text-sm"
-
-                  >
-
-                    <div className="text-gray-700">{s}</div>
-
-                    <div className="font-medium text-red-700">
-
-                      {formatCurrencyIN(fyExpensesBySubtype[s] || 0)}
-
-                    </div>
+                    FY Expenses (selected subtypes)
 
                   </div>
 
-                ))}
+                </div>
+
+                <div className="text-xl font-bold text-red-800 dark:text-red-200 mt-2">
+
+                  {formatCurrencyIN(fyExpensesTotal)}
+
+                </div>
+
+                <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">Breakdown:</div>
+
+                <div className="mt-2 space-y-1 w-full">
+
+                  {fyExpenseSubtypes.map((s) => (
+
+                    <div
+
+                      key={s}
+
+                      className="flex items-center justify-between text-sm"
+
+                    >
+
+                      <div className="text-gray-700">{s}</div>
+
+                      <div className="font-medium text-red-700">
+
+                        {formatCurrencyIN(fyExpensesBySubtype[s] || 0)}
+
+                      </div>
+
+                    </div>
+
+                  ))}
+
+                </div>
 
               </div>
 
-            </div>
+              {/* Net FY Total (collections - expenses) */}
 
-            {/* Net FY Total (collections - expenses) */}
+              <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 flex flex-col items-start">
 
-            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex flex-col items-start">
+                <div className="flex items-center justify-between w-full">
 
-              <div className="flex items-center justify-between w-full">
+                  <div className="text-xs text-gray-600 dark:text-emerald-200">Net Total (FY)</div>
 
-                <div className="text-xs text-gray-600">Net Total (FY)</div>
+                </div>
 
-              </div>
+                <div className="text-xl font-bold text-emerald-800 dark:text-emerald-200 mt-2">
 
-              <div className="text-xl font-bold text-emerald-800 mt-2">
+                  {formatCurrencyIN(
 
-                {formatCurrencyIN(
-
-                  fySubscriptionCollected +
+                    fySubscriptionCollected +
 
                     fyInterestCollected +
 
@@ -2230,11 +2226,11 @@ const SummaryPage = () => {
 
                     fyExpensesTotal
 
-                )}
+                  )}
+
+                </div>
 
               </div>
-
-            </div>
 
             </div>
 

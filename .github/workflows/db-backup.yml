@@ -54,15 +54,21 @@ jobs:
         run: |
           curl -fsSL https://rclone.org/install.sh | sudo bash
 
-      - name: Configure rclone (service account)
+      - name: Configure rclone (OAuth token for personal Drive)
         env:
-          GDRIVE_SA_JSON: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
+          GDRIVE_TOKEN: ${{ secrets.GDRIVE_TOKEN }}
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
         run: |
           set -euo pipefail
-          mkdir -p /tmp/rclone-sa
-          echo "$GDRIVE_SA_JSON" > /tmp/rclone-sa/sa.json
           mkdir -p ~/.config/rclone
-          printf '%s\n' '[gdrive]' 'type = drive' 'service_account_file = /tmp/rclone-sa/sa.json' 'root_folder_id = 1_6w4x5S9OuSh8inDikd7X3py2202csMj' > ~/.config/rclone/rclone.conf
+          # Build rclone config using user OAuth token (not service account)
+          printf '%s\n' '[gdrive]' \
+            'type = drive' \
+            'root_folder_id = 1_6w4x5S9OuSh8inDikd7X3py2202csMj' \
+            "token = ${GDRIVE_TOKEN}" \
+            "client_id = ${GDRIVE_CLIENT_ID}" \
+            "client_secret = ${GDRIVE_CLIENT_SECRET}" > ~/.config/rclone/rclone.conf
 
       - name: Upload .backup to Google Drive
         run: |
@@ -73,8 +79,8 @@ jobs:
             echo "No .backup found" >&2
             exit 1
           fi
-          rclone copy "$B" gdrive:Backups/LoanApp --drive-chunk-size=64M --transfers=1
-          echo "Uploaded $B to Google Drive:Backups/LoanApp"
+          rclone copy "$B" gdrive: --drive-chunk-size=64M --transfers=1
+          echo "Uploaded $B to Google Drive root (configured root_folder_id)"
 
       - name: Upload artifact (14-day retention)
         uses: actions/upload-artifact@v4

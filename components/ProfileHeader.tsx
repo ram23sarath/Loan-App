@@ -368,6 +368,45 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                         <div className="text-xs text-amber-500 dark:text-amber-400/70">Reset password for any user</div>
                       </div>
                     </button>
+                      <button
+                      onClick={async () => {
+                        setToolsLoading(true);
+                        setToolsMessage(null);
+                        try {
+                          const res = await fetch('/.netlify/functions/trigger-backup', { method: 'POST' });
+                          if (!res.ok) {
+                            const txt = await res.text();
+                            throw new Error(txt || 'Backup failed');
+                          }
+                          const blob = await res.blob();
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          // attempt to read filename from response headers
+                          const disp = res.headers.get('content-disposition') || '';
+                          const m = /filename\*=UTF-8''(.+)|filename="?([^";]+)"?/.exec(disp);
+                          const filename = m ? (m[1] || m[2]) : `db-backup-${new Date().toISOString()}.zip`;
+                          a.download = decodeURIComponent(filename);
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          URL.revokeObjectURL(url);
+                          setToolsMessage({ type: 'success', text: 'Backup downloaded' });
+                        } catch (err: any) {
+                          setToolsMessage({ type: 'error', text: err.message || 'Backup failed' });
+                        } finally {
+                          setToolsLoading(false);
+                        }
+                      }}
+                      className="w-full px-4 py-4 md:py-3 bg-green-50 hover:bg-green-100 active:bg-green-200 text-green-700 font-medium rounded-lg transition-colors flex items-center gap-3 dark:bg-green-900/30 dark:hover:bg-green-900/50 dark:text-green-400"
+                      disabled={toolsLoading}
+                    >
+                      <span className="text-xl">💾</span>
+                      <div className="text-left">
+                        <div className="font-semibold text-sm md:text-base">Backup Database</div>
+                        <div className="text-xs text-green-500 dark:text-green-400/70">Trigger a DB backup and download artifact</div>
+                      </div>
+                    </button>
                   </div>
                 </>
               )}

@@ -62,13 +62,16 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ~/.config/rclone
-          # Build rclone config using user OAuth token (not service account)
-          printf '%s\n' '[gdrive]' \
-            'type = drive' \
-            'root_folder_id = 1_6w4x5S9OuSh8inDikd7X3py2202csMj' \
-            "token = ${GDRIVE_TOKEN}" \
-            "client_id = ${GDRIVE_CLIENT_ID}" \
-            "client_secret = ${GDRIVE_CLIENT_SECRET}" > ~/.config/rclone/rclone.conf
+          # Build rclone config using cat heredoc to avoid escaping issues
+          cat > ~/.config/rclone/rclone.conf << 'EOF'
+          [gdrive]
+          type = drive
+          root_folder_id = 1_6w4x5S9OuSh8inDikd7X3py2202csMj
+          EOF
+          # Append secrets separately to avoid heredoc variable expansion issues
+          echo "token = ${GDRIVE_TOKEN}" >> ~/.config/rclone/rclone.conf
+          echo "client_id = ${GDRIVE_CLIENT_ID}" >> ~/.config/rclone/rclone.conf
+          echo "client_secret = ${GDRIVE_CLIENT_SECRET}" >> ~/.config/rclone/rclone.conf
 
       - name: Upload .backup to Google Drive
         run: |

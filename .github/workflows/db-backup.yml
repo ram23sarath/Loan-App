@@ -62,16 +62,18 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ~/.config/rclone
-          # Build rclone config using cat heredoc to avoid escaping issues
-          cat > ~/.config/rclone/rclone.conf << 'EOF'
-          [gdrive]
-          type = drive
-          root_folder_id = 1_6w4x5S9OuSh8inDikd7X3py2202csMj
-          EOF
-          # Append secrets separately to avoid heredoc variable expansion issues
-          echo "token = ${GDRIVE_TOKEN}" >> ~/.config/rclone/rclone.conf
-          echo "client_id = ${GDRIVE_CLIENT_ID}" >> ~/.config/rclone/rclone.conf
-          echo "client_secret = ${GDRIVE_CLIENT_SECRET}" >> ~/.config/rclone/rclone.conf
+          # Write config line by line to avoid any formatting issues
+          {
+            echo "[gdrive]"
+            echo "type = drive"
+            echo "root_folder_id = 1_6w4x5S9OuSh8inDikd7X3py2202csMj"
+            echo "client_id = ${GDRIVE_CLIENT_ID}"
+            echo "client_secret = ${GDRIVE_CLIENT_SECRET}"
+            echo "token = ${GDRIVE_TOKEN}"
+          } > ~/.config/rclone/rclone.conf
+          # Debug: show config structure (secrets will be masked)
+          echo "Config file created. Lines:"
+          wc -l ~/.config/rclone/rclone.conf
 
       - name: Upload .backup to Google Drive
         run: |

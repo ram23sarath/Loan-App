@@ -24,23 +24,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dumps
-          
-          # Extract host and resolve to IPv4
-          HOST=$(echo "$DATABASE_URL" | sed -E 's|.*@([^:/?]+).*|\1|')
-          echo "Resolving host: $HOST"
-          IPV4=$(dig +short A "$HOST" | head -n1)
-          echo "Resolved to IPv4: $IPV4"
-          
-          # Build connection string with hostaddr for IPv4
-          if [[ "$DATABASE_URL" == *\?* ]]; then
-            CONN="${DATABASE_URL}&hostaddr=${IPV4}"
-          else
-            CONN="${DATABASE_URL}?hostaddr=${IPV4}"
-          fi
-          
           TS=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
           FILE="dumps/backup-${TS}.dump"
-          pg_dump "$CONN" -Fc -f "$FILE"
+          pg_dump "$DATABASE_URL" -Fc -f "$FILE"
           gzip "$FILE"
           echo "Created backup: ${FILE}.gz"
 

@@ -25,7 +25,7 @@ exports.handler = async function (event) {
   };
 
   try {
-    // 1) Dispatch workflow
+    // 1) Dispatch workflow and return immediately with a link to the workflow runs view
     const dispatchRes = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/${WORKFLOW_FILE}/dispatches`, {
       method: 'POST',
       headers,
@@ -33,92 +33,18 @@ exports.handler = async function (event) {
     });
     if (![204].includes(dispatchRes.status)) {
       const txt = await dispatchRes.text();
+      console.error('Dispatch failed:', dispatchRes.status, txt);
       return { statusCode: 502, body: `Failed to dispatch workflow: ${dispatchRes.status} ${txt}` };
     }
 
-    // 2) Poll for the latest run for this workflow
-    let runId = null;
-    const maxPoll = 60; // poll up to ~10 minutes (60 * 10s)
-    for (let i = 0; i < maxPoll; i++) {
-      const runsRes = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/${WORKFLOW_FILE}/runs?per_page=5`, { headers });
-      if (!runsRes.ok) {
-        const txt = await runsRes.text();
-        return { statusCode: 502, body: `Failed to list runs: ${runsRes.status} ${txt}` };
-      }
-      const runsJson = await runsRes.json();
-      const runs = runsJson.workflow_runs || [];
-      if (runs.length > 0) {
-        // pick the most recent run
-        const run = runs[0];
-        runId = run.id;
-        // If it's still queued/running, wait until completed
-        if (run.status === 'completed') {
-          if (run.conclusion !== 'success') {
-            return { statusCode: 502, body: `Workflow completed with conclusion: ${run.conclusion}` };
-          }
-          break; // completed successfully
-        }
-      }
-      await sleep(10000); // 10s
-    }
+    const workflowUrl = `https://github.com/${OWNER}/${REPO}/actions/workflows/${WORKFLOW_FILE}`;
+    const runsUrl = `https://github.com/${OWNER}/${REPO}/actions`;
 
-    if (!runId) {
-      return { statusCode: 504, body: 'Timed out waiting for workflow run to appear' };
-    }
-
-    // 3) Poll until run is completed (in case run was found but not completed)
-    for (let i = 0; i < maxPoll; i++) {
-      const runRes = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/actions/runs/${runId}`, { headers });
-      if (!runRes.ok) {
-        const txt = await runRes.text();
-        return { statusCode: 502, body: `Failed to get run: ${runRes.status} ${txt}` };
-      }
-      const runJson = await runRes.json();
-      if (runJson.status === 'completed') {
-        if (runJson.conclusion !== 'success') {
-          return { statusCode: 502, body: `Workflow finished with conclusion: ${runJson.conclusion}` };
-        }
-        break;
-      }
-      await sleep(10000);
-    }
-
-    // 4) Get artifacts
-    const artifactsRes = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/actions/runs/${runId}/artifacts`, { headers });
-    if (!artifactsRes.ok) {
-      const txt = await artifactsRes.text();
-      return { statusCode: 502, body: `Failed to list artifacts: ${artifactsRes.status} ${txt}` };
-    }
-    const artifactsJson = await artifactsRes.json();
-    const artifacts = artifactsJson.artifacts || [];
-    if (artifacts.length === 0) {
-      return { statusCode: 502, body: 'No artifacts produced by workflow' };
-    }
-
-    // choose first artifact
-    const artifact = artifacts[0];
-    const downloadUrl = artifact.archive_download_url; // requires auth
-    const artifactName = artifact.name || 'artifact';
-
-    // 5) Download artifact archive and stream back as zip
-    const artifactRes = await fetch(downloadUrl, { headers });
-    if (!artifactRes.ok) {
-      const txt = await artifactRes.text();
-      return { statusCode: 502, body: `Failed to download artifact: ${artifactRes.status} ${txt}` };
-    }
-
-    const arrayBuffer = await artifactRes.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const body = buffer.toString('base64');
-
+    // Return a short response so the function doesn't time out waiting for long-running workflow
     return {
-      statusCode: 200,
-      isBase64Encoded: true,
-      headers: {
-        'Content-Type': 'application/zip',
-        'Content-Disposition': `attachment; filename="${artifactName}.zip"`
-      },
-      body
+      statusCode: 202,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'Workflow dispatched', workflowUrl, runsUrl })
     };
   } catch (err) {
     return { statusCode: 500, body: String(err) };

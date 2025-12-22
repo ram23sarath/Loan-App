@@ -62,11 +62,7 @@ jobs:
           mkdir -p /tmp/rclone-sa
           echo "$GDRIVE_SA_JSON" > /tmp/rclone-sa/sa.json
           mkdir -p ~/.config/rclone
-          cat > ~/.config/rclone/rclone.conf <<EOF
-[gdrive]
-type = drive
-service_account_file = /tmp/rclone-sa/sa.json
-EOF
+          printf '%s\n' '[gdrive]' 'type = drive' 'service_account_file = /tmp/rclone-sa/sa.json' > ~/.config/rclone/rclone.conf
 
       - name: Upload .backup to Google Drive
         run: |

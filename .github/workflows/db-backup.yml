@@ -21,12 +21,14 @@ jobs:
           wget -qO- https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo tee /etc/apt/trusted.gpg.d/pgdg.asc
           sudo apt-get update -y
           sudo apt-get install -y postgresql-client-17
+          sudo update-alternatives --install /usr/bin/pg_dump pg_dump /usr/lib/postgresql/17/bin/pg_dump 100
 
       - name: Dump database
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
+          pg_dump --version
           mkdir -p dumps
           TS=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
           FILE="dumps/backup-${TS}.dump"

@@ -54,6 +54,7 @@ jobs:
         run: |
           curl -fsSL https://rclone.org/install.sh | sudo bash
 
+      # --- FIXED STEP: Uses 'rclone config create' to handle JSON tokens safely ---
       - name: Configure rclone (OAuth token for personal Drive)
         env:
           GDRIVE_TOKEN: ${{ secrets.GDRIVE_TOKEN }}
@@ -61,31 +62,27 @@ jobs:
           GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
         run: |
           set -euo pipefail
-          mkdir -p ~/.config/rclone
-          # Write config line by line to avoid any formatting issues
-          {
-            echo "[gdrive]"
-            echo "type = drive"
-            echo "root_folder_id = 1_6w4x5S9OuSh8inDikd7X3py2202csMj"
-            echo "client_id = ${GDRIVE_CLIENT_ID}"
-            echo "client_secret = ${GDRIVE_CLIENT_SECRET}"
-            echo "token = ${GDRIVE_TOKEN}"
-          } > ~/.config/rclone/rclone.conf
-          # Debug: show config structure (secrets will be masked)
-          echo "Config file created. Lines:"
-          wc -l ~/.config/rclone/rclone.conf
+          
+          # Safely create the config entry named "gdrive"
+          rclone config create gdrive drive \
+            client_id "$GDRIVE_CLIENT_ID" \
+            client_secret "$GDRIVE_CLIENT_SECRET" \
+            token "$GDRIVE_TOKEN" \
+            root_folder_id "1_6w4x5S9OuSh8inDikd7X3py2202csMj" \
+            --non-interactive
 
       - name: Upload .backup to Google Drive
         run: |
           set -euo pipefail
-          # copy the latest .backup to Drive:/Backups/LoanApp
+          # copy the latest .backup to Drive (configured root_folder_id)
           B=$(ls -1t dumps/*.backup | head -n1)
           if [ -z "$B" ]; then
             echo "No .backup found" >&2
             exit 1
           fi
+          # 'gdrive:' matches the name we created in the previous step
           rclone copy "$B" gdrive: --drive-chunk-size=64M --transfers=1
-          echo "Uploaded $B to Google Drive root (configured root_folder_id)"
+          echo "Uploaded $B to Google Drive root"
 
       - name: Upload artifact (14-day retention)
         uses: actions/upload-artifact@v4

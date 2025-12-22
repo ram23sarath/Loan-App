@@ -339,7 +339,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                                 {onEditLoan && (
                                   <button
                                     onClick={() => onEditLoan(loan)}
-                                    className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700 dark:hover:bg-blue-500"
+                                    className="px-2 py-1 rounded bg-blue-600 dark:bg-blue-500 text-white text-xs hover:bg-blue-700 dark:hover:bg-blue-400"
                                   >
                                     Edit
                                   </button>
@@ -518,7 +518,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                           {onEditLoan && (
                             <button
                               onClick={() => onEditLoan(loan)}
-                              className="flex-1 px-3 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500"
+                              className="flex-1 px-3 py-2 rounded bg-blue-600 dark:bg-blue-500 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-400"
                             >
                               Edit
                             </button>
@@ -579,7 +579,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                             {onEditSubscription && (
                               <button
                                 onClick={() => onEditSubscription(sub)}
-                                className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700 dark:hover:bg-blue-500"
+                                className="px-2 py-1 rounded bg-blue-600 dark:bg-blue-500 text-white text-xs hover:bg-blue-700 dark:hover:bg-blue-400"
                               >
                                 Edit
                               </button>
@@ -628,7 +628,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                         {onEditSubscription && (
                           <button
                             onClick={() => onEditSubscription(sub)}
-                            className="flex-1 px-3 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500"
+                            className="flex-1 px-3 py-2 rounded bg-blue-600 dark:bg-blue-500 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-400"
                           >
                             Edit
                           </button>
@@ -794,7 +794,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   </button>
                   <button
                     onClick={confirmDeleteLoan}
-                    className="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                    className="px-3 py-2 rounded bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
                   >
                     Delete Loan
                   </button>
@@ -833,7 +833,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   </button>
                   <button
                     onClick={confirmDeleteSubscription}
-                    className="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                    className="px-3 py-2 rounded bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
                   >
                     Delete
                   </button>
@@ -872,7 +872,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   </button>
                   <button
                     onClick={confirmDeleteInstallment}
-                    className="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                    className="px-3 py-2 rounded bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
                   >
                     Delete
                   </button>

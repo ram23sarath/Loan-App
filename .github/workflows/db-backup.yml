@@ -11,9 +11,6 @@ on:
         required: false
         type: string
 
-env:
-  DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-
 jobs:
   backup:
     runs-on: ubuntu-latest
@@ -21,34 +18,31 @@ jobs:
       - name: Install pg_dump
         run: sudo apt-get update -y && sudo apt-get install -y postgresql-client
 
-      - name: Resolve IPv4 for Supabase host
-        env:
-          DB_URL: ${{ env.DB_URL }}
-        run: |
-          set -euo pipefail
-          HOST=$(echo "$DB_URL" | sed -E 's|.*@([^:/?]+).*|\1|')
-          IPV4=$(getent ahostsv4 "$HOST" | awk 'NR==1 {print $1}')
-          if [ -z "$IPV4" ]; then
-            echo "Failed to resolve IPv4 for $HOST" >&2
-            exit 1
-          fi
-          if [[ "$DB_URL" == *\?* ]]; then
-            echo "DB_URL_EFFECTIVE=${DB_URL}&hostaddr=${IPV4}" >> "$GITHUB_ENV"
-          else
-            echo "DB_URL_EFFECTIVE=${DB_URL}?hostaddr=${IPV4}" >> "$GITHUB_ENV"
-          fi
-          echo "Resolved $HOST to $IPV4"
-
       - name: Dump database
         env:
-          DB_URL: ${{ env.DB_URL_EFFECTIVE }}
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
           mkdir -p dumps
+          
+          # Extract host and resolve to IPv4
+          HOST=$(echo "$DATABASE_URL" | sed -E 's|.*@([^:/?]+).*|\1|')
+          echo "Resolving host: $HOST"
+          IPV4=$(dig +short A "$HOST" | head -n1)
+          echo "Resolved to IPv4: $IPV4"
+          
+          # Build connection string with hostaddr for IPv4
+          if [[ "$DATABASE_URL" == *\?* ]]; then
+            CONN="${DATABASE_URL}&hostaddr=${IPV4}"
+          else
+            CONN="${DATABASE_URL}?hostaddr=${IPV4}"
+          fi
+          
           TS=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
           FILE="dumps/backup-${TS}.dump"
-          pg_dump "$DB_URL" -Fc -f "$FILE"
+          pg_dump "$CONN" -Fc -f "$FILE"
           gzip "$FILE"
+          echo "Created backup: ${FILE}.gz"
 
       - name: Upload artifact (14-day retention)
         uses: actions/upload-artifact@v4

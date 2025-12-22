@@ -16,13 +16,13 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
     }, [onComplete]);
 
     return (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/90 backdrop-blur-md overflow-hidden">
-            {/* Background elements for premium feel */}
-            <div className="absolute inset-0 bg-gradient-to-r from-indigo-50/50 to-blue-50/50 pointer-events-none" />
+            <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/90 dark:bg-slate-900/90 backdrop-blur-md overflow-hidden">
+                {/* Background elements for premium feel */}
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-50/50 to-blue-50/50 pointer-events-none dark:from-indigo-900/40 dark:to-blue-900/40" />
 
             <div className="relative w-full h-48 flex items-center">
                 {/* Road line */}
-                <div className="absolute bottom-10 left-0 right-0 h-0.5 bg-gray-200/50" />
+                <div className="absolute bottom-10 left-0 right-0 h-0.5 bg-gray-200/50 dark:bg-slate-700/50" />
 
                 <motion.div
                     initial={{ x: '-20vw' }}
@@ -47,13 +47,13 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
                             initial={{ opacity: 0, width: 0 }}
                             animate={{ opacity: [0, 0.5, 0], width: [0, 100, 0] }}
                             transition={{ duration: 3, times: [0, 0.5, 1] }}
-                            className="absolute top-1/2 -left-20 h-1 bg-gradient-to-r from-transparent to-indigo-400 rounded-full blur-sm"
+                            className="absolute top-1/2 -left-20 h-1 bg-gradient-to-r from-transparent to-indigo-400 rounded-full blur-sm dark:to-indigo-300"
                         />
 
                         <img
                             src="/firetruck.png"
                             alt="Fire Truck"
-                            className="w-32 md:w-40 h-auto object-contain drop-shadow-xl filter saturate-110"
+                            className="w-32 md:w-40 h-auto object-contain drop-shadow-xl filter saturate-110 dark:filter dark:brightness-90"
                         />
                     </motion.div>
                 </motion.div>
@@ -65,7 +65,7 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
                 transition={{ delay: 0.2, duration: 0.6 }}
                 className="absolute bottom-20 flex flex-col items-center gap-2"
             >
-                <h3 className="text-xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-600 uppercase">
+                <h3 className="text-xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-600 dark:from-indigo-200 dark:to-blue-200 uppercase">
                     Logging In
                 </h3>
                 <div className="flex gap-1">
@@ -79,7 +79,7 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
                                 delay: i * 0.2,
                                 ease: "easeInOut"
                             }}
-                            className="w-2 h-2 rounded-full bg-indigo-500"
+                            className="w-2 h-2 rounded-full bg-indigo-500 dark:bg-indigo-300"
                         />
                     ))}
                 </div>

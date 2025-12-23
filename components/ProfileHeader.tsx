@@ -6,6 +6,7 @@ import { supabase } from '../src/lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactDOM from 'react-dom';
 import ChangePasswordModal from './modals/ChangePasswordModal';
+import { SquigglyProgress } from './SquigglyProgress';
 
 export interface ProfileHeaderHandle {
   openMenu: () => void;
@@ -957,49 +958,12 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                 <span className="text-gray-600 dark:text-gray-300">Progress</span>
                 <span className="font-semibold text-green-600 dark:text-green-400">{backupProgress}%</span>
               </div>
-              <div className="h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden relative">
-                {/* Determinate progress fill */}
-                <motion.div
-                  className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full absolute left-0 top-0"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${backupProgress}%` }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                  style={{ zIndex: 1 }}
-                />
-                {/* Indeterminate squiggly overlay - only show when in progress */}
-                {backupProgress < 100 && !backupCurrentStep.startsWith('❌') && (
-                  <div className="absolute inset-0 overflow-hidden rounded-full">
-                    <div
-                      className="h-full w-[200%] absolute"
-                      style={{
-                        background: `linear-gradient(
-                          90deg,
-                          transparent 0%,
-                          transparent 25%,
-                          rgba(16, 185, 129, 0.6) 35%,
-                          rgba(52, 211, 153, 0.8) 50%,
-                          rgba(16, 185, 129, 0.6) 65%,
-                          transparent 75%,
-                          transparent 100%
-                        )`,
-                        animation: 'squiggly-slide 1.5s ease-in-out infinite',
-                        zIndex: 2
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-              {/* Inline keyframes for the squiggly animation */}
-              <style>{`
-                @keyframes squiggly-slide {
-                  0% {
-                    transform: translateX(-50%);
-                  }
-                  100% {
-                    transform: translateX(0%);
-                  }
-                }
-              `}</style>
+              <SquigglyProgress
+                value={backupProgress}
+                height={12}
+                color="#10b981"
+                backgroundColor={theme === 'dark' ? '#334155' : '#e2e8f0'}
+              />
             </div>
 
             {/* Current Step */}

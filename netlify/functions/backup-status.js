@@ -26,8 +26,35 @@ exports.handler = async function (event) {
       status: run.status, // queued, in_progress, completed
       conclusion: run.conclusion || null,
       html_url: run.html_url,
-      created_at: run.created_at
+      created_at: run.created_at,
+      progress: 0,
+      currentStep: ''
     };
+
+    // Get jobs to calculate progress
+    if (run.status === 'in_progress' || run.status === 'queued') {
+      try {
+        const jobsRes = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/actions/runs/${run.id}/jobs`, { headers });
+        if (jobsRes.ok) {
+          const jobsData = await jobsRes.json();
+          const job = jobsData.jobs?.[0];
+
+          if (job && job.steps && job.steps.length > 0) {
+            const totalSteps = job.steps.length;
+            const completedSteps = job.steps.filter(s => s.status === 'completed').length;
+            const inProgressStep = job.steps.find(s => s.status === 'in_progress');
+
+            result.progress = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+            result.currentStep = inProgressStep?.name || (completedSteps < totalSteps ? job.steps[completedSteps]?.name : 'Finishing...');
+          }
+        }
+      } catch (e) {
+        // Ignore job fetch errors, progress will stay at 0
+      }
+    } else if (run.status === 'completed') {
+      result.progress = 100;
+      result.currentStep = run.conclusion === 'success' ? 'Completed successfully' : `Finished: ${run.conclusion}`;
+    }
 
     if (run.status === 'completed') {
       const artifactsRes = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/actions/runs/${run.id}/artifacts`, { headers });

@@ -60,12 +60,11 @@ jobs:
           # Create the config directory
           mkdir -p ~/.config/rclone
           
-          # Write the entire config from the secret to the file
-          # This avoids all issues with JSON escaping, token formatting, or client ID mismatches.
-          # The secret RCLONE_CONF should contain the entire [gdrive] section from your local rclone.conf
-          echo "${{ secrets.RCLONE_CONF }}" > ~/.config/rclone/rclone.conf
+          # Decode the Base64 secret to the config file
+          # This ensures exact byte-for-byte restoration of your local config
+          echo "${{ secrets.RCLONE_CONF_BASE64 }}" | base64 -d > ~/.config/rclone/rclone.conf
           
-          # Verify config exists (but don't print it for security)
+          # Verify config exists
           ls -l ~/.config/rclone/rclone.conf
 
       - name: Upload Backup to Google Drive

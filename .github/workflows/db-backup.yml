@@ -77,20 +77,21 @@ jobs:
             exit 1
           fi
           # 'gdrive:' matches the name we created in the previous step
-          rclone copy "$B" gdrive: --drive-chunk-size=64M --transfers=1
-          echo "Uploaded $B to Google Drive root"
+          # Since rclone.conf has root_folder_id, this goes to that specific folder
+          rclone copy "$B" gdrive: --drive-chunk-size=64M --transfers=1 -v
+          echo "Uploaded $B to Google Drive (configured root folder)"
 
       - name: Cleanup old backups (keep last 3)
         run: |
           set -euo pipefail
-          echo "Listing all backup files on Google Drive..."
+          echo "Listing all backup files in configured folder..."
           
-          # List all .backup files, sorted by name (newest first due to timestamp format)
+          # List all .backup files in the root_folder_id path
           FILES=$(rclone lsf gdrive: --files-only | grep '\.backup$' | sort -r)
           
           # Count total files
           TOTAL=$(echo "$FILES" | grep -c '.' || echo "0")
-          echo "Found $TOTAL backup file(s) on Drive"
+          echo "Found $TOTAL backup file(s)"
           
           # Keep only last 3, delete the rest
           KEEP=3

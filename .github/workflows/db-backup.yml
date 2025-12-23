@@ -68,6 +68,9 @@ jobs:
           ls -l ~/.config/rclone/rclone.conf
 
       - name: Upload Backup to Google Drive
+        env:
+          # Force the specific folder ID, overriding config file if needed
+          RCLONE_CONFIG_GDRIVE_ROOT_FOLDER_ID: 1_6w4x5S9OuSh8inDikd7X3py2202csMj
         run: |
           set -euo pipefail
           # copy the latest .backup to Drive (configured root_folder_id)
@@ -82,6 +85,8 @@ jobs:
           echo "Uploaded $B to Google Drive (configured root folder)"
 
       - name: Cleanup old backups (keep last 3)
+        env:
+           RCLONE_CONFIG_GDRIVE_ROOT_FOLDER_ID: 1_6w4x5S9OuSh8inDikd7X3py2202csMj
         run: |
           set -euo pipefail
           echo "Listing all backup files in configured folder..."

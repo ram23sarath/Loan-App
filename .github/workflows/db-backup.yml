@@ -55,23 +55,20 @@ jobs:
           curl -fsSL https://rclone.org/install.sh | sudo bash
 
       # --- FIXED STEP: Uses 'rclone config create' to handle JSON tokens safely ---
-      - name: Configure rclone (OAuth token for personal Drive)
-        env:
-          GDRIVE_TOKEN: ${{ secrets.GDRIVE_TOKEN }}
-          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
-          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+      - name: Setup Rclone Config
         run: |
-          set -euo pipefail
+          # Create the config directory
+          mkdir -p ~/.config/rclone
           
-          # Safely create the config entry named "gdrive"
-          rclone config create gdrive drive \
-            client_id "$GDRIVE_CLIENT_ID" \
-            client_secret "$GDRIVE_CLIENT_SECRET" \
-            token "$GDRIVE_TOKEN" \
-            root_folder_id "1_6w4x5S9OuSh8inDikd7X3py2202csMj" \
-            --non-interactive
+          # Write the entire config from the secret to the file
+          # This avoids all issues with JSON escaping, token formatting, or client ID mismatches.
+          # The secret RCLONE_CONF should contain the entire [gdrive] section from your local rclone.conf
+          echo "${{ secrets.RCLONE_CONF }}" > ~/.config/rclone/rclone.conf
+          
+          # Verify config exists (but don't print it for security)
+          ls -l ~/.config/rclone/rclone.conf
 
-      - name: Upload .backup to Google Drive
+      - name: Upload Backup to Google Drive
         run: |
           set -euo pipefail
           # copy the latest .backup to Drive (configured root_folder_id)

@@ -40,6 +40,11 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   const [backupStartTs, setBackupStartTs] = useState<number | null>(null);
   const [backupElapsed, setBackupElapsed] = useState('00:00');
   const backupTimerRef = React.useRef<number | null>(null);
+  const [backupProgress, setBackupProgress] = useState(0);
+  const [backupCurrentStep, setBackupCurrentStep] = useState('');
+  const [backupRunId, setBackupRunId] = useState<number | null>(null);
+  const [backupCancelling, setBackupCancelling] = useState(false);
+  const backupPollRef = React.useRef<number | null>(null);
   const [createUserEmail, setCreateUserEmail] = useState('');
   const [createUserPassword, setCreateUserPassword] = useState('');
   const [createUserName, setCreateUserName] = useState('');
@@ -374,81 +379,112 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                     </button>
                     <button
                       onClick={async () => {
-                        setToolsLoading(true);
+                        // Close tools modal and show full-screen backup overlay
+                        setShowToolsModal(false);
                         setToolsMessage(null);
-                        // start local progress UI
                         setBackupRunning(true);
-                        setBackupStartTs(Date.now());
+                        setBackupProgress(0);
+                        setBackupCurrentStep('Starting backup...');
+                        setBackupRunId(null);
+                        setBackupCancelling(false);
+                        const startTime = Date.now();
+                        setBackupStartTs(startTime);
                         setBackupElapsed('00:00');
+
+                        // Start elapsed timer
                         backupTimerRef.current = window.setInterval(() => {
-                          if (!backupStartTs) return;
-                          const diff = Date.now() - backupStartTs;
+                          const diff = Date.now() - startTime;
                           const s = Math.floor(diff / 1000);
                           const hh = Math.floor(s / 3600);
                           const mm = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
                           const ss = (s % 60).toString().padStart(2, '0');
                           setBackupElapsed(hh > 0 ? `${hh}:${mm}:${ss}` : `${mm}:${ss}`);
                         }, 1000) as unknown as number;
+
                         try {
+                          // Trigger the workflow
                           const res = await fetch('/.netlify/functions/trigger-backup', { method: 'POST' });
                           if (!res.ok) {
                             const txt = await res.text();
-                            throw new Error(txt || 'Backup failed');
+                            throw new Error(txt || 'Failed to start backup');
                           }
-                          const contentType = res.headers.get('content-type') || '';
-                          if (contentType.includes('application/json')) {
-                            const data = await res.json();
-                            const msg = data.message || 'Workflow dispatched';
-                            const link = data.runsUrl || data.workflowUrl || null;
-                            setToolsMessage({ type: 'success', text: `${msg}${link ? ' — ' + link : ''}` });
-                          } else {
-                            // assume binary ZIP
-                            const blob = await res.blob();
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            // attempt to read filename from response headers
-                            const disp = res.headers.get('content-disposition') || '';
-                            const m = /filename\*=UTF-8''(.+)|filename="?([^";]+)"?/.exec(disp);
-                            const filename = m ? (m[1] || m[2]) : `db-backup-${new Date().toISOString()}.zip`;
-                            a.download = decodeURIComponent(filename);
-                            document.body.appendChild(a);
-                            a.click();
-                            a.remove();
-                            URL.revokeObjectURL(url);
-                            setToolsMessage({ type: 'success', text: 'Backup downloaded' });
-                          }
+
+                          setBackupCurrentStep('Workflow dispatched, waiting for run to start...');
+
+                          // Poll for status
+                          const pollStatus = async () => {
+                            try {
+                              const statusRes = await fetch('/.netlify/functions/backup-status');
+                              if (statusRes.ok) {
+                                const data = await statusRes.json();
+                                if (data.found) {
+                                  setBackupRunId(data.id);
+                                  setBackupProgress(data.progress || 0);
+                                  setBackupCurrentStep(data.currentStep || `Status: ${data.status}`);
+
+                                  if (data.status === 'completed') {
+                                    // Stop polling
+                                    if (backupPollRef.current) {
+                                      clearInterval(backupPollRef.current);
+                                      backupPollRef.current = null;
+                                    }
+                                    if (backupTimerRef.current) {
+                                      clearInterval(backupTimerRef.current);
+                                      backupTimerRef.current = null;
+                                    }
+                                    setBackupProgress(100);
+                                    if (data.conclusion === 'success') {
+                                      setBackupCurrentStep('✅ Backup completed successfully!');
+                                    } else if (data.conclusion === 'cancelled') {
+                                      setBackupCurrentStep('❌ Backup was cancelled');
+                                    } else {
+                                      setBackupCurrentStep(`⚠️ Backup finished: ${data.conclusion}`);
+                                    }
+                                    // Auto-close after 3 seconds
+                                    setTimeout(() => {
+                                      setBackupRunning(false);
+                                      setBackupStartTs(null);
+                                      setBackupElapsed('00:00');
+                                    }, 3000);
+                                  }
+                                }
+                              }
+                            } catch (e) {
+                              console.error('Status poll error:', e);
+                            }
+                          };
+
+                          // Initial delay before first poll (give workflow time to start)
+                          await new Promise(r => setTimeout(r, 3000));
+                          await pollStatus();
+
+                          // Continue polling every 5 seconds
+                          backupPollRef.current = window.setInterval(pollStatus, 5000) as unknown as number;
+
                         } catch (err: any) {
-                          setToolsMessage({ type: 'error', text: err.message || 'Backup failed' });
-                        } finally {
-                          setToolsLoading(false);
-                          // stop local progress UI
+                          setBackupCurrentStep(`❌ Error: ${err.message || 'Backup failed'}`);
+                          setBackupProgress(0);
+                          // Stop timers
                           if (backupTimerRef.current) {
-                            clearInterval(backupTimerRef.current as unknown as number);
+                            clearInterval(backupTimerRef.current);
                             backupTimerRef.current = null;
                           }
-                          setBackupRunning(false);
-                          setBackupStartTs(null);
-                          setBackupElapsed('00:00');
+                          // Auto-close after 3 seconds
+                          setTimeout(() => {
+                            setBackupRunning(false);
+                            setBackupStartTs(null);
+                            setBackupElapsed('00:00');
+                          }, 3000);
                         }
                       }}
                       className="w-full px-4 py-4 md:py-3 bg-green-50 hover:bg-green-100 active:bg-green-200 text-green-700 font-medium rounded-lg transition-colors flex items-center gap-3 dark:bg-green-900/30 dark:hover:bg-green-900/50 dark:text-green-400"
-                      disabled={toolsLoading}
+                      disabled={toolsLoading || backupRunning}
                     >
                       <span className="text-xl">💾</span>
                       <div className="text-left">
                         <div className="font-semibold text-sm md:text-base">Backup Database</div>
-                        <div className="text-xs text-green-500 dark:text-green-400/70 flex items-center gap-2">
-                          <span>Trigger a DB backup</span>
-                          {backupRunning && (
-                            <>
-                              <svg className="w-4 h-4 animate-spin text-green-600" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                              </svg>
-                              <span className="text-xs text-green-600">{backupElapsed}</span>
-                            </>
-                          )}
+                        <div className="text-xs text-green-500 dark:text-green-400/70">
+                          Trigger a DB backup to Google Drive
                         </div>
                       </div>
                     </button>
@@ -889,6 +925,132 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Full-screen Backup Progress Overlay */}
+      {backupRunning && typeof document !== 'undefined' && ReactDOM.createPortal(
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 md:p-8 w-[90%] max-w-md mx-4"
+          >
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
+                <span className="text-2xl">💾</span>
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-800 dark:text-white">Database Backup</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Elapsed: {backupElapsed}</p>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="mb-4">
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-gray-600 dark:text-gray-300">Progress</span>
+                <span className="font-semibold text-green-600 dark:text-green-400">{backupProgress}%</span>
+              </div>
+              <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${backupProgress}%` }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                />
+              </div>
+            </div>
+
+            {/* Current Step */}
+            <div className="mb-6 p-3 bg-gray-50 dark:bg-slate-700/50 rounded-lg">
+              <p className="text-sm text-gray-600 dark:text-gray-300 flex items-center gap-2">
+                {backupProgress < 100 && !backupCurrentStep.startsWith('❌') && !backupCurrentStep.startsWith('✅') && (
+                  <svg className="w-4 h-4 animate-spin text-green-600" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                  </svg>
+                )}
+                <span className="truncate">{backupCurrentStep}</span>
+              </p>
+            </div>
+
+            {/* Cancel Button */}
+            {backupProgress < 100 && !backupCurrentStep.startsWith('❌') && (
+              <button
+                onClick={async () => {
+                  if (!backupRunId || backupCancelling) return;
+                  setBackupCancelling(true);
+                  setBackupCurrentStep('Cancelling backup...');
+                  try {
+                    const res = await fetch('/.netlify/functions/cancel-backup', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ runId: backupRunId })
+                    });
+                    if (res.ok) {
+                      setBackupCurrentStep('❌ Backup cancelled');
+                    } else {
+                      const data = await res.json();
+                      setBackupCurrentStep(`⚠️ Cancel failed: ${data.error || 'Unknown error'}`);
+                    }
+                  } catch (e: any) {
+                    setBackupCurrentStep(`⚠️ Cancel failed: ${e.message}`);
+                  } finally {
+                    // Stop polling
+                    if (backupPollRef.current) {
+                      clearInterval(backupPollRef.current);
+                      backupPollRef.current = null;
+                    }
+                    if (backupTimerRef.current) {
+                      clearInterval(backupTimerRef.current);
+                      backupTimerRef.current = null;
+                    }
+                    setBackupCancelling(false);
+                    // Close after 2 seconds
+                    setTimeout(() => {
+                      setBackupRunning(false);
+                      setBackupStartTs(null);
+                      setBackupElapsed('00:00');
+                    }, 2000);
+                  }
+                }}
+                disabled={backupCancelling || !backupRunId}
+                className="w-full px-4 py-3 bg-red-100 hover:bg-red-200 active:bg-red-300 text-red-700 font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400"
+              >
+                {backupCancelling ? 'Cancelling...' : 'Cancel Backup'}
+              </button>
+            )}
+
+            {/* Close Button (shown when complete or error) */}
+            {(backupProgress >= 100 || backupCurrentStep.startsWith('❌')) && (
+              <button
+                onClick={() => {
+                  if (backupPollRef.current) {
+                    clearInterval(backupPollRef.current);
+                    backupPollRef.current = null;
+                  }
+                  if (backupTimerRef.current) {
+                    clearInterval(backupTimerRef.current);
+                    backupTimerRef.current = null;
+                  }
+                  setBackupRunning(false);
+                  setBackupStartTs(null);
+                  setBackupElapsed('00:00');
+                }}
+                className="w-full px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition-colors dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-white"
+              >
+                Close
+              </button>
+            )}
+          </motion.div>
+        </motion.div>,
+        document.body
+      )}
     </>
   );
 });

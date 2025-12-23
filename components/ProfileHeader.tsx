@@ -45,6 +45,8 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   const [backupRunId, setBackupRunId] = useState<number | null>(null);
   const [backupCancelling, setBackupCancelling] = useState(false);
   const [backupGitHubUrl, setBackupGitHubUrl] = useState<string | null>(null);
+  const [backupArtifacts, setBackupArtifacts] = useState<Array<{ id: number; name: string }>>([]);
+  const [backupDownloading, setBackupDownloading] = useState(false);
   const backupPollRef = React.useRef<number | null>(null);
   const [createUserEmail, setCreateUserEmail] = useState('');
   const [createUserPassword, setCreateUserPassword] = useState('');
@@ -389,6 +391,8 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                         setBackupRunId(null);
                         setBackupCancelling(false);
                         setBackupGitHubUrl(null);
+                        setBackupArtifacts([]);
+                        setBackupDownloading(false);
                         const startTime = Date.now();
                         setBackupStartTs(startTime);
                         setBackupElapsed('00:00');
@@ -440,6 +444,10 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                                     setBackupProgress(100);
                                     if (data.conclusion === 'success') {
                                       setBackupCurrentStep('✅ Backup completed successfully!');
+                                      // Store artifacts for download
+                                      if (data.artifacts && data.artifacts.length > 0) {
+                                        setBackupArtifacts(data.artifacts);
+                                      }
                                     } else if (data.conclusion === 'cancelled') {
                                       setBackupCurrentStep('❌ Backup was cancelled');
                                     } else {
@@ -943,20 +951,55 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
               </div>
             </div>
 
-            {/* Progress Bar */}
+            {/* Progress Bar - Material Design 3 Style */}
             <div className="mb-4">
               <div className="flex justify-between text-sm mb-2">
                 <span className="text-gray-600 dark:text-gray-300">Progress</span>
                 <span className="font-semibold text-green-600 dark:text-green-400">{backupProgress}%</span>
               </div>
-              <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
+              <div className="h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden relative">
+                {/* Determinate progress fill */}
                 <motion.div
-                  className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full"
+                  className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full absolute left-0 top-0"
                   initial={{ width: 0 }}
                   animate={{ width: `${backupProgress}%` }}
                   transition={{ duration: 0.5, ease: 'easeOut' }}
+                  style={{ zIndex: 1 }}
                 />
+                {/* Indeterminate squiggly overlay - only show when in progress */}
+                {backupProgress < 100 && !backupCurrentStep.startsWith('❌') && (
+                  <div className="absolute inset-0 overflow-hidden rounded-full">
+                    <div
+                      className="h-full w-[200%] absolute"
+                      style={{
+                        background: `linear-gradient(
+                          90deg,
+                          transparent 0%,
+                          transparent 25%,
+                          rgba(16, 185, 129, 0.6) 35%,
+                          rgba(52, 211, 153, 0.8) 50%,
+                          rgba(16, 185, 129, 0.6) 65%,
+                          transparent 75%,
+                          transparent 100%
+                        )`,
+                        animation: 'squiggly-slide 1.5s ease-in-out infinite',
+                        zIndex: 2
+                      }}
+                    />
+                  </div>
+                )}
               </div>
+              {/* Inline keyframes for the squiggly animation */}
+              <style>{`
+                @keyframes squiggly-slide {
+                  0% {
+                    transform: translateX(-50%);
+                  }
+                  100% {
+                    transform: translateX(0%);
+                  }
+                }
+              `}</style>
             </div>
 
             {/* Current Step */}
@@ -1022,7 +1065,62 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
             {/* View on GitHub and Close Buttons (shown when complete or error) */}
             {(backupProgress >= 100 || backupCurrentStep.startsWith('❌')) && (
               <div className="space-y-3">
-                {/* View on GitHub link - only show on success */}
+                {/* Download Backup button - only show on success with artifacts */}
+                {backupCurrentStep.startsWith('✅') && backupArtifacts.length > 0 && backupRunId && (
+                  <button
+                    onClick={async () => {
+                      if (backupDownloading) return;
+                      setBackupDownloading(true);
+                      try {
+                        const artifact = backupArtifacts[0]; // Get the first artifact
+                        const res = await fetch('/.netlify/functions/download-artifact', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ run_id: backupRunId, artifact_id: artifact.id })
+                        });
+                        if (!res.ok) {
+                          const txt = await res.text();
+                          throw new Error(txt || 'Download failed');
+                        }
+                        // Download the blob
+                        const blob = await res.blob();
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${artifact.name}.zip`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        URL.revokeObjectURL(url);
+                      } catch (err: any) {
+                        console.error('Download error:', err);
+                        alert(`Download failed: ${err.message}`);
+                      } finally {
+                        setBackupDownloading(false);
+                      }
+                    }}
+                    disabled={backupDownloading}
+                    className="w-full px-4 py-3 bg-green-100 hover:bg-green-200 active:bg-green-300 text-green-700 font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50 dark:bg-green-900/30 dark:hover:bg-green-900/50 dark:text-green-400"
+                  >
+                    {backupDownloading ? (
+                      <>
+                        <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                        </svg>
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download Backup
+                      </>
+                    )}
+                  </button>
+                )}
+                {/* View on GitHub link - fallback */}
                 {backupGitHubUrl && backupCurrentStep.startsWith('✅') && (
                   <a
                     href={backupGitHubUrl}

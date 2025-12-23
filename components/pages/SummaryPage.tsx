@@ -1934,7 +1934,7 @@ const SummaryPage = () => {
 
                 <div className="flex items-center justify-between w-full">
 
-                  <div className="text-xs text-gray-600">Subscriptions (FY)</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-200">Subscriptions (FY)</div>
 
                   <button
 
@@ -1962,7 +1962,7 @@ const SummaryPage = () => {
 
                 <div className="flex items-center justify-between w-full">
 
-                  <div className="text-xs text-gray-600">Interest (FY)</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-200">Interest (FY)</div>
 
                   <button
 
@@ -1990,7 +1990,7 @@ const SummaryPage = () => {
 
                 <div className="flex items-center justify-between w-full">
 
-                  <div className="text-xs text-gray-600">Late Fees (FY)</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-200">Late Fees (FY)</div>
 
                   <button
 
@@ -2018,7 +2018,7 @@ const SummaryPage = () => {
 
                 <div className="flex items-center justify-between w-full">
 
-                  <div className="text-xs text-gray-600">
+                  <div className="text-xs text-gray-600 dark:text-gray-200">
 
                     Loan Recovery (Principal) (FY)
 
@@ -2052,9 +2052,9 @@ const SummaryPage = () => {
 
                 <div className="flex items-center justify-between w-full">
 
-                  <div className="text-xs text-gray-600">Loans Given (FY)</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-200">Loans Given (FY)</div>
 
-                  <div className="text-xs text-gray-600">Balance (FY)</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-200">Balance (FY)</div>
 
                 </div>
 
@@ -2062,9 +2062,9 @@ const SummaryPage = () => {
 
                   <div className="flex items-center justify-between">
 
-                    <div className="text-sm text-gray-700">Total Loans Given</div>
+                    <div className="text-sm text-gray-700 dark:text-gray-200">Total Loans Given</div>
 
-                    <div className="text-sm font-medium text-blue-700">
+                    <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
 
                       {formatCurrencyIN(fyLoansGiven)}
 
@@ -2074,13 +2074,13 @@ const SummaryPage = () => {
 
                   <div className="flex items-center justify-between mt-1">
 
-                    <div className="text-sm text-gray-700">
+                    <div className="text-sm text-gray-700 dark:text-gray-200">
 
                       Loan Recovery (Principal)
 
                     </div>
 
-                    <div className="text-sm font-medium text-blue-700">
+                    <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
 
                       {formatCurrencyIN(fyPrincipalRecovered)}
 
@@ -2090,7 +2090,7 @@ const SummaryPage = () => {
 
                   <div className="flex items-center justify-between mt-2">
 
-                    <div className="text-sm font-medium text-blue-700">
+                    <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
 
                       Balance
 
@@ -2098,7 +2098,7 @@ const SummaryPage = () => {
 
                     <div
 
-                      className={`text-sm font-bold ${fyLoanBalance < 0 ? "text-red-600" : "text-blue-800"
+                      className={`text-sm font-bold ${fyLoanBalance < 0 ? "text-red-600 dark:text-red-400" : "text-blue-800 dark:text-blue-200"
 
                         }`}
 
@@ -2118,7 +2118,7 @@ const SummaryPage = () => {
 
                 <div className="flex items-center justify-between w-full">
 
-                  <div className="text-xs text-gray-600">Total (FY)</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-200">Total (FY)</div>
 
                   <button
 
@@ -2158,7 +2158,7 @@ const SummaryPage = () => {
 
                 <div className="flex items-center justify-between w-full">
 
-                  <div className="text-xs text-gray-600">
+                  <div className="text-xs text-gray-600 dark:text-gray-200">
 
                     FY Expenses (selected subtypes)
 
@@ -2186,9 +2186,9 @@ const SummaryPage = () => {
 
                     >
 
-                      <div className="text-gray-700">{s}</div>
+                      <div className="text-gray-700 dark:text-gray-200">{s}</div>
 
-                      <div className="font-medium text-red-700">
+                      <div className="font-medium text-red-700 dark:text-red-300">
 
                         {formatCurrencyIN(fyExpensesBySubtype[s] || 0)}
 

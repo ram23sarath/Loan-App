@@ -1,73 +1,134 @@
 import React from "react";
+import { motion } from "framer-motion";
 
 interface SquigglyProgressProps {
     value: number; // 0–100
     height?: number;
-    color?: string;
-    backgroundColor?: string;
+    color?: string; // Progress color
+    trackColor?: string; // Background track color
 }
 
 export const SquigglyProgress: React.FC<SquigglyProgressProps> = ({
     value,
-    height = 12,
-    color = "#10b981", // Tailwind green-500
-    backgroundColor = "#e5e7eb", // Tailwind gray-200
+    height = 16,
+    color = "#3b82f6", // Tailwind blue-500
+    trackColor = "#e2e8f0", // Tailwind slate-200
 }) => {
-    const width = 100;
-    // Ensure value is between 0 and 100
+    // Ensure value is 0-100
     const safeValue = Math.max(0, Math.min(value, 100));
 
-    // Calculate dash array: [filled_length, gap_length]
-    // We want the filled part to be proportional to value
-    const dashArray = `${safeValue}, ${width}`;
+    // Visual parameters
+    const strokeWidth = 3;
+    const amplitude = height / 2 - strokeWidth;
+    const wavelength = 20; // Width of one wave cycle
+
+    // Generate a seamless wave path
+    // We need enough width to cover 100% + some buffer for animation
+    // Let's create a path that is conceptually 200 units wide (0-200) viewbox
+    // so we can animate it sliding.
+    // Actually, we can use a pattern or just drawing a long path.
+    // M 0 0 Q 5 -10 10 0 T 20 0 T 30 0 ...
+    // Center Y is height/2.
+    const centerY = height / 2;
+    const cycles = 20; // Number of cycles to draw
+
+    let path = `M 0 ${centerY}`;
+    for (let i = 0; i < cycles; i++) {
+        const startX = i * wavelength;
+        // Q control-x control-y end-x end-y
+        // We do a full sine wave as two quadratic curves or one smooth cubic?
+        // M 0 0 Q 5 -10 10 0 T 20 0
+        // This creates one period (0 to 20).
+        const midX = startX + (wavelength / 2);
+        const endX = startX + wavelength;
+
+        // First half (up)
+        // path += ` Q ${startX + wavelength/4} ${centerY - amplitude} ${midX} ${centerY}`;
+        // Second half (down) - T command automatically reflects control point for smooth join
+        // path += ` T ${endX} ${centerY}`;
+
+        // Simpler: Just standard bezier sine approximation
+        // One Q command per half-cycle? 
+        // Q cp1x cp1y x y
+        path += ` Q ${startX + wavelength / 4} ${centerY - amplitude} ${midX} ${centerY}`;
+        path += ` T ${endX} ${centerY}`;
+    }
+
+    // To make it responsive without stretching the wave shape weirdly,
+    // we can't rely on preserving aspect ratio if width is percentage.
+    // But for a progress bar, stretching usually looks okay if it's just horizontal.
+    // Let's rely on preserving aspectRatio="none" so it fits the container, 
+    // but generate enough points so it looks smooth.
 
     return (
-        <div style={{ width: "100%" }}>
-            <style>
-                {`
-          @keyframes wave {
-            0% { stroke-dashoffset: 0; }
-            100% { stroke-dashoffset: -40; }
-          }
-        `}
-            </style>
-            <svg
-                viewBox={`0 0 ${width} ${height}`}
-                width="100%"
-                height={height}
-                preserveAspectRatio="none"
-                aria-label={`Progress ${value}%`}
-                role="progressbar"
-                style={{ display: 'block', overflow: 'visible' }}
-            >
-                {/* Background Path */}
-                <path
-                    d={`M 0 ${height / 2}
-              Q 5 0 10 ${height / 2}
-              T ${width} ${height / 2}`}
-                    fill="none"
-                    stroke={backgroundColor}
-                    strokeWidth={height}
-                    strokeLinecap="round"
-                    className="dark:stroke-slate-700" // Support dark mode via class if possible, or pass prop
-                />
+        <div className="w-full relative overflow-hidden rounded-full" style={{ height }}>
+            <style>{`
+        @keyframes squiggly-scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-${wavelength * 2}px); } /* Scroll 2 cycles? */
+        }
+      `}</style>
 
-                {/* Foreground (Progress) Path */}
-                <path
-                    d={`M 0 ${height / 2}
-              Q 5 0 10 ${height / 2}
-              T ${width} ${height / 2}`}
-                    fill="none"
-                    stroke={color}
-                    strokeWidth={height}
-                    strokeLinecap="round"
-                    strokeDasharray={dashArray}
+            {/* Container for the waves */}
+            {/* We use a viewbox that allows the path to be drawn. 
+          To support infinite scrolling, we render the path nicely. */}
+
+            {/* OPTION: We assume the SVG coordinates map approximately to pixels for the wavelength to look "professional" 
+          Let's set viewBox width to match the cycles * wavelength */}
+
+            {/* Background Track */}
+            <div className="absolute inset-0 w-full h-full">
+                <svg
+                    className="w-full h-full"
+                    viewBox={`0 0 ${cycles * wavelength} ${height}`}
+                    preserveAspectRatio="none"
+                >
+                    <path
+                        d={path}
+                        fill="none"
+                        stroke={trackColor}
+                        strokeWidth={strokeWidth}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        vectorEffect="non-scaling-stroke" // Keeps stroke width constant even if stretched
+                    />
+                </svg>
+            </div>
+
+            {/* Foreground Progress (Blue) */}
+            {/* We clip this container to the progress percentage */}
+            <motion.div
+                className="absolute inset-0 w-full h-full"
+                initial={{ clipPath: `inset(0 100% 0 0)` }}
+                animate={{ clipPath: `inset(0 ${100 - safeValue}% 0 0)` }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+            >
+                {/* Inner container that slides for animation */}
+                {/* Only animate if in progress */}
+                <div
                     style={{
-                        transition: "stroke-dasharray 0.4s ease",
-                        animation: value < 100 ? "wave 1.5s linear infinite" : "none"
+                        width: '120%', // Make it wider so we can slide
+                        height: '100%',
+                        animation: safeValue < 100 ? 'squiggly-scroll 2s linear infinite' : 'none'
                     }}
-                />
-            </svg>
+                >
+                    <svg
+                        className="w-full h-full"
+                        viewBox={`0 0 ${cycles * wavelength} ${height}`}
+                        preserveAspectRatio="none"
+                    >
+                        <path
+                            d={path}
+                            fill="none"
+                            stroke={color}
+                            strokeWidth={strokeWidth}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            vectorEffect="non-scaling-stroke"
+                        />
+                    </svg>
+                </div>
+            </motion.div>
         </div>
     );
 };

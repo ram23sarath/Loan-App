@@ -440,12 +440,6 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                                     } else {
                                       setBackupCurrentStep(`⚠️ Backup finished: ${data.conclusion}`);
                                     }
-                                    // Auto-close after 3 seconds
-                                    setTimeout(() => {
-                                      setBackupRunning(false);
-                                      setBackupStartTs(null);
-                                      setBackupElapsed('00:00');
-                                    }, 3000);
                                   }
                                 }
                               }
@@ -469,12 +463,6 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                             clearInterval(backupTimerRef.current);
                             backupTimerRef.current = null;
                           }
-                          // Auto-close after 3 seconds
-                          setTimeout(() => {
-                            setBackupRunning(false);
-                            setBackupStartTs(null);
-                            setBackupElapsed('00:00');
-                          }, 3000);
                         }
                       }}
                       className="w-full px-4 py-4 md:py-3 bg-green-50 hover:bg-green-100 active:bg-green-200 text-green-700 font-medium rounded-lg transition-colors flex items-center gap-3 dark:bg-green-900/30 dark:hover:bg-green-900/50 dark:text-green-400"

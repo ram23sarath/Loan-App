@@ -236,6 +236,15 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                 👤 View Profile
               </button>
 
+              <button
+                onClick={() => {
+                  window.location.reload();
+                }}
+                className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-green-600 hover:bg-green-50 active:bg-green-100 transition-colors font-medium flex items-center gap-2 dark:text-green-400 dark:hover:bg-green-900/20 dark:active:bg-green-900/30"
+              >
+                🔄 Refresh App
+              </button>
+
               {/* Tools - Admin Only */}
               {!isScopedCustomer && (
                 <button

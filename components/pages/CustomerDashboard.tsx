@@ -64,7 +64,7 @@ const CustomerDashboard = () => {
   const dataEntries = isScopedCustomer ? dataEntriesForSummary : contextDataEntries;
 
   // Get the current customer's data
-  const customer = isScopedCustomer && scopedCustomerId 
+  const customer = isScopedCustomer && scopedCustomerId
     ? customerMap.get(scopedCustomerId)
     : customers.length > 0 ? customers[0] : null;
 
@@ -99,10 +99,10 @@ const CustomerDashboard = () => {
           className="mb-6"
         >
           <GlassCard className="!p-6 sm:!p-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-dark-text mb-2">
               Welcome, {customer?.name}!
             </h1>
-            <p className="text-gray-600 text-sm sm:text-base">
+            <p className="text-gray-600 dark:text-dark-muted text-sm sm:text-base">
               Here's a summary of your account information.
             </p>
           </GlassCard>
@@ -128,7 +128,7 @@ const CustomerDashboard = () => {
           transition={{ duration: 0.5, delay: 0.4 }}
         >
           <GlassCard className="!p-6 sm:!p-8">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">
+            <h2 className="text-xl font-bold text-gray-800 dark:text-dark-text mb-4">
               Quick Actions
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -162,7 +162,7 @@ const CustomerDashboard = () => {
                   whileTap={{ scale: 0.98 }}
                   onClick={() => {
                     // default requested date to today
-                    const today = new Date().toISOString().slice(0,10);
+                    const today = new Date().toISOString().slice(0, 10);
                     setLoanRequestDate(today);
                     setShowRequestModal(true);
                   }}
@@ -186,93 +186,93 @@ const CustomerDashboard = () => {
             {/* Income Section */}
             <GlassCard className="!p-6 sm:!p-8">
               <div className="flex items-center gap-3 mb-4">
-                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 font-bold">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-400 font-bold">
                   ₹
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                  <div className="text-sm font-semibold text-gray-700 dark:text-dark-text uppercase tracking-wide">
                     Income
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-gray-400 dark:text-dark-muted">
                     Collections & recoveries
                   </div>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <div className="flex flex-col items-center p-4 rounded-lg bg-indigo-50 border border-indigo-200">
-                  <span className="text-sm font-medium text-indigo-800 uppercase">
+                <div className="flex flex-col items-center p-4 rounded-lg bg-indigo-50 border border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800">
+                  <span className="text-sm font-medium text-indigo-800 dark:text-indigo-300 uppercase">
                     Total Collected
                   </span>
-                  <span className="text-3xl font-bold text-indigo-700 mt-2">
+                  <span className="text-3xl font-bold text-indigo-700 dark:text-indigo-400 mt-2">
                     {formatCurrencyIN(totalAllCollected)}
                   </span>
                 </div>
 
-                <div className="flex flex-col items-center p-4 rounded-lg bg-blue-50 border border-blue-200">
-                  <span className="text-sm font-medium text-blue-800 uppercase">
+                <div className="flex flex-col items-center p-4 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
+                  <span className="text-sm font-medium text-blue-800 dark:text-blue-300 uppercase">
                     Loan Recovery (Principal)
                   </span>
-                  <span className="text-2xl font-bold text-blue-700 mt-2">
+                  <span className="text-2xl font-bold text-blue-700 dark:text-blue-400 mt-2">
                     {formatCurrencyIN(totalPrincipalRecovered)}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2">
-                  <div className="flex flex-col items-center p-3 rounded-lg bg-green-50 border border-green-200">
-                    <span className="text-xs font-medium text-green-700">Interest</span>
-                    <span className="text-sm font-bold text-green-800 mt-1">
+                  <div className="flex flex-col items-center p-3 rounded-lg bg-green-50 border border-green-200 dark:bg-green-900/20 dark:border-green-800">
+                    <span className="text-xs font-medium text-green-700 dark:text-green-300">Interest</span>
+                    <span className="text-sm font-bold text-green-800 dark:text-green-400 mt-1">
                       {formatCurrencyIN(totalInterestCollected)}
                     </span>
                   </div>
-                  <div className="flex flex-col items-center p-3 rounded-lg bg-orange-50 border border-orange-200">
-                    <span className="text-xs font-medium text-orange-700">Late Fees</span>
-                    <span className="text-sm font-bold text-orange-800 mt-1">
+                  <div className="flex flex-col items-center p-3 rounded-lg bg-orange-50 border border-orange-200 dark:bg-orange-900/20 dark:border-orange-800">
+                    <span className="text-xs font-medium text-orange-700 dark:text-orange-300">Late Fees</span>
+                    <span className="text-sm font-bold text-orange-800 dark:text-orange-400 mt-1">
                       {formatCurrencyIN(totalLateFeeCollected)}
                     </span>
                   </div>
-                  <div className="flex flex-col items-center p-3 rounded-lg bg-cyan-50 border border-cyan-200">
-                    <span className="text-xs font-medium text-cyan-700">Subscriptions</span>
-                    <span className="text-sm font-bold text-cyan-800 mt-1">
+                  <div className="flex flex-col items-center p-3 rounded-lg bg-cyan-50 border border-cyan-200 dark:bg-cyan-900/20 dark:border-cyan-800">
+                    <span className="text-xs font-medium text-cyan-700 dark:text-cyan-300">Subscriptions</span>
+                    <span className="text-sm font-bold text-cyan-800 dark:text-cyan-400 mt-1">
                       {formatCurrencyIN(totalSubscriptionCollected)}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-center p-4 rounded-lg bg-cyan-50 border border-cyan-200">
-                  <span className="text-sm font-medium text-cyan-800 mb-3">Subscriptions Balance</span>
+                <div className="flex flex-col items-center p-4 rounded-lg bg-cyan-50 border border-cyan-200 dark:bg-cyan-900/20 dark:border-cyan-800">
+                  <span className="text-sm font-medium text-cyan-800 dark:text-cyan-300 mb-3">Subscriptions Balance</span>
                   <div className="w-full space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-700">Subscriptions</span>
-                      <span className="font-medium text-cyan-700">{formatCurrencyIN(totalSubscriptionCollected)}</span>
+                      <span className="text-gray-700 dark:text-dark-muted">Subscriptions</span>
+                      <span className="font-medium text-cyan-700 dark:text-cyan-400">{formatCurrencyIN(totalSubscriptionCollected)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-700">Return</span>
-                      <span className="font-medium text-cyan-700">{formatCurrencyIN(subscriptionReturnTotal)}</span>
+                      <span className="text-gray-700 dark:text-dark-muted">Return</span>
+                      <span className="font-medium text-cyan-700 dark:text-cyan-400">{formatCurrencyIN(subscriptionReturnTotal)}</span>
                     </div>
-                    <div className="border-t border-cyan-200 pt-2 flex justify-between">
-                      <span className="font-medium text-cyan-800">Balance</span>
-                      <span className={`font-bold ${subscriptionBalance < 0 ? "text-red-600" : "text-cyan-800"}`}>
+                    <div className="border-t border-cyan-200 dark:border-cyan-800 pt-2 flex justify-between">
+                      <span className="font-medium text-cyan-800 dark:text-cyan-300">Balance</span>
+                      <span className={`font-bold ${subscriptionBalance < 0 ? "text-red-600 dark:text-red-400" : "text-cyan-800 dark:text-cyan-400"}`}>
                         {formatCurrencyIN(subscriptionBalance)}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-center p-4 rounded-lg bg-blue-50 border border-blue-200">
-                  <span className="text-sm font-medium text-blue-800 mb-3">Loan Balance</span>
+                <div className="flex flex-col items-center p-4 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
+                  <span className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-3">Loan Balance</span>
                   <div className="w-full space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-700">Total Loans Given</span>
-                      <span className="font-medium text-blue-700">{formatCurrencyIN(totalLoansGiven)}</span>
+                      <span className="text-gray-700 dark:text-dark-muted">Total Loans Given</span>
+                      <span className="font-medium text-blue-700 dark:text-blue-400">{formatCurrencyIN(totalLoansGiven)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-700">Recovery (Principal)</span>
-                      <span className="font-medium text-blue-700">{formatCurrencyIN(totalPrincipalRecovered)}</span>
+                      <span className="text-gray-700 dark:text-dark-muted">Recovery (Principal)</span>
+                      <span className="font-medium text-blue-700 dark:text-blue-400">{formatCurrencyIN(totalPrincipalRecovered)}</span>
                     </div>
-                    <div className="border-t border-blue-200 pt-2 flex justify-between">
-                      <span className="font-medium text-blue-800">Balance</span>
-                      <span className={`font-bold ${loanBalance < 0 ? "text-red-600" : "text-blue-800"}`}>
+                    <div className="border-t border-blue-200 dark:border-blue-800 pt-2 flex justify-between">
+                      <span className="font-medium text-blue-800 dark:text-blue-300">Balance</span>
+                      <span className={`font-bold ${loanBalance < 0 ? "text-red-600 dark:text-red-400" : "text-blue-800 dark:text-blue-400"}`}>
                         {formatCurrencyIN(loanBalance)}
                       </span>
                     </div>
@@ -284,43 +284,43 @@ const CustomerDashboard = () => {
             {/* Expenses Section */}
             <GlassCard className="!p-6 sm:!p-8">
               <div className="flex items-center gap-3 mb-4">
-                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-red-100 text-red-700 font-bold">
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 font-bold">
                   -
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                  <div className="text-sm font-semibold text-gray-700 dark:text-dark-text uppercase tracking-wide">
                     Expenses
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-gray-400 dark:text-dark-muted">
                     Outgoing & disbursed principal
                   </div>
                 </div>
               </div>
 
               <div className="space-y-4">
-                <div className="flex flex-col items-center p-4 rounded-lg bg-blue-50 border border-blue-200">
-                  <span className="text-sm font-medium text-blue-800 uppercase">
+                <div className="flex flex-col items-center p-4 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-900/20 dark:border-blue-800">
+                  <span className="text-sm font-medium text-blue-800 dark:text-blue-300 uppercase">
                     Total Loans Given
                   </span>
-                  <span className="text-3xl font-bold text-blue-700 mt-2">
+                  <span className="text-3xl font-bold text-blue-700 dark:text-blue-400 mt-2">
                     {formatCurrencyIN(totalLoansGiven)}
                   </span>
                 </div>
 
-                <div className="flex flex-col items-center p-4 rounded-lg bg-red-50 border border-red-200">
-                  <span className="text-sm font-medium text-red-800 uppercase">
+                <div className="flex flex-col items-center p-4 rounded-lg bg-red-50 border border-red-200 dark:bg-red-900/20 dark:border-red-800">
+                  <span className="text-sm font-medium text-red-800 dark:text-red-300 uppercase">
                     Expenses
                   </span>
-                  <span className="text-2xl font-bold text-red-700 mt-2">
+                  <span className="text-2xl font-bold text-red-700 dark:text-red-400 mt-2">
                     {formatCurrencyIN(totalExpenses)}
                   </span>
                 </div>
 
                 <div className="space-y-2">
                   {Object.entries(expenseTotalsBySubtype).map(([subtype, amt]) => (
-                    <div key={subtype} className="flex justify-between items-center p-2 rounded-md bg-red-50 border border-red-100 text-sm">
-                      <span className="text-gray-700">{subtype}</span>
-                      <span className="font-medium text-red-700">{formatCurrencyIN((amt as number) || 0)}</span>
+                    <div key={subtype} className="flex justify-between items-center p-2 rounded-md bg-red-50 border border-red-100 text-sm dark:bg-red-900/10 dark:border-red-800/50">
+                      <span className="text-gray-700 dark:text-dark-muted">{subtype}</span>
+                      <span className="font-medium text-red-700 dark:text-red-400">{formatCurrencyIN((amt as number) || 0)}</span>
                     </div>
                   ))}
                 </div>

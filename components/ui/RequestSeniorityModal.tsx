@@ -93,45 +93,58 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
             exit="hidden"
             variants={variants.modal}
             transition={{ duration: EXIT_DURATION / 1000 }}
-            className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-md overflow-hidden"
+            className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-md overflow-hidden dark:bg-dark-card dark:border dark:border-dark-border"
             onClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Request Loan / Subscription</h3>
-              <button onClick={() => startClose()} className="text-gray-500">✕</button>
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-dark-text">Request Loan / Subscription</h3>
+              <button onClick={() => startClose()} className="text-gray-500 hover:text-gray-700 dark:text-dark-muted dark:hover:text-dark-text transition-colors">✕</button>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium mb-1">Station Name</label>
-                <input value={stationName} onChange={(e) => setStationName(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2" />
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">Station Name</label>
+                <input
+                  value={stationName}
+                  onChange={(e) => setStationName(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-gray-800 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted"
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Loan Type</label>
-                <select value={loanType} onChange={(e) => setLoanType(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2">
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">Loan Type</label>
+                <select
+                  value={loanType}
+                  onChange={(e) => setLoanType(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-gray-800 focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text"
+                >
                   <option value="General">General</option>
                   <option value="Medical">Medical</option>
                   <option value="Emergency">Emergency</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Requested Date</label>
-                <input 
-                  value={loanRequestDate} 
-                  onChange={(e) => setLoanRequestDate(e.target.value)} 
-                  type="date" 
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-base bg-white block"
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">Requested Date</label>
+                <input
+                  value={loanRequestDate}
+                  onChange={(e) => setLoanRequestDate(e.target.value)}
+                  type="date"
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-base text-gray-800 bg-white block focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted"
                   style={{ minHeight: '42px', WebkitAppearance: 'none' }}
                 />
               </div>
             </div>
             <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => startClose()} className="px-3 py-2 rounded bg-gray-200">Cancel</button>
+              <button
+                onClick={() => startClose()}
+                className="px-3 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300 transition-colors dark:bg-slate-700 dark:text-dark-text dark:hover:bg-slate-600"
+              >
+                Cancel
+              </button>
               <button
                 onClick={handleSubmit}
                 disabled={isSaving}
-                className="px-3 py-2 rounded bg-yellow-600 text-white disabled:opacity-50"
+                className="px-3 py-2 rounded bg-yellow-600 text-white hover:bg-yellow-700 disabled:opacity-50 transition-colors dark:bg-yellow-700 dark:hover:bg-yellow-800"
               >
                 {isSaving ? 'Saving...' : 'Submit Request'}
               </button>

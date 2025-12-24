@@ -172,7 +172,7 @@ const AddRecordPage = () => {
       } else {
         const monthlyAmount = Math.round(
           (loanInProgress.original_amount + loanInProgress.interest_amount) /
-            loanInProgress.total_instalments
+          loanInProgress.total_instalments
         );
         installmentForm.setValue("amount", monthlyAmount);
         installmentForm.setValue("installment_number", 1);
@@ -320,15 +320,15 @@ const AddRecordPage = () => {
           totalRepayable: activeLoan.original_amount + activeLoan.interest_amount,
         }
       });
-      
+
       // Show success message
       setShowSuccess(`Installment #${data.installment_number} recorded!`);
-      
+
       // Update paid installment numbers
       const updatedPaidNumbers = new Set(paidInstallmentNumbers);
       updatedPaidNumbers.add(data.installment_number);
       setPaidInstallmentNumbers(updatedPaidNumbers);
-      
+
       // Prepare form for next installment
       const nextInstallmentNumber = data.installment_number + 1;
       if (nextInstallmentNumber <= activeLoan.total_instalments) {
@@ -361,15 +361,15 @@ const AddRecordPage = () => {
 
   const monthlyInstallment = activeLoan
     ? (
-        (activeLoan.original_amount + activeLoan.interest_amount) /
-        activeLoan.total_instalments
-      ).toFixed(2)
+      (activeLoan.original_amount + activeLoan.interest_amount) /
+      activeLoan.total_instalments
+    ).toFixed(2)
     : 0;
   const availableInstallmentNumbers = activeLoan
     ? Array.from(
-        { length: activeLoan.total_instalments },
-        (_, i) => i + 1
-      ).filter((num) => !paidInstallmentNumbers.has(num))
+      { length: activeLoan.total_instalments },
+      (_, i) => i + 1
+    ).filter((num) => !paidInstallmentNumbers.has(num))
     : [];
 
   const inputStyles =
@@ -389,7 +389,7 @@ const AddRecordPage = () => {
   // Custom dropdown with search inside
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
-  
+
   // Memoize filtered customers to prevent recalculation on every render
   const filteredCustomers = useMemo(() => {
     return customers.filter(
@@ -455,16 +455,15 @@ const AddRecordPage = () => {
                 >
                   {selectedCustomerId
                     ? (() => {
-                        const selected = customerMap.get(selectedCustomerId);
-                        return selected
-                          ? `${selected.name} (${selected.phone})`
-                          : "Select...";
-                      })()
+                      const selected = customerMap.get(selectedCustomerId);
+                      return selected
+                        ? `${selected.name} (${selected.phone})`
+                        : "Select...";
+                    })()
                     : "Select..."}
                   <svg
-                    className={`w-4 h-4 ml-2 transition-transform ${
-                      dropdownOpen ? "rotate-180" : ""
-                    }`}
+                    className={`w-4 h-4 ml-2 transition-transform ${dropdownOpen ? "rotate-180" : ""
+                      }`}
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
@@ -510,11 +509,10 @@ const AddRecordPage = () => {
                       {filteredCustomers.map((customer) => (
                         <li
                           key={customer.id}
-                          className={`px-4 py-2 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-gray-800 dark:text-dark-text ${
-                            selectedCustomerId === customer.id
+                          className={`px-4 py-2 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-gray-800 dark:text-dark-text ${selectedCustomerId === customer.id
                               ? "bg-indigo-50 dark:bg-indigo-900/50 font-bold"
                               : ""
-                          }`}
+                            }`}
                           onClick={() => {
                             setSelectedCustomerId(customer.id);
                             setDropdownOpen(false);
@@ -678,13 +676,13 @@ const AddRecordPage = () => {
                           </select>
                           {installmentForm.formState.errors
                             .installment_number && (
-                            <p className="text-red-600 dark:text-red-400 text-sm mt-1">
-                              {
-                                installmentForm.formState.errors
-                                  .installment_number.message
-                              }
-                            </p>
-                          )}
+                              <p className="text-red-600 dark:text-red-400 text-sm mt-1">
+                                {
+                                  installmentForm.formState.errors
+                                    .installment_number.message
+                                }
+                              </p>
+                            )}
                         </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1018,7 +1016,7 @@ const AddRecordPage = () => {
                     <div className="text-center mb-4">
                       <span className="font-semibold text-lg">{showSuccess}</span>
                     </div>
-                    
+
                     {/* WhatsApp Button */}
                     {lastRecordData && lastRecordData.customerPhone && (
                       <div className="flex justify-center mb-4">

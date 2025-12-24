@@ -62,6 +62,8 @@ const LoanTableView: React.FC = () => {
   // Default to sorting by status so "In Progress" loans appear first
   const [sortField, setSortField] = React.useState("status");
   const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">("asc");
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const itemsPerPage = 25;
 
   // Helper function for O(1) installment lookup
   const getLoanInstallments = React.useCallback((loanId: string) => {
@@ -185,6 +187,19 @@ const LoanTableView: React.FC = () => {
     });
   }, [filteredLoans, sortField, sortDirection, getLoanInstallments]);
 
+  // Paginate the sorted loans
+  const totalPages = Math.ceil(sortedLoans.length / itemsPerPage);
+  const paginatedLoans = React.useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return sortedLoans.slice(start, end);
+  }, [sortedLoans, currentPage, itemsPerPage]);
+
+  // Reset to page 1 when filters or sorting changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedFilter, statusFilter, sortField, sortDirection]);
+
   if (loans.length === 0) {
     const emptyMessage = isScopedCustomer && scopedCustomerId
       ? (() => {
@@ -229,11 +244,11 @@ const LoanTableView: React.FC = () => {
     }
   }
 
-  // Key for tbody to reset animation on data load
+  // Key for tbody to reset animation on data load or page change
   const [tbodyKey, setTbodyKey] = React.useState(0);
   React.useEffect(() => {
     setTbodyKey((prev) => prev + 1);
-  }, [loans]);
+  }, [loans, currentPage]);
 
   return (
     <GlassCard className="overflow-x-auto">
@@ -358,7 +373,7 @@ const LoanTableView: React.FC = () => {
           variants={containerVariants}
         >
           <AnimatePresence>
-            {sortedLoans.map((loan: LoanWithCustomer, idx: number) => {
+            {paginatedLoans.map((loan: LoanWithCustomer, idx: number) => {
               // Use O(1) lookup - installments already sorted by date in the map
               const loanInstallments = getLoanInstallments(loan.id);
               const totalRepayable =
@@ -373,12 +388,13 @@ const LoanTableView: React.FC = () => {
               return (
                 <React.Fragment key={loan.id}>
                   <motion.tr
-                    layout
-                    variants={itemVariants}
-                    exit="exit"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3, delay: idx * 0.05 }}
                     className="even:bg-gray-50/50 hover:bg-indigo-50/50 transition-colors dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50"
                   >
-                    <td className="px-4 py-2 border-b font-medium text-sm text-gray-700 dark:border-dark-border dark:text-dark-muted">{idx + 1}</td>
+                    <td className="px-4 py-2 border-b font-medium text-sm text-gray-700 dark:border-dark-border dark:text-dark-muted">{(currentPage - 1) * itemsPerPage + idx + 1}</td>
                     <td className="px-4 py-2 border-b dark:border-dark-border">
                       <button
                         className="font-bold text-indigo-700 hover:underline focus:outline-none text-left dark:text-indigo-400"
@@ -604,7 +620,7 @@ const LoanTableView: React.FC = () => {
       {/* Mobile stacked cards */}
       {/* This `md:hidden` class is correct. It hides this view on desktop */}
       <div className="md:hidden mt-4 space-y-3">
-        {sortedLoans.map((loan, idx) => {
+        {paginatedLoans.map((loan, idx) => {
           // Use O(1) lookup - installments already sorted by date in the map
           const loanInstallments = getLoanInstallments(loan.id);
           const totalRepayable = loan.original_amount + loan.interest_amount;
@@ -677,7 +693,7 @@ const LoanTableView: React.FC = () => {
                 {/* Row 1: # Name and Total Repayable */}
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-1">
-                    <span className="text-xs text-gray-400 dark:text-dark-muted">#{idx + 1}</span>
+                    <span className="text-xs text-gray-400 dark:text-dark-muted">#{(currentPage - 1) * itemsPerPage + idx + 1}</span>
                     <button
                       onClick={() => setExpandedRow(expandedRow === loan.id ? null : loan.id)}
                       className="text-sm font-semibold text-indigo-700 truncate underline dark:text-indigo-400"
@@ -859,6 +875,76 @@ const LoanTableView: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-dark-border">
+          <div className="text-sm text-gray-600 dark:text-dark-muted">
+            Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+            {Math.min(currentPage * itemsPerPage, sortedLoans.length)} of{" "}
+            {sortedLoans.length} loans
+          </div>
+          <div className="flex gap-2 flex-wrap justify-center">
+            <button
+              onClick={() => setCurrentPage(1)}
+              disabled={currentPage === 1}
+              className="px-3 py-1 rounded border border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
+            >
+              First
+            </button>
+            <button
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 rounded border border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
+            >
+              Previous
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+              if (
+                page === 1 ||
+                page === totalPages ||
+                Math.abs(page - currentPage) <= 1
+              ) {
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-1 rounded border ${currentPage === page
+                      ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
+                      : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
+                      }`}
+                  >
+                    {page}
+                  </button>
+                );
+              }
+              if (page === 2 && currentPage > 3) {
+                return <span key="dots-start" className="px-2 dark:text-dark-muted">...</span>;
+              }
+              if (page === totalPages - 1 && currentPage < totalPages - 2) {
+                return <span key="dots-end" className="px-2 dark:text-dark-muted">...</span>;
+              }
+              return null;
+            })}
+
+            <button
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 rounded border border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
+            >
+              Next
+            </button>
+            <button
+              onClick={() => setCurrentPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 rounded border border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
+            >
+              Last
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ... (All modal logic remains unchanged) ... */}
 

@@ -29,7 +29,7 @@ const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 const CustomerListPage = () => {
   const { customers, loans, subscriptions, installments, installmentsByLoanId, dataEntries, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, isRefreshing, signOut, updateCustomer, updateLoan, updateSubscription, isScopedCustomer } = useData();
-  const [deleteCustomerTarget, setDeleteCustomerTarget] = React.useState<{id: string, name: string} | null>(null);
+  const [deleteCustomerTarget, setDeleteCustomerTarget] = React.useState<{ id: string, name: string } | null>(null);
   const [deleteCounts, setDeleteCounts] = React.useState<{ dataEntries: number; loans: number; installments: number; subscriptions: number } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -96,7 +96,7 @@ const CustomerListPage = () => {
     const dataEntriesCount = dataEntries.filter(d => d.customer_id === cid).length;
     const customerLoans = loans.filter(l => l.customer_id === cid);
     const loansCount = customerLoans.length;
-    const installmentsCount = customerLoans.reduce((acc, loan) => 
+    const installmentsCount = customerLoans.reduce((acc, loan) =>
       acc + (installmentsByLoanId.get(loan.id)?.length || 0), 0);
     const subscriptionsCount = subscriptions.filter(s => s.customer_id === cid).length;
     setDeleteCounts({ dataEntries: dataEntriesCount, loans: loansCount, installments: installmentsCount, subscriptions: subscriptionsCount });
@@ -166,7 +166,7 @@ const CustomerListPage = () => {
 
     return { withOnlyLoans, withOnlySubscriptions, withBoth, withNeither };
   }, [customers, loans, subscriptions, debouncedSearchTerm, sortOption]);
-  
+
   const formatCurrency = (value: number) => {
     return value.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 0 });
   }
@@ -183,7 +183,7 @@ const CustomerListPage = () => {
     if (totalPages <= 1) return null;
 
     return (
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-4 pb-4 border-b border-gray-200 dark:border-dark-border">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-dark-border">
         <div className="text-sm text-gray-600 dark:text-dark-muted">
           Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
           {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} customers
@@ -203,7 +203,7 @@ const CustomerListPage = () => {
           >
             Previous
           </button>
-          
+
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
             if (
               page === 1 ||
@@ -214,11 +214,10 @@ const CustomerListPage = () => {
                 <button
                   key={page}
                   onClick={() => setCurrentPage(section, page)}
-                  className={`px-3 py-1 rounded border ${
-                    currentPage === page
-                      ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
-                      : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
-                  }`}
+                  className={`px-3 py-1 rounded border ${currentPage === page
+                    ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
+                    : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
+                    }`}
                 >
                   {page}
                 </button>
@@ -232,7 +231,7 @@ const CustomerListPage = () => {
             }
             return null;
           })}
-          
+
           <button
             onClick={() => setCurrentPage(section, Math.min(totalPages, currentPage + 1))}
             disabled={currentPage === totalPages}
@@ -302,10 +301,10 @@ const CustomerListPage = () => {
       )}
 
       {categorizedCustomers.withBoth.length === 0 &&
-      categorizedCustomers.withOnlyLoans.length === 0 &&
-      categorizedCustomers.withOnlySubscriptions.length === 0 &&
-      categorizedCustomers.withNeither.length === 0 &&
-      !isRefreshing ? (
+        categorizedCustomers.withOnlyLoans.length === 0 &&
+        categorizedCustomers.withOnlySubscriptions.length === 0 &&
+        categorizedCustomers.withNeither.length === 0 &&
+        !isRefreshing ? (
         <GlassCard>
           <p className="text-center text-gray-500 dark:text-dark-muted">
             {searchTerm ? 'No customers match your search.' : 'No customers found. Add one to get started!'}
@@ -313,7 +312,7 @@ const CustomerListPage = () => {
         </GlassCard>
       ) : (
         <div className="space-y-8">
-        
+
           {/* Section: Customers with Both */}
           {categorizedCustomers.withBoth.length > 0 && (
             <GlassCard className="!p-0 bg-indigo-50 border-indigo-200 dark:bg-dark-card dark:border-dark-border overflow-hidden">
@@ -321,7 +320,7 @@ const CustomerListPage = () => {
                 onClick={() => toggleSection('both')}
                 className="w-full flex justify-between items-center p-2 sm:p-4"
               >
-                <h3 className="text-xl font-bold text-indigo-800 dark:text-indigo-400 flex items-center gap-1"><UsersIcon className="w-5 h-5 mr-1"/>Customers with Loans & Subscriptions</h3>
+                <h3 className="text-xl font-bold text-indigo-800 dark:text-indigo-400 flex items-center gap-1"><UsersIcon className="w-5 h-5 mr-1" />Customers with Loans & Subscriptions</h3>
                 <ChevronDownIcon className={`w-6 h-6 text-indigo-800 dark:text-indigo-400 transition-transform ${expandedSections.both ? 'rotate-180' : ''}`} />
               </button>
               <AnimatePresence initial={false}>
@@ -342,8 +341,6 @@ const CustomerListPage = () => {
                         const paginatedCustomers = categorizedCustomers.withBoth.slice(start, end);
                         return (
                           <>
-                            <PaginationControls section="both" totalItems={categorizedCustomers.withBoth.length} />
-
                             {/* Desktop Table */}
                             <div className="hidden sm:block">
                               <table className="min-w-full divide-y divide-gray-200 dark:divide-dark-border">
@@ -360,26 +357,26 @@ const CustomerListPage = () => {
                                 </thead>
                                 <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
                                   {paginatedCustomers.map((customer, idx) => {
-                                      const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
-                                      const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
-                                      const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
-                                      const rowNumber = (currentPages.both - 1) * itemsPerPage + idx + 1;
-                                      return (
-                                          <motion.tr key={customer.id} className="bg-white hover:bg-indigo-50/50 transition cursor-pointer dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
-                                              <td className="px-2 py-2 text-gray-400 text-sm dark:text-dark-muted dark:border-dark-border">{rowNumber}</td>
-                                              <td className="px-4 py-2 font-bold text-indigo-700 dark:text-indigo-400 dark:border-dark-border">{customer.name}</td>
-                                              <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">{customer.phone}</td>
-                                              <td className="px-4 py-2 text-gray-700 dark:text-dark-text dark:border-dark-border">{customerLoans.length}</td>
-                                              <td className="px-4 py-2 text-green-600 dark:text-green-400 dark:border-dark-border">{formatCurrency(loanValue)}</td>
-                                              <td className="px-4 py-2 text-cyan-600 dark:text-cyan-400 dark:border-dark-border">{customerSubscriptions.length}</td>
-                                              <td className="px-4 py-2 dark:border-dark-border">
-                                                <div className="flex justify-center gap-2">
-                                                  <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {}, subscription: customerSubscriptions[0] || {} } }); }} className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
-                                                  <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
-                                                </div>
-                                              </td>
-                                          </motion.tr>
-                                      );
+                                    const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
+                                    const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
+                                    const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+                                    const rowNumber = (currentPages.both - 1) * itemsPerPage + idx + 1;
+                                    return (
+                                      <motion.tr key={customer.id} className="bg-white hover:bg-indigo-50/50 transition cursor-pointer dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
+                                        <td className="px-2 py-2 text-gray-400 text-sm dark:text-dark-muted dark:border-dark-border">{rowNumber}</td>
+                                        <td className="px-4 py-2 font-bold text-indigo-700 dark:text-indigo-400 dark:border-dark-border">{customer.name}</td>
+                                        <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">{customer.phone}</td>
+                                        <td className="px-4 py-2 text-gray-700 dark:text-dark-text dark:border-dark-border">{customerLoans.length}</td>
+                                        <td className="px-4 py-2 text-green-600 dark:text-green-400 dark:border-dark-border">{formatCurrency(loanValue)}</td>
+                                        <td className="px-4 py-2 text-cyan-600 dark:text-cyan-400 dark:border-dark-border">{customerSubscriptions.length}</td>
+                                        <td className="px-4 py-2 dark:border-dark-border">
+                                          <div className="flex justify-center gap-2">
+                                            <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {}, subscription: customerSubscriptions[0] || {} } }); }} className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
+                                            <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                                          </div>
+                                        </td>
+                                      </motion.tr>
+                                    );
                                   })}
                                 </tbody>
                               </table>
@@ -387,93 +384,94 @@ const CustomerListPage = () => {
                             {/* Mobile Cards */}
                             <div className="sm:hidden space-y-3">
                               {paginatedCustomers.map((customer, idx) => {
-                                  const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
-                                  const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
-                                  const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
-                                  const rowNumber = (currentPages.both - 1) * itemsPerPage + idx + 1;
-                                  const isValidPhone = customer.phone && /^\d{10,15}$/.test(customer.phone);
-                                  const message = `Hi ${customer.name},\n\nLoans: ${customerLoans.length}\nLoan Value: ${formatCurrency(loanValue)}\nSubscriptions: ${customerSubscriptions.length}\n\nThank You, I J Reddy.`;
-                                  return (
-                                    <div key={customer.id} className="relative overflow-hidden rounded-lg">
-                                      {/* Swipe background indicators */}
-                                      {draggingCardId === customer.id && (
-                                        <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
-                                          <div className={`${isScopedCustomer ? "w-full" : "w-1/2"} bg-green-500 flex items-center justify-start pl-4`}>
-                                            <WhatsAppIcon className="w-6 h-6 text-white" />
+                                const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
+                                const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
+                                const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+                                const rowNumber = (currentPages.both - 1) * itemsPerPage + idx + 1;
+                                const isValidPhone = customer.phone && /^\d{10,15}$/.test(customer.phone);
+                                const message = `Hi ${customer.name},\n\nLoans: ${customerLoans.length}\nLoan Value: ${formatCurrency(loanValue)}\nSubscriptions: ${customerSubscriptions.length}\n\nThank You, I J Reddy.`;
+                                return (
+                                  <div key={customer.id} className="relative overflow-hidden rounded-lg">
+                                    {/* Swipe background indicators */}
+                                    {draggingCardId === customer.id && (
+                                      <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
+                                        <div className={`${isScopedCustomer ? "w-full" : "w-1/2"} bg-green-500 flex items-center justify-start pl-4`}>
+                                          <WhatsAppIcon className="w-6 h-6 text-white" />
+                                        </div>
+                                        {!isScopedCustomer && (
+                                          <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
+                                            <Trash2Icon className="w-6 h-6 text-white" />
                                           </div>
-                                          {!isScopedCustomer && (
-                                            <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
-                                              <Trash2Icon className="w-6 h-6 text-white" />
-                                            </div>
-                                          )}
-                                        </div>
-                                      )}
-                                      <motion.div 
-                                        className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border" 
-                                        onClick={() => setSelectedCustomer(customer)} 
-                                        initial={{ opacity: 0 }} 
-                                        animate={{ opacity: 1 }} 
-                                        exit={{ opacity: 0 }} 
-                                        transition={{ duration: 0.3, delay: idx * 0.03 }}
-                                        drag="x"
-                                        dragConstraints={{ left: 0, right: 0 }}
-                                        dragElastic={0.3}
-                                        dragMomentum={false}
-                                        dragDirectionLock={true}
-                                        style={{ touchAction: "pan-y" }}
-                                        onDragStart={() => setDraggingCardId(customer.id)}
-                                        onDragEnd={(_, info) => {
-                                          setDraggingCardId(null);
-                                          const threshold = 100;
-                                          if (!isScopedCustomer && info.offset.x < -threshold) {
-                                            handleDeleteCustomer(customer);
-                                          } else if (info.offset.x > threshold && isValidPhone) {
-                                            openWhatsApp(customer.phone, message, { cooldownMs: 1200 });
-                                          }
-                                        }}
-                                      >
-                                        <div className="flex items-center gap-1">
-                                          <span className="text-xs text-gray-400 dark:text-dark-muted">#{rowNumber}</span>
-                                          <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 truncate">{customer.name}</span>
-                                        </div>
-                                        <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                          Phone: <span className="font-semibold text-gray-700 dark:text-dark-text">{customer.phone}</span>
-                                        </div>
-                                        <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                          Loans: <span className="font-semibold text-gray-700 dark:text-dark-text">{customerLoans.length}</span>
-                                        </div>
-                                        <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                          Loan Value: <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(loanValue)}</span>
-                                        </div>
-                                        <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                          Subscriptions: <span className="font-semibold text-cyan-600 dark:text-cyan-400">{customerSubscriptions.length}</span>
-                                        </div>
-                                        <div className="mt-3 flex items-center justify-evenly">
-                                          <button
-                                            onClick={(e) => { e.stopPropagation(); isValidPhone && openWhatsApp(customer.phone, message, { cooldownMs: 1200 }); }}
-                                            className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-                                            disabled={!isValidPhone}
-                                          >
-                                            <WhatsAppIcon className="w-5 h-5" />
-                                          </button>
-                                          <button
-                                            onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {}, subscription: customerSubscriptions[0] || {} } }); }}
-                                            className="px-3 py-1 rounded bg-blue-600 text-white text-sm dark:hover:bg-blue-500"
-                                          >
-                                            Edit
-                                          </button>
-                                          <button
-                                            onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }}
-                                            className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-                                          >
-                                            <Trash2Icon className="w-5 h-5" />
-                                          </button>
-                                        </div>
-                                      </motion.div>
-                                    </div>
-                                  );
+                                        )}
+                                      </div>
+                                    )}
+                                    <motion.div
+                                      className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
+                                      onClick={() => setSelectedCustomer(customer)}
+                                      initial={{ opacity: 0 }}
+                                      animate={{ opacity: 1 }}
+                                      exit={{ opacity: 0 }}
+                                      transition={{ duration: 0.3, delay: idx * 0.03 }}
+                                      drag="x"
+                                      dragConstraints={{ left: 0, right: 0 }}
+                                      dragElastic={0.3}
+                                      dragMomentum={false}
+                                      dragDirectionLock={true}
+                                      style={{ touchAction: "pan-y" }}
+                                      onDragStart={() => setDraggingCardId(customer.id)}
+                                      onDragEnd={(_, info) => {
+                                        setDraggingCardId(null);
+                                        const threshold = 100;
+                                        if (!isScopedCustomer && info.offset.x < -threshold) {
+                                          handleDeleteCustomer(customer);
+                                        } else if (info.offset.x > threshold && isValidPhone) {
+                                          openWhatsApp(customer.phone, message, { cooldownMs: 1200 });
+                                        }
+                                      }}
+                                    >
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-xs text-gray-400 dark:text-dark-muted">#{rowNumber}</span>
+                                        <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 truncate">{customer.name}</span>
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                                        Phone: <span className="font-semibold text-gray-700 dark:text-dark-text">{customer.phone}</span>
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                                        Loans: <span className="font-semibold text-gray-700 dark:text-dark-text">{customerLoans.length}</span>
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                                        Loan Value: <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(loanValue)}</span>
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                                        Subscriptions: <span className="font-semibold text-cyan-600 dark:text-cyan-400">{customerSubscriptions.length}</span>
+                                      </div>
+                                      <div className="mt-3 flex items-center justify-evenly">
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); isValidPhone && openWhatsApp(customer.phone, message, { cooldownMs: 1200 }); }}
+                                          className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                                          disabled={!isValidPhone}
+                                        >
+                                          <WhatsAppIcon className="w-5 h-5" />
+                                        </button>
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {}, subscription: customerSubscriptions[0] || {} } }); }}
+                                          className="px-3 py-1 rounded bg-blue-600 text-white text-sm dark:hover:bg-blue-500"
+                                        >
+                                          Edit
+                                        </button>
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }}
+                                          className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                                        >
+                                          <Trash2Icon className="w-5 h-5" />
+                                        </button>
+                                      </div>
+                                    </motion.div>
+                                  </div>
+                                );
                               })}
                             </div>
+                            <PaginationControls section="both" totalItems={categorizedCustomers.withBoth.length} />
                           </>
                         );
                       })()}
@@ -491,7 +489,7 @@ const CustomerListPage = () => {
                 onClick={() => toggleSection('loans')}
                 className="w-full flex justify-between items-center p-2 sm:p-4"
               >
-                <h3 className="text-xl font-bold text-blue-800 dark:text-indigo-400 flex items-center gap-1"><UsersIcon className="w-5 h-5 mr-1"/>Customers with Only Loans</h3>
+                <h3 className="text-xl font-bold text-blue-800 dark:text-indigo-400 flex items-center gap-1"><UsersIcon className="w-5 h-5 mr-1" />Customers with Only Loans</h3>
                 <ChevronDownIcon className={`w-6 h-6 text-blue-800 dark:text-indigo-400 transition-transform ${expandedSections.loans ? 'rotate-180' : ''}`} />
               </button>
               <AnimatePresence initial={false}>
@@ -512,8 +510,6 @@ const CustomerListPage = () => {
                         const paginatedCustomers = categorizedCustomers.withOnlyLoans.slice(start, end);
                         return (
                           <>
-                            <PaginationControls section="loans" totalItems={categorizedCustomers.withOnlyLoans.length} />
-
                             {/* Desktop Table */}
                             <div className="hidden sm:block">
                               <table className="min-w-full divide-y divide-gray-200 dark:divide-dark-border">
@@ -529,24 +525,24 @@ const CustomerListPage = () => {
                                 </thead>
                                 <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
                                   {paginatedCustomers.map((customer, idx) => {
-                                      const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
-                                      const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
-                                      const rowNumber = (currentPages.loans - 1) * itemsPerPage + idx + 1;
-                                      return (
-                                          <motion.tr key={customer.id} className="bg-white hover:bg-blue-50/50 transition cursor-pointer dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
-                                              <td className="px-2 py-2 text-gray-400 text-sm dark:text-dark-muted dark:border-dark-border">{rowNumber}</td>
-                                              <td className="px-4 py-2 font-bold text-indigo-700 dark:text-indigo-400 dark:border-dark-border">{customer.name}</td>
-                                              <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">{customer.phone}</td>
-                                              <td className="px-4 py-2 text-gray-700 dark:text-dark-text dark:border-dark-border">{customerLoans.length}</td>
-                                              <td className="px-4 py-2 text-green-600 dark:text-green-400 dark:border-dark-border">{formatCurrency(loanValue)}</td>
-                                              <td className="px-4 py-2 dark:border-dark-border">
-                                                <div className="flex justify-center gap-2">
-                                                  <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {} } }); }} className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
-                                                  <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
-                                                </div>
-                                              </td>
-                                          </motion.tr>
-                                      );
+                                    const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
+                                    const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+                                    const rowNumber = (currentPages.loans - 1) * itemsPerPage + idx + 1;
+                                    return (
+                                      <motion.tr key={customer.id} className="bg-white hover:bg-blue-50/50 transition cursor-pointer dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
+                                        <td className="px-2 py-2 text-gray-400 text-sm dark:text-dark-muted dark:border-dark-border">{rowNumber}</td>
+                                        <td className="px-4 py-2 font-bold text-indigo-700 dark:text-indigo-400 dark:border-dark-border">{customer.name}</td>
+                                        <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">{customer.phone}</td>
+                                        <td className="px-4 py-2 text-gray-700 dark:text-dark-text dark:border-dark-border">{customerLoans.length}</td>
+                                        <td className="px-4 py-2 text-green-600 dark:text-green-400 dark:border-dark-border">{formatCurrency(loanValue)}</td>
+                                        <td className="px-4 py-2 dark:border-dark-border">
+                                          <div className="flex justify-center gap-2">
+                                            <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {} } }); }} className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
+                                            <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                                          </div>
+                                        </td>
+                                      </motion.tr>
+                                    );
                                   })}
                                 </tbody>
                               </table>
@@ -554,89 +550,90 @@ const CustomerListPage = () => {
                             {/* Mobile Cards */}
                             <div className="sm:hidden space-y-3">
                               {paginatedCustomers.map((customer, idx) => {
-                                  const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
-                                  const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
-                                  const rowNumber = (currentPages.loans - 1) * itemsPerPage + idx + 1;
-                                  const isValidPhone = customer.phone && /^\d{10,15}$/.test(customer.phone);
-                                  const message = `Hi ${customer.name},\n\nLoans: ${customerLoans.length}\nLoan Value: ${formatCurrency(loanValue)}\n\nThank You, I J Reddy.`;
-                                  return (
-                                    <div key={customer.id} className="relative overflow-hidden rounded-lg">
-                                      {/* Swipe background indicators */}
-                                      {draggingCardId === customer.id && (
-                                        <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
-                                          <div className={`${isScopedCustomer ? "w-full" : "w-1/2"} bg-green-500 flex items-center justify-start pl-4`}>
-                                            <WhatsAppIcon className="w-6 h-6 text-white" />
+                                const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
+                                const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+                                const rowNumber = (currentPages.loans - 1) * itemsPerPage + idx + 1;
+                                const isValidPhone = customer.phone && /^\d{10,15}$/.test(customer.phone);
+                                const message = `Hi ${customer.name},\n\nLoans: ${customerLoans.length}\nLoan Value: ${formatCurrency(loanValue)}\n\nThank You, I J Reddy.`;
+                                return (
+                                  <div key={customer.id} className="relative overflow-hidden rounded-lg">
+                                    {/* Swipe background indicators */}
+                                    {draggingCardId === customer.id && (
+                                      <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
+                                        <div className={`${isScopedCustomer ? "w-full" : "w-1/2"} bg-green-500 flex items-center justify-start pl-4`}>
+                                          <WhatsAppIcon className="w-6 h-6 text-white" />
+                                        </div>
+                                        {!isScopedCustomer && (
+                                          <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
+                                            <Trash2Icon className="w-6 h-6 text-white" />
                                           </div>
-                                          {!isScopedCustomer && (
-                                            <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
-                                              <Trash2Icon className="w-6 h-6 text-white" />
-                                            </div>
-                                          )}
-                                        </div>
-                                      )}
-                                      <motion.div 
-                                        className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border" 
-                                        onClick={() => setSelectedCustomer(customer)} 
-                                        initial={{ opacity: 0 }} 
-                                        animate={{ opacity: 1 }} 
-                                        exit={{ opacity: 0 }} 
-                                        transition={{ duration: 0.3, delay: idx * 0.03 }}
-                                        drag="x"
-                                        dragConstraints={{ left: 0, right: 0 }}
-                                        dragElastic={0.3}
-                                        dragMomentum={false}
-                                        dragDirectionLock={true}
-                                        style={{ touchAction: "pan-y" }}
-                                        onDragStart={() => setDraggingCardId(customer.id)}
-                                        onDragEnd={(_, info) => {
-                                          setDraggingCardId(null);
-                                          const threshold = 100;
-                                          if (!isScopedCustomer && info.offset.x < -threshold) {
-                                            handleDeleteCustomer(customer);
-                                          } else if (info.offset.x > threshold && isValidPhone) {
-                                            openWhatsApp(customer.phone, message, { cooldownMs: 1200 });
-                                          }
-                                        }}
-                                      >
-                                        <div className="flex items-center gap-1">
-                                          <span className="text-xs text-gray-400 dark:text-dark-muted">#{rowNumber}</span>
-                                          <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 truncate">{customer.name}</span>
-                                        </div>
-                                        <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                          Phone: <span className="font-semibold text-gray-700 dark:text-dark-text">{customer.phone}</span>
-                                        </div>
-                                        <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                          Loans: <span className="font-semibold text-gray-700 dark:text-dark-text">{customerLoans.length}</span>
-                                        </div>
-                                        <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                          Loan Value: <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(loanValue)}</span>
-                                        </div>
-                                        <div className="mt-3 flex items-center justify-evenly">
-                                          <button
-                                            onClick={(e) => { e.stopPropagation(); isValidPhone && openWhatsApp(customer.phone, message, { cooldownMs: 1200 }); }}
-                                            className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-                                            disabled={!isValidPhone}
-                                          >
-                                            <WhatsAppIcon className="w-5 h-5" />
-                                          </button>
-                                          <button
-                                            onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {} } }); }}
-                                            className="px-3 py-1 rounded bg-blue-600 text-white text-sm dark:hover:bg-blue-500"
-                                          >
-                                            Edit
-                                          </button>
-                                          <button
-                                            onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }}
-                                            className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-                                          >
-                                            <Trash2Icon className="w-5 h-5" />
-                                          </button>
-                                        </div>
-                                      </motion.div>
-                                    </div>
-                                  );
+                                        )}
+                                      </div>
+                                    )}
+                                    <motion.div
+                                      className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
+                                      onClick={() => setSelectedCustomer(customer)}
+                                      initial={{ opacity: 0 }}
+                                      animate={{ opacity: 1 }}
+                                      exit={{ opacity: 0 }}
+                                      transition={{ duration: 0.3, delay: idx * 0.03 }}
+                                      drag="x"
+                                      dragConstraints={{ left: 0, right: 0 }}
+                                      dragElastic={0.3}
+                                      dragMomentum={false}
+                                      dragDirectionLock={true}
+                                      style={{ touchAction: "pan-y" }}
+                                      onDragStart={() => setDraggingCardId(customer.id)}
+                                      onDragEnd={(_, info) => {
+                                        setDraggingCardId(null);
+                                        const threshold = 100;
+                                        if (!isScopedCustomer && info.offset.x < -threshold) {
+                                          handleDeleteCustomer(customer);
+                                        } else if (info.offset.x > threshold && isValidPhone) {
+                                          openWhatsApp(customer.phone, message, { cooldownMs: 1200 });
+                                        }
+                                      }}
+                                    >
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-xs text-gray-400 dark:text-dark-muted">#{rowNumber}</span>
+                                        <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 truncate">{customer.name}</span>
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                                        Phone: <span className="font-semibold text-gray-700 dark:text-dark-text">{customer.phone}</span>
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                                        Loans: <span className="font-semibold text-gray-700 dark:text-dark-text">{customerLoans.length}</span>
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                                        Loan Value: <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(loanValue)}</span>
+                                      </div>
+                                      <div className="mt-3 flex items-center justify-evenly">
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); isValidPhone && openWhatsApp(customer.phone, message, { cooldownMs: 1200 }); }}
+                                          className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                                          disabled={!isValidPhone}
+                                        >
+                                          <WhatsAppIcon className="w-5 h-5" />
+                                        </button>
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {} } }); }}
+                                          className="px-3 py-1 rounded bg-blue-600 text-white text-sm dark:hover:bg-blue-500"
+                                        >
+                                          Edit
+                                        </button>
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }}
+                                          className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                                        >
+                                          <Trash2Icon className="w-5 h-5" />
+                                        </button>
+                                      </div>
+                                    </motion.div>
+                                  </div>
+                                );
                               })}
                             </div>
+                            <PaginationControls section="loans" totalItems={categorizedCustomers.withOnlyLoans.length} />
                           </>
                         );
                       })()}
@@ -654,7 +651,7 @@ const CustomerListPage = () => {
                 onClick={() => toggleSection('subs')}
                 className="w-full flex justify-between items-center p-2 sm:p-4"
               >
-                <h3 className="text-xl font-bold text-cyan-800 dark:text-cyan-400 flex items-center gap-1"><UsersIcon className="w-5 h-5 mr-1"/>Customers with Only Subscriptions</h3>
+                <h3 className="text-xl font-bold text-cyan-800 dark:text-cyan-400 flex items-center gap-1"><UsersIcon className="w-5 h-5 mr-1" />Customers with Only Subscriptions</h3>
                 <ChevronDownIcon className={`w-6 h-6 text-cyan-800 dark:text-cyan-400 transition-transform ${expandedSections.subs ? 'rotate-180' : ''}`} />
               </button>
               <AnimatePresence initial={false}>
@@ -675,8 +672,6 @@ const CustomerListPage = () => {
                         const paginatedCustomers = categorizedCustomers.withOnlySubscriptions.slice(start, end);
                         return (
                           <>
-                            <PaginationControls section="subs" totalItems={categorizedCustomers.withOnlySubscriptions.length} />
-
                             {/* Desktop Table */}
                             <div className="hidden sm:block">
                               <table className="min-w-full divide-y divide-gray-200 dark:divide-dark-border">
@@ -692,24 +687,24 @@ const CustomerListPage = () => {
                                 </thead>
                                 <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
                                   {paginatedCustomers.map((customer, idx) => {
-                                      const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
-                                      const subValue = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
-                                      const rowNumber = (currentPages.subs - 1) * itemsPerPage + idx + 1;
-                                      return (
-                                          <motion.tr key={customer.id} className="bg-white hover:bg-cyan-50/50 transition cursor-pointer dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
-                                              <td className="px-2 py-2 text-gray-400 text-sm dark:text-dark-muted dark:border-dark-border">{rowNumber}</td>
-                                              <td className="px-4 py-2 font-bold text-indigo-700 dark:text-indigo-400 dark:border-dark-border">{customer.name}</td>
-                                              <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">{customer.phone}</td>
-                                              <td className="px-4 py-2 text-cyan-600 dark:text-cyan-400 dark:border-dark-border">{customerSubscriptions.length}</td>
-                                              <td className="px-4 py-2 text-cyan-600 dark:text-cyan-400 dark:border-dark-border">{formatCurrency(subValue)}</td>
-                                              <td className="px-4 py-2 dark:border-dark-border">
-                                                <div className="flex justify-center gap-2">
-                                                  <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, subscription: customerSubscriptions[0] || {} } }); }} className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
-                                                  <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
-                                                </div>
-                                              </td>
-                                          </motion.tr>
-                                      );
+                                    const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
+                                    const subValue = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
+                                    const rowNumber = (currentPages.subs - 1) * itemsPerPage + idx + 1;
+                                    return (
+                                      <motion.tr key={customer.id} className="bg-white hover:bg-cyan-50/50 transition cursor-pointer dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
+                                        <td className="px-2 py-2 text-gray-400 text-sm dark:text-dark-muted dark:border-dark-border">{rowNumber}</td>
+                                        <td className="px-4 py-2 font-bold text-indigo-700 dark:text-indigo-400 dark:border-dark-border">{customer.name}</td>
+                                        <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">{customer.phone}</td>
+                                        <td className="px-4 py-2 text-cyan-600 dark:text-cyan-400 dark:border-dark-border">{customerSubscriptions.length}</td>
+                                        <td className="px-4 py-2 text-cyan-600 dark:text-cyan-400 dark:border-dark-border">{formatCurrency(subValue)}</td>
+                                        <td className="px-4 py-2 dark:border-dark-border">
+                                          <div className="flex justify-center gap-2">
+                                            <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, subscription: customerSubscriptions[0] || {} } }); }} className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
+                                            <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                                          </div>
+                                        </td>
+                                      </motion.tr>
+                                    );
                                   })}
                                 </tbody>
                               </table>
@@ -717,89 +712,90 @@ const CustomerListPage = () => {
                             {/* Mobile Cards */}
                             <div className="sm:hidden space-y-3">
                               {paginatedCustomers.map((customer, idx) => {
-                                  const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
-                                  const subValue = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
-                                  const rowNumber = (currentPages.subs - 1) * itemsPerPage + idx + 1;
-                                  const isValidPhone = customer.phone && /^\d{10,15}$/.test(customer.phone);
-                                  const message = `Hi ${customer.name},\n\nSubscriptions: ${customerSubscriptions.length}\nTotal Value: ${formatCurrency(subValue)}\n\nThank You, I J Reddy.`;
-                                  return (
-                                    <div key={customer.id} className="relative overflow-hidden rounded-lg">
-                                      {/* Swipe background indicators */}
-                                      {draggingCardId === customer.id && (
-                                        <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
-                                          <div className={`${isScopedCustomer ? "w-full" : "w-1/2"} bg-green-500 flex items-center justify-start pl-4`}>
-                                            <WhatsAppIcon className="w-6 h-6 text-white" />
+                                const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
+                                const subValue = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
+                                const rowNumber = (currentPages.subs - 1) * itemsPerPage + idx + 1;
+                                const isValidPhone = customer.phone && /^\d{10,15}$/.test(customer.phone);
+                                const message = `Hi ${customer.name},\n\nSubscriptions: ${customerSubscriptions.length}\nTotal Value: ${formatCurrency(subValue)}\n\nThank You, I J Reddy.`;
+                                return (
+                                  <div key={customer.id} className="relative overflow-hidden rounded-lg">
+                                    {/* Swipe background indicators */}
+                                    {draggingCardId === customer.id && (
+                                      <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
+                                        <div className={`${isScopedCustomer ? "w-full" : "w-1/2"} bg-green-500 flex items-center justify-start pl-4`}>
+                                          <WhatsAppIcon className="w-6 h-6 text-white" />
+                                        </div>
+                                        {!isScopedCustomer && (
+                                          <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
+                                            <Trash2Icon className="w-6 h-6 text-white" />
                                           </div>
-                                          {!isScopedCustomer && (
-                                            <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
-                                              <Trash2Icon className="w-6 h-6 text-white" />
-                                            </div>
-                                          )}
-                                        </div>
-                                      )}
-                                      <motion.div 
-                                        className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border" 
-                                        onClick={() => setSelectedCustomer(customer)} 
-                                        initial={{ opacity: 0 }} 
-                                        animate={{ opacity: 1 }} 
-                                        exit={{ opacity: 0 }} 
-                                        transition={{ duration: 0.3, delay: idx * 0.03 }}
-                                        drag="x"
-                                        dragConstraints={{ left: 0, right: 0 }}
-                                        dragElastic={0.3}
-                                        dragMomentum={false}
-                                        dragDirectionLock={true}
-                                        style={{ touchAction: "pan-y" }}
-                                        onDragStart={() => setDraggingCardId(customer.id)}
-                                        onDragEnd={(_, info) => {
-                                          setDraggingCardId(null);
-                                          const threshold = 100;
-                                          if (!isScopedCustomer && info.offset.x < -threshold) {
-                                            handleDeleteCustomer(customer);
-                                          } else if (info.offset.x > threshold && isValidPhone) {
-                                            openWhatsApp(customer.phone, message, { cooldownMs: 1200 });
-                                          }
-                                        }}
-                                      >
-                                        <div className="flex items-center gap-1">
-                                          <span className="text-xs text-gray-400 dark:text-dark-muted">#{rowNumber}</span>
-                                          <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 truncate">{customer.name}</span>
-                                        </div>
-                                        <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                          Phone: <span className="font-semibold text-gray-700 dark:text-dark-text">{customer.phone}</span>
-                                        </div>
-                                        <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                          Subscriptions: <span className="font-semibold text-cyan-600 dark:text-cyan-400">{customerSubscriptions.length}</span>
-                                        </div>
-                                        <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                          Total Value: <span className="font-semibold text-cyan-600 dark:text-cyan-400">{formatCurrency(subValue)}</span>
-                                        </div>
-                                        <div className="mt-3 flex items-center justify-evenly">
-                                          <button
-                                            onClick={(e) => { e.stopPropagation(); isValidPhone && openWhatsApp(customer.phone, message, { cooldownMs: 1200 }); }}
-                                            className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-                                            disabled={!isValidPhone}
-                                          >
-                                            <WhatsAppIcon className="w-5 h-5" />
-                                          </button>
-                                          <button
-                                            onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, subscription: customerSubscriptions[0] || {} } }); }}
-                                            className="px-3 py-1 rounded bg-blue-600 text-white text-sm dark:hover:bg-blue-500"
-                                          >
-                                            Edit
-                                          </button>
-                                          <button
-                                            onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }}
-                                            className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-                                          >
-                                            <Trash2Icon className="w-5 h-5" />
-                                          </button>
-                                        </div>
-                                      </motion.div>
-                                    </div>
-                                  );
+                                        )}
+                                      </div>
+                                    )}
+                                    <motion.div
+                                      className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
+                                      onClick={() => setSelectedCustomer(customer)}
+                                      initial={{ opacity: 0 }}
+                                      animate={{ opacity: 1 }}
+                                      exit={{ opacity: 0 }}
+                                      transition={{ duration: 0.3, delay: idx * 0.03 }}
+                                      drag="x"
+                                      dragConstraints={{ left: 0, right: 0 }}
+                                      dragElastic={0.3}
+                                      dragMomentum={false}
+                                      dragDirectionLock={true}
+                                      style={{ touchAction: "pan-y" }}
+                                      onDragStart={() => setDraggingCardId(customer.id)}
+                                      onDragEnd={(_, info) => {
+                                        setDraggingCardId(null);
+                                        const threshold = 100;
+                                        if (!isScopedCustomer && info.offset.x < -threshold) {
+                                          handleDeleteCustomer(customer);
+                                        } else if (info.offset.x > threshold && isValidPhone) {
+                                          openWhatsApp(customer.phone, message, { cooldownMs: 1200 });
+                                        }
+                                      }}
+                                    >
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-xs text-gray-400 dark:text-dark-muted">#{rowNumber}</span>
+                                        <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 truncate">{customer.name}</span>
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                                        Phone: <span className="font-semibold text-gray-700 dark:text-dark-text">{customer.phone}</span>
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                                        Subscriptions: <span className="font-semibold text-cyan-600 dark:text-cyan-400">{customerSubscriptions.length}</span>
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                                        Total Value: <span className="font-semibold text-cyan-600 dark:text-cyan-400">{formatCurrency(subValue)}</span>
+                                      </div>
+                                      <div className="mt-3 flex items-center justify-evenly">
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); isValidPhone && openWhatsApp(customer.phone, message, { cooldownMs: 1200 }); }}
+                                          className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                                          disabled={!isValidPhone}
+                                        >
+                                          <WhatsAppIcon className="w-5 h-5" />
+                                        </button>
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, subscription: customerSubscriptions[0] || {} } }); }}
+                                          className="px-3 py-1 rounded bg-blue-600 text-white text-sm dark:hover:bg-blue-500"
+                                        >
+                                          Edit
+                                        </button>
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }}
+                                          className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                                        >
+                                          <Trash2Icon className="w-5 h-5" />
+                                        </button>
+                                      </div>
+                                    </motion.div>
+                                  </div>
+                                );
                               })}
                             </div>
+                            <PaginationControls section="subs" totalItems={categorizedCustomers.withOnlySubscriptions.length} />
                           </>
                         );
                       })()}
@@ -812,151 +808,151 @@ const CustomerListPage = () => {
 
           {/* Section: Customers with No Loans or Subscriptions */}
           {categorizedCustomers.withNeither && categorizedCustomers.withNeither.length > 0 && (
-              <GlassCard className="!p-0 bg-gray-50 border-gray-200 dark:bg-dark-card dark:border-dark-border overflow-hidden">
-                <button
-                  onClick={() => toggleSection('neither')}
-                  className="w-full flex justify-between items-center p-2 sm:p-4"
-                >
-                  <h3 className="text-xl font-bold text-gray-800 dark:text-gray-400 flex items-center gap-1"><UsersIcon className="w-5 h-5 mr-1"/>Customers with No Records</h3>
-                  <ChevronDownIcon className={`w-6 h-6 text-gray-800 dark:text-gray-400 transition-transform ${expandedSections.neither ? 'rotate-180' : ''}`} />
-                </button>
-                <AnimatePresence initial={false}>
-                  {expandedSections.neither && (
-                    <motion.div
-                      key="content"
-                      initial="collapsed"
-                      animate="open"
-                      exit="collapsed"
-                      variants={collapseVariants}
-                      transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
-                    >
-                      <div className="p-2 sm:p-4 pt-0">
-                        {(() => {
-                          const totalPages = Math.ceil(categorizedCustomers.withNeither.length / itemsPerPage);
-                          const start = (currentPages.neither - 1) * itemsPerPage;
-                          const end = start + itemsPerPage;
-                          const paginatedCustomers = categorizedCustomers.withNeither.slice(start, end);
-                          return (
-                            <>
-                              <PaginationControls section="neither" totalItems={categorizedCustomers.withNeither.length} />
+            <GlassCard className="!p-0 bg-gray-50 border-gray-200 dark:bg-dark-card dark:border-dark-border overflow-hidden">
+              <button
+                onClick={() => toggleSection('neither')}
+                className="w-full flex justify-between items-center p-2 sm:p-4"
+              >
+                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-400 flex items-center gap-1"><UsersIcon className="w-5 h-5 mr-1" />Customers with No Records</h3>
+                <ChevronDownIcon className={`w-6 h-6 text-gray-800 dark:text-gray-400 transition-transform ${expandedSections.neither ? 'rotate-180' : ''}`} />
+              </button>
+              <AnimatePresence initial={false}>
+                {expandedSections.neither && (
+                  <motion.div
+                    key="content"
+                    initial="collapsed"
+                    animate="open"
+                    exit="collapsed"
+                    variants={collapseVariants}
+                    transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
+                  >
+                    <div className="p-2 sm:p-4 pt-0">
+                      {(() => {
+                        const totalPages = Math.ceil(categorizedCustomers.withNeither.length / itemsPerPage);
+                        const start = (currentPages.neither - 1) * itemsPerPage;
+                        const end = start + itemsPerPage;
+                        const paginatedCustomers = categorizedCustomers.withNeither.slice(start, end);
+                        return (
+                          <>
 
-                              {/* Desktop Table */}
-                              <div className="hidden sm:block">
-                                <table className="min-w-full divide-y divide-gray-200 dark:divide-dark-border">
-                                  <thead className="dark:bg-slate-700">
-                                      <tr>
-                                          <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border w-12">#</th>
-                                          <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Name</th>
-                                          <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Phone</th>
-                                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Actions</th>
-                                      </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
-                                      {paginatedCustomers.map((customer, idx) => {
-                                          const rowNumber = (currentPages.neither - 1) * itemsPerPage + idx + 1;
-                                          return (
-                                          <motion.tr key={customer.id} className="bg-white hover:bg-gray-50/50 transition cursor-pointer dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
-                                                  <td className="px-2 py-2 text-gray-400 text-sm dark:text-dark-muted dark:border-dark-border">{rowNumber}</td>
-                                                  <td className="px-4 py-2 font-bold text-indigo-700 dark:text-indigo-400 dark:border-dark-border">{customer.name}</td>
-                                                  <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">{customer.phone}</td>
-                                                  <td className="px-4 py-2 dark:border-dark-border">
-                                                    <div className="flex justify-center gap-2">
-                                                      <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer } }); }} className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
-                                                      <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
-                                                    </div>
-                                                  </td>
-                                          </motion.tr>
-                                          );
-                                      })}
-                                  </tbody>
-                                </table>
-                              </div>
-                              {/* Mobile Cards */}
-                              <div className="sm:hidden space-y-3">
+                            {/* Desktop Table */}
+                            <div className="hidden sm:block">
+                              <table className="min-w-full divide-y divide-gray-200 dark:divide-dark-border">
+                                <thead className="dark:bg-slate-700">
+                                  <tr>
+                                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border w-12">#</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Name</th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Phone</th>
+                                    <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Actions</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
                                   {paginatedCustomers.map((customer, idx) => {
-                                      const rowNumber = (currentPages.neither - 1) * itemsPerPage + idx + 1;
-                                      const isValidPhone = customer.phone && /^\d{10,15}$/.test(customer.phone);
-                                      const message = `Hi ${customer.name},\n\nThank You, I J Reddy.`;
-                                      return (
-                                      <div key={customer.id} className="relative overflow-hidden rounded-lg">
-                                        {/* Swipe background indicators */}
-                                        {draggingCardId === customer.id && (
-                                          <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
-                                            <div className={`${isScopedCustomer ? "w-full" : "w-1/2"} bg-green-500 flex items-center justify-start pl-4`}>
-                                              <WhatsAppIcon className="w-6 h-6 text-white" />
-                                            </div>
-                                            {!isScopedCustomer && (
-                                              <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
-                                                <Trash2Icon className="w-6 h-6 text-white" />
-                                              </div>
-                                            )}
+                                    const rowNumber = (currentPages.neither - 1) * itemsPerPage + idx + 1;
+                                    return (
+                                      <motion.tr key={customer.id} className="bg-white hover:bg-gray-50/50 transition cursor-pointer dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
+                                        <td className="px-2 py-2 text-gray-400 text-sm dark:text-dark-muted dark:border-dark-border">{rowNumber}</td>
+                                        <td className="px-4 py-2 font-bold text-indigo-700 dark:text-indigo-400 dark:border-dark-border">{customer.name}</td>
+                                        <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">{customer.phone}</td>
+                                        <td className="px-4 py-2 dark:border-dark-border">
+                                          <div className="flex justify-center gap-2">
+                                            <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer } }); }} className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
+                                            <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                                          </div>
+                                        </td>
+                                      </motion.tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                            {/* Mobile Cards */}
+                            <div className="sm:hidden space-y-3">
+                              {paginatedCustomers.map((customer, idx) => {
+                                const rowNumber = (currentPages.neither - 1) * itemsPerPage + idx + 1;
+                                const isValidPhone = customer.phone && /^\d{10,15}$/.test(customer.phone);
+                                const message = `Hi ${customer.name},\n\nThank You, I J Reddy.`;
+                                return (
+                                  <div key={customer.id} className="relative overflow-hidden rounded-lg">
+                                    {/* Swipe background indicators */}
+                                    {draggingCardId === customer.id && (
+                                      <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
+                                        <div className={`${isScopedCustomer ? "w-full" : "w-1/2"} bg-green-500 flex items-center justify-start pl-4`}>
+                                          <WhatsAppIcon className="w-6 h-6 text-white" />
+                                        </div>
+                                        {!isScopedCustomer && (
+                                          <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
+                                            <Trash2Icon className="w-6 h-6 text-white" />
                                           </div>
                                         )}
-                                        <motion.div 
-                                          className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border" 
-                                          onClick={() => setSelectedCustomer(customer)} 
-                                          initial={{ opacity: 0 }} 
-                                          animate={{ opacity: 1 }} 
-                                          exit={{ opacity: 0 }} 
-                                          transition={{ duration: 0.3, delay: idx * 0.03 }}
-                                          drag="x"
-                                          dragConstraints={{ left: 0, right: 0 }}
-                                          dragElastic={0.3}
-                                          dragMomentum={false}
-                                          dragDirectionLock={true}
-                                          style={{ touchAction: "pan-y" }}
-                                            onDragStart={() => setDraggingCardId(customer.id)}
-                                            onDragEnd={(_, info) => {
-                                              setDraggingCardId(null);
-                                              const threshold = 100;
-                                              if (!isScopedCustomer && info.offset.x < -threshold) {
-                                                handleDeleteCustomer(customer);
-                                              } else if (info.offset.x > threshold && isValidPhone) {
-                                                openWhatsApp(customer.phone, message, { cooldownMs: 1200 });
-                                              }
-                                            }}
-                                        >
-                                          <div className="flex items-center gap-1">
-                                            <span className="text-xs text-gray-400 dark:text-dark-muted">#{rowNumber}</span>
-                                            <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 truncate">{customer.name}</span>
-                                          </div>
-                                          <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                            Phone: <span className="font-semibold text-gray-700 dark:text-dark-text">{customer.phone}</span>
-                                          </div>
-                                          <div className="mt-3 flex items-center justify-evenly">
-                                            <button
-                                              onClick={(e) => { e.stopPropagation(); isValidPhone && openWhatsApp(customer.phone, message, { cooldownMs: 1200 }); }}
-                                              className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-                                              disabled={!isValidPhone}
-                                            >
-                                              <WhatsAppIcon className="w-5 h-5" />
-                                            </button>
-                                            <button
-                                              onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer } }); }}
-                                              className="px-3 py-1 rounded bg-blue-600 text-white text-sm dark:hover:bg-blue-500"
-                                            >
-                                              Edit
-                                            </button>
-                                            <button
-                                              onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }}
-                                              className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-                                            >
-                                              <Trash2Icon className="w-5 h-5" />
-                                            </button>
-                                          </div>
-                                        </motion.div>
                                       </div>
-                                      );
-                                  })}
-                              </div>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </GlassCard>
+                                    )}
+                                    <motion.div
+                                      className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
+                                      onClick={() => setSelectedCustomer(customer)}
+                                      initial={{ opacity: 0 }}
+                                      animate={{ opacity: 1 }}
+                                      exit={{ opacity: 0 }}
+                                      transition={{ duration: 0.3, delay: idx * 0.03 }}
+                                      drag="x"
+                                      dragConstraints={{ left: 0, right: 0 }}
+                                      dragElastic={0.3}
+                                      dragMomentum={false}
+                                      dragDirectionLock={true}
+                                      style={{ touchAction: "pan-y" }}
+                                      onDragStart={() => setDraggingCardId(customer.id)}
+                                      onDragEnd={(_, info) => {
+                                        setDraggingCardId(null);
+                                        const threshold = 100;
+                                        if (!isScopedCustomer && info.offset.x < -threshold) {
+                                          handleDeleteCustomer(customer);
+                                        } else if (info.offset.x > threshold && isValidPhone) {
+                                          openWhatsApp(customer.phone, message, { cooldownMs: 1200 });
+                                        }
+                                      }}
+                                    >
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-xs text-gray-400 dark:text-dark-muted">#{rowNumber}</span>
+                                        <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 truncate">{customer.name}</span>
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                                        Phone: <span className="font-semibold text-gray-700 dark:text-dark-text">{customer.phone}</span>
+                                      </div>
+                                      <div className="mt-3 flex items-center justify-evenly">
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); isValidPhone && openWhatsApp(customer.phone, message, { cooldownMs: 1200 }); }}
+                                          className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                                          disabled={!isValidPhone}
+                                        >
+                                          <WhatsAppIcon className="w-5 h-5" />
+                                        </button>
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer } }); }}
+                                          className="px-3 py-1 rounded bg-blue-600 text-white text-sm dark:hover:bg-blue-500"
+                                        >
+                                          Edit
+                                        </button>
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }}
+                                          className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                                        >
+                                          <Trash2Icon className="w-5 h-5" />
+                                        </button>
+                                      </div>
+                                    </motion.div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <PaginationControls section="neither" totalItems={categorizedCustomers.withNeither.length} />
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </GlassCard>
           )}
 
         </div>
@@ -964,19 +960,19 @@ const CustomerListPage = () => {
 
       <AnimatePresence>
         {selectedCustomer && (
-      <CustomerDetailModal
-          customer={selectedCustomer}
-          loans={loans.filter(l => l.customer_id === selectedCustomer.id)}
-          subscriptions={subscriptions.filter(s => s.customer_id === selectedCustomer.id)}
-          installments={installments}
-          dataEntries={dataEntries.filter(d => d.customer_id === selectedCustomer.id)}
-          onClose={() => setSelectedCustomer(null)}
-          deleteLoan={deleteLoan}
-          deleteSubscription={deleteSubscription}
-          deleteInstallment={deleteInstallment}
-          onEditLoan={(loan) => setEditModal({ type: 'loan', data: loan })}
-          onEditSubscription={(sub) => setEditModal({ type: 'subscription', data: sub })}
-      />
+          <CustomerDetailModal
+            customer={selectedCustomer}
+            loans={loans.filter(l => l.customer_id === selectedCustomer.id)}
+            subscriptions={subscriptions.filter(s => s.customer_id === selectedCustomer.id)}
+            installments={installments}
+            dataEntries={dataEntries.filter(d => d.customer_id === selectedCustomer.id)}
+            onClose={() => setSelectedCustomer(null)}
+            deleteLoan={deleteLoan}
+            deleteSubscription={deleteSubscription}
+            deleteInstallment={deleteInstallment}
+            onEditLoan={(loan) => setEditModal({ type: 'loan', data: loan })}
+            onEditSubscription={(sub) => setEditModal({ type: 'subscription', data: sub })}
+          />
         )}
       </AnimatePresence>
       <AnimatePresence>
@@ -985,49 +981,49 @@ const CustomerListPage = () => {
             type={editModal.type}
             data={editModal.data}
             onSave={async (updated) => {
-            try {
-              if (editModal.type === 'customer') {
-                await updateCustomer(updated.id, { name: updated.name, phone: updated.phone });
-              } else if (editModal.type === 'loan') {
-                await updateLoan(updated.id, {
-                  original_amount: updated.original_amount,
-                  interest_amount: updated.interest_amount,
-                  payment_date: updated.payment_date,
-                  total_instalments: updated.total_instalments,
-                });
-              } else if (editModal.type === 'subscription') {
-                await updateSubscription(updated.id, {
-                  amount: updated.amount,
-                  year: updated.year,
-                  date: updated.date,
-                  receipt: updated.receipt,
-                });
-              } else if (editModal.type === 'customer_loan') {
-                await updateCustomer(updated.customer.id, { name: updated.customer.name, phone: updated.customer.phone });
-                if (updated.loan && updated.loan.id) {
-                  await updateLoan(updated.loan.id, {
-                    original_amount: updated.loan.original_amount,
-                    interest_amount: updated.loan.interest_amount,
-                    payment_date: updated.loan.payment_date,
-                    total_instalments: updated.loan.total_instalments,
+              try {
+                if (editModal.type === 'customer') {
+                  await updateCustomer(updated.id, { name: updated.name, phone: updated.phone });
+                } else if (editModal.type === 'loan') {
+                  await updateLoan(updated.id, {
+                    original_amount: updated.original_amount,
+                    interest_amount: updated.interest_amount,
+                    payment_date: updated.payment_date,
+                    total_instalments: updated.total_instalments,
                   });
-                }
-                if (updated.subscription && updated.subscription.id) {
-                  await updateSubscription(updated.subscription.id, {
-                    amount: updated.subscription.amount,
-                    year: updated.subscription.year,
-                    date: updated.subscription.date,
-                    receipt: updated.subscription.receipt,
+                } else if (editModal.type === 'subscription') {
+                  await updateSubscription(updated.id, {
+                    amount: updated.amount,
+                    year: updated.year,
+                    date: updated.date,
+                    receipt: updated.receipt,
                   });
+                } else if (editModal.type === 'customer_loan') {
+                  await updateCustomer(updated.customer.id, { name: updated.customer.name, phone: updated.customer.phone });
+                  if (updated.loan && updated.loan.id) {
+                    await updateLoan(updated.loan.id, {
+                      original_amount: updated.loan.original_amount,
+                      interest_amount: updated.loan.interest_amount,
+                      payment_date: updated.loan.payment_date,
+                      total_instalments: updated.loan.total_instalments,
+                    });
+                  }
+                  if (updated.subscription && updated.subscription.id) {
+                    await updateSubscription(updated.subscription.id, {
+                      amount: updated.subscription.amount,
+                      year: updated.subscription.year,
+                      date: updated.subscription.date,
+                      receipt: updated.subscription.receipt,
+                    });
+                  }
                 }
+                setEditModal(null);
+              } catch (err: any) {
+                alert(err.message || 'Failed to update record');
               }
-              setEditModal(null);
-            } catch (err: any) {
-              alert(err.message || 'Failed to update record');
-            }
-          }}
-          onClose={() => setEditModal(null)}
-        />
+            }}
+            onClose={() => setEditModal(null)}
+          />
         )}
       </AnimatePresence>
       <AnimatePresence>

@@ -258,22 +258,20 @@ const DataPage = () => {
               {showTable ? 'All Entries' : 'New Data Entry'}
             </h2>
             <div className="w-full md:w-auto">
-              <button
-                type="button"
-                disabled={isScopedCustomer}
-                className={`w-full md:w-auto px-4 py-2 rounded-lg font-semibold transition-colors duration-200 text-center mt-2 md:mt-0 ${isScopedCustomer
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-slate-700 dark:text-dark-muted'
-                  : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50'
-                  }`}
-                onClick={() => {
-                  setShowTable(v => !v);
-                  // --- LOGIC FIX ---
-                  // Reset the filter when toggling views to prevent confusion.
-                  setCustomerFilter('');
-                }}
-              >
-                {showTable ? 'Add Data Entry' : 'View All Entries'}
-              </button>
+              {!isScopedCustomer && (
+                <button
+                  type="button"
+                  className="w-full md:w-auto px-4 py-2 rounded-lg font-semibold transition-colors duration-200 text-center mt-2 md:mt-0 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
+                  onClick={() => {
+                    setShowTable(v => !v);
+                    // --- LOGIC FIX ---
+                    // Reset the filter when toggling views to prevent confusion.
+                    setCustomerFilter('');
+                  }}
+                >
+                  {showTable ? 'Add Data Entry' : 'View All Entries'}
+                </button>
+              )}
             </div>
           </div>
 
@@ -367,7 +365,7 @@ const DataPage = () => {
                           <th className="px-4 py-3 resize-x overflow-auto cursor-col-resize" style={{ minWidth: '80px' }}>Amount</th>
                           <th className="px-4 py-3 resize-x overflow-auto cursor-col-resize" style={{ minWidth: '70px' }}>Receipt #</th>
                           <th className="px-4 py-3 resize-x overflow-auto cursor-col-resize" style={{ minWidth: '150px' }}>Notes</th>
-                          <th className="px-4 py-3 text-center text-red-600" style={{ minWidth: '100px' }}>Actions</th>
+                          {!isScopedCustomer && <th className="px-4 py-3 text-center text-red-600 dark:text-red-400" style={{ minWidth: '100px' }}>Actions</th>}
                         </tr>
                       </thead>
                       <tbody className="bg-white dark:bg-dark-card">
@@ -410,16 +408,18 @@ const DataPage = () => {
                                     {entry.notes || '-'}
                                   </div>
                                 </td>
-                                <td className="px-4 py-3 text-center">
-                                  <div className="flex items-center justify-center gap-2">
-                                    <button type="button" className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
-                                      Edit
-                                    </button>
-                                    <button type="button" className="p-1 rounded-full hover:bg-red-500/10 transition-colors" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }}>
-                                      <Trash2Icon className="w-5 h-5 text-red-500" />
-                                    </button>
-                                  </div>
-                                </td>
+                                {!isScopedCustomer && (
+                                  <td className="px-4 py-3 text-center">
+                                    <div className="flex items-center justify-center gap-2">
+                                      <button type="button" className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
+                                        Edit
+                                      </button>
+                                      <button type="button" className="p-1 rounded-full hover:bg-red-500/10 transition-colors" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }}>
+                                        <Trash2Icon className="w-5 h-5 text-red-500" />
+                                      </button>
+                                    </div>
+                                  </td>
+                                )}
                               </tr>
                             );
                           })
@@ -458,12 +458,16 @@ const DataPage = () => {
                                 <div>{formatDate(entry.date)}</div>
                                 <div className="flex items-center gap-3">
                                   {entry.receipt_number && <div className="px-2 py-1 bg-gray-100 rounded text-xs dark:bg-slate-700">#{entry.receipt_number}</div>}
-                                  <button type="button" className="px-3 py-1 rounded bg-blue-600 text-white text-sm" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
-                                    Edit
-                                  </button>
-                                  <button aria-label="Delete entry" type="button" className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }}>
-                                    <Trash2Icon className="w-5 h-5" />
-                                  </button>
+                                  {!isScopedCustomer && (
+                                    <>
+                                      <button type="button" className="px-3 py-1 rounded bg-blue-600 text-white text-sm" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
+                                        Edit
+                                      </button>
+                                      <button aria-label="Delete entry" type="button" className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }}>
+                                        <Trash2Icon className="w-5 h-5" />
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
                               </div>
                               {entry.notes && (

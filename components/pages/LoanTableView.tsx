@@ -284,6 +284,12 @@ const LoanTableView: React.FC = () => {
             </th>
             <th
               className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
+              onClick={() => handleSort("total_repayable")}
+            >
+              Total Repayable
+            </th>
+            <th
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("loan_amount")}
             >
               Loan Amount
@@ -293,12 +299,6 @@ const LoanTableView: React.FC = () => {
               onClick={() => handleSort("interest")}
             >
               Interest
-            </th>
-            <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
-              onClick={() => handleSort("total_repayable")}
-            >
-              Total Repayable
             </th>
             <th
               className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
@@ -342,9 +342,11 @@ const LoanTableView: React.FC = () => {
             >
               Status
             </th>
-            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 dark:border-dark-border dark:text-dark-text">
-              Actions
-            </th>
+            {!isScopedCustomer && (
+              <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 dark:border-dark-border dark:text-dark-text">
+                Actions
+              </th>
+            )}
           </tr>
         </thead>
         {/* THIS SECTION CONTROLS THE INITIAL ROW-BY-ROW FADE IN */}
@@ -389,13 +391,13 @@ const LoanTableView: React.FC = () => {
                       </button>
                     </td>
                     <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
+                      {formatCurrencyIN(totalRepayable)}
+                    </td>
+                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
                       {formatCurrencyIN(loan.original_amount)}
                     </td>
                     <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
                       {formatCurrencyIN(loan.interest_amount)}
-                    </td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
-                      {formatCurrencyIN(totalRepayable)}
                     </td>
                     <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
                       {formatCurrencyIN(paid)}
@@ -421,32 +423,30 @@ const LoanTableView: React.FC = () => {
                     >
                       {isPaidOff ? "Paid Off" : "In Progress"}
                     </td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border">
-                      <div className="flex gap-2">
-                        {!isScopedCustomer && (
-                          <>
-                            <button
-                              onClick={() => setEditLoanTarget(loan)}
-                              className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() =>
-                                setDeleteLoanTarget({
-                                  id: loan.id,
-                                  customer: loan.customers?.name ?? null,
-                                })
-                              }
-                              className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
-                              title="Delete loan"
-                            >
-                              <Trash2Icon className="w-5 h-5 text-red-500" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
+                    {!isScopedCustomer && (
+                      <td className="px-4 py-2 border-b dark:border-dark-border">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setEditLoanTarget(loan)}
+                            className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() =>
+                              setDeleteLoanTarget({
+                                id: loan.id,
+                                customer: loan.customers?.name ?? null,
+                              })
+                            }
+                            className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                            title="Delete loan"
+                          >
+                            <Trash2Icon className="w-5 h-5 text-red-500" />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </motion.tr>
 
                   <AnimatePresence>
@@ -614,7 +614,7 @@ const LoanTableView: React.FC = () => {
           );
           const balance = totalRepayable - paid;
           const customer = loan.customers;
-          
+
           // WhatsApp message construction for loan - matches displayed fields
           let loanMessage = "";
           let isValidPhone = false;
@@ -622,7 +622,7 @@ const LoanTableView: React.FC = () => {
             isValidPhone = true;
             loanMessage = `Hi ${customer.name}, this is regarding your loan.\n\nTotal Repayable: ${formatCurrencyIN(totalRepayable)}\nTotal Installments: ${loan.total_instalments}\nPaid: ${formatCurrencyIN(paid)}\nInstallments Paid: ${loanInstallments.length}\nBalance: ${formatCurrencyIN(balance)}\n\nThank You, I J Reddy.`;
           }
-          
+
           return (
             <div key={loan.id} className="relative">
               {/* Swipe background indicators - only visible when dragging this card */}
@@ -781,73 +781,73 @@ const LoanTableView: React.FC = () => {
                             message += " Thank You, I J Reddy.";
                           }
                           return (
-                          <li
-                            key={inst.id}
-                            className="flex items-center justify-between"
-                          >
-                            <div className="text-sm">
-                              <div className="dark:text-dark-text">
-                                #{inst.installment_number} • {formatDate(inst.date)}
+                            <li
+                              key={inst.id}
+                              className="flex items-center justify-between"
+                            >
+                              <div className="text-sm">
+                                <div className="dark:text-dark-text">
+                                  #{inst.installment_number} • {formatDate(inst.date)}
+                                </div>
+                                <div className="text-green-700 font-semibold dark:text-green-400">
+                                  {formatCurrencyIN(inst.amount)}{" "}
+                                  {inst.late_fee > 0 && (
+                                    <span className="text-orange-500 text-xs">
+                                      (+{formatCurrencyIN(inst.late_fee)} late)
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-dark-muted">
+                                  Receipt: {inst.receipt_number || "-"}
+                                </div>
                               </div>
-                              <div className="text-green-700 font-semibold dark:text-green-400">
-                                {formatCurrencyIN(inst.amount)}{" "}
-                                {inst.late_fee > 0 && (
-                                  <span className="text-orange-500 text-xs">
-                                    (+{formatCurrencyIN(inst.late_fee)} late)
-                                  </span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (isValidPhone) {
+                                      openWhatsApp(customer?.phone, message, { cooldownMs: 1200 });
+                                    }
+                                  }}
+                                  className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                                  aria-label={`Send installment #${inst.installment_number} on WhatsApp`}
+                                  disabled={!isValidPhone}
+                                >
+                                  <WhatsAppIcon className="w-4 h-4" />
+                                </button>
+                                {!isScopedCustomer && (
+                                  <>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditTarget(inst);
+                                        setEditForm({
+                                          date: inst.date,
+                                          amount: inst.amount.toString(),
+                                          late_fee: inst.late_fee?.toString() || "",
+                                          receipt_number: inst.receipt_number || "",
+                                        });
+                                      }}
+                                      className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDeleteTarget({
+                                          id: inst.id,
+                                          number: inst.installment_number,
+                                        });
+                                      }}
+                                      className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                                    >
+                                      <Trash2Icon className="w-4 h-4" />
+                                    </button>
+                                  </>
                                 )}
                               </div>
-                              <div className="text-xs text-gray-500 dark:text-dark-muted">
-                                Receipt: {inst.receipt_number || "-"}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (isValidPhone) {
-                                    openWhatsApp(customer?.phone, message, { cooldownMs: 1200 });
-                                  }
-                                }}
-                                className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-                                aria-label={`Send installment #${inst.installment_number} on WhatsApp`}
-                                disabled={!isValidPhone}
-                              >
-                                <WhatsAppIcon className="w-4 h-4" />
-                              </button>
-                              {!isScopedCustomer && (
-                                <>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setEditTarget(inst);
-                                      setEditForm({
-                                        date: inst.date,
-                                        amount: inst.amount.toString(),
-                                        late_fee: inst.late_fee?.toString() || "",
-                                        receipt_number: inst.receipt_number || "",
-                                      });
-                                    }}
-                                    className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setDeleteTarget({
-                                        id: inst.id,
-                                        number: inst.installment_number,
-                                      });
-                                    }}
-                                    className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-                                  >
-                                    <Trash2Icon className="w-4 h-4" />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </li>
+                            </li>
                           );
                         })}
                       </ul>

@@ -253,22 +253,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
               >
                 👤 View Profile
               </button>
-              <button
-                onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                  const coords = getButtonCenter(e.currentTarget);
-                  setShowMenu(false);
-                  // Small delay to let menu close before animation
-                  setTimeout(() => toggleTheme(coords), 50);
-                }}
-                className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2 dark:text-dark-text dark:hover:bg-slate-700 dark:active:bg-slate-600"
-              >
-                {theme === 'dark' ? (
-                  <SunIcon className="w-4 h-4" />
-                ) : (
-                  <MoonIcon className="w-4 h-4" />
-                )}
-                {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-              </button>
+
               {/* Tools - Admin Only */}
               {!isScopedCustomer && (
                 <button

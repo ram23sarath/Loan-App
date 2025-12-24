@@ -323,7 +323,7 @@ const CustomerListPage = () => {
                 <h3 className="text-xl font-bold text-indigo-800 dark:text-indigo-400 flex items-center gap-1"><UsersIcon className="w-5 h-5 mr-1" />Customers with Loans & Subscriptions</h3>
                 <ChevronDownIcon className={`w-6 h-6 text-indigo-800 dark:text-indigo-400 transition-transform ${expandedSections.both ? 'rotate-180' : ''}`} />
               </button>
-              <AnimatePresence initial={false}>
+              <AnimatePresence initial={true}>
                 {expandedSections.both && (
                   <motion.div
                     key="content"
@@ -355,7 +355,7 @@ const CustomerListPage = () => {
                                     <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Actions</th>
                                   </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
+                                <tbody key={`both-page-${currentPages.both}`} className="divide-y divide-gray-200 dark:divide-dark-border">
                                   {paginatedCustomers.map((customer, idx) => {
                                     const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
                                     const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
@@ -492,7 +492,7 @@ const CustomerListPage = () => {
                 <h3 className="text-xl font-bold text-blue-800 dark:text-indigo-400 flex items-center gap-1"><UsersIcon className="w-5 h-5 mr-1" />Customers with Only Loans</h3>
                 <ChevronDownIcon className={`w-6 h-6 text-blue-800 dark:text-indigo-400 transition-transform ${expandedSections.loans ? 'rotate-180' : ''}`} />
               </button>
-              <AnimatePresence initial={false}>
+              <AnimatePresence initial={true}>
                 {expandedSections.loans && (
                   <motion.div
                     key="content"
@@ -523,7 +523,7 @@ const CustomerListPage = () => {
                                     <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Actions</th>
                                   </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
+                                <tbody key={`loans-page-${currentPages.loans}`} className="divide-y divide-gray-200 dark:divide-dark-border">
                                   {paginatedCustomers.map((customer, idx) => {
                                     const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
                                     const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
@@ -654,7 +654,7 @@ const CustomerListPage = () => {
                 <h3 className="text-xl font-bold text-cyan-800 dark:text-cyan-400 flex items-center gap-1"><UsersIcon className="w-5 h-5 mr-1" />Customers with Only Subscriptions</h3>
                 <ChevronDownIcon className={`w-6 h-6 text-cyan-800 dark:text-cyan-400 transition-transform ${expandedSections.subs ? 'rotate-180' : ''}`} />
               </button>
-              <AnimatePresence initial={false}>
+              <AnimatePresence initial={true}>
                 {expandedSections.subs && (
                   <motion.div
                     key="content"
@@ -685,7 +685,7 @@ const CustomerListPage = () => {
                                     <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Actions</th>
                                   </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
+                                <tbody key={`subs-page-${currentPages.subs}`} className="divide-y divide-gray-200 dark:divide-dark-border">
                                   {paginatedCustomers.map((customer, idx) => {
                                     const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
                                     const subValue = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
@@ -816,7 +816,7 @@ const CustomerListPage = () => {
                 <h3 className="text-xl font-bold text-gray-800 dark:text-gray-400 flex items-center gap-1"><UsersIcon className="w-5 h-5 mr-1" />Customers with No Records</h3>
                 <ChevronDownIcon className={`w-6 h-6 text-gray-800 dark:text-gray-400 transition-transform ${expandedSections.neither ? 'rotate-180' : ''}`} />
               </button>
-              <AnimatePresence initial={false}>
+              <AnimatePresence initial={true}>
                 {expandedSections.neither && (
                   <motion.div
                     key="content"
@@ -846,7 +846,7 @@ const CustomerListPage = () => {
                                     <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Actions</th>
                                   </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
+                                <tbody key={`neither-page-${currentPages.neither}`} className="divide-y divide-gray-200 dark:divide-dark-border">
                                   {paginatedCustomers.map((customer, idx) => {
                                     const rowNumber = (currentPages.neither - 1) * itemsPerPage + idx + 1;
                                     return (

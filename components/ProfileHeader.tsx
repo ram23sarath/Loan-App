@@ -181,29 +181,11 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
 
   return (
     <>
-      <div className="fixed top-2 right-6 md:top-4 md:right-6 z-[100] flex items-center gap-2" ref={menuRef}>
-        {/* Dark Mode Toggle Button */}
-        <motion.button
-          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-            const coords = getButtonCenter(e.currentTarget);
-            toggleTheme(coords);
-          }}
-          className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-white dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-yellow-400 flex items-center justify-center shadow-lg transition-colors border border-gray-200 dark:border-slate-600"
-          whileHover={{ scale: 1.05, rotate: 15 }}
-          whileTap={{ scale: 0.95 }}
-          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-        >
-          {theme === 'dark' ? (
-            <SunIcon className="w-5 h-5 md:w-6 md:h-6" />
-          ) : (
-            <MoonIcon className="w-5 h-5 md:w-6 md:h-6" />
-          )}
-        </motion.button>
-
+      <div className="fixed top-4 right-6 z-[100] hidden sm:flex items-center gap-2" ref={menuRef}>
         {/* Profile Avatar Button */}
         <motion.button
           onClick={() => setShowMenu(!showMenu)}
-          className="hidden sm:flex w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold items-center justify-center shadow-lg transition-colors text-lg md:text-xl"
+          className="w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center justify-center shadow-lg transition-colors text-lg md:text-xl"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           title={displayName}

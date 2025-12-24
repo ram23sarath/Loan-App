@@ -181,7 +181,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
 
   return (
     <>
-      <div className="fixed top-2 right-6 md:top-4 md:right-6 z-[100] hidden sm:flex landscape:flex items-center gap-2" ref={menuRef}>
+      <div className="fixed top-2 right-6 md:top-4 md:right-6 z-[100] flex items-center gap-2" ref={menuRef}>
         {/* Dark Mode Toggle Button */}
         <motion.button
           onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
@@ -203,7 +203,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
         {/* Profile Avatar Button */}
         <motion.button
           onClick={() => setShowMenu(!showMenu)}
-          className="w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center justify-center shadow-lg transition-colors text-lg md:text-xl"
+          className="hidden sm:flex w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold items-center justify-center shadow-lg transition-colors text-lg md:text-xl"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           title={displayName}

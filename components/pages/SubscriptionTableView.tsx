@@ -55,12 +55,18 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
 
   const sortedSubscriptions = React.useMemo(() => {
     let result = [...filteredSubscriptions];
-    
-    // If no sort field is set, sort by date descending (latest first)
+
+    // If no sort field is set, sort by date
     if (!sortField) {
       result.sort((a, b) => {
         const aDate = a.date ? new Date(a.date).getTime() : 0;
         const bDate = b.date ? new Date(b.date).getTime() : 0;
+
+        // For scoped customers, show oldest first (Ascending)
+        if (isScopedCustomer) {
+          return aDate - bDate;
+        }
+        // For admins, show newest first (Descending)
         return bDate - aDate;
       });
     } else {
@@ -205,7 +211,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
             >
               Previous
             </button>
-            
+
             {/* Page numbers */}
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
               // Show first, last, current, and neighbors
@@ -218,11 +224,10 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-1 rounded border ${
-                      currentPage === page
+                    className={`px-3 py-1 rounded border ${currentPage === page
                         ? "bg-indigo-600 text-white border-indigo-600"
                         : "border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700"
-                    }`}
+                      }`}
                   >
                     {page}
                   </button>
@@ -237,7 +242,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
               }
               return null;
             })}
-            
+
             <button
               onClick={() =>
                 setCurrentPage(Math.min(totalPages, currentPage + 1))
@@ -402,10 +407,10 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
           ) {
             isValidPhone = true;
             message = `Hi ${customer.name}, your subscription payment of ${formatCurrencyIN(
-                sub.amount
-              )} was received on ${formatDate(sub.date, "whatsapp")}${sub.late_fee && sub.late_fee > 0
-                ? ` (Late fee: ${formatCurrencyIN(sub.late_fee)})`
-                : ""
+              sub.amount
+            )} was received on ${formatDate(sub.date, "whatsapp")}${sub.late_fee && sub.late_fee > 0
+              ? ` (Late fee: ${formatCurrencyIN(sub.late_fee)})`
+              : ""
               }. Thank You, I J Reddy.`;
             whatsappUrl = `https://wa.me/${customer.phone
               }?text=${encodeURIComponent(message)}`;
@@ -428,7 +433,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                   )}
                 </div>
               )}
-              
+
               <motion.div
                 className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
                 initial={{ opacity: 0, y: 10 }}
@@ -454,66 +459,66 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                   }
                 }}
               >
-              {/* Row 1: # Name and Amount */}
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-gray-400 dark:text-dark-muted">#{actualIndex}</span>
-                  <span className="text-sm font-semibold text-indigo-700 truncate dark:text-indigo-400">
-                    {customer?.name ?? "Unknown"}
-                  </span>
+                {/* Row 1: # Name and Amount */}
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-gray-400 dark:text-dark-muted">#{actualIndex}</span>
+                    <span className="text-sm font-semibold text-indigo-700 truncate dark:text-indigo-400">
+                      {customer?.name ?? "Unknown"}
+                    </span>
+                  </div>
+                  <div className="text-lg font-bold dark:text-dark-text">
+                    {formatCurrencyIN(sub.amount)}
+                  </div>
                 </div>
-                <div className="text-lg font-bold dark:text-dark-text">
-                  {formatCurrencyIN(sub.amount)}
+
+                {/* Row 2: Date */}
+                <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                  Date: {formatDate(sub.date) || "-"}
                 </div>
-              </div>
 
-              {/* Row 2: Date */}
-              <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                Date: {formatDate(sub.date) || "-"}
-              </div>
+                {/* Row 3: Receipt Number (and Late Fee if exists) */}
+                <div className="text-xs text-gray-500 mt-1 flex justify-between dark:text-dark-muted">
+                  <span>Receipt: {sub.receipt || "-"}</span>
+                  {typeof sub.late_fee === "number" && sub.late_fee > 0 && (
+                    <span className="text-red-500">Late Fee: {formatCurrencyIN(sub.late_fee)}</span>
+                  )}
+                </div>
 
-              {/* Row 3: Receipt Number (and Late Fee if exists) */}
-              <div className="text-xs text-gray-500 mt-1 flex justify-between dark:text-dark-muted">
-                <span>Receipt: {sub.receipt || "-"}</span>
-                {typeof sub.late_fee === "number" && sub.late_fee > 0 && (
-                  <span className="text-red-500">Late Fee: {formatCurrencyIN(sub.late_fee)}</span>
-                )}
-              </div>
-
-              {/* Row 4: Action buttons */}
-              <div className="mt-3 flex items-center justify-evenly">
-                <button
-                  onClick={() =>
-                    isValidPhone &&
-                    openWhatsApp(customer?.phone, message, {
-                      cooldownMs: 1200,
-                    })
-                  }
-                  className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-                  disabled={!isValidPhone}
-                  aria-label={`Send subscription for ${customer?.name} on WhatsApp`}
-                >
-                  <WhatsAppIcon className="w-5 h-5" />
-                </button>
-                {!isScopedCustomer && (
+                {/* Row 4: Action buttons */}
+                <div className="mt-3 flex items-center justify-evenly">
                   <button
-                    onClick={() => setEditSubscriptionTarget(sub)}
-                    className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
+                    onClick={() =>
+                      isValidPhone &&
+                      openWhatsApp(customer?.phone, message, {
+                        cooldownMs: 1200,
+                      })
+                    }
+                    className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                    disabled={!isValidPhone}
+                    aria-label={`Send subscription for ${customer?.name} on WhatsApp`}
                   >
-                    Edit
+                    <WhatsAppIcon className="w-5 h-5" />
                   </button>
-                )}
-                {!isScopedCustomer && (
-                  <button
-                    onClick={() => onDelete(sub)}
-                    className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-                    aria-label={`Delete subscription for ${customer?.name}`}
-                    disabled={deletingId === sub.id}
-                  >
-                    <Trash2Icon className="w-5 h-5" />
-                  </button>
-                )}
-              </div>
+                  {!isScopedCustomer && (
+                    <button
+                      onClick={() => setEditSubscriptionTarget(sub)}
+                      className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
+                    >
+                      Edit
+                    </button>
+                  )}
+                  {!isScopedCustomer && (
+                    <button
+                      onClick={() => onDelete(sub)}
+                      className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                      aria-label={`Delete subscription for ${customer?.name}`}
+                      disabled={deletingId === sub.id}
+                    >
+                      <Trash2Icon className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
               </motion.div>
             </div>
           );

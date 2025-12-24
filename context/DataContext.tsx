@@ -200,7 +200,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 setLoans(loansArr);
 
                 // Subscriptions for this customer
-                const { data: subscriptionsData, error: subscriptionsError } = await supabase.from('subscriptions').select('*, customers(name, phone)').eq('customer_id', effectiveScopedId);
+                // Subscriptions for this customer (sorted by date ascending: oldest to newest)
+                const { data: subscriptionsData, error: subscriptionsError } = await supabase.from('subscriptions').select('*, customers(name, phone)').eq('customer_id', effectiveScopedId).order('date', { ascending: true });
                 if (subscriptionsError) throw subscriptionsError;
                 setSubscriptions((subscriptionsData as unknown as SubscriptionWithCustomer[]) || []);
 
@@ -561,7 +562,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                             const [customerRes, loansRes, subsRes, dataEntriesRes] = await Promise.all([
                                 supabase.from('customers').select('*').eq('id', currentScopedId).limit(1),
                                 supabase.from('loans').select('*, customers(name, phone)').eq('customer_id', currentScopedId),
-                                supabase.from('subscriptions').select('*, customers(name, phone)').eq('customer_id', currentScopedId),
+                                supabase.from('subscriptions').select('*, customers(name, phone)').eq('customer_id', currentScopedId).order('date', { ascending: true }),
                                 supabase.from('data_entries').select('*').eq('customer_id', currentScopedId),
                             ]);
 
@@ -606,27 +607,27 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                         } else {
                             // Admin/full data fetch - use pagination to get ALL records
                             console.log('🔄 Admin init: fetching all data with pagination...');
-                            
+
                             const customersData = await fetchAllRecords<Customer>(
                                 () => supabase.from('customers').select('*').order('created_at', { ascending: false }),
                                 'customers'
                             );
-                            
+
                             const loansData = await fetchAllRecords<LoanWithCustomer>(
                                 () => supabase.from('loans').select('*, customers(name, phone)').order('created_at', { ascending: false }),
                                 'loans'
                             );
-                            
+
                             const subscriptionsData = await fetchAllRecords<SubscriptionWithCustomer>(
                                 () => supabase.from('subscriptions').select('*, customers(name, phone)').order('created_at', { ascending: false }),
                                 'subscriptions'
                             );
-                            
+
                             const installmentsData = await fetchAllRecords<Installment>(
                                 () => supabase.from('installments').select('*').order('created_at', { ascending: false }),
                                 'installments'
                             );
-                            
+
                             const dataEntriesData = await fetchAllRecords<DataEntry>(
                                 () => supabase.from('data_entries').select('*').order('date', { ascending: false }),
                                 'data_entries'
@@ -765,7 +766,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     const [customerRes, loansRes, subsRes, dataEntriesRes] = await Promise.all([
                         supabase.from('customers').select('*').eq('id', currentScopedId).limit(1),
                         supabase.from('loans').select('*, customers(name, phone)').eq('customer_id', currentScopedId),
-                        supabase.from('subscriptions').select('*, customers(name, phone)').eq('customer_id', currentScopedId),
+                        supabase.from('subscriptions').select('*, customers(name, phone)').eq('customer_id', currentScopedId).order('date', { ascending: true }),
                         supabase.from('data_entries').select('*').eq('customer_id', currentScopedId),
                     ]);
 
@@ -815,27 +816,27 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
                     // Admin/full data fetch - use pagination to get ALL records
                     console.log('🔄 Admin refetch: fetching all data with pagination...');
-                    
+
                     const customersData = await fetchAllRecords<Customer>(
                         () => supabase.from('customers').select('*').order('created_at', { ascending: false }),
                         'customers'
                     );
-                    
+
                     const loansData = await fetchAllRecords<LoanWithCustomer>(
                         () => supabase.from('loans').select('*, customers(name, phone)').order('created_at', { ascending: false }),
                         'loans'
                     );
-                    
+
                     const subscriptionsData = await fetchAllRecords<SubscriptionWithCustomer>(
                         () => supabase.from('subscriptions').select('*, customers(name, phone)').order('created_at', { ascending: false }),
                         'subscriptions'
                     );
-                    
+
                     const installmentsData = await fetchAllRecords<Installment>(
                         () => supabase.from('installments').select('*').order('created_at', { ascending: false }),
                         'installments'
                     );
-                    
+
                     const dataEntriesData = await fetchAllRecords<DataEntry>(
                         () => supabase.from('data_entries').select('*').order('date', { ascending: false }),
                         'data_entries'

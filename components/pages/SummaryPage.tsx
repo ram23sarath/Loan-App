@@ -6,6 +6,8 @@ import * as XLSX from "xlsx";
 
 import FYBreakdownModal from "../modals/FYBreakdownModal";
 import PageWrapper from "../ui/PageWrapper";
+import { useTheme } from "../../context/ThemeContext";
+import { MoonIcon, SunIcon } from "../../constants";
 
 import { useData } from "../../context/DataContext";
 
@@ -23,7 +25,16 @@ import type { LoanWithCustomer, SubscriptionWithCustomer, Installment, DataEntry
 
 
 
+const getButtonCenter = (button: HTMLElement) => {
+  const rect = button.getBoundingClientRect();
+  return {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+  };
+};
+
 const SummaryPage = () => {
+  const { theme, toggleTheme } = useTheme();
 
   const {
 
@@ -1326,119 +1337,134 @@ const SummaryPage = () => {
           <div className="flex justify-between items-center mb-2">
 
             <div className="flex items-baseline gap-3">
-
               <h2 className="text-2xl font-bold text-indigo-700 uppercase tracking-widest">
-
                 Summary Dashboard
-
               </h2>
-
             </div>
 
-            {!isScopedCustomer && (
-
-              <div className="relative">
-
-                <motion.button
-
-                  onClick={() => setExportMenuOpen(!exportMenuOpen)}
-
-                  className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors p-2 sm:p-3 rounded-lg font-semibold text-sm dark:text-gray-200"
-
-                  whileHover={{ scale: 1.02 }}
-
-                  whileTap={{ scale: 0.98 }}
-
-                >
-
-                  <FileDownIcon className="w-5 h-5" />
-
-                  <span className="hidden sm:inline">Export</span>
-
-                  <svg className={`w-4 h-4 transition-transform ${exportMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-
-                  </svg>
-
-                </motion.button>
-
-                {exportMenuOpen && (
-
-                  <>
-
-                    <div className="fixed inset-0 z-40" onClick={() => setExportMenuOpen(false)} />
-
-                    <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 py-2">
-
-                      <button
-
-                        onClick={handleExportLoans}
-
-                        className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
-
-                      >
-
-                        <FileDownIcon className="w-4 h-4 text-blue-600" />
-
-                        Export Loans
-
-                      </button>
-
-                      <button
-
-                        onClick={handleExportSubscriptions}
-
-                        className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
-
-                      >
-
-                        <FileDownIcon className="w-4 h-4 text-cyan-600" />
-
-                        Export Subscriptions
-
-                      </button>
-
-                      <button
-
-                        onClick={handleExportSeniority}
-
-                        className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
-
-                      >
-
-                        <FileDownIcon className="w-4 h-4 text-purple-600" />
-
-                        Export Loan Seniority
-
-                      </button>
-
-                      <div className="border-t border-gray-100 my-1" />
-
-                      <button
-
-                        onClick={handleExportComprehensive}
-
-                        className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
-
-                      >
-
-                        <FileDownIcon className="w-4 h-4 text-indigo-600" />
-
-                        Export Comprehensive Report
-
-                      </button>
-
-                    </div>
-
-                  </>
-
+            <div className="flex items-center gap-3">
+              {/* Theme Toggle */}
+              <motion.button
+                onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                  const coords = getButtonCenter(e.currentTarget);
+                  toggleTheme(coords);
+                }}
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-yellow-400 flex items-center justify-center shadow-md transition-colors border border-gray-200 dark:border-slate-600 no-print"
+                whileHover={{ scale: 1.05, rotate: 15 }}
+                whileTap={{ scale: 0.95 }}
+                title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              >
+                {theme === "dark" ? (
+                  <SunIcon className="w-5 h-5" />
+                ) : (
+                  <MoonIcon className="w-5 h-5" />
                 )}
+              </motion.button>
 
-              </div>
+              {!isScopedCustomer && (
 
-            )}
+                <div className="relative">
 
+                  <motion.button
+
+                    onClick={() => setExportMenuOpen(!exportMenuOpen)}
+
+                    className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors p-2 sm:p-3 rounded-lg font-semibold text-sm dark:text-gray-200"
+
+                    whileHover={{ scale: 1.02 }}
+
+                    whileTap={{ scale: 0.98 }}
+
+                  >
+
+                    <FileDownIcon className="w-5 h-5" />
+
+                    <span className="hidden sm:inline">Export</span>
+
+                    <svg className={`w-4 h-4 transition-transform ${exportMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+
+                    </svg>
+
+                  </motion.button>
+
+                  {exportMenuOpen && (
+
+                    <>
+
+                      <div className="fixed inset-0 z-40" onClick={() => setExportMenuOpen(false)} />
+
+                      <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 py-2">
+
+                        <button
+
+                          onClick={handleExportLoans}
+
+                          className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
+
+                        >
+
+                          <FileDownIcon className="w-4 h-4 text-blue-600" />
+
+                          Export Loans
+
+                        </button>
+
+                        <button
+
+                          onClick={handleExportSubscriptions}
+
+                          className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
+
+                        >
+
+                          <FileDownIcon className="w-4 h-4 text-cyan-600" />
+
+                          Export Subscriptions
+
+                        </button>
+
+                        <button
+
+                          onClick={handleExportSeniority}
+
+                          className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
+
+                        >
+
+                          <FileDownIcon className="w-4 h-4 text-purple-600" />
+
+                          Export Loan Seniority
+
+                        </button>
+
+                        <div className="border-t border-gray-100 my-1" />
+
+                        <button
+
+                          onClick={handleExportComprehensive}
+
+                          className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
+
+                        >
+
+                          <FileDownIcon className="w-4 h-4 text-indigo-600" />
+
+                          Export Comprehensive Report
+
+                        </button>
+
+                      </div>
+
+                    </>
+
+                  )}
+
+                </div>
+
+              )}
+            </div>
           </div>
 
 

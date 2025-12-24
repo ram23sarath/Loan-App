@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import * as XLSX from "xlsx";
 
 import FYBreakdownModal from "../modals/FYBreakdownModal";
+import PageWrapper from "../ui/PageWrapper";
 
 import { useData } from "../../context/DataContext";
 
@@ -1317,780 +1318,344 @@ const SummaryPage = () => {
 
 
   return (
+    <PageWrapper>
+      <div className="w-full max-w-7xl mx-auto my-8 printable-summary">
 
-    <div className="w-full max-w-7xl mx-auto my-8 printable-summary">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md flex flex-col gap-8 p-6 border border-gray-200/80 dark:border-gray-700">
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md flex flex-col gap-8 p-6 border border-gray-200/80 dark:border-gray-700">
+          <div className="flex justify-between items-center mb-2">
 
-        <div className="flex justify-between items-center mb-2">
+            <div className="flex items-baseline gap-3">
 
-          <div className="flex items-baseline gap-3">
+              <h2 className="text-2xl font-bold text-indigo-700 uppercase tracking-widest">
 
-            <h2 className="text-2xl font-bold text-indigo-700 uppercase tracking-widest">
+                Summary Dashboard
 
-              Summary Dashboard
-
-            </h2>
-
-          </div>
-
-          {!isScopedCustomer && (
-
-            <div className="relative">
-
-              <motion.button
-
-                onClick={() => setExportMenuOpen(!exportMenuOpen)}
-
-                className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors p-2 sm:p-3 rounded-lg font-semibold text-sm dark:text-gray-200"
-
-                whileHover={{ scale: 1.02 }}
-
-                whileTap={{ scale: 0.98 }}
-
-              >
-
-                <FileDownIcon className="w-5 h-5" />
-
-                <span className="hidden sm:inline">Export</span>
-
-                <svg className={`w-4 h-4 transition-transform ${exportMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-
-                </svg>
-
-              </motion.button>
-
-              {exportMenuOpen && (
-
-                <>
-
-                  <div className="fixed inset-0 z-40" onClick={() => setExportMenuOpen(false)} />
-
-                  <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 py-2">
-
-                    <button
-
-                      onClick={handleExportLoans}
-
-                      className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
-
-                    >
-
-                      <FileDownIcon className="w-4 h-4 text-blue-600" />
-
-                      Export Loans
-
-                    </button>
-
-                    <button
-
-                      onClick={handleExportSubscriptions}
-
-                      className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
-
-                    >
-
-                      <FileDownIcon className="w-4 h-4 text-cyan-600" />
-
-                      Export Subscriptions
-
-                    </button>
-
-                    <button
-
-                      onClick={handleExportSeniority}
-
-                      className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
-
-                    >
-
-                      <FileDownIcon className="w-4 h-4 text-purple-600" />
-
-                      Export Loan Seniority
-
-                    </button>
-
-                    <div className="border-t border-gray-100 my-1" />
-
-                    <button
-
-                      onClick={handleExportComprehensive}
-
-                      className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
-
-                    >
-
-                      <FileDownIcon className="w-4 h-4 text-indigo-600" />
-
-                      Export Comprehensive Report
-
-                    </button>
-
-                  </div>
-
-                </>
-
-              )}
+              </h2>
 
             </div>
 
-          )}
+            {!isScopedCustomer && (
 
-        </div>
+              <div className="relative">
 
+                <motion.button
 
+                  onClick={() => setExportMenuOpen(!exportMenuOpen)}
 
-        <motion.div
+                  className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors p-2 sm:p-3 rounded-lg font-semibold text-sm dark:text-gray-200"
 
-          className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6 auto-rows-fr items-stretch"
+                  whileHover={{ scale: 1.02 }}
 
-          variants={mainContainerVariants}
+                  whileTap={{ scale: 0.98 }}
 
-          initial="hidden"
+                >
 
-          animate="visible"
+                  <FileDownIcon className="w-5 h-5" />
 
-        >
+                  <span className="hidden sm:inline">Export</span>
 
-          {/* Section 1: Income */}
+                  <svg className={`w-4 h-4 transition-transform ${exportMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
 
-          <motion.div
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
 
-            className="lg:col-span-1 bg-white/60 dark:bg-slate-800/60 border border-indigo-100 dark:border-indigo-800 rounded-2xl p-5 flex flex-col gap-4 shadow-sm h-full"
+                  </svg>
 
-            variants={mainCardVariants}
+                </motion.button>
 
-          >
+                {exportMenuOpen && (
 
-            <div className="w-full flex items-center justify-between">
+                  <>
 
-              <div className="flex items-center gap-3">
+                    <div className="fixed inset-0 z-40" onClick={() => setExportMenuOpen(false)} />
 
-                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold">
+                    <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 py-2">
 
-                  ₹
+                      <button
 
-                </div>
+                        onClick={handleExportLoans}
 
-                <div>
+                        className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
 
-                  <div className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
+                      >
 
-                    Income
+                        <FileDownIcon className="w-4 h-4 text-blue-600" />
 
-                  </div>
+                        Export Loans
 
-                  <div className="text-xs text-gray-400">
+                      </button>
 
-                    Collections & recoveries
+                      <button
 
-                  </div>
+                        onClick={handleExportSubscriptions}
 
-                </div>
+                        className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
 
-              </div>
+                      >
 
-            </div>
+                        <FileDownIcon className="w-4 h-4 text-cyan-600" />
 
+                        Export Subscriptions
 
+                      </button>
 
-            <div className="flex flex-col items-center">
+                      <button
 
-              <span className="text-base font-medium text-indigo-800 dark:text-indigo-300 uppercase tracking-wider">
+                        onClick={handleExportSeniority}
 
-                Total Collected
+                        className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
 
-              </span>
+                      >
 
-              <span className="text-4xl font-bold text-indigo-700 dark:text-indigo-400 mt-1">
+                        <FileDownIcon className="w-4 h-4 text-purple-600" />
 
-                {formatCurrencyIN(totalAllCollected)}
+                        Export Loan Seniority
 
-              </span>
+                      </button>
 
-            </div>
+                      <div className="border-t border-gray-100 my-1" />
 
+                      <button
 
+                        onClick={handleExportComprehensive}
 
-            {/* Quick summary: Loan Balance (keep clearly inside Income column) */}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
 
-            <div className="w-full mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      >
 
-              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 flex flex-col items-start">
+                        <FileDownIcon className="w-4 h-4 text-indigo-600" />
 
-                <div className="text-xs text-gray-600 dark:text-blue-300">Loan Balance</div>
+                        Export Comprehensive Report
 
-                <div className="text-lg font-bold text-blue-800 dark:text-blue-200 mt-1">{formatCurrencyIN(loanBalance)}</div>
-
-              </div>
-
-              <div className="p-3 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-100 dark:border-cyan-800 flex flex-col items-start">
-
-                <div className="text-xs text-gray-600 dark:text-cyan-300">Subscription Balance</div>
-
-                <div className="text-lg font-bold text-cyan-800 dark:text-cyan-200 mt-1">{formatCurrencyIN(subscriptionBalance)}</div>
-
-              </div>
-
-            </div>
-
-
-
-
-
-
-
-            {/* Income breakdown as list items */}
-
-            <div className="w-full mt-4">
-
-              <div className="space-y-3">
-
-                {/* Loan Recovery (Principal) */}
-
-                <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-
-                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-
-                    Loan Recovery (Principal)
-
-                  </span>
-
-                  <span className="text-lg font-bold text-blue-800 dark:text-blue-200">
-
-                    {formatCurrencyIN(totalPrincipalRecovered)}
-
-                  </span>
-
-                </div>
-
-                {/* Subscriptions, Interest, Late Fees */}
-
-                {leftCards.map((card) => (
-
-                  <div
-
-                    key={card.label}
-
-                    className={`flex items-center justify-between px-4 py-3 rounded-lg bg-${card.color}-50 dark:bg-${card.color}-900/20 border border-${card.color}-200 dark:border-${card.color}-800`}
-
-                  >
-
-                    <span className={`text-sm font-medium text-${card.color}-700 dark:text-${card.color}-300`}>
-
-                      {card.label}
-
-                    </span>
-
-                    <span className={`text-lg font-bold text-${card.color}-800 dark:text-${card.color}-200`}>
-
-                      {formatCurrencyIN(card.value)}
-
-                    </span>
-
-                  </div>
-
-                ))}
-
-              </div>
-
-            </div>
-
-            {/* Subscriptions Balance box: shows Subscriptions, Subscription Return and Balance */}
-
-            <div className="w-full mt-4">
-
-              <div className="flex items-center justify-between p-4 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800">
-
-                <div>
-
-                  <div className="text-sm font-medium text-cyan-700 dark:text-cyan-300">
-
-                    Subscriptions Balance
-
-                  </div>
-
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-
-                    Subscriptions - Subscription Return = Balance
-
-                  </div>
-
-                </div>
-
-              </div>
-
-              <div className="mt-3 space-y-2">
-
-                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-cyan-25/30 dark:bg-cyan-900/30">
-
-                  <div className="text-sm text-gray-700 dark:text-gray-300">Subscriptions</div>
-
-                  <div className="text-sm font-medium text-cyan-700 dark:text-cyan-300">
-
-                    {formatCurrencyIN(totalSubscriptionCollected)}
-
-                  </div>
-
-                </div>
-
-                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-cyan-25/30 dark:bg-cyan-900/30">
-
-                  <div className="text-sm text-gray-700 dark:text-gray-300">
-
-                    Subscription Return
-
-                  </div>
-
-                  <div className="text-sm font-medium text-cyan-700 dark:text-cyan-300">
-
-                    {formatCurrencyIN(subscriptionReturnTotal)}
-
-                  </div>
-
-                </div>
-
-                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-cyan-25/30 dark:bg-cyan-900/30">
-
-                  <div className="text-sm font-medium text-cyan-700 dark:text-cyan-300">
-
-                    Balance
-
-                  </div>
-
-                  <div
-
-                    className={`text-sm font-bold ${subscriptionBalance < 0 ? "text-red-600 dark:text-red-400" : "text-cyan-800 dark:text-cyan-200"
-
-                      }`}
-
-                  >
-
-                    {formatCurrencyIN(subscriptionBalance)}
-
-                  </div>
-
-                </div>
-
-              </div>
-
-            </div>
-
-            {/* Loan Balance box: Total Loans Given - Loan Recovery (Principal) = Loan Balance */}
-
-            <div className="w-full mt-4">
-
-              <div className="flex items-center justify-between p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-
-                <div>
-
-                  <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
-
-                    Loans Summary
-
-                  </div>
-
-                </div>
-
-              </div>
-
-              <div className="mt-3 space-y-2">
-
-                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-blue-25/30 dark:bg-blue-900/30">
-
-                  <div className="text-sm text-gray-700 dark:text-gray-300">Total Loans Given</div>
-
-                  <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
-
-                    {formatCurrencyIN(totalLoansGiven)}
-
-                  </div>
-
-                </div>
-
-                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-blue-25/30 dark:bg-blue-900/30">
-
-                  <div className="text-sm text-gray-700 dark:text-gray-300">
-
-                    Loan Recovery (Principal)
-
-                  </div>
-
-                  <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
-
-                    {formatCurrencyIN(totalPrincipalRecovered)}
-
-                  </div>
-
-                </div>
-
-                <div className="flex items-center justify-between px-3 py-1 rounded-md bg-blue-25/30 dark:bg-blue-900/30 border-t border-blue-100 dark:border-blue-800">
-
-                  <div className="text-sm font-medium text-blue-700 dark:text-blue-300">Balance</div>
-
-                  <div className={`text-sm font-bold ${loanBalance < 0 ? "text-red-600 dark:text-red-400" : "text-blue-800 dark:text-blue-200"}`}>
-
-                    {formatCurrencyIN(loanBalance)}
-
-                  </div>
-
-                </div>
-
-                {/* Balance now shown in Loans Summary section */}
-
-              </div>
-
-            </div>
-
-          </motion.div>
-
-
-
-          {/* Section 2: Expenses */}
-
-          <motion.div
-
-            className="lg:col-span-1 bg-white/60 dark:bg-slate-800/60 border border-red-100 dark:border-red-800 rounded-2xl p-5 flex flex-col gap-4 shadow-sm h-full"
-
-            variants={mainCardVariants}
-
-          >
-
-            <div className="w-full flex items-center gap-3 mb-3">
-
-              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 font-bold">
-
-                -
-
-              </div>
-
-              <div className="text-sm">
-
-                <div className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
-
-                  Expenses
-
-                </div>
-
-                <div className="text-xs text-gray-400">
-
-                  Outgoing & disbursed principal
-
-                </div>
-
-              </div>
-
-            </div>
-
-
-
-            <div className="flex flex-col items-center">
-
-              <span className="text-base font-medium text-blue-800 dark:text-blue-300 uppercase tracking-wider">
-
-                Total Loans Given
-
-              </span>
-
-              <span className="text-4xl font-bold text-blue-700 dark:text-blue-400 mt-1">
-
-                {formatCurrencyIN(totalLoansGiven)}
-
-              </span>
-
-            </div>
-
-            {/* Previously showed a separate 'Misc Expenses' card here; removed because subtype breakdown already covers expenses. */}
-
-            {/* Expenses box (calculated from selected misc entry subtypes) */}
-
-            <div className="w-full mt-4">
-
-              <div
-
-                className={`flex items-center justify-between p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800`}
-
-              >
-
-                <div>
-
-                  <div className={`text-sm font-medium text-red-700 dark:text-red-300`}>
-
-                    Expenses
-
-                  </div>
-
-                  <div className={`text-lg font-bold text-red-800 dark:text-red-200 mt-1`}>
-
-                    {formatCurrencyIN(totalExpenses)}
-
-                  </div>
-
-                </div>
-
-              </div>
-
-              {/* Per-subtype breakdown */}
-
-              <div className="mt-3 space-y-2">
-
-                {Object.entries(expenseTotalsBySubtype).map(
-
-                  ([subtype, amt]) => (
-
-                    <div
-
-                      key={subtype}
-
-                      className="flex items-center justify-between px-3 py-1 rounded-md bg-red-25/30 dark:bg-red-900/30"
-
-                    >
-
-                      <div className="text-sm text-gray-700 dark:text-gray-300">{subtype}</div>
-
-                      <div className="text-sm font-medium text-red-700 dark:text-red-300">
-
-                        {formatCurrencyIN((amt as number) || 0)}
-
-                      </div>
+                      </button>
 
                     </div>
 
-                  )
+                  </>
 
                 )}
 
               </div>
 
-            </div>
+            )}
 
-          </motion.div>
+          </div>
 
-        </motion.div>
 
 
+          <motion.div
 
-        {/* Financial Year Section - separate visualization for selected FY (Admin only) */}
+            className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch"
 
-        {!isScopedCustomer && (
+            variants={mainContainerVariants}
 
-          <div className="w-full mt-6 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-gray-700 rounded-lg p-4">
+            initial="hidden"
 
-            <div className="flex items-center justify-between mb-3">
+            animate="visible"
 
-              <div>
+          >
 
-                <div className="text-2xl font-bold text-gray-700 dark:text-gray-200 uppercase">
+            {/* Section 1: Income */}
 
-                  Financial Year Summary — FY {fyLabel(selectedFYStart)}
+            <motion.div
 
-                </div>
+              className="lg:col-span-1 bg-white/60 dark:bg-slate-800/60 border border-indigo-100 dark:border-indigo-800 rounded-2xl p-5 flex flex-col gap-4 shadow-sm h-full"
 
-                <div className="text-xs text-gray-400">
+              variants={mainCardVariants}
 
-                  Select a fiscal year (Apr - Mar) to visualize collections
+            >
 
-                </div>
+              <div className="w-full flex items-center justify-between">
 
-              </div>
+                <div className="flex items-center gap-3">
 
-              <div className="flex items-center gap-3 no-print">
+                  <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold">
 
-                <select
-
-                  value={selectedFYStart}
-
-                  onChange={(e) => setSelectedFYStart(Number(e.target.value))}
-
-                  className="px-5 py-2 rounded border bg-white dark:bg-slate-700 text-base dark:text-white dark:border-slate-600"
-
-                  style={{ minWidth: 150 }}
-
-                >
-
-                  {fyOptions.map((y) => (
-
-                    <option key={y} value={y}>
-
-                      {fyLabel(y)}
-
-                    </option>
-
-                  ))}
-
-                </select>
-
-              </div>
-
-            </div>
-
-
-
-            <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-
-              <div className="p-4 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 flex flex-col items-start">
-
-                <div className="flex items-center justify-between w-full">
-
-                  <div className="text-xs text-gray-600 dark:text-gray-200">Subscriptions (FY)</div>
-
-                  <button
-
-                    onClick={() => openBreakdown("subscriptions")}
-
-                    className="text-xs text-indigo-600 underline"
-
-                  >
-
-                    Details
-
-                  </button>
-
-                </div>
-
-                <div className="text-xl font-bold text-cyan-800 dark:text-cyan-200 mt-2">
-
-                  {formatCurrencyIN(fySubscriptionCollected)}
-
-                </div>
-
-              </div>
-
-              <div className="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 flex flex-col items-start">
-
-                <div className="flex items-center justify-between w-full">
-
-                  <div className="text-xs text-gray-600 dark:text-gray-200">Interest (FY)</div>
-
-                  <button
-
-                    onClick={() => openBreakdown("interest")}
-
-                    className="text-xs text-indigo-600 underline"
-
-                  >
-
-                    Details
-
-                  </button>
-
-                </div>
-
-                <div className="text-xl font-bold text-green-800 dark:text-green-200 mt-2">
-
-                  {formatCurrencyIN(fyInterestCollected)}
-
-                </div>
-
-              </div>
-
-              <div className="p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 flex flex-col items-start">
-
-                <div className="flex items-center justify-between w-full">
-
-                  <div className="text-xs text-gray-600 dark:text-gray-200">Late Fees (FY)</div>
-
-                  <button
-
-                    onClick={() => openBreakdown("latefees")}
-
-                    className="text-xs text-indigo-600 underline"
-
-                  >
-
-                    Details
-
-                  </button>
-
-                </div>
-
-                <div className="text-xl font-bold text-orange-800 dark:text-orange-200 mt-2">
-
-                  {formatCurrencyIN(fyLateFees)}
-
-                </div>
-
-              </div>
-
-              <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 flex flex-col items-start">
-
-                <div className="flex items-center justify-between w-full">
-
-                  <div className="text-xs text-gray-600 dark:text-gray-200">
-
-                    Loan Recovery (Principal) (FY)
+                    ₹
 
                   </div>
 
-                  <button
+                  <div>
 
-                    onClick={() => openBreakdown("principal")}
+                    <div className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
 
-                    className="text-xs text-indigo-600 underline"
+                      Income
 
-                  >
+                    </div>
 
-                    Details
+                    <div className="text-xs text-gray-400">
 
-                  </button>
-
-                </div>
-
-                <div className="text-xl font-bold text-blue-800 dark:text-blue-200 mt-2">
-
-                  {formatCurrencyIN(fyPrincipalRecovered)}
-
-                </div>
-
-              </div>
-
-              {/* FY Loans Given vs Recovery Balance */}
-
-              <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 flex flex-col items-start">
-
-                <div className="flex items-center justify-between w-full">
-
-                  <div className="text-xs text-gray-600 dark:text-gray-200">Loans Given (FY)</div>
-
-                  <div className="text-xs text-gray-600 dark:text-gray-200">Balance (FY)</div>
-
-                </div>
-
-                <div className="mt-2 w-full">
-
-                  <div className="flex items-center justify-between">
-
-                    <div className="text-sm text-gray-700 dark:text-gray-200">Total Loans Given</div>
-
-                    <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
-
-                      {formatCurrencyIN(fyLoansGiven)}
+                      Collections & recoveries
 
                     </div>
 
                   </div>
 
-                  <div className="flex items-center justify-between mt-1">
+                </div>
 
-                    <div className="text-sm text-gray-700 dark:text-gray-200">
+              </div>
+
+
+
+              <div className="flex flex-col items-center">
+
+                <span className="text-base font-medium text-indigo-800 dark:text-indigo-300 uppercase tracking-wider">
+
+                  Total Collected
+
+                </span>
+
+                <span className="text-4xl font-bold text-indigo-700 dark:text-indigo-400 mt-1">
+
+                  {formatCurrencyIN(totalAllCollected)}
+
+                </span>
+
+              </div>
+
+
+
+              {/* Quick summary: Loan Balance (keep clearly inside Income column) */}
+
+              <div className="w-full mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 flex flex-col items-start">
+
+                  <div className="text-xs text-gray-600 dark:text-blue-300">Loan Balance</div>
+
+                  <div className="text-lg font-bold text-blue-800 dark:text-blue-200 mt-1">{formatCurrencyIN(loanBalance)}</div>
+
+                </div>
+
+                <div className="p-3 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-100 dark:border-cyan-800 flex flex-col items-start">
+
+                  <div className="text-xs text-gray-600 dark:text-cyan-300">Subscription Balance</div>
+
+                  <div className="text-lg font-bold text-cyan-800 dark:text-cyan-200 mt-1">{formatCurrencyIN(subscriptionBalance)}</div>
+
+                </div>
+
+              </div>
+
+
+
+
+
+
+
+              {/* Income breakdown as list items */}
+
+              <div className="w-full mt-4">
+
+                <div className="space-y-3">
+
+                  {/* Loan Recovery (Principal) */}
+
+                  <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+
+                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
 
                       Loan Recovery (Principal)
 
+                    </span>
+
+                    <span className="text-lg font-bold text-blue-800 dark:text-blue-200">
+
+                      {formatCurrencyIN(totalPrincipalRecovered)}
+
+                    </span>
+
+                  </div>
+
+                  {/* Subscriptions, Interest, Late Fees */}
+
+                  {leftCards.map((card) => (
+
+                    <div
+
+                      key={card.label}
+
+                      className={`flex items-center justify-between px-4 py-3 rounded-lg bg-${card.color}-50 dark:bg-${card.color}-900/20 border border-${card.color}-200 dark:border-${card.color}-800`}
+
+                    >
+
+                      <span className={`text-sm font-medium text-${card.color}-700 dark:text-${card.color}-300`}>
+
+                        {card.label}
+
+                      </span>
+
+                      <span className={`text-lg font-bold text-${card.color}-800 dark:text-${card.color}-200`}>
+
+                        {formatCurrencyIN(card.value)}
+
+                      </span>
+
                     </div>
 
-                    <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                  ))}
 
-                      {formatCurrencyIN(fyPrincipalRecovered)}
+                </div>
+
+              </div>
+
+              {/* Subscriptions Balance box: shows Subscriptions, Subscription Return and Balance */}
+
+              <div className="w-full mt-4">
+
+                <div className="flex items-center justify-between p-4 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800">
+
+                  <div>
+
+                    <div className="text-sm font-medium text-cyan-700 dark:text-cyan-300">
+
+                      Subscriptions Balance
+
+                    </div>
+
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+
+                      Subscriptions - Subscription Return = Balance
 
                     </div>
 
                   </div>
 
-                  <div className="flex items-center justify-between mt-2">
+                </div>
 
-                    <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                <div className="mt-3 space-y-2">
+
+                  <div className="flex items-center justify-between px-3 py-1 rounded-md bg-cyan-25/30 dark:bg-cyan-900/30">
+
+                    <div className="text-sm text-gray-700 dark:text-gray-300">Subscriptions</div>
+
+                    <div className="text-sm font-medium text-cyan-700 dark:text-cyan-300">
+
+                      {formatCurrencyIN(totalSubscriptionCollected)}
+
+                    </div>
+
+                  </div>
+
+                  <div className="flex items-center justify-between px-3 py-1 rounded-md bg-cyan-25/30 dark:bg-cyan-900/30">
+
+                    <div className="text-sm text-gray-700 dark:text-gray-300">
+
+                      Subscription Return
+
+                    </div>
+
+                    <div className="text-sm font-medium text-cyan-700 dark:text-cyan-300">
+
+                      {formatCurrencyIN(subscriptionReturnTotal)}
+
+                    </div>
+
+                  </div>
+
+                  <div className="flex items-center justify-between px-3 py-1 rounded-md bg-cyan-25/30 dark:bg-cyan-900/30">
+
+                    <div className="text-sm font-medium text-cyan-700 dark:text-cyan-300">
 
                       Balance
 
@@ -2098,13 +1663,13 @@ const SummaryPage = () => {
 
                     <div
 
-                      className={`text-sm font-bold ${fyLoanBalance < 0 ? "text-red-600 dark:text-red-400" : "text-blue-800 dark:text-blue-200"
+                      className={`text-sm font-bold ${subscriptionBalance < 0 ? "text-red-600 dark:text-red-400" : "text-cyan-800 dark:text-cyan-200"
 
                         }`}
 
                     >
 
-                      {formatCurrencyIN(fyLoanBalance)}
+                      {formatCurrencyIN(subscriptionBalance)}
 
                     </div>
 
@@ -2114,37 +1679,187 @@ const SummaryPage = () => {
 
               </div>
 
-              <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 flex flex-col items-start">
+              {/* Loan Balance box: Total Loans Given - Loan Recovery (Principal) = Loan Balance */}
 
-                <div className="flex items-center justify-between w-full">
+              <div className="w-full mt-4">
 
-                  <div className="text-xs text-gray-600 dark:text-gray-200">Total (FY)</div>
+                <div className="flex items-center justify-between p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
 
-                  <button
+                  <div>
 
-                    onClick={() => openBreakdown("total")}
+                    <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
 
-                    className="text-xs text-indigo-600 underline"
+                      Loans Summary
 
-                  >
+                    </div>
 
-                    Details
-
-                  </button>
+                  </div>
 
                 </div>
 
-                <div className="text-xl font-bold text-indigo-800 dark:text-indigo-200 mt-2">
+                <div className="mt-3 space-y-2">
 
-                  {formatCurrencyIN(
+                  <div className="flex items-center justify-between px-3 py-1 rounded-md bg-blue-25/30 dark:bg-blue-900/30">
 
-                    fySubscriptionCollected +
+                    <div className="text-sm text-gray-700 dark:text-gray-300">Total Loans Given</div>
 
-                    fyInterestCollected +
+                    <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
 
-                    fyLateFees +
+                      {formatCurrencyIN(totalLoansGiven)}
 
-                    fyPrincipalRecovered
+                    </div>
+
+                  </div>
+
+                  <div className="flex items-center justify-between px-3 py-1 rounded-md bg-blue-25/30 dark:bg-blue-900/30">
+
+                    <div className="text-sm text-gray-700 dark:text-gray-300">
+
+                      Loan Recovery (Principal)
+
+                    </div>
+
+                    <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
+
+                      {formatCurrencyIN(totalPrincipalRecovered)}
+
+                    </div>
+
+                  </div>
+
+                  <div className="flex items-center justify-between px-3 py-1 rounded-md bg-blue-25/30 dark:bg-blue-900/30 border-t border-blue-100 dark:border-blue-800">
+
+                    <div className="text-sm font-medium text-blue-700 dark:text-blue-300">Balance</div>
+
+                    <div className={`text-sm font-bold ${loanBalance < 0 ? "text-red-600 dark:text-red-400" : "text-blue-800 dark:text-blue-200"}`}>
+
+                      {formatCurrencyIN(loanBalance)}
+
+                    </div>
+
+                  </div>
+
+                  {/* Balance now shown in Loans Summary section */}
+
+                </div>
+
+              </div>
+
+            </motion.div>
+
+
+
+            {/* Section 2: Expenses */}
+
+            <motion.div
+
+              className="lg:col-span-1 bg-white/60 dark:bg-slate-800/60 border border-red-100 dark:border-red-800 rounded-2xl p-5 flex flex-col gap-4 shadow-sm h-full"
+
+              variants={mainCardVariants}
+
+            >
+
+              <div className="w-full flex items-center gap-3 mb-3">
+
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 font-bold">
+
+                  -
+
+                </div>
+
+                <div className="text-sm">
+
+                  <div className="text-sm font-semibold text-gray-700 dark:text-gray-200 uppercase tracking-wide">
+
+                    Expenses
+
+                  </div>
+
+                  <div className="text-xs text-gray-400">
+
+                    Outgoing & disbursed principal
+
+                  </div>
+
+                </div>
+
+              </div>
+
+
+
+              <div className="flex flex-col items-center">
+
+                <span className="text-base font-medium text-blue-800 dark:text-blue-300 uppercase tracking-wider">
+
+                  Total Loans Given
+
+                </span>
+
+                <span className="text-4xl font-bold text-blue-700 dark:text-blue-400 mt-1">
+
+                  {formatCurrencyIN(totalLoansGiven)}
+
+                </span>
+
+              </div>
+
+              {/* Previously showed a separate 'Misc Expenses' card here; removed because subtype breakdown already covers expenses. */}
+
+              {/* Expenses box (calculated from selected misc entry subtypes) */}
+
+              <div className="w-full mt-4">
+
+                <div
+
+                  className={`flex items-center justify-between p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800`}
+
+                >
+
+                  <div>
+
+                    <div className={`text-sm font-medium text-red-700 dark:text-red-300`}>
+
+                      Expenses
+
+                    </div>
+
+                    <div className={`text-lg font-bold text-red-800 dark:text-red-200 mt-1`}>
+
+                      {formatCurrencyIN(totalExpenses)}
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+                {/* Per-subtype breakdown */}
+
+                <div className="mt-3 space-y-2">
+
+                  {Object.entries(expenseTotalsBySubtype).map(
+
+                    ([subtype, amt]) => (
+
+                      <div
+
+                        key={subtype}
+
+                        className="flex items-center justify-between px-3 py-1 rounded-md bg-red-25/30 dark:bg-red-900/30"
+
+                      >
+
+                        <div className="text-sm text-gray-700 dark:text-gray-300">{subtype}</div>
+
+                        <div className="text-sm font-medium text-red-700 dark:text-red-300">
+
+                          {formatCurrencyIN((amt as number) || 0)}
+
+                        </div>
+
+                      </div>
+
+                    )
 
                   )}
 
@@ -2152,81 +1867,369 @@ const SummaryPage = () => {
 
               </div>
 
-              {/* FY Expenses card (deductible) */}
+            </motion.div>
 
-              <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex flex-col items-start">
+          </motion.div>
 
-                <div className="flex items-center justify-between w-full">
 
-                  <div className="text-xs text-gray-600 dark:text-gray-200">
 
-                    FY Expenses (selected subtypes)
+          {/* Financial Year Section - separate visualization for selected FY (Admin only) */}
+
+          {!isScopedCustomer && (
+
+            <div className="w-full mt-6 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-gray-700 rounded-lg p-4">
+
+              <div className="flex items-center justify-between mb-3">
+
+                <div>
+
+                  <div className="text-2xl font-bold text-gray-700 dark:text-gray-200 uppercase">
+
+                    Financial Year Summary — FY {fyLabel(selectedFYStart)}
+
+                  </div>
+
+                  <div className="text-xs text-gray-400">
+
+                    Select a fiscal year (Apr - Mar) to visualize collections
 
                   </div>
 
                 </div>
 
-                <div className="text-xl font-bold text-red-800 dark:text-red-200 mt-2">
+                <div className="flex items-center gap-3 no-print">
 
-                  {formatCurrencyIN(fyExpensesTotal)}
+                  <select
+
+                    value={selectedFYStart}
+
+                    onChange={(e) => setSelectedFYStart(Number(e.target.value))}
+
+                    className="px-5 py-2 rounded border bg-white dark:bg-slate-700 text-base dark:text-white dark:border-slate-600"
+
+                    style={{ minWidth: 150 }}
+
+                  >
+
+                    {fyOptions.map((y) => (
+
+                      <option key={y} value={y}>
+
+                        {fyLabel(y)}
+
+                      </option>
+
+                    ))}
+
+                  </select>
 
                 </div>
 
-                <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">Breakdown:</div>
+              </div>
 
-                <div className="mt-2 space-y-1 w-full">
 
-                  {fyExpenseSubtypes.map((s) => (
 
-                    <div
+              <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
 
-                      key={s}
+                <div className="p-4 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 flex flex-col items-start">
 
-                      className="flex items-center justify-between text-sm"
+                  <div className="flex items-center justify-between w-full">
+
+                    <div className="text-xs text-gray-600 dark:text-gray-200">Subscriptions (FY)</div>
+
+                    <button
+
+                      onClick={() => openBreakdown("subscriptions")}
+
+                      className="text-xs text-indigo-600 underline"
 
                     >
 
-                      <div className="text-gray-700 dark:text-gray-200">{s}</div>
+                      Details
 
-                      <div className="font-medium text-red-700 dark:text-red-300">
+                    </button>
 
-                        {formatCurrencyIN(fyExpensesBySubtype[s] || 0)}
+                  </div>
+
+                  <div className="text-xl font-bold text-cyan-800 dark:text-cyan-200 mt-2">
+
+                    {formatCurrencyIN(fySubscriptionCollected)}
+
+                  </div>
+
+                </div>
+
+                <div className="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 flex flex-col items-start">
+
+                  <div className="flex items-center justify-between w-full">
+
+                    <div className="text-xs text-gray-600 dark:text-gray-200">Interest (FY)</div>
+
+                    <button
+
+                      onClick={() => openBreakdown("interest")}
+
+                      className="text-xs text-indigo-600 underline"
+
+                    >
+
+                      Details
+
+                    </button>
+
+                  </div>
+
+                  <div className="text-xl font-bold text-green-800 dark:text-green-200 mt-2">
+
+                    {formatCurrencyIN(fyInterestCollected)}
+
+                  </div>
+
+                </div>
+
+                <div className="p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 flex flex-col items-start">
+
+                  <div className="flex items-center justify-between w-full">
+
+                    <div className="text-xs text-gray-600 dark:text-gray-200">Late Fees (FY)</div>
+
+                    <button
+
+                      onClick={() => openBreakdown("latefees")}
+
+                      className="text-xs text-indigo-600 underline"
+
+                    >
+
+                      Details
+
+                    </button>
+
+                  </div>
+
+                  <div className="text-xl font-bold text-orange-800 dark:text-orange-200 mt-2">
+
+                    {formatCurrencyIN(fyLateFees)}
+
+                  </div>
+
+                </div>
+
+                <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 flex flex-col items-start">
+
+                  <div className="flex items-center justify-between w-full">
+
+                    <div className="text-xs text-gray-600 dark:text-gray-200">
+
+                      Loan Recovery (Principal) (FY)
+
+                    </div>
+
+                    <button
+
+                      onClick={() => openBreakdown("principal")}
+
+                      className="text-xs text-indigo-600 underline"
+
+                    >
+
+                      Details
+
+                    </button>
+
+                  </div>
+
+                  <div className="text-xl font-bold text-blue-800 dark:text-blue-200 mt-2">
+
+                    {formatCurrencyIN(fyPrincipalRecovered)}
+
+                  </div>
+
+                </div>
+
+                {/* FY Loans Given vs Recovery Balance */}
+
+                <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 flex flex-col items-start">
+
+                  <div className="flex items-center justify-between w-full">
+
+                    <div className="text-xs text-gray-600 dark:text-gray-200">Loans Given (FY)</div>
+
+                    <div className="text-xs text-gray-600 dark:text-gray-200">Balance (FY)</div>
+
+                  </div>
+
+                  <div className="mt-2 w-full">
+
+                    <div className="flex items-center justify-between">
+
+                      <div className="text-sm text-gray-700 dark:text-gray-200">Total Loans Given</div>
+
+                      <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
+
+                        {formatCurrencyIN(fyLoansGiven)}
 
                       </div>
 
                     </div>
 
-                  ))}
+                    <div className="flex items-center justify-between mt-1">
+
+                      <div className="text-sm text-gray-700 dark:text-gray-200">
+
+                        Loan Recovery (Principal)
+
+                      </div>
+
+                      <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
+
+                        {formatCurrencyIN(fyPrincipalRecovered)}
+
+                      </div>
+
+                    </div>
+
+                    <div className="flex items-center justify-between mt-2">
+
+                      <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
+
+                        Balance
+
+                      </div>
+
+                      <div
+
+                        className={`text-sm font-bold ${fyLoanBalance < 0 ? "text-red-600 dark:text-red-400" : "text-blue-800 dark:text-blue-200"
+
+                          }`}
+
+                      >
+
+                        {formatCurrencyIN(fyLoanBalance)}
+
+                      </div>
+
+                    </div>
+
+                  </div>
 
                 </div>
 
-              </div>
+                <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 flex flex-col items-start">
 
-              {/* Net FY Total (collections - expenses) */}
+                  <div className="flex items-center justify-between w-full">
 
-              <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 flex flex-col items-start">
+                    <div className="text-xs text-gray-600 dark:text-gray-200">Total (FY)</div>
 
-                <div className="flex items-center justify-between w-full">
+                    <button
 
-                  <div className="text-xs text-gray-600 dark:text-emerald-200">Net Total (FY)</div>
+                      onClick={() => openBreakdown("total")}
+
+                      className="text-xs text-indigo-600 underline"
+
+                    >
+
+                      Details
+
+                    </button>
+
+                  </div>
+
+                  <div className="text-xl font-bold text-indigo-800 dark:text-indigo-200 mt-2">
+
+                    {formatCurrencyIN(
+
+                      fySubscriptionCollected +
+
+                      fyInterestCollected +
+
+                      fyLateFees +
+
+                      fyPrincipalRecovered
+
+                    )}
+
+                  </div>
 
                 </div>
 
-                <div className="text-xl font-bold text-emerald-800 dark:text-emerald-200 mt-2">
+                {/* FY Expenses card (deductible) */}
 
-                  {formatCurrencyIN(
+                <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex flex-col items-start">
 
-                    fySubscriptionCollected +
+                  <div className="flex items-center justify-between w-full">
 
-                    fyInterestCollected +
+                    <div className="text-xs text-gray-600 dark:text-gray-200">
 
-                    fyLateFees +
+                      FY Expenses (selected subtypes)
 
-                    fyPrincipalRecovered -
+                    </div>
 
-                    fyExpensesTotal
+                  </div>
 
-                  )}
+                  <div className="text-xl font-bold text-red-800 dark:text-red-200 mt-2">
+
+                    {formatCurrencyIN(fyExpensesTotal)}
+
+                  </div>
+
+                  <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">Breakdown:</div>
+
+                  <div className="mt-2 space-y-1 w-full">
+
+                    {fyExpenseSubtypes.map((s) => (
+
+                      <div
+
+                        key={s}
+
+                        className="flex items-center justify-between text-sm"
+
+                      >
+
+                        <div className="text-gray-700 dark:text-gray-200">{s}</div>
+
+                        <div className="font-medium text-red-700 dark:text-red-300">
+
+                          {formatCurrencyIN(fyExpensesBySubtype[s] || 0)}
+
+                        </div>
+
+                      </div>
+
+                    ))}
+
+                  </div>
+
+                </div>
+
+                {/* Net FY Total (collections - expenses) */}
+
+                <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 flex flex-col items-start">
+
+                  <div className="flex items-center justify-between w-full">
+
+                    <div className="text-xs text-gray-600 dark:text-emerald-200">Net Total (FY)</div>
+
+                  </div>
+
+                  <div className="text-xl font-bold text-emerald-800 dark:text-emerald-200 mt-2">
+
+                    {formatCurrencyIN(
+
+                      fySubscriptionCollected +
+
+                      fyInterestCollected +
+
+                      fyLateFees +
+
+                      fyPrincipalRecovered -
+
+                      fyExpensesTotal
+
+                    )}
+
+                  </div>
 
                 </div>
 
@@ -2234,40 +2237,37 @@ const SummaryPage = () => {
 
             </div>
 
+          )}
+
+
+
+          <div className="text-center text-xs text-gray-400 mt-2">
+
+            Updated as of {formatDate(new Date().toISOString().slice(0, 10))}
+
           </div>
 
-        )}
 
 
+          <FYBreakdownModal
 
-        <div className="text-center text-xs text-gray-400 mt-2">
+            open={breakdownOpen}
 
-          Updated as of {formatDate(new Date().toISOString().slice(0, 10))}
+            title={breakdownTitle}
+
+            items={breakdownItems}
+
+            summary={breakdownSummary}
+
+            onClose={() => setBreakdownOpen(false)}
+
+          />
 
         </div>
 
-
-
-        <FYBreakdownModal
-
-          open={breakdownOpen}
-
-          title={breakdownTitle}
-
-          items={breakdownItems}
-
-          summary={breakdownSummary}
-
-          onClose={() => setBreakdownOpen(false)}
-
-        />
-
       </div>
-
-    </div>
-
+    </PageWrapper>
   );
-
 };
 
 

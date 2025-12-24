@@ -65,6 +65,10 @@ const LoanTableView: React.FC = () => {
   const [currentPage, setCurrentPage] = React.useState(1);
   const itemsPerPage = 25;
 
+  // Page picker popup state
+  const [pagePickerOpen, setPagePickerOpen] = React.useState<'start' | 'end' | null>(null);
+  const [pagePickerOffset, setPagePickerOffset] = React.useState(0);
+
   // Helper function for O(1) installment lookup
   const getLoanInstallments = React.useCallback((loanId: string) => {
     return installmentsByLoanId.get(loanId) || [];
@@ -909,7 +913,10 @@ const LoanTableView: React.FC = () => {
                 return (
                   <button
                     key={page}
-                    onClick={() => setCurrentPage(page)}
+                    onClick={() => {
+                      setCurrentPage(page);
+                      setPagePickerOpen(null);
+                    }}
                     className={`px-3 py-1 rounded border ${currentPage === page
                       ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
                       : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
@@ -919,11 +926,127 @@ const LoanTableView: React.FC = () => {
                   </button>
                 );
               }
+              // Start ellipsis - pages between 1 and current-1
               if (page === 2 && currentPage > 3) {
-                return <span key="dots-start" className="px-2 dark:text-dark-muted">...</span>;
+                const startPages = Array.from({ length: currentPage - 3 }, (_, i) => i + 2);
+                const maxOffset = Math.max(0, Math.ceil(startPages.length / 9) - 1);
+                const visiblePages = startPages.slice(pagePickerOffset * 9, (pagePickerOffset + 1) * 9);
+
+                return (
+                  <div key="dots-start" className="relative">
+                    <button
+                      onClick={() => {
+                        setPagePickerOpen(pagePickerOpen === 'start' ? null : 'start');
+                        setPagePickerOffset(0);
+                      }}
+                      className="px-2 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded"
+                      title="Click to show more pages"
+                    >
+                      ...
+                    </button>
+                    {pagePickerOpen === 'start' && (
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-lg p-2 z-50 min-w-[140px]">
+                        <div className="flex items-center justify-between mb-2 px-1">
+                          <button
+                            onClick={() => setPagePickerOffset(Math.max(0, pagePickerOffset - 1))}
+                            disabled={pagePickerOffset === 0}
+                            className="p-1 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            ‹
+                          </button>
+                          <span className="text-xs text-gray-500 dark:text-dark-muted">
+                            {pagePickerOffset * 9 + 1}-{Math.min((pagePickerOffset + 1) * 9, startPages.length)} of {startPages.length}
+                          </span>
+                          <button
+                            onClick={() => setPagePickerOffset(Math.min(maxOffset, pagePickerOffset + 1))}
+                            disabled={pagePickerOffset >= maxOffset}
+                            className="p-1 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            ›
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1">
+                          {visiblePages.map((p) => (
+                            <button
+                              key={p}
+                              onClick={() => {
+                                setCurrentPage(p);
+                                setPagePickerOpen(null);
+                              }}
+                              className={`px-2 py-1 text-sm rounded ${currentPage === p
+                                  ? "bg-indigo-600 text-white"
+                                  : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
+                                }`}
+                            >
+                              {p}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
               }
+              // End ellipsis - pages between current+1 and totalPages-1
               if (page === totalPages - 1 && currentPage < totalPages - 2) {
-                return <span key="dots-end" className="px-2 dark:text-dark-muted">...</span>;
+                const endPages = Array.from({ length: totalPages - currentPage - 2 }, (_, i) => currentPage + 2 + i);
+                const maxOffset = Math.max(0, Math.ceil(endPages.length / 9) - 1);
+                const visiblePages = endPages.slice(pagePickerOffset * 9, (pagePickerOffset + 1) * 9);
+
+                return (
+                  <div key="dots-end" className="relative">
+                    <button
+                      onClick={() => {
+                        setPagePickerOpen(pagePickerOpen === 'end' ? null : 'end');
+                        setPagePickerOffset(0);
+                      }}
+                      className="px-2 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded"
+                      title="Click to show more pages"
+                    >
+                      ...
+                    </button>
+                    {pagePickerOpen === 'end' && (
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-lg p-2 z-50 min-w-[140px]">
+                        <div className="flex items-center justify-between mb-2 px-1">
+                          <button
+                            onClick={() => setPagePickerOffset(Math.max(0, pagePickerOffset - 1))}
+                            disabled={pagePickerOffset === 0}
+                            className="p-1 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            ‹
+                          </button>
+                          <span className="text-xs text-gray-500 dark:text-dark-muted">
+                            {pagePickerOffset * 9 + 1}-{Math.min((pagePickerOffset + 1) * 9, endPages.length)} of {endPages.length}
+                          </span>
+                          <button
+                            onClick={() => setPagePickerOffset(Math.min(maxOffset, pagePickerOffset + 1))}
+                            disabled={pagePickerOffset >= maxOffset}
+                            className="p-1 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            ›
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1">
+                          {visiblePages.map((p) => (
+                            <button
+                              key={p}
+                              onClick={() => {
+                                setCurrentPage(p);
+                                setPagePickerOpen(null);
+                              }}
+                              className={`px-2 py-1 text-sm rounded ${currentPage === p
+                                  ? "bg-indigo-600 text-white"
+                                  : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
+                                }`}
+                            >
+                              {p}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
               }
               return null;
             })}

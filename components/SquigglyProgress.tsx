@@ -62,12 +62,12 @@ export const SquigglyProgress: React.FC<SquigglyProgressProps> = ({
 
     return (
         <div className="w-full relative overflow-hidden rounded-full" style={{ height }}>
-            <style>{`
-        @keyframes squiggly-scroll {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-${wavelength * 2}px); } /* Scroll 2 cycles? */
-        }
-      `}</style>
+                        <style>{`
+                @keyframes squiggly-scroll {
+                    0% { transform: translateX(0%); }
+                    100% { transform: translateX(-50%); }
+                }
+            `}</style>
 
             {/* Container for the waves */}
             {/* We use a viewbox that allows the path to be drawn. 
@@ -103,30 +103,55 @@ export const SquigglyProgress: React.FC<SquigglyProgressProps> = ({
                 animate={{ clipPath: `inset(0 ${100 - safeValue}% 0 0)` }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
             >
-                {/* Inner container that slides for animation */}
-                {/* Only animate if in progress */}
+                {/* Duplicate the SVG horizontally so the animation can scroll seamlessly. */}
                 <div
                     style={{
-                        width: '120%', // Make it wider so we can slide
+                        width: '200%', // two copies side-by-side
                         height: '100%',
-                        animation: safeValue < 100 ? 'squiggly-scroll 2s linear infinite' : 'none'
+                        display: 'flex',
+                        transform: 'translateX(0)',
+                        animation: safeValue < 100 ? 'squiggly-scroll 2.5s linear infinite' : 'none'
                     }}
                 >
-                    <svg
-                        className="w-full h-full"
-                        viewBox={`0 0 ${cycles * wavelength} ${height}`}
-                        preserveAspectRatio="none"
-                    >
-                        <path
-                            d={path}
-                            fill="none"
-                            stroke={color}
-                            strokeWidth={strokeWidth}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            vectorEffect="non-scaling-stroke"
-                        />
-                    </svg>
+                    {/* First copy */}
+                    <div style={{ width: '50%', height: '100%' }}>
+                        <svg
+                            className="w-full h-full"
+                            viewBox={`0 0 ${cycles * wavelength} ${height}`}
+                            preserveAspectRatio="none"
+                        >
+                            <path
+                                d={path}
+                                fill="none"
+                                stroke={color}
+                                strokeWidth={strokeWidth}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                vectorEffect="non-scaling-stroke"
+                            />
+                        </svg>
+                    </div>
+
+                    {/* Second copy (shifted) */}
+                    <div style={{ width: '50%', height: '100%' }}>
+                        <svg
+                            className="w-full h-full"
+                            viewBox={`0 0 ${cycles * wavelength} ${height}`}
+                            preserveAspectRatio="none"
+                        >
+                            <g transform={`translate(${cycles * wavelength}, 0)`}>
+                                <path
+                                    d={path}
+                                    fill="none"
+                                    stroke={color}
+                                    strokeWidth={strokeWidth}
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    vectorEffect="non-scaling-stroke"
+                                />
+                            </g>
+                        </svg>
+                    </div>
                 </div>
             </motion.div>
         </div>

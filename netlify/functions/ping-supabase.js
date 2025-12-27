@@ -33,3 +33,8 @@ export default async (req) => {
   }
 };
 
+// Configure the schedule for the function
+export const config = {
+  schedule: "*/2 * * * *",
+};
+

@@ -308,6 +308,23 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             }
             const { data, error } = await supabase.from('loan_seniority').insert([payload]).select().single();
             if (error || !data) throw error;
+
+            // Notify admins if this was a scoped request
+            if (isScopedCustomer) {
+                try {
+                    const customer = customerMap.get(customerId);
+                    const name = customer?.name || 'A customer';
+                    await supabase.from('system_notifications').insert({
+                        type: 'seniority_request',
+                        status: 'processing', // Using 'processing' makes it blue/info
+                        message: `${name} requested Loan Seniority: ${details?.loan_type || 'General'}`,
+                        metadata: { customer_id: customerId, ...details }
+                    });
+                } catch (notifyErr) {
+                    console.error("Failed to send system notification:", notifyErr);
+                }
+            }
+
             await fetchSeniorityList();
         } catch (err: any) {
             throw new Error(parseSupabaseError(err, `adding customer ${customerId} to seniority list`));

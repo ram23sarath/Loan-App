@@ -11,19 +11,20 @@ CREATE TABLE IF NOT EXISTS public.system_notifications (
 -- Enable RLS
 ALTER TABLE public.system_notifications ENABLE ROW LEVEL SECURITY;
 
--- 1. READ: Allow Admins Only (changed from "all users")
--- Users who are authenticated AND NOT present in the customers table.
+-- 1. READ: Allow Admins Only
 DROP POLICY IF EXISTS "Allow read access for all users" ON public.system_notifications;
+DROP POLICY IF EXISTS "Allow read access for admins only" ON public.system_notifications;
 CREATE POLICY "Allow read access for admins only" ON public.system_notifications
 FOR SELECT USING (
   auth.role() = 'authenticated' AND
   NOT EXISTS (SELECT 1 FROM public.customers WHERE user_id = auth.uid())
 );
 
--- 2. INSERT: Allow service role only (the Netlify function)
+-- 2. INSERT: Allow Authenticated Users (so customers can request seniority)
 DROP POLICY IF EXISTS "Allow insert for service role only" ON public.system_notifications;
-CREATE POLICY "Allow insert for service role only" ON public.system_notifications
-FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow insert for authenticated users" ON public.system_notifications;
+CREATE POLICY "Allow insert for authenticated users" ON public.system_notifications
+FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 
 -- 3. DELETE: Allow ADMINS only
 DROP POLICY IF EXISTS "Allow delete for admins only" ON public.system_notifications;

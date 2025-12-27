@@ -1,27 +1,78 @@
 import React from 'react';
-import { motion, Transition } from 'framer-motion';
+import { motion, Transition, Variants } from 'framer-motion';
 import { useData } from '../../context/DataContext';
 import Toast from './Toast';
 
-const pageVariants = {
+// Enhanced page variants with more creative transitions
+const pageVariants: Variants = {
   initial: {
     opacity: 0,
-    y: 20,
+    y: 30,
+    scale: 0.98,
+    filter: 'blur(4px)',
   },
   in: {
     opacity: 1,
     y: 0,
+    scale: 1,
+    filter: 'blur(0px)',
   },
   out: {
     opacity: 0,
     y: -20,
+    scale: 0.98,
+    filter: 'blur(4px)',
   },
 };
 
 const pageTransition: Transition = {
-  type: 'tween',
-  ease: 'anticipate',
-  duration: 0.5,
+  type: 'spring',
+  stiffness: 260,
+  damping: 25,
+  mass: 0.8,
+};
+
+// Container variants for staggered children
+const containerVariants: Variants = {
+  initial: { opacity: 0 },
+  in: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.1,
+    },
+  },
+  out: {
+    opacity: 0,
+    transition: {
+      staggerChildren: 0.05,
+      staggerDirection: -1,
+    },
+  },
+};
+
+// Child variants for staggered animations
+export const childVariants: Variants = {
+  initial: {
+    opacity: 0,
+    y: 20,
+    scale: 0.95,
+  },
+  in: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      type: 'spring',
+      stiffness: 300,
+      damping: 24,
+    },
+  },
+  out: {
+    opacity: 0,
+    y: -10,
+    scale: 0.95,
+  },
 };
 
 const PageWrapper = ({ children }: { children: React.ReactNode }) => {

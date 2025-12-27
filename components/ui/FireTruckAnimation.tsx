@@ -16,9 +16,26 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
     }, [onComplete]);
 
     return (
-            <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/90 dark:bg-slate-900/90 backdrop-blur-md overflow-hidden">
-                {/* Background elements for premium feel */}
-                <div className="absolute inset-0 bg-gradient-to-r from-indigo-50/50 to-blue-50/50 pointer-events-none dark:from-indigo-900/40 dark:to-blue-900/40" />
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/90 dark:bg-slate-900/90 backdrop-blur-md overflow-hidden">
+            {/* Background elements for premium feel */}
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-50/50 to-blue-50/50 pointer-events-none dark:from-indigo-900/40 dark:to-blue-900/40" />
+
+            {/* Officer Image and Greeting */}
+            <motion.div
+                initial={{ opacity: 0, scale: 0.8, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="flex flex-col items-center z-10 mb-8"
+            >
+                <img
+                    src="/police_officer.png"
+                    alt="Officer"
+                    className="w-96 h-auto object-contain drop-shadow-2xl mb-4 rounded-lg"
+                />
+                <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-red-600 dark:text-red-500 drop-shadow-sm">
+                    Namasthe!
+                </h1>
+            </motion.div>
 
             <div className="relative w-full h-48 flex items-center">
                 {/* Road line */}
@@ -63,11 +80,8 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.6 }}
-                className="absolute bottom-20 flex flex-col items-center gap-2"
+                className="absolute bottom-10 flex flex-col items-center gap-2"
             >
-                <h3 className="text-xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-600 dark:from-indigo-200 dark:to-blue-200 uppercase">
-                    Logging In
-                </h3>
                 <div className="flex gap-1">
                     {[0, 1, 2].map((i) => (
                         <motion.div

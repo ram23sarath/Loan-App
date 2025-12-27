@@ -552,98 +552,103 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
       </AnimatePresence>
 
       {/* Notification Modal */}
-      {showNotificationModal && typeof document !== 'undefined' && ReactDOM.createPortal(
+      {/* Notification Modal */}
+      {typeof document !== 'undefined' && ReactDOM.createPortal(
         <AnimatePresence>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 px-4"
-            onClick={() => setShowNotificationModal(false)}
-          >
+          {showNotificationModal && (
             <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-              className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md relative dark:bg-dark-card dark:border dark:border-dark-border max-h-[80vh] flex flex-col"
-              onClick={(e) => e.stopPropagation()}
+              key="notification-modal-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 px-4"
+              onClick={() => setShowNotificationModal(false)}
             >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-800 dark:text-dark-text flex items-center gap-2 flex-shrink-0">
-                  🔔 System Notifications
-                </h3>
-
-                {notifications.length > 0 && !isScopedCustomer && (
-                  <button
-                    onClick={handleClearNotifications}
-                    disabled={isClearing}
-                    className="text-xs px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors disabled:opacity-50 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 mr-8"
-                  >
-                    {isClearing ? 'Snapping...' : 'Clear Messages'}
-                  </button>
-                )}
-              </div>
-
-              <button
-                onClick={() => setShowNotificationModal(false)}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors dark:text-dark-muted dark:hover:text-dark-text"
+              <motion.div
+                key="notification-modal-content"
+                initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md relative dark:bg-dark-card dark:border dark:border-dark-border max-h-[80vh] flex flex-col"
+                onClick={(e) => e.stopPropagation()}
               >
-                ✕
-              </button>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-gray-800 dark:text-dark-text flex items-center gap-2 flex-shrink-0">
+                    🔔 System Notifications
+                  </h3>
 
-              <div className="flex-1 overflow-y-auto min-h-[100px] overflow-x-hidden p-1">
-                {notificationLoading ? (
-                  <div className="flex flex-col items-center justify-center h-full gap-3 text-indigo-600 dark:text-indigo-400 py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-current"></div>
-                    <span className="text-sm font-medium">Loading activity log...</span>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <AnimatePresence mode='popLayout'>
-                      {notifications.length === 0 ? (
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          className="text-center py-8 text-gray-500 dark:text-dark-muted"
-                        >
-                          No recent system notifications found.
-                          <p className="text-xs mt-2 opacity-70">(Ensure the system_notifications table exists)</p>
-                        </motion.div>
-                      ) : (
-                        notifications.map((note) => (
+                  {notifications.length > 0 && !isScopedCustomer && (
+                    <button
+                      onClick={handleClearNotifications}
+                      disabled={isClearing}
+                      className="text-xs px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors disabled:opacity-50 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 mr-8"
+                    >
+                      {isClearing ? 'Snapping...' : 'Clear Messages'}
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => setShowNotificationModal(false)}
+                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors dark:text-dark-muted dark:hover:text-dark-text"
+                >
+                  ✕
+                </button>
+
+                <div className="flex-1 overflow-y-auto min-h-[100px] overflow-x-hidden p-1">
+                  {notificationLoading ? (
+                    <div className="flex flex-col items-center justify-center h-full gap-3 text-indigo-600 dark:text-indigo-400 py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-current"></div>
+                      <span className="text-sm font-medium">Loading activity log...</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <AnimatePresence mode='popLayout'>
+                        {notifications.length === 0 ? (
                           <motion.div
-                            key={note.id}
-                            layout
-                            variants={notificationItemVariants}
-                            initial="hidden"
-                            animate={isClearing ? "exit" : "visible"}
-                            exit="exit"
-                            className={`w-full p-3 rounded-xl border flex items-start gap-3 relative overflow-hidden ${note.status === 'success'
-                                ? 'bg-green-50 border-green-100 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300'
-                                : note.status === 'processing'
-                                  ? 'bg-blue-50 border-blue-100 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300'
-                                  : 'bg-red-50 border-red-100 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'
-                              }`}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="text-center py-8 text-gray-500 dark:text-dark-muted"
                           >
-                            <span className="text-lg flex-shrink-0 mt-0.5">
-                              {note.status === 'success' ? '✅' : note.status === 'processing' ? '⏳' : '❌'}
-                            </span>
-                            <div className="flex flex-col gap-0.5 relative z-10">
-                              <span className="font-medium text-sm">{note.message}</span>
-                              <span className="text-[10px] opacity-70">
-                                {new Date(note.created_at).toLocaleString()}
-                              </span>
-                            </div>
+                            No recent system notifications found.
+                            <p className="text-xs mt-2 opacity-70">(Ensure the system_notifications table exists)</p>
                           </motion.div>
-                        ))
-                      )}
-                    </AnimatePresence>
-                  </div>
-                )}
-              </div>
+                        ) : (
+                          notifications.map((note) => (
+                            <motion.div
+                              key={note.id}
+                              layout
+                              variants={notificationItemVariants}
+                              initial="hidden"
+                              animate={isClearing ? "exit" : "visible"}
+                              exit="exit"
+                              className={`w-full p-3 rounded-xl border flex items-start gap-3 relative overflow-hidden ${note.status === 'success'
+                                  ? 'bg-green-50 border-green-100 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300'
+                                  : note.status === 'processing'
+                                    ? 'bg-blue-50 border-blue-100 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300'
+                                    : 'bg-red-50 border-red-100 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'
+                                }`}
+                            >
+                              <span className="text-lg flex-shrink-0 mt-0.5">
+                                {note.status === 'success' ? '✅' : note.status === 'processing' ? '⏳' : '❌'}
+                              </span>
+                              <div className="flex flex-col gap-0.5 relative z-10">
+                                <span className="font-medium text-sm">{note.message}</span>
+                                <span className="text-[10px] opacity-70">
+                                  {new Date(note.created_at).toLocaleString()}
+                                </span>
+                              </div>
+                            </motion.div>
+                          ))
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
             </motion.div>
-          </motion.div>
+          )}
         </AnimatePresence>,
         document.body
       )}

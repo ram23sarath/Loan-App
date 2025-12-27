@@ -20,6 +20,7 @@ export default async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+
     // Simple query to test connection
     const { data, error } = await supabase
       .from('customers')
@@ -28,7 +29,28 @@ export default async (req) => {
 
     if (error) {
       console.error("Supabase Ping Error:", error.message);
+      // Try to log failure
+      try {
+        await supabase.from('system_notifications').insert({
+          type: 'ping',
+          status: 'error',
+          message: `Ping failed: ${error.message}`
+        });
+      } catch (e) { console.error("DB Log Error", e); }
+
       return new Response(`Supabase Ping Failed: ${error.message}`, { status: 500 });
+    }
+
+    // Log success
+    try {
+      await supabase.from('system_notifications').insert({
+        type: 'ping',
+        status: 'success',
+        message: 'System connectivity check passed'
+      });
+    } catch (e) {
+      console.error("Failed to log success to DB (table might be missing)", e);
+      // Continue anyway as the ping itself was successful
     }
 
     console.log("Supabase ping successful!");

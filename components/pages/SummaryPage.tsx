@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
 
-import { motion } from "framer-motion";
+import { motion, useSpring, useTransform, AnimatePresence } from "framer-motion";
 
 import * as XLSX from "xlsx";
 
@@ -31,6 +31,17 @@ const getButtonCenter = (button: HTMLElement) => {
     x: rect.left + rect.width / 2,
     y: rect.top + rect.height / 2,
   };
+};
+
+const AnimatedNumber = ({ value }: { value: number }) => {
+  const spring = useSpring(0, { mass: 0.8, stiffness: 75, damping: 15 });
+  const display = useTransform(spring, (current) => formatCurrencyIN(Math.round(current)));
+
+  useEffect(() => {
+    spring.set(value);
+  }, [value, spring]);
+
+  return <motion.span>{display}</motion.span>;
 };
 
 const SummaryPage = () => {
@@ -1275,19 +1286,17 @@ const SummaryPage = () => {
   };
 
   const mainCardVariants = {
-
-    hidden: { y: -30, opacity: 0 },
-
+    hidden: { y: 20, opacity: 0, scale: 0.95 },
     visible: {
-
       y: 0,
-
       opacity: 1,
-
-      transition: { type: "spring", stiffness: 100, damping: 12 },
-
+      scale: 1,
+      transition: { type: "spring", stiffness: 100, damping: 15 },
     },
-
+    hover: {
+      y: -5,
+      transition: { type: "spring", stiffness: 400, damping: 10 }
+    }
   };
 
   const breakdownContainerVariants = {
@@ -1484,11 +1493,9 @@ const SummaryPage = () => {
             {/* Section 1: Income */}
 
             <motion.div
-
               className="lg:col-span-1 bg-white/60 dark:bg-slate-800/60 border border-indigo-100 dark:border-indigo-800 rounded-2xl p-5 flex flex-col gap-4 shadow-sm h-full"
-
               variants={mainCardVariants}
-
+              whileHover="hover"
             >
 
               <div className="w-full flex items-center justify-between">
@@ -1533,8 +1540,7 @@ const SummaryPage = () => {
 
                 <span className="text-4xl font-bold text-indigo-700 dark:text-indigo-400 mt-1">
 
-                  {formatCurrencyIN(totalAllCollected)}
-
+                  <AnimatedNumber value={totalAllCollected} />
                 </span>
 
               </div>
@@ -1549,7 +1555,7 @@ const SummaryPage = () => {
 
                   <div className="text-xs text-gray-600 dark:text-blue-300">Loan Balance</div>
 
-                  <div className="text-lg font-bold text-blue-800 dark:text-blue-200 mt-1">{formatCurrencyIN(loanBalance)}</div>
+                  <div className="text-lg font-bold text-blue-800 dark:text-blue-200 mt-1"><AnimatedNumber value={loanBalance} /></div>
 
                 </div>
 
@@ -1557,7 +1563,7 @@ const SummaryPage = () => {
 
                   <div className="text-xs text-gray-600 dark:text-cyan-300">Subscription Balance</div>
 
-                  <div className="text-lg font-bold text-cyan-800 dark:text-cyan-200 mt-1">{formatCurrencyIN(subscriptionBalance)}</div>
+                  <div className="text-lg font-bold text-cyan-800 dark:text-cyan-200 mt-1"><AnimatedNumber value={subscriptionBalance} /></div>
 
                 </div>
 
@@ -1587,8 +1593,7 @@ const SummaryPage = () => {
 
                     <span className="text-lg font-bold text-blue-800 dark:text-blue-200">
 
-                      {formatCurrencyIN(totalPrincipalRecovered)}
-
+                      <AnimatedNumber value={totalPrincipalRecovered} />
                     </span>
 
                   </div>
@@ -1613,8 +1618,7 @@ const SummaryPage = () => {
 
                       <span className={`text-lg font-bold text-${card.color}-800 dark:text-${card.color}-200`}>
 
-                        {formatCurrencyIN(card.value)}
-
+                        <AnimatedNumber value={card.value} />
                       </span>
 
                     </div>
@@ -1657,8 +1661,7 @@ const SummaryPage = () => {
 
                     <div className="text-sm font-medium text-cyan-700 dark:text-cyan-300">
 
-                      {formatCurrencyIN(totalSubscriptionCollected)}
-
+                      <AnimatedNumber value={totalSubscriptionCollected} />
                     </div>
 
                   </div>
@@ -1673,8 +1676,7 @@ const SummaryPage = () => {
 
                     <div className="text-sm font-medium text-cyan-700 dark:text-cyan-300">
 
-                      {formatCurrencyIN(subscriptionReturnTotal)}
-
+                      <AnimatedNumber value={subscriptionReturnTotal} />
                     </div>
 
                   </div>
@@ -1695,8 +1697,7 @@ const SummaryPage = () => {
 
                     >
 
-                      {formatCurrencyIN(subscriptionBalance)}
-
+                      <AnimatedNumber value={subscriptionBalance} />
                     </div>
 
                   </div>
@@ -1731,8 +1732,7 @@ const SummaryPage = () => {
 
                     <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
 
-                      {formatCurrencyIN(totalLoansGiven)}
-
+                      <AnimatedNumber value={totalLoansGiven} />
                     </div>
 
                   </div>
@@ -1747,8 +1747,7 @@ const SummaryPage = () => {
 
                     <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
 
-                      {formatCurrencyIN(totalPrincipalRecovered)}
-
+                      <AnimatedNumber value={totalPrincipalRecovered} />
                     </div>
 
                   </div>
@@ -1759,8 +1758,7 @@ const SummaryPage = () => {
 
                     <div className={`text-sm font-bold ${loanBalance < 0 ? "text-red-600 dark:text-red-400" : "text-blue-800 dark:text-blue-200"}`}>
 
-                      {formatCurrencyIN(loanBalance)}
-
+                      <AnimatedNumber value={loanBalance} />
                     </div>
 
                   </div>
@@ -1778,11 +1776,9 @@ const SummaryPage = () => {
             {/* Section 2: Expenses */}
 
             <motion.div
-
               className="lg:col-span-1 bg-white/60 dark:bg-slate-800/60 border border-red-100 dark:border-red-800 rounded-2xl p-5 flex flex-col gap-4 shadow-sm h-full"
-
               variants={mainCardVariants}
-
+              whileHover="hover"
             >
 
               <div className="w-full flex items-center gap-3 mb-3">
@@ -1823,8 +1819,7 @@ const SummaryPage = () => {
 
                 <span className="text-4xl font-bold text-blue-700 dark:text-blue-400 mt-1">
 
-                  {formatCurrencyIN(totalLoansGiven)}
-
+                  <AnimatedNumber value={totalLoansGiven} />
                 </span>
 
               </div>
@@ -1851,8 +1846,7 @@ const SummaryPage = () => {
 
                     <div className={`text-lg font-bold text-red-800 dark:text-red-200 mt-1`}>
 
-                      {formatCurrencyIN(totalExpenses)}
-
+                      <AnimatedNumber value={totalExpenses} />
                     </div>
 
                   </div>
@@ -1879,8 +1873,7 @@ const SummaryPage = () => {
 
                         <div className="text-sm font-medium text-red-700 dark:text-red-300">
 
-                          {formatCurrencyIN((amt as number) || 0)}
-
+                          <AnimatedNumber value={(amt as number) || 0} />
                         </div>
 
                       </div>
@@ -1957,7 +1950,10 @@ const SummaryPage = () => {
 
               <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
 
-                <div className="p-4 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 flex flex-col items-start">
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  className="p-4 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 flex flex-col items-start transition-shadow hover:shadow-md"
+                >
 
                   <div className="flex items-center justify-between w-full">
 
@@ -1979,13 +1975,14 @@ const SummaryPage = () => {
 
                   <div className="text-xl font-bold text-cyan-800 dark:text-cyan-200 mt-2">
 
-                    {formatCurrencyIN(fySubscriptionCollected)}
-
+                    <AnimatedNumber value={fySubscriptionCollected} />
                   </div>
 
-                </div>
-
-                <div className="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 flex flex-col items-start">
+                </motion.div>
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  className="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 flex flex-col items-start transition-shadow hover:shadow-md"
+                >
 
                   <div className="flex items-center justify-between w-full">
 
@@ -2007,13 +2004,14 @@ const SummaryPage = () => {
 
                   <div className="text-xl font-bold text-green-800 dark:text-green-200 mt-2">
 
-                    {formatCurrencyIN(fyInterestCollected)}
-
+                    <AnimatedNumber value={fyInterestCollected} />
                   </div>
 
-                </div>
-
-                <div className="p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 flex flex-col items-start">
+                </motion.div>
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  className="p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 flex flex-col items-start transition-shadow hover:shadow-md"
+                >
 
                   <div className="flex items-center justify-between w-full">
 
@@ -2035,13 +2033,14 @@ const SummaryPage = () => {
 
                   <div className="text-xl font-bold text-orange-800 dark:text-orange-200 mt-2">
 
-                    {formatCurrencyIN(fyLateFees)}
-
+                    <AnimatedNumber value={fyLateFees} />
                   </div>
 
-                </div>
-
-                <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 flex flex-col items-start">
+                </motion.div>
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 flex flex-col items-start transition-shadow hover:shadow-md"
+                >
 
                   <div className="flex items-center justify-between w-full">
 
@@ -2067,15 +2066,16 @@ const SummaryPage = () => {
 
                   <div className="text-xl font-bold text-blue-800 dark:text-blue-200 mt-2">
 
-                    {formatCurrencyIN(fyPrincipalRecovered)}
-
+                    <AnimatedNumber value={fyPrincipalRecovered} />
                   </div>
 
-                </div>
+                </motion.div>
 
                 {/* FY Loans Given vs Recovery Balance */}
-
-                <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 flex flex-col items-start">
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 flex flex-col items-start transition-shadow hover:shadow-md"
+                >
 
                   <div className="flex items-center justify-between w-full">
 
@@ -2093,8 +2093,7 @@ const SummaryPage = () => {
 
                       <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
 
-                        {formatCurrencyIN(fyLoansGiven)}
-
+                        <AnimatedNumber value={fyLoansGiven} />
                       </div>
 
                     </div>
@@ -2109,8 +2108,7 @@ const SummaryPage = () => {
 
                       <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
 
-                        {formatCurrencyIN(fyPrincipalRecovered)}
-
+                        <AnimatedNumber value={fyPrincipalRecovered} />
                       </div>
 
                     </div>
@@ -2131,17 +2129,19 @@ const SummaryPage = () => {
 
                       >
 
-                        {formatCurrencyIN(fyLoanBalance)}
-
+                        <AnimatedNumber value={fyLoanBalance} />
                       </div>
 
                     </div>
 
                   </div>
 
-                </div>
+                </motion.div>
 
-                <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 flex flex-col items-start">
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 flex flex-col items-start transition-shadow hover:shadow-md"
+                >
 
                   <div className="flex items-center justify-between w-full">
 
@@ -2163,25 +2163,16 @@ const SummaryPage = () => {
 
                   <div className="text-xl font-bold text-indigo-800 dark:text-indigo-200 mt-2">
 
-                    {formatCurrencyIN(
-
-                      fySubscriptionCollected +
-
-                      fyInterestCollected +
-
-                      fyLateFees +
-
-                      fyPrincipalRecovered
-
-                    )}
-
+                    <AnimatedNumber value={fySubscriptionCollected + fyInterestCollected + fyLateFees + fyPrincipalRecovered} />
                   </div>
 
-                </div>
+                </motion.div>
 
                 {/* FY Expenses card (deductible) */}
-
-                <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex flex-col items-start">
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex flex-col items-start transition-shadow hover:shadow-md"
+                >
 
                   <div className="flex items-center justify-between w-full">
 
@@ -2195,8 +2186,7 @@ const SummaryPage = () => {
 
                   <div className="text-xl font-bold text-red-800 dark:text-red-200 mt-2">
 
-                    {formatCurrencyIN(fyExpensesTotal)}
-
+                    <AnimatedNumber value={fyExpensesTotal} />
                   </div>
 
                   <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">Breakdown:</div>
@@ -2217,8 +2207,7 @@ const SummaryPage = () => {
 
                         <div className="font-medium text-red-700 dark:text-red-300">
 
-                          {formatCurrencyIN(fyExpensesBySubtype[s] || 0)}
-
+                          <AnimatedNumber value={fyExpensesBySubtype[s] || 0} />
                         </div>
 
                       </div>
@@ -2227,11 +2216,13 @@ const SummaryPage = () => {
 
                   </div>
 
-                </div>
+                </motion.div>
 
                 {/* Net FY Total (collections - expenses) */}
-
-                <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 flex flex-col items-start">
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 flex flex-col items-start transition-shadow hover:shadow-md"
+                >
 
                   <div className="flex items-center justify-between w-full">
 
@@ -2241,23 +2232,10 @@ const SummaryPage = () => {
 
                   <div className="text-xl font-bold text-emerald-800 dark:text-emerald-200 mt-2">
 
-                    {formatCurrencyIN(
-
-                      fySubscriptionCollected +
-
-                      fyInterestCollected +
-
-                      fyLateFees +
-
-                      fyPrincipalRecovered -
-
-                      fyExpensesTotal
-
-                    )}
-
+                    <AnimatedNumber value={fySubscriptionCollected + fyInterestCollected + fyLateFees + fyPrincipalRecovered - fyExpensesTotal} />
                   </div>
 
-                </div>
+                </motion.div>
 
               </div>
 
@@ -2292,7 +2270,7 @@ const SummaryPage = () => {
         </div>
 
       </div>
-    </PageWrapper>
+    </PageWrapper >
   );
 };
 

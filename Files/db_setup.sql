@@ -1,5 +1,4 @@
--- Run this in your Supabase SQL Editor to create the notifications table
-
+-- Create the table if it doesn't exist
 CREATE TABLE IF NOT EXISTS public.system_notifications (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     created_at timestamptz DEFAULT now(),
@@ -12,11 +11,25 @@ CREATE TABLE IF NOT EXISTS public.system_notifications (
 -- Enable RLS
 ALTER TABLE public.system_notifications ENABLE ROW LEVEL SECURITY;
 
--- Allow anonymous read (so the UI can fetch notifications)
--- Adjust logic if you want strict admin-only access (e.g., checks against auth.uid())
-CREATE POLICY "Allow read access for all users" ON public.system_notifications
-FOR SELECT USING (true);
+-- 1. READ: Allow Admins Only (changed from "all users")
+-- Users who are authenticated AND NOT present in the customers table.
+DROP POLICY IF EXISTS "Allow read access for all users" ON public.system_notifications;
+CREATE POLICY "Allow read access for admins only" ON public.system_notifications
+FOR SELECT USING (
+  auth.role() = 'authenticated' AND
+  NOT EXISTS (SELECT 1 FROM public.customers WHERE user_id = auth.uid())
+);
 
--- Allow service role (server) to insert
+-- 2. INSERT: Allow service role only (the Netlify function)
+DROP POLICY IF EXISTS "Allow insert for service role only" ON public.system_notifications;
 CREATE POLICY "Allow insert for service role only" ON public.system_notifications
 FOR INSERT WITH CHECK (true);
+
+-- 3. DELETE: Allow ADMINS only
+DROP POLICY IF EXISTS "Allow delete for admins only" ON public.system_notifications;
+CREATE POLICY "Allow delete for admins only" ON public.system_notifications
+FOR DELETE
+USING (
+  auth.role() = 'authenticated' AND
+  NOT EXISTS (SELECT 1 FROM public.customers WHERE user_id = auth.uid())
+);

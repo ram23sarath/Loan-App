@@ -29,7 +29,7 @@ export default async (req) => {
 
   } catch (err) {
     console.error("Unexpected error during Supabase ping:", err);
-    return new Response("Unexpected Error", { status: 500 });
+    return new Response(`Unexpected Error: ${err.message}`, { status: 500 });
   }
 };
 

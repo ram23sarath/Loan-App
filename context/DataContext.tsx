@@ -317,7 +317,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     await supabase.from('system_notifications').insert({
                         type: 'seniority_request',
                         status: 'processing', // Using 'processing' makes it blue/info
-                        message: `${name} requested Loan Seniority: ${details?.loan_type || 'General'}`,
+                        message: `${name} requested For Loan Seniority: ${details?.loan_type || 'General'}`,
                         metadata: { customer_id: customerId, ...details }
                     });
                 } catch (notifyErr) {

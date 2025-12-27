@@ -66,6 +66,5 @@ export default async (req) => {
 };
 
 export const config = {
-  path: "/.netlify/functions/ping-supabase",
   schedule: "*/2 * * * *"
 };

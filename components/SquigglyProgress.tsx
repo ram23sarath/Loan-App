@@ -54,7 +54,7 @@ export const SquigglyProgress: React.FC<SquigglyProgressProps> = ({
               <path
                 d={oneWavePath}
                 fill="none"
-                stroke="currentColor"
+                stroke={trackColor}
                 strokeWidth={strokeWidth}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -67,8 +67,6 @@ export const SquigglyProgress: React.FC<SquigglyProgressProps> = ({
             width="100%"
             height="100%"
             fill={`url(#wave-pattern-${height})`}
-            className="text-slate-300"
-            style={{ color: trackColor }}
           />
         </svg>
       </div>
@@ -80,7 +78,7 @@ export const SquigglyProgress: React.FC<SquigglyProgressProps> = ({
         animate={{ width: `${safeValue}%` }}
         transition={{ type: "spring", stiffness: 50, damping: 15 }}
       >
-        <svg className="h-full w-full" style={{ minWidth: "100vw" }}>
+        <svg className="h-full w-full" style={{ width: "100%" }}>
           <defs>
             <pattern
               id={`wave-pattern-${height}`}
@@ -89,14 +87,23 @@ export const SquigglyProgress: React.FC<SquigglyProgressProps> = ({
               width={wavelength}
               height={height}
               patternUnits="userSpaceOnUse"
+              patternTransform="translate(0,0)"
             >
               <path
                 d={oneWavePath}
                 fill="none"
-                stroke="currentColor"
+                stroke={color}
                 strokeWidth={strokeWidth}
                 strokeLinecap="round"
                 strokeLinejoin="round"
+              />
+              <animateTransform
+                attributeName="patternTransform"
+                type="translate"
+                from="0 0"
+                to={`-${wavelength} 0`}
+                dur="1s"
+                repeatCount="indefinite"
               />
             </pattern>
           </defs>
@@ -109,17 +116,7 @@ export const SquigglyProgress: React.FC<SquigglyProgressProps> = ({
             width="100%"
             height="100%"
             fill={`url(#wave-pattern-${height})`}
-            style={{ color: color }}
-          >
-            {/* The Animation: We animate the Pattern X position */}
-            <animate
-              attributeName="x"
-              from="0"
-              to={`-${wavelength}`}
-              dur="1s"
-              repeatCount="indefinite"
-            />
-          </rect>
+          />
         </svg>
       </motion.div>
     </div>

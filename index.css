@@ -6,6 +6,13 @@
 /* Dark mode background transition */
 body {
   @apply transition-colors duration-200;
+  scrollbar-gutter: stable;
+}
+
+/* Prevent scrollbar layout shift during page transitions */
+html {
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
 }
 
 /* ===== SPHERE/CIRCULAR THEME TRANSITION ===== */

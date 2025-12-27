@@ -3,33 +3,26 @@ import { motion, Transition, Variants } from 'framer-motion';
 import { useData } from '../../context/DataContext';
 import Toast from './Toast';
 
-// Enhanced page variants with more creative transitions
+// Enhanced page variants - using only opacity and blur to avoid scrollbar flash
 const pageVariants: Variants = {
   initial: {
     opacity: 0,
-    y: 30,
-    scale: 0.98,
-    filter: 'blur(4px)',
+    filter: 'blur(8px)',
   },
   in: {
     opacity: 1,
-    y: 0,
-    scale: 1,
     filter: 'blur(0px)',
   },
   out: {
     opacity: 0,
-    y: -20,
-    scale: 0.98,
     filter: 'blur(4px)',
   },
 };
 
 const pageTransition: Transition = {
-  type: 'spring',
-  stiffness: 260,
-  damping: 25,
-  mass: 0.8,
+  type: 'tween',
+  ease: 'easeOut',
+  duration: 0.3,
 };
 
 // Container variants for staggered children

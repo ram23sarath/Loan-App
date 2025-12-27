@@ -24,13 +24,11 @@ const listContainerVariants: Variants = {
 const listItemVariants: Variants = {
   hidden: {
     opacity: 0,
-    x: -20,
-    scale: 0.95,
+    y: 10,
   },
   visible: {
     opacity: 1,
-    x: 0,
-    scale: 1,
+    y: 0,
     transition: {
       type: 'spring',
       stiffness: 300,
@@ -39,10 +37,8 @@ const listItemVariants: Variants = {
   },
   exit: {
     opacity: 0,
-    x: 20,
-    scale: 0.95,
     transition: {
-      duration: 0.2,
+      duration: 0.15,
     },
   },
 };
@@ -318,7 +314,7 @@ const LoanSeniorityPage = () => {
           >
             <h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-dark-text">Search results</h3>
             <motion.div
-              className="space-y-2 max-h-64 overflow-y-auto"
+              className="space-y-2 max-h-64 overflow-hidden"
               variants={listContainerVariants}
               initial="hidden"
               animate="visible"

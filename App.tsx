@@ -124,7 +124,7 @@ const App = () => {
                     <main
                       className="flex-1 h-full overflow-y-auto"
                       // Use the CSS variable set by Sidebar to offset content when sidebar is visible on desktop.
-                      style={{ paddingLeft: 'var(--sidebar-offset, 0px)' }}
+                      style={{ paddingLeft: 'var(--sidebar-offset, 0px)', scrollbarGutter: 'stable' }}
                     >
                       <AnimatedRoutes />
                     </main>

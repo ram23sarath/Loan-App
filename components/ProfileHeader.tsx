@@ -1,4 +1,4 @@
-import React, { useState, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, forwardRef, useImperativeHandle, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { useTheme } from '../context/ThemeContext';
 import { MoonIcon, SunIcon } from '../constants';
@@ -160,6 +160,42 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   useImperativeHandle(ref, () => ({
     openMenu: () => setShowMenu(true),
   }));
+
+  // Handle Escape key to close modals
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        // Close modals in priority order (most specific first)
+        if (showLogoutConfirm) {
+          setShowLogoutConfirm(false);
+        } else if (showChangePasswordModal) {
+          setShowChangePasswordModal(false);
+        } else if (showToolsModal) {
+          setShowToolsModal(false);
+        } else if (showProfilePanel) {
+          setShowProfilePanel(false);
+        } else if (showMenu) {
+          setShowMenu(false);
+        } else if (backupRunning && (backupProgress >= 100 || backupCurrentStep.startsWith('❌'))) {
+          // Only allow closing backup overlay when complete or error
+          if (backupPollRef.current) {
+            clearInterval(backupPollRef.current);
+            backupPollRef.current = null;
+          }
+          if (backupTimerRef.current) {
+            clearInterval(backupTimerRef.current);
+            backupTimerRef.current = null;
+          }
+          setBackupRunning(false);
+          setBackupStartTs(null);
+          setBackupElapsed('00:00');
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [showMenu, showChangePasswordModal, showToolsModal, showProfilePanel, showLogoutConfirm, backupRunning, backupProgress, backupCurrentStep]);
 
   if (!session || !session.user) return null;
 

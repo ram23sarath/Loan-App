@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import ReactDOM from 'react-dom';
 import { motion, Variants, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
 import type { Customer, LoanWithCustomer, SubscriptionWithCustomer, Installment, DataEntry } from '../../types';
@@ -35,7 +36,7 @@ const formatCurrency = (amount: number) => `₹${amount.toLocaleString()}`;
 
 // Define variants for the note's expansion
 const noteVariants: Variants = {
-  collapsed: { 
+  collapsed: {
     height: 'auto',
     opacity: 1,
     overflow: 'hidden',
@@ -44,7 +45,7 @@ const noteVariants: Variants = {
       opacity: { duration: 0.2, ease: 'easeOut' },
     }
   },
-  expanded: { 
+  expanded: {
     height: 'auto',
     opacity: 1,
     overflow: 'visible',
@@ -56,7 +57,7 @@ const noteVariants: Variants = {
 };
 
 const installmentRowVariants: Variants = {
-  hidden: { 
+  hidden: {
     opacity: 0,
     height: 0,
     transition: {
@@ -64,7 +65,7 @@ const installmentRowVariants: Variants = {
       ease: 'easeOut'
     }
   },
-  visible: { 
+  visible: {
     opacity: 1,
     height: 'auto',
     transition: {
@@ -75,7 +76,7 @@ const installmentRowVariants: Variants = {
 };
 
 const installmentCardVariants: Variants = {
-  hidden: { 
+  hidden: {
     opacity: 0,
     height: 0,
     marginTop: 0,
@@ -84,7 +85,7 @@ const installmentCardVariants: Variants = {
       ease: 'easeOut'
     }
   },
-  visible: { 
+  visible: {
     opacity: 1,
     height: 'auto',
     marginTop: '0.75rem',
@@ -188,7 +189,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
       const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
       const lateFeesPaid = loanInstallments.reduce((acc, inst) => acc + (inst.late_fee || 0), 0);
       const totalRepayable = loan.original_amount + loan.interest_amount;
-      
+
       return {
         'Loan ID': loan.id,
         'Original Amount': loan.original_amount,
@@ -230,7 +231,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     XLSX.writeFile(wb, `${customer.name}_Details.xlsx`);
   };
 
-  return (
+  return ReactDOM.createPortal(
     <motion.div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
       variants={backdropVariants}
@@ -272,7 +273,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           </div>
         </GlassCard>
 
-        <div className="mt-2 sm:mt-4 space-y-3 sm:space-y-6 overflow-y-auto">
+        <div className="mt-2 sm:mt-4 space-y-3 sm:space-y-6 overflow-y-auto overflow-x-hidden scrollbar-thin">
           {/* Loans Section */}
           <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border">
             <h3 className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-lg sm:text-2xl font-semibold dark:text-dark-text">
@@ -310,7 +311,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                       const balance = totalRepayable - amountPaid;
                       const isPaidOff = amountPaid >= totalRepayable;
                       const isExpanded = expandedLoanId === loan.id;
-                      
+
                       return (
                         <React.Fragment key={loan.id}>
                           <tr className="even:bg-gray-50/50 hover:bg-indigo-50/50 transition-colors dark:even:bg-slate-700/50 dark:hover:bg-indigo-900/30">
@@ -362,40 +363,40 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                                 variants={installmentRowVariants}
                               >
                                 <td colSpan={11} className="px-4 py-3 bg-indigo-50/30 dark:bg-indigo-900/20">
-                                  <motion.div 
+                                  <motion.div
                                     className="space-y-2"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     transition={{ delay: 0.1 }}
                                   >
-                                  <h5 className="text-sm font-semibold text-gray-700 dark:text-dark-text mb-2">Installments Paid:</h5>
-                                  <div className="space-y-1">
-                                    {loanInstallments.map(inst => (
-                                      <div key={inst.id} className="flex items-center justify-between p-2 bg-white dark:bg-slate-800 rounded border border-gray-200 dark:border-dark-border text-sm">
-                                        <div className="flex items-center gap-4">
-                                          <span className="font-medium text-gray-700 dark:text-dark-text">#{inst.installment_number}</span>
-                                          <span className="text-gray-600 dark:text-dark-muted">{formatDate(inst.date)}</span>
-                                          <span className="text-gray-600 dark:text-dark-muted">Receipt: {inst.receipt_number}</span>
+                                    <h5 className="text-sm font-semibold text-gray-700 dark:text-dark-text mb-2">Installments Paid:</h5>
+                                    <div className="space-y-1">
+                                      {loanInstallments.map(inst => (
+                                        <div key={inst.id} className="flex items-center justify-between p-2 bg-white dark:bg-slate-800 rounded border border-gray-200 dark:border-dark-border text-sm">
+                                          <div className="flex items-center gap-4">
+                                            <span className="font-medium text-gray-700 dark:text-dark-text">#{inst.installment_number}</span>
+                                            <span className="text-gray-600 dark:text-dark-muted">{formatDate(inst.date)}</span>
+                                            <span className="text-gray-600 dark:text-dark-muted">Receipt: {inst.receipt_number}</span>
+                                          </div>
+                                          <div className="flex items-center gap-3">
+                                            <span className="font-semibold text-green-600 dark:text-green-400">
+                                              {formatCurrency(inst.amount)}
+                                              {inst.late_fee && inst.late_fee > 0 && (
+                                                <span className="ml-1 text-xs text-orange-500">(+{formatCurrency(inst.late_fee)} late)</span>
+                                              )}
+                                            </span>
+                                            <motion.button
+                                              onClick={() => setDeleteInstTarget(inst)}
+                                              className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors"
+                                              whileHover={{ scale: 1.2 }}
+                                              whileTap={{ scale: 0.9 }}
+                                            >
+                                              <Trash2Icon className="w-4 h-4 text-red-500" />
+                                            </motion.button>
+                                          </div>
                                         </div>
-                                        <div className="flex items-center gap-3">
-                                          <span className="font-semibold text-green-600 dark:text-green-400">
-                                            {formatCurrency(inst.amount)}
-                                            {inst.late_fee && inst.late_fee > 0 && (
-                                              <span className="ml-1 text-xs text-orange-500">(+{formatCurrency(inst.late_fee)} late)</span>
-                                            )}
-                                          </span>
-                                          <motion.button
-                                            onClick={() => setDeleteInstTarget(inst)}
-                                            className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors"
-                                            whileHover={{ scale: 1.2 }}
-                                            whileTap={{ scale: 0.9 }}
-                                          >
-                                            <Trash2Icon className="w-4 h-4 text-red-500" />
-                                          </motion.button>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
+                                      ))}
+                                    </div>
                                   </motion.div>
                                 </td>
                               </motion.tr>
@@ -416,7 +417,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                     const balance = totalRepayable - amountPaid;
                     const isPaidOff = amountPaid >= totalRepayable;
                     const isExpanded = expandedLoanId === loan.id;
-                    
+
                     return (
                       <div key={loan.id} className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-dark-border">
                         <div className="flex justify-between items-start mb-2">
@@ -467,10 +468,10 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                             </div>
                           )}
                         </div>
-                        
+
                         <AnimatePresence>
                           {isExpanded && loanInstallments.length > 0 && (
-                            <motion.div 
+                            <motion.div
                               className="mt-3 pt-3 border-t dark:border-dark-border space-y-2"
                               initial="hidden"
                               animate="visible"
@@ -478,42 +479,42 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                               variants={installmentCardVariants}
                             >
                               <h5 className="text-xs font-semibold text-gray-700 dark:text-dark-text">Installments Paid:</h5>
-                              <motion.div 
+                              <motion.div
                                 className="space-y-1"
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.1 }}
                               >
-                              {loanInstallments.map(inst => (
-                                <div key={inst.id} className="flex items-start justify-between p-2 bg-white dark:bg-slate-700/50 rounded border border-gray-200 dark:border-dark-border text-xs">
-                                  <div className="flex-1">
-                                    <div className="font-medium text-gray-700 dark:text-dark-text">Installment #{inst.installment_number}</div>
-                                    <div className="text-gray-600 dark:text-dark-muted mt-1">{formatDate(inst.date)}</div>
-                                    <div className="text-gray-600 dark:text-dark-muted">Receipt: {inst.receipt_number}</div>
+                                {loanInstallments.map(inst => (
+                                  <div key={inst.id} className="flex items-start justify-between p-2 bg-white dark:bg-slate-700/50 rounded border border-gray-200 dark:border-dark-border text-xs">
+                                    <div className="flex-1">
+                                      <div className="font-medium text-gray-700 dark:text-dark-text">Installment #{inst.installment_number}</div>
+                                      <div className="text-gray-600 dark:text-dark-muted mt-1">{formatDate(inst.date)}</div>
+                                      <div className="text-gray-600 dark:text-dark-muted">Receipt: {inst.receipt_number}</div>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1">
+                                      <span className="font-semibold text-green-600 dark:text-green-400">
+                                        {formatCurrency(inst.amount)}
+                                      </span>
+                                      {inst.late_fee && inst.late_fee > 0 && (
+                                        <span className="text-xs text-orange-500">+{formatCurrency(inst.late_fee)} late</span>
+                                      )}
+                                      <motion.button
+                                        onClick={() => setDeleteInstTarget(inst)}
+                                        className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors"
+                                        whileHover={{ scale: 1.2 }}
+                                        whileTap={{ scale: 0.9 }}
+                                      >
+                                        <Trash2Icon className="w-3 h-3 text-red-500" />
+                                      </motion.button>
+                                    </div>
                                   </div>
-                                  <div className="flex flex-col items-end gap-1">
-                                    <span className="font-semibold text-green-600 dark:text-green-400">
-                                      {formatCurrency(inst.amount)}
-                                    </span>
-                                    {inst.late_fee && inst.late_fee > 0 && (
-                                      <span className="text-xs text-orange-500">+{formatCurrency(inst.late_fee)} late</span>
-                                    )}
-                                    <motion.button
-                                      onClick={() => setDeleteInstTarget(inst)}
-                                      className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors"
-                                      whileHover={{ scale: 1.2 }}
-                                      whileTap={{ scale: 0.9 }}
-                                    >
-                                      <Trash2Icon className="w-3 h-3 text-red-500" />
-                                    </motion.button>
-                                  </div>
-                                </div>
-                              ))}
+                                ))}
                               </motion.div>
                             </motion.div>
                           )}
                         </AnimatePresence>
-                        
+
                         <div className="flex gap-2 mt-3 pt-3 border-t dark:border-dark-border">
                           {onEditLoan && (
                             <button
@@ -882,7 +883,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           )}
         </AnimatePresence>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 };
 

@@ -37,41 +37,37 @@ export const SquigglyProgress: React.FC<SquigglyProgressProps> = ({
       className="relative w-full overflow-hidden rounded-full transform translate-z-0"
       style={{ height, background: "transparent" }} // translate-z-0 forces GPU acceleration
     >
-      {/* We define the Wave Pattern once in a shared SVG defs block.
-        We can then reference this pattern for both the track and the fill.
-      */}
-      <svg className="absolute w-full h-full" style={{ left: 0, top: 0 }}>
-        <defs>
-          <pattern
-            id={`wave-pattern-${height}`} // Unique ID based on height
-            x="0"
-            y="0"
-            width={wavelength}
-            height={height}
-            patternUnits="userSpaceOnUse"
-          >
-            <path
-              d={oneWavePath}
-              fill="none"
-              stroke="currentColor" // Inherits from the rect utilizing it
-              strokeWidth={strokeWidth}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </pattern>
-        </defs>
-      </svg>
+      {/* We define the Wave Pattern inside each SVG that uses it so references resolve reliably. */}
 
       {/* 1. The Background Track (Static) */}
       <div className="absolute inset-0 w-full h-full">
         <svg className="w-full h-full">
+          <defs>
+            <pattern
+              id={`wave-pattern-${height}`}
+              x="0"
+              y="0"
+              width={wavelength}
+              height={height}
+              patternUnits="userSpaceOnUse"
+            >
+              <path
+                d={oneWavePath}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={strokeWidth}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </pattern>
+          </defs>
           <rect
             x="0"
             y="0"
             width="100%"
             height="100%"
             fill={`url(#wave-pattern-${height})`}
-            className="text-slate-300" // Fallback class
+            className="text-slate-300"
             style={{ color: trackColor }}
           />
         </svg>
@@ -85,6 +81,25 @@ export const SquigglyProgress: React.FC<SquigglyProgressProps> = ({
         transition={{ type: "spring", stiffness: 50, damping: 15 }}
       >
         <svg className="h-full w-full" style={{ minWidth: "100vw" }}>
+          <defs>
+            <pattern
+              id={`wave-pattern-${height}`}
+              x="0"
+              y="0"
+              width={wavelength}
+              height={height}
+              patternUnits="userSpaceOnUse"
+            >
+              <path
+                d={oneWavePath}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={strokeWidth}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </pattern>
+          </defs>
            {/* minWidth 100vw ensures the SVG inside the clipped div 
              is always large enough to show the pattern, preventing squash.
            */}

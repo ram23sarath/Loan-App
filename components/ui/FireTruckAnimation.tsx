@@ -30,10 +30,10 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
                 <img
                     src="/police_officer.png"
                     alt="Officer"
-                    className="w-96 h-auto object-contain drop-shadow-2xl mb-4 rounded-lg"
+                    className="w-48 h-auto object-contain drop-shadow-2xl mb-4 rounded-lg"
                 />
-                <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-red-600 dark:text-red-500 drop-shadow-sm">
-                    Namasthe!
+                <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-red-600 dark:text-red-500 drop-shadow-sm">
+                    Welcome to CTR Dist Welfare LoanApp!
                 </h1>
             </motion.div>
 

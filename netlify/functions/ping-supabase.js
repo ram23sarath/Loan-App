@@ -33,8 +33,3 @@ export default async (req) => {
   }
 };
 
-// Configure the schedule for the function
-export const config = {
-  schedule: "*/2 * * * *", // Runs every 2 minutes
-};
-// Or: "0 0 * * 1" // Every Monday at midnight UTC (once a week, might be too long for Supabase free tier)

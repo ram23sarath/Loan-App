@@ -988,8 +988,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             const { data, error } = await supabase.from('loans').insert([loanData] as any).select().single();
             if (error || !data) throw error;
             try {
-                if (session?.user?.id && data.customer_id) {
-                    await supabase.from('loan_seniority').delete().match({ customer_id: data.customer_id, user_id: session.user.id });
+                if (data.customer_id) {
+                    // Remove from seniority list regardless of who requested it
+                    await supabase.from('loan_seniority').delete().eq('customer_id', data.customer_id);
                 }
             } catch (e) {
                 console.error('Failed to cleanup loan_seniority after loan create', e);
@@ -1008,13 +1009,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             const { data, error } = await supabase.from('subscriptions').insert([subscriptionData] as any).select().single();
             console.log('📝 Insert result:', { data, error });
             if (error || !data) throw error;
-            try {
-                if (session?.user?.id && data.customer_id) {
-                    await supabase.from('loan_seniority').delete().match({ customer_id: data.customer_id, user_id: session.user.id });
-                }
-            } catch (e) {
-                console.error('Failed to cleanup loan_seniority after subscription create', e);
-            }
+
             console.log('📝 Calling fetchData after subscription insert...');
             await fetchData();
             console.log('📝 fetchData complete, subscriptions count:', subscriptions.length);

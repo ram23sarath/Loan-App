@@ -99,7 +99,7 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
             onTouchStart={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-dark-text">Request Loan / Subscription</h3>
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-dark-text">Request Loan</h3>
               <button onClick={() => startClose()} className="text-gray-500 hover:text-gray-700 dark:text-dark-muted dark:hover:text-dark-text transition-colors">✕</button>
             </div>
             <div className="space-y-3">

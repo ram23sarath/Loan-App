@@ -9,7 +9,7 @@ import { formatDate } from '../../utils/dateFormatter';
 import { useDebounce } from '../../utils/useDebounce';
 
 const LoanSeniorityPage = () => {
-  const { customers, loans, subscriptions, seniorityList, fetchSeniorityList, addToSeniority, updateSeniority, removeFromSeniority } = useData();
+  const { customers, loans, subscriptions, seniorityList, fetchSeniorityList, addToSeniority, updateSeniority, removeFromSeniority, isScopedCustomer } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
@@ -110,54 +110,57 @@ const LoanSeniorityPage = () => {
         </h2>
       </div>
 
-      <GlassCard className="mb-6 !p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <input
-              className="w-full bg-white dark:bg-dark-bg border border-gray-300 dark:border-dark-border rounded-lg py-2 px-3 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 dark:text-dark-text placeholder:text-gray-400 dark:placeholder:text-dark-muted"
-              placeholder="Search customers by name or phone..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-dark-muted hover:text-gray-600 dark:hover:text-dark-text p-1"
-                aria-label="Clear search"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
+      {/* Search/Add section - hidden for scoped users */}
+      {!isScopedCustomer && (
+        <GlassCard className="mb-6 !p-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <input
+                className="w-full bg-white dark:bg-dark-bg border border-gray-300 dark:border-dark-border rounded-lg py-2 px-3 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 dark:text-dark-text placeholder:text-gray-400 dark:placeholder:text-dark-muted"
+                placeholder="Search customers by name or phone..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-dark-muted hover:text-gray-600 dark:hover:text-dark-text p-1"
+                  aria-label="Clear search"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
-        </div>
 
-        <div className="mt-4">
-          <h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-dark-text">Search results</h3>
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {filtered.length === 0 ? (
-              <div className="text-sm text-gray-500 dark:text-dark-muted">No customers found.</div>
-            ) : (
-              filtered.map(c => (
-                <div key={c.id} className="flex items-center justify-between bg-white dark:bg-dark-bg border border-gray-100 dark:border-dark-border rounded p-2">
-                  <div className="min-w-0 mr-2">
-                    <div className="font-semibold text-indigo-700 dark:text-indigo-400 truncate">{c.name}</div>
-                    <div className="text-sm text-gray-500 dark:text-dark-muted">{c.phone}</div>
+          <div className="mt-4">
+            <h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-dark-text">Search results</h3>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {filtered.length === 0 ? (
+                <div className="text-sm text-gray-500 dark:text-dark-muted">No customers found.</div>
+              ) : (
+                filtered.map(c => (
+                  <div key={c.id} className="flex items-center justify-between bg-white dark:bg-dark-bg border border-gray-100 dark:border-dark-border rounded p-2">
+                    <div className="min-w-0 mr-2">
+                      <div className="font-semibold text-indigo-700 dark:text-indigo-400 truncate">{c.name}</div>
+                      <div className="text-sm text-gray-500 dark:text-dark-muted">{c.phone}</div>
+                    </div>
+                    <button
+                      onClick={() => addCustomerToList(c)}
+                      className="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 shrink-0"
+                    >
+                      Add
+                    </button>
                   </div>
-                  <button
-                    onClick={() => addCustomerToList(c)}
-                    className="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 shrink-0"
-                  >
-                    Add
-                  </button>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
-        </div>
-      </GlassCard>
+        </GlassCard>
+      )}
 
       {/* Entry modal */}
       {modalCustomer && (
@@ -181,10 +184,10 @@ const LoanSeniorityPage = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">Loan Request Date</label>
-                <input 
-                  value={loanRequestDate} 
-                  onChange={(e) => setLoanRequestDate(e.target.value)} 
-                  type="date" 
+                <input
+                  value={loanRequestDate}
+                  onChange={(e) => setLoanRequestDate(e.target.value)}
+                  type="date"
                   className="w-full border border-gray-300 dark:border-dark-border rounded px-3 py-2 text-base bg-white dark:bg-dark-bg block text-gray-800 dark:text-dark-text"
                   style={{ minHeight: '42px', WebkitAppearance: 'none' }}
                 />
@@ -215,7 +218,7 @@ const LoanSeniorityPage = () => {
                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Station</th>
                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Loan Type</th>
                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Requested</th>
-                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Actions</th>
+                    {!isScopedCustomer && <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -227,25 +230,27 @@ const LoanSeniorityPage = () => {
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-dark-text">{entry.station_name || '-'}</td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-dark-text">{entry.loan_type || '-'}</td>
                       <td className="px-4 py-3 text-sm text-gray-700 dark:text-dark-text">{entry.loan_request_date ? formatDate(entry.loan_request_date) : '-'}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex gap-2">
-                          <button onClick={() => {
-                            // open edit modal prefilled
-                            setModalCustomer({ id: entry.customer_id, name: entry.customers?.name });
-                            setStationName(entry.station_name || '');
-                            setLoanType(entry.loan_type || 'General');
-                            setLoanRequestDate(entry.loan_request_date || '');
-                            setModalEditingId(entry.id);
-                          }}
-                            aria-label={`Edit seniority entry ${entry.id}`}
-                            className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700">
-                            Edit
-                          </button>
-                          <button onClick={() => setDeleteTarget({ id: entry.id, name: entry.customers?.name || 'Unknown' })} aria-label={`Remove seniority entry ${entry.id}`} className="p-1 rounded-full hover:bg-red-500/10 transition-colors">
-                            <Trash2Icon className="w-4 h-4 text-red-500" />
-                          </button>
-                        </div>
-                      </td>
+                      {!isScopedCustomer && (
+                        <td className="px-4 py-3">
+                          <div className="flex gap-2">
+                            <button onClick={() => {
+                              // open edit modal prefilled
+                              setModalCustomer({ id: entry.customer_id, name: entry.customers?.name });
+                              setStationName(entry.station_name || '');
+                              setLoanType(entry.loan_type || 'General');
+                              setLoanRequestDate(entry.loan_request_date || '');
+                              setModalEditingId(entry.id);
+                            }}
+                              aria-label={`Edit seniority entry ${entry.id}`}
+                              className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700">
+                              Edit
+                            </button>
+                            <button onClick={() => setDeleteTarget({ id: entry.id, name: entry.customers?.name || 'Unknown' })} aria-label={`Remove seniority entry ${entry.id}`} className="p-1 rounded-full hover:bg-red-500/10 transition-colors">
+                              <Trash2Icon className="w-4 h-4 text-red-500" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -267,20 +272,22 @@ const LoanSeniorityPage = () => {
                         {entry.loan_request_date && <div>Requested: <span className="font-medium text-gray-800 dark:text-dark-text">{formatDate(entry.loan_request_date)}</span></div>}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 ml-3">
-                      <button onClick={() => {
-                        setModalCustomer({ id: entry.customer_id, name: entry.customers?.name });
-                        setStationName(entry.station_name || '');
-                        setLoanType(entry.loan_type || 'General');
-                        setLoanRequestDate(entry.loan_request_date || '');
-                        setModalEditingId(entry.id);
-                      }} className="px-3 py-1 rounded bg-blue-600 text-white text-sm" aria-label="Edit">
-                        Edit
-                      </button>
-                      <button onClick={() => setDeleteTarget({ id: entry.id, name: entry.customers?.name || 'Unknown' })} className="p-2 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" aria-label="Remove">
-                        <Trash2Icon className="w-4 h-4" />
-                      </button>
-                    </div>
+                    {!isScopedCustomer && (
+                      <div className="flex items-center gap-2 ml-3">
+                        <button onClick={() => {
+                          setModalCustomer({ id: entry.customer_id, name: entry.customers?.name });
+                          setStationName(entry.station_name || '');
+                          setLoanType(entry.loan_type || 'General');
+                          setLoanRequestDate(entry.loan_request_date || '');
+                          setModalEditingId(entry.id);
+                        }} className="px-3 py-1 rounded bg-blue-600 text-white text-sm" aria-label="Edit">
+                          Edit
+                        </button>
+                        <button onClick={() => setDeleteTarget({ id: entry.id, name: entry.customers?.name || 'Unknown' })} className="p-2 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" aria-label="Remove">
+                          <Trash2Icon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

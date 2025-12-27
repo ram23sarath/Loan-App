@@ -35,9 +35,9 @@ const allNavItems = [
   { path: "/add-record", label: "Add Record", icon: FilePlusIcon, adminOnly: true },
   { path: "/customers", label: "Customers", icon: UsersIcon, adminOnly: true },
   { path: "/loans", label: "Loans", icon: LandmarkIcon },
-  { path: "/loan-seniority", label: "Loan Seniority", icon: StarIcon, adminOnly: true },
   { path: "/subscriptions", label: "Subscriptions", icon: HistoryIcon },
   { path: "/data", label: "Misc", icon: DatabaseIcon },
+  { path: "/loan-seniority", label: "Loan Seniority", icon: StarIcon },
   { path: "/summary", label: "Summary", icon: BookOpenIcon },
 ];
 

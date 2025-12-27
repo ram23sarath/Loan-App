@@ -249,6 +249,29 @@ const DataPage = () => {
   const toastVariants = { hidden: { opacity: 0, x: "100%" }, visible: { opacity: 1, x: 0, transition: { type: "spring", stiffness: 150, damping: 20 } }, exit: { opacity: 0, x: "100%", transition: { ease: "easeIn", duration: 0.4 } } };
   const dropdownVariants = { hidden: { opacity: 0, y: -10 }, visible: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -10 } };
 
+  // Early return for scoped users with no entries - show simple message box
+  if (isScopedCustomer && displayedDataEntries.length === 0) {
+    const customerName = scopedCustomerId ? customerMap.get(scopedCustomerId) : null;
+    return (
+      <PageWrapper>
+        <div className="w-full max-w-7xl mx-auto my-8 flex justify-center md:min-h-[calc(100vh-4rem)] md:items-start">
+          <motion.div
+            layout
+            transition={{ type: 'spring', stiffness: 280, damping: 30 }}
+            className="bg-white rounded-xl shadow-md flex flex-col gap-6 border border-gray-200/80 mx-auto p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border-dark-border"
+          >
+            <h2 className="text-xl md:text-2xl font-bold text-indigo-700 dark:text-indigo-400">
+              Misc Entries
+            </h2>
+            <div className="text-center text-gray-500 py-8 text-base dark:text-dark-muted">
+              No Entries for {customerName || 'you'} yet!
+            </div>
+          </motion.div>
+        </div>
+      </PageWrapper>
+    );
+  }
+
   return (
     <PageWrapper>
       <div className="w-full max-w-7xl mx-auto my-8 flex justify-center md:min-h-[calc(100vh-4rem)] md:items-start">

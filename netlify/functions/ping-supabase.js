@@ -14,7 +14,8 @@ export default async (req) => {
 
   try {
     const { data, error } = await supabase
-      .from('your_table_name') // IMPORTANT: Replace with a real table name
+
+      .from('customers') // Updated to a real table name
       .select('id')
       .limit(1);
 
@@ -24,7 +25,7 @@ export default async (req) => {
     }
 
     console.log("Supabase ping successful!", data);
-    return new Response("Supabase Ping Successful!", { status: 200 });
+    return new Response("Connection to DB Successful", { status: 200 });
 
   } catch (err) {
     console.error("Unexpected error during Supabase ping:", err);
@@ -34,6 +35,6 @@ export default async (req) => {
 
 // Configure the schedule for the function
 export const config = {
-  schedule: "0 0 * * 1", // Runs at midnight (00:00) UTC, every 5th day of the month
+  schedule: "*/2 * * * *", // Runs every 2 minutes
 };
-  // Or: "0 0 * * 1" // Every Monday at midnight UTC (once a week, might be too long for Supabase free tier)
+// Or: "0 0 * * 1" // Every Monday at midnight UTC (once a week, might be too long for Supabase free tier)

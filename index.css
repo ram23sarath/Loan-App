@@ -15,6 +15,42 @@ html {
   overflow-y: scroll;
 }
 
+/* Custom scrollbar utilities */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: #9ca3af;
+}
+
+/* Dark mode scrollbar */
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #475569;
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-track {
+  background-color: rgba(30, 41, 59, 0.5);
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: #64748b;
+}
+
 /* ===== SPHERE/CIRCULAR THEME TRANSITION ===== */
 
 /* View Transitions API - Modern browsers */

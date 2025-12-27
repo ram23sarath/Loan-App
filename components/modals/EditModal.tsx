@@ -1,4 +1,5 @@
 import React from "react";
+import ReactDOM from "react-dom";
 import { motion, Variants } from "framer-motion";
 import type {
   Customer,
@@ -51,7 +52,18 @@ const EditModal: React.FC<EditModalProps> = ({
     }
   };
 
-  return (
+  // Handle Escape key to close modal
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  return ReactDOM.createPortal(
     <motion.div
       className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
       variants={backdropVariants}
@@ -249,7 +261,7 @@ const EditModal: React.FC<EditModalProps> = ({
                   </div>
                 </div>
                 <div className="mt-3">
-                    <label className="block text-sm font-medium mb-1 dark:text-gray-200">Date</label>
+                  <label className="block text-sm font-medium mb-1 dark:text-gray-200">Date</label>
                   <input
                     name="date"
                     data-section="subscription"
@@ -260,14 +272,14 @@ const EditModal: React.FC<EditModalProps> = ({
                         : ""
                     }
                     onChange={handleCombinedChange}
-                      className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-base bg-white dark:bg-slate-700 dark:text-gray-100 block"
+                    className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-base bg-white dark:bg-slate-700 dark:text-gray-100 block"
                     style={{ minHeight: '42px', WebkitAppearance: 'none' }}
                     min="1980-01-01"
                     max="2050-12-31"
                   />
                 </div>
                 <div className="mt-3">
-                    <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+                  <label className="block text-sm font-medium mb-1 dark:text-gray-200">
                     Receipt
                   </label>
                   <input
@@ -276,11 +288,11 @@ const EditModal: React.FC<EditModalProps> = ({
                     type="text"
                     value={form.subscription.receipt || ""}
                     onChange={handleCombinedChange}
-                      className="w-full border border-gray-300 dark:border-gray-700 dark:bg-slate-700 dark:text-gray-100 rounded px-3 py-2"
+                    className="w-full border border-gray-300 dark:border-gray-700 dark:bg-slate-700 dark:text-gray-100 rounded px-3 py-2"
                   />
                 </div>
                 <div className="mt-3">
-                    <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+                  <label className="block text-sm font-medium mb-1 dark:text-gray-200">
                     Late Fee
                   </label>
                   <input
@@ -289,16 +301,16 @@ const EditModal: React.FC<EditModalProps> = ({
                     type="number"
                     value={form.subscription.late_fee ?? ""}
                     onChange={handleCombinedChange}
-                      className="w-full border border-gray-300 dark:border-gray-700 dark:bg-slate-700 dark:text-gray-100 rounded px-3 py-2"
+                    className="w-full border border-gray-300 dark:border-gray-700 dark:bg-slate-700 dark:text-gray-100 rounded px-3 py-2"
                     min="0"
                   />
                 </div>
               </div>
             )}
-              <div className="mt-4 flex justify-end gap-2">
-                <button type="button" onClick={onClose} className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-gray-100">Cancel</button>
-                <button type="submit" className="px-3 py-2 rounded bg-indigo-600 dark:bg-indigo-500 text-white">Save</button>
-              </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={onClose} className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-gray-100">Cancel</button>
+              <button type="submit" className="px-3 py-2 rounded bg-indigo-600 dark:bg-indigo-500 text-white">Save</button>
+            </div>
           </form>
         )}
         {type === "customer" && (
@@ -485,7 +497,8 @@ const EditModal: React.FC<EditModalProps> = ({
           </form>
         )}
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 };
 

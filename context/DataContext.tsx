@@ -279,10 +279,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 return;
             }
 
-            let query = supabase.from('loan_seniority').select('*, customers(name, phone)').order('created_at', { ascending: true });
-            if (effectiveIsScoped) {
-                query = query.eq('user_id', effectiveSession.user.id as string);
-            }
+            let query = supabase.from('loan_seniority').select('*, customers(name, phone)').order('loan_request_date', { ascending: true, nullsFirst: false });
+            // All users (including scoped) see the full seniority list
 
             const { data, error } = await query;
             if (error) {
@@ -663,10 +661,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                             if (isMounted) setSeniorityList(cachedSeniority);
                         }
 
-                        let query = supabase.from('loan_seniority').select('*, customers(name, phone)').order('created_at', { ascending: false });
-                        if (currentIsScoped) {
-                            query = query.eq('user_id', session.user.id as string);
-                        }
+                        // All users (including scoped) see the full seniority list
+                        let query = supabase.from('loan_seniority').select('*, customers(name, phone)').order('loan_request_date', { ascending: true, nullsFirst: false });
                         const { data, error } = await query;
                         if (error) throw error;
                         const seniorityData = (data as any[]) || [];

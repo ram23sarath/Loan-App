@@ -46,7 +46,7 @@ export default async (req) => {
       await supabase.from('system_notifications').insert({
         type: 'ping',
         status: 'success',
-        message: 'System connectivity check passed'
+        message: 'Supabase ping successful!'
       });
     } catch (e) {
       console.error("Failed to log success to DB (table might be missing)", e);

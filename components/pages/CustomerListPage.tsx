@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../../context/DataContext';
 import GlassCard from '../ui/GlassCard';
@@ -283,8 +284,8 @@ const CustomerListPage = () => {
                               setPagePickerOpen(null);
                             }}
                             className={`px-2 py-1 text-sm rounded ${currentPage === p
-                                ? "bg-indigo-600 text-white"
-                                : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
+                              ? "bg-indigo-600 text-white"
+                              : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
                               }`}
                           >
                             {p}
@@ -349,8 +350,8 @@ const CustomerListPage = () => {
                               setPagePickerOpen(null);
                             }}
                             className={`px-2 py-1 text-sm rounded ${currentPage === p
-                                ? "bg-indigo-600 text-white"
-                                : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
+                              ? "bg-indigo-600 text-white"
+                              : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
                               }`}
                           >
                             {p}
@@ -504,8 +505,8 @@ const CustomerListPage = () => {
                                         <td className="px-4 py-2 text-cyan-600 dark:text-cyan-400 dark:border-dark-border">{customerSubscriptions.length}</td>
                                         <td className="px-4 py-2 dark:border-dark-border">
                                           <div className="flex justify-center gap-2">
-                                            <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {}, subscription: customerSubscriptions[0] || {} } }); }} className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
-                                            <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                                            <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {}, subscription: customerSubscriptions[0] || {} } }); }} onPointerDownCapture={(e) => e.stopPropagation()} className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
+                                            <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} onPointerDownCapture={(e) => e.stopPropagation()} className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
                                           </div>
                                         </td>
                                       </motion.tr>
@@ -670,8 +671,8 @@ const CustomerListPage = () => {
                                         <td className="px-4 py-2 text-green-600 dark:text-green-400 dark:border-dark-border">{formatCurrency(loanValue)}</td>
                                         <td className="px-4 py-2 dark:border-dark-border">
                                           <div className="flex justify-center gap-2">
-                                            <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {} } }); }} className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
-                                            <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                                            <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {} } }); }} onPointerDownCapture={(e) => e.stopPropagation()} className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
+                                            <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} onPointerDownCapture={(e) => e.stopPropagation()} className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
                                           </div>
                                         </td>
                                       </motion.tr>
@@ -832,8 +833,8 @@ const CustomerListPage = () => {
                                         <td className="px-4 py-2 text-cyan-600 dark:text-cyan-400 dark:border-dark-border">{formatCurrency(subValue)}</td>
                                         <td className="px-4 py-2 dark:border-dark-border">
                                           <div className="flex justify-center gap-2">
-                                            <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, subscription: customerSubscriptions[0] || {} } }); }} className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
-                                            <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                                            <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, subscription: customerSubscriptions[0] || {} } }); }} onPointerDownCapture={(e) => e.stopPropagation()} className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
+                                            <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} onPointerDownCapture={(e) => e.stopPropagation()} className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
                                           </div>
                                         </td>
                                       </motion.tr>
@@ -989,8 +990,8 @@ const CustomerListPage = () => {
                                         <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">{customer.phone}</td>
                                         <td className="px-4 py-2 dark:border-dark-border">
                                           <div className="flex justify-center gap-2">
-                                            <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer } }); }} className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
-                                            <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                                            <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer } }); }} onPointerDownCapture={(e) => e.stopPropagation()} className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
+                                            <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} onPointerDownCapture={(e) => e.stopPropagation()} className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
                                           </div>
                                         </td>
                                       </motion.tr>
@@ -1159,43 +1160,46 @@ const CustomerListPage = () => {
           />
         )}
       </AnimatePresence>
-      <AnimatePresence>
-        {deleteCustomerTarget && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-            variants={{
-              hidden: { opacity: 0 },
-              visible: { opacity: 1 },
-            }}
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-            onClick={cancelDeleteCustomer}
-          >
+      {typeof document !== 'undefined' && ReactDOM.createPortal(
+        <AnimatePresence>
+          {deleteCustomerTarget && (
             <motion.div
-              className="bg-white rounded-lg shadow-lg p-5 w-[90%] max-w-sm dark:bg-dark-card dark:border dark:border-dark-border"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
               variants={{
-                hidden: { opacity: 0, y: 50, scale: 0.9 },
-                visible: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 100 } },
-                exit: { opacity: 0, y: 50, scale: 0.9 },
+                hidden: { opacity: 0 },
+                visible: { opacity: 1 },
               }}
-              onClick={(e) => e.stopPropagation()}
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+              onClick={cancelDeleteCustomer}
             >
-              <h3 className="text-base font-bold mb-3 dark:text-dark-text">Delete {deleteCustomerTarget.name} customer permanently?</h3>
-              <div className="text-sm text-gray-600 mb-3 space-y-1 dark:text-dark-muted">
-                <p><span className="font-medium">Loans: {deleteCounts?.loans ?? 0}</span></p>
-                <p><span className="font-medium">Installments: {deleteCounts?.installments ?? 0}</span></p>
-                <p><span className="font-medium">Subscriptions: {deleteCounts?.subscriptions ?? 0}</span></p>
-              </div>
-              <p className="text-xs text-red-600 mb-4 dark:text-red-400">This is permanent delete, cannot be undone.</p>
-              <div className="flex justify-end gap-2">
-                <button onClick={cancelDeleteCustomer} className="px-3 py-1.5 rounded bg-gray-200 hover:bg-gray-300 text-sm dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text">Cancel</button>
-                <button onClick={confirmDeleteCustomer} className="px-3 py-1.5 rounded bg-red-600 text-white hover:bg-red-700 text-sm">Delete</button>
-              </div>
+              <motion.div
+                className="bg-white rounded-lg shadow-lg p-5 w-[90%] max-w-sm dark:bg-dark-card dark:border dark:border-dark-border"
+                variants={{
+                  hidden: { opacity: 0, y: 50, scale: 0.9 },
+                  visible: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 100 } },
+                  exit: { opacity: 0, y: 50, scale: 0.9 },
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3 className="text-base font-bold mb-3 dark:text-dark-text">Delete {deleteCustomerTarget.name} customer permanently?</h3>
+                <div className="text-sm text-gray-600 mb-3 space-y-1 dark:text-dark-muted">
+                  <p><span className="font-medium">Loans: {deleteCounts?.loans ?? 0}</span></p>
+                  <p><span className="font-medium">Installments: {deleteCounts?.installments ?? 0}</span></p>
+                  <p><span className="font-medium">Subscriptions: {deleteCounts?.subscriptions ?? 0}</span></p>
+                </div>
+                <p className="text-xs text-red-600 mb-4 dark:text-red-400">This is permanent delete, cannot be undone.</p>
+                <div className="flex justify-end gap-2">
+                  <button onClick={cancelDeleteCustomer} className="px-3 py-1.5 rounded bg-gray-200 hover:bg-gray-300 text-sm dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text">Cancel</button>
+                  <button onClick={confirmDeleteCustomer} className="px-3 py-1.5 rounded bg-red-600 text-white hover:bg-red-700 text-sm">Delete</button>
+                </div>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </PageWrapper>
   );
 };

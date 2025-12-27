@@ -5,7 +5,7 @@ interface SquigglyProgressProps {
   value: number; // 0–100
   height?: number;
   color?: string; // Progress color
-  trackColor?: string; // Background track color
+  backgroundColor?: string; // Background track color
   strokeWidth?: number;
 }
 
@@ -13,7 +13,7 @@ export const SquigglyProgress: React.FC<SquigglyProgressProps> = ({
   value,
   height = 24,
   color = "#3b82f6", // Tailwind blue-500
-  trackColor = "#cbd5e1", // Tailwind slate-300
+  backgroundColor = "#cbd5e1", // Tailwind slate-300
   strokeWidth = 4,
 }) => {
   // Clamp value
@@ -32,6 +32,10 @@ export const SquigglyProgress: React.FC<SquigglyProgressProps> = ({
     T ${wavelength} ${centerY}
   `;
 
+  const sanitizeId = (input: string) => input.replace(/[^a-z0-9_-]/gi, "");
+  const trackPatternId = `wave-track-${height}-${sanitizeId(backgroundColor)}`;
+  const fillPatternId = `wave-fill-${height}-${sanitizeId(color)}`;
+
   return (
     <div
       className="relative w-full overflow-hidden rounded-full transform translate-z-0"
@@ -44,7 +48,7 @@ export const SquigglyProgress: React.FC<SquigglyProgressProps> = ({
         <svg className="w-full h-full">
           <defs>
             <pattern
-              id={`wave-pattern-${height}`}
+              id={trackPatternId}
               x="0"
               y="0"
               width={wavelength}
@@ -54,19 +58,19 @@ export const SquigglyProgress: React.FC<SquigglyProgressProps> = ({
               <path
                 d={oneWavePath}
                 fill="none"
-                stroke={trackColor}
+                stroke={backgroundColor}
                 strokeWidth={strokeWidth}
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
             </pattern>
           </defs>
-          <rect
+            <rect
             x="0"
             y="0"
             width="100%"
             height="100%"
-            fill={`url(#wave-pattern-${height})`}
+              fill={`url(#${trackPatternId})`}
           />
         </svg>
       </div>
@@ -81,7 +85,7 @@ export const SquigglyProgress: React.FC<SquigglyProgressProps> = ({
         <svg className="h-full w-full" style={{ width: "100%" }}>
           <defs>
             <pattern
-              id={`wave-pattern-${height}`}
+              id={fillPatternId}
               x="0"
               y="0"
               width={wavelength}
@@ -115,7 +119,7 @@ export const SquigglyProgress: React.FC<SquigglyProgressProps> = ({
             y="0"
             width="100%"
             height="100%"
-            fill={`url(#wave-pattern-${height})`}
+            fill={`url(#${fillPatternId})`}
           />
         </svg>
       </motion.div>

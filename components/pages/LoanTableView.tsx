@@ -248,11 +248,7 @@ const LoanTableView: React.FC = () => {
     }
   }
 
-  // Key for tbody to reset animation on data load or page change
-  const [tbodyKey, setTbodyKey] = React.useState(0);
-  React.useEffect(() => {
-    setTbodyKey((prev) => prev + 1);
-  }, [loans, currentPage]);
+
 
   return (
     <GlassCard className="overflow-x-auto">
@@ -369,256 +365,247 @@ const LoanTableView: React.FC = () => {
           </tr>
         </thead>
         {/* THIS SECTION CONTROLS THE INITIAL ROW-BY-ROW FADE IN */}
-        <motion.tbody
-          key={tbodyKey}
-          layout
-          initial="hidden"
-          animate="visible"
-          variants={containerVariants}
-        >
-          <AnimatePresence>
-            {paginatedLoans.map((loan: LoanWithCustomer, idx: number) => {
-              // Use O(1) lookup - installments already sorted by date in the map
-              const loanInstallments = getLoanInstallments(loan.id);
-              const totalRepayable =
-                loan.original_amount + loan.interest_amount;
-              const paid = loanInstallments.reduce(
-                (acc, inst) => acc + inst.amount,
-                0
-              );
-              const balance = totalRepayable - paid;
-              const isPaidOff = paid >= totalRepayable;
-              const isExpanded = expandedRow === loan.id;
-              return (
-                <React.Fragment key={loan.id}>
-                  <motion.tr
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.3, delay: idx * 0.05 }}
-                    className="even:bg-gray-50/50 hover:bg-indigo-50/50 transition-colors dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50"
-                  >
-                    <td className="px-4 py-2 border-b font-medium text-sm text-gray-700 dark:border-dark-border dark:text-dark-muted">{(currentPage - 1) * itemsPerPage + idx + 1}</td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border">
-                      <button
-                        className="font-bold text-indigo-700 hover:underline focus:outline-none text-left dark:text-indigo-400"
-                        onClick={() =>
-                          setExpandedRow(isExpanded ? null : loan.id)
-                        }
-                        aria-expanded={isExpanded}
-                      >
-                        {loan.customers?.name ?? "Unknown"}
-                      </button>
-                    </td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
-                      {formatCurrencyIN(totalRepayable)}
-                    </td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
-                      {formatCurrencyIN(loan.original_amount)}
-                    </td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
-                      {formatCurrencyIN(loan.interest_amount)}
-                    </td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
-                      {formatCurrencyIN(paid)}
-                    </td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
-                      {formatCurrencyIN(balance)}
-                    </td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
-                      {loan.check_number || "-"}
-                    </td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
-                      {loanInstallments.length}
-                    </td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
-                      {loan.total_instalments || "-"}
-                    </td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
-                      {loan.payment_date ? formatDate(loan.payment_date) : "-"}
-                    </td>
-                    <td
-                      className={`px-4 py-2 border-b font-semibold dark:border-dark-border ${isPaidOff ? "text-green-600" : "text-orange-600"
-                        }`}
+        <tbody>
+          {paginatedLoans.map((loan: LoanWithCustomer, idx: number) => {
+            // Use O(1) lookup - installments already sorted by date in the map
+            const loanInstallments = getLoanInstallments(loan.id);
+            const totalRepayable =
+              loan.original_amount + loan.interest_amount;
+            const paid = loanInstallments.reduce(
+              (acc, inst) => acc + inst.amount,
+              0
+            );
+            const balance = totalRepayable - paid;
+            const isPaidOff = paid >= totalRepayable;
+            const isExpanded = expandedRow === loan.id;
+            return (
+              <React.Fragment key={loan.id}>
+                <motion.tr
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: idx * 0.03 }}
+                  className="even:bg-gray-50/50 hover:bg-indigo-50/50 transition-colors dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50"
+                >
+                  <td className="px-4 py-2 border-b font-medium text-sm text-gray-700 dark:border-dark-border dark:text-dark-muted">{(currentPage - 1) * itemsPerPage + idx + 1}</td>
+                  <td className="px-4 py-2 border-b dark:border-dark-border">
+                    <button
+                      className="font-bold text-indigo-700 hover:underline focus:outline-none text-left dark:text-indigo-400"
+                      onClick={() =>
+                        setExpandedRow(isExpanded ? null : loan.id)
+                      }
+                      aria-expanded={isExpanded}
                     >
-                      {isPaidOff ? "Paid Off" : "In Progress"}
+                      {loan.customers?.name ?? "Unknown"}
+                    </button>
+                  </td>
+                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
+                    {formatCurrencyIN(totalRepayable)}
+                  </td>
+                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
+                    {formatCurrencyIN(loan.original_amount)}
+                  </td>
+                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
+                    {formatCurrencyIN(loan.interest_amount)}
+                  </td>
+                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
+                    {formatCurrencyIN(paid)}
+                  </td>
+                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
+                    {formatCurrencyIN(balance)}
+                  </td>
+                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
+                    {loan.check_number || "-"}
+                  </td>
+                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
+                    {loanInstallments.length}
+                  </td>
+                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
+                    {loan.total_instalments || "-"}
+                  </td>
+                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
+                    {loan.payment_date ? formatDate(loan.payment_date) : "-"}
+                  </td>
+                  <td
+                    className={`px-4 py-2 border-b font-semibold dark:border-dark-border ${isPaidOff ? "text-green-600" : "text-orange-600"
+                      }`}
+                  >
+                    {isPaidOff ? "Paid Off" : "In Progress"}
+                  </td>
+                  {!isScopedCustomer && (
+                    <td className="px-4 py-2 border-b dark:border-dark-border">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setEditLoanTarget(loan)}
+                          className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() =>
+                            setDeleteLoanTarget({
+                              id: loan.id,
+                              customer: loan.customers?.name ?? null,
+                            })
+                          }
+                          className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                          title="Delete loan"
+                        >
+                          <Trash2Icon className="w-5 h-5 text-red-500" />
+                        </button>
+                      </div>
                     </td>
-                    {!isScopedCustomer && (
-                      <td className="px-4 py-2 border-b dark:border-dark-border">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => setEditLoanTarget(loan)}
-                            className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() =>
-                              setDeleteLoanTarget({
-                                id: loan.id,
-                                customer: loan.customers?.name ?? null,
-                              })
-                            }
-                            className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
-                            title="Delete loan"
-                          >
-                            <Trash2Icon className="w-5 h-5 text-red-500" />
-                          </button>
-                        </div>
-                      </td>
-                    )}
-                  </motion.tr>
+                  )}
+                </motion.tr>
 
-                  <AnimatePresence>
-                    {isExpanded && (
-                      <tr className="bg-gray-50/20 dark:bg-slate-800/20">
-                        <td colSpan={12} className="p-0 border-b dark:border-dark-border">
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3, ease: "easeInOut" }}
-                            className="overflow-hidden"
-                          >
-                            <div className="p-3 border rounded-lg bg-white/80 dark:bg-dark-card dark:border-dark-border">
-                              <h4 className="font-semibold text-gray-700 mb-2 dark:text-dark-text">
-                                Installments Paid
-                              </h4>
-                              {loanInstallments.length > 0 ? (
-                                <ul className="space-y-2">
-                                  {loanInstallments.map((inst) => {
-                                    const customer = loan.customers;
-                                    let message = "";
-                                    let whatsappUrl = "#";
-                                    let isValidPhone = false;
-                                    if (
-                                      customer &&
-                                      customer.phone &&
-                                      /^\d{10,15}$/.test(customer.phone)
-                                    ) {
-                                      isValidPhone = true;
-                                      message = `Hi ${customer.name}, your installment payment of ₹${inst.amount}`;
-                                      if (inst.late_fee && inst.late_fee > 0) {
-                                        message += ` (including a ₹${inst.late_fee} late fee)`;
-                                      }
-                                      message += ` (Installment #${inst.installment_number
-                                        }) was received on ${formatDate(
-                                          inst.date,
-                                          "whatsapp"
-                                        )}. Thank you.`;
-                                      // Append signature
-                                      message += " Thank You, I J Reddy.";
-                                      // build wa.me URL and ensure proper encoding
-                                      try {
-                                        whatsappUrl = `https://wa.me/${customer.phone
-                                          }?text=${encodeURIComponent(message)}`;
-                                      } catch (err) {
-                                        whatsappUrl = `https://api.whatsapp.com/send?phone=${customer.phone
-                                          }&text=${encodeURIComponent(message)}`;
-                                      }
+                <AnimatePresence>
+                  {isExpanded && (
+                    <tr className="bg-gray-50/20 dark:bg-slate-800/20">
+                      <td colSpan={12} className="p-0 border-b dark:border-dark-border">
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.3, ease: "easeInOut" }}
+                          className="overflow-hidden"
+                        >
+                          <div className="p-3 border rounded-lg bg-white/80 dark:bg-dark-card dark:border-dark-border">
+                            <h4 className="font-semibold text-gray-700 mb-2 dark:text-dark-text">
+                              Installments Paid
+                            </h4>
+                            {loanInstallments.length > 0 ? (
+                              <ul className="space-y-2">
+                                {loanInstallments.map((inst) => {
+                                  const customer = loan.customers;
+                                  let message = "";
+                                  let whatsappUrl = "#";
+                                  let isValidPhone = false;
+                                  if (
+                                    customer &&
+                                    customer.phone &&
+                                    /^\d{10,15}$/.test(customer.phone)
+                                  ) {
+                                    isValidPhone = true;
+                                    message = `Hi ${customer.name}, your installment payment of ₹${inst.amount}`;
+                                    if (inst.late_fee && inst.late_fee > 0) {
+                                      message += ` (including a ₹${inst.late_fee} late fee)`;
                                     }
-                                    return (
-                                      <li
-                                        key={inst.id}
-                                        className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gray-50 rounded px-3 py-2 border border-gray-200 gap-2 dark:bg-slate-700 dark:border-dark-border"
-                                      >
-                                        <div>
-                                          <span className="font-medium dark:text-dark-text">
-                                            #{inst.installment_number}
+                                    message += ` (Installment #${inst.installment_number
+                                      }) was received on ${formatDate(
+                                        inst.date,
+                                        "whatsapp"
+                                      )}. Thank you.`;
+                                    // Append signature
+                                    message += " Thank You, I J Reddy.";
+                                    // build wa.me URL and ensure proper encoding
+                                    try {
+                                      whatsappUrl = `https://wa.me/${customer.phone
+                                        }?text=${encodeURIComponent(message)}`;
+                                    } catch (err) {
+                                      whatsappUrl = `https://api.whatsapp.com/send?phone=${customer.phone
+                                        }&text=${encodeURIComponent(message)}`;
+                                    }
+                                  }
+                                  return (
+                                    <li
+                                      key={inst.id}
+                                      className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gray-50 rounded px-3 py-2 border border-gray-200 gap-2 dark:bg-slate-700 dark:border-dark-border"
+                                    >
+                                      <div>
+                                        <span className="font-medium dark:text-dark-text">
+                                          #{inst.installment_number}
+                                        </span>
+                                        <span className="ml-2 text-gray-600 dark:text-dark-muted">
+                                          {formatDate(inst.date)}
+                                        </span>
+                                        <span className="ml-2 text-green-700 font-semibold dark:text-green-400">
+                                          {formatCurrencyIN(inst.amount)}
+                                        </span>
+                                        {inst.late_fee > 0 && (
+                                          <span className="ml-2 text-orange-500 text-xs">
+                                            (+₹{inst.late_fee} late)
                                           </span>
-                                          <span className="ml-2 text-gray-600 dark:text-dark-muted">
-                                            {formatDate(inst.date)}
-                                          </span>
-                                          <span className="ml-2 text-green-700 font-semibold dark:text-green-400">
-                                            {formatCurrencyIN(inst.amount)}
-                                          </span>
-                                          {inst.late_fee > 0 && (
-                                            <span className="ml-2 text-orange-500 text-xs">
-                                              (+₹{inst.late_fee} late)
-                                            </span>
-                                          )}
-                                          <span className="ml-2 text-gray-500 text-xs dark:text-dark-muted">
-                                            Receipt: {inst.receipt_number}
-                                          </span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          <motion.button
-                                            onClick={() =>
-                                              isValidPhone &&
-                                              openWhatsApp(
-                                                customer?.phone,
-                                                message,
-                                                { cooldownMs: 1200 }
-                                              )
-                                            }
-                                            className="p-1 rounded-full hover:bg-green-500/10 transition-colors"
-                                            aria-label={`Send installment #${inst.installment_number} on WhatsApp`}
-                                            whileHover={{ scale: 1.2 }}
-                                            whileTap={{ scale: 0.9 }}
-                                            disabled={!isValidPhone}
-                                          >
-                                            <WhatsAppIcon className="w-4 h-4 text-green-500" />
-                                          </motion.button>
-                                          {!isScopedCustomer && (
-                                            <>
-                                              <motion.button
-                                                onClick={() => {
-                                                  setEditTarget(inst);
-                                                  setEditForm({
-                                                    date: inst.date,
-                                                    amount: inst.amount.toString(),
-                                                    late_fee:
-                                                      inst.late_fee?.toString() ||
-                                                      "",
-                                                    receipt_number:
-                                                      inst.receipt_number || "",
-                                                  });
-                                                }}
-                                                className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700 ml-2"
-                                                aria-label={`Edit installment #${inst.installment_number}`}
-                                                whileHover={{ scale: 1.05 }}
-                                                whileTap={{ scale: 0.95 }}
-                                              >
-                                                Edit
-                                              </motion.button>
-                                              <motion.button
-                                                onClick={() =>
-                                                  setDeleteTarget({
-                                                    id: inst.id,
-                                                    number: inst.installment_number,
-                                                  })
-                                                }
-                                                className="p-1 rounded-full hover:bg-red-500/10 transition-colors ml-2"
-                                                aria-label={`Delete installment #${inst.installment_number}`}
-                                                whileHover={{ scale: 1.2 }}
-                                                whileTap={{ scale: 0.9 }}
-                                              >
-                                                <Trash2Icon className="w-4 h-4 text-red-500" />
-                                              </motion.button>
-                                            </>
-                                          )}
-                                        </div>
-                                      </li>
-                                    );
-                                  })}
-                                </ul>
-                              ) : (
-                                <p className="text-center text-gray-500 py-4 dark:text-dark-muted">
-                                  No installments have been paid for this loan
-                                  yet.
-                                </p>
-                              )}
-                            </div>
-                          </motion.div>
-                        </td>
-                      </tr>
-                    )}
-                  </AnimatePresence>
-                </React.Fragment>
-              );
-            })}
-          </AnimatePresence>
-        </motion.tbody>
+                                        )}
+                                        <span className="ml-2 text-gray-500 text-xs dark:text-dark-muted">
+                                          Receipt: {inst.receipt_number}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <motion.button
+                                          onClick={() =>
+                                            isValidPhone &&
+                                            openWhatsApp(
+                                              customer?.phone,
+                                              message,
+                                              { cooldownMs: 1200 }
+                                            )
+                                          }
+                                          className="p-1 rounded-full hover:bg-green-500/10 transition-colors"
+                                          aria-label={`Send installment #${inst.installment_number} on WhatsApp`}
+                                          whileHover={{ scale: 1.2 }}
+                                          whileTap={{ scale: 0.9 }}
+                                          disabled={!isValidPhone}
+                                        >
+                                          <WhatsAppIcon className="w-4 h-4 text-green-500" />
+                                        </motion.button>
+                                        {!isScopedCustomer && (
+                                          <>
+                                            <motion.button
+                                              onClick={() => {
+                                                setEditTarget(inst);
+                                                setEditForm({
+                                                  date: inst.date,
+                                                  amount: inst.amount.toString(),
+                                                  late_fee:
+                                                    inst.late_fee?.toString() ||
+                                                    "",
+                                                  receipt_number:
+                                                    inst.receipt_number || "",
+                                                });
+                                              }}
+                                              className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700 ml-2"
+                                              aria-label={`Edit installment #${inst.installment_number}`}
+                                              whileHover={{ scale: 1.05 }}
+                                              whileTap={{ scale: 0.95 }}
+                                            >
+                                              Edit
+                                            </motion.button>
+                                            <motion.button
+                                              onClick={() =>
+                                                setDeleteTarget({
+                                                  id: inst.id,
+                                                  number: inst.installment_number,
+                                                })
+                                              }
+                                              className="p-1 rounded-full hover:bg-red-500/10 transition-colors ml-2"
+                                              aria-label={`Delete installment #${inst.installment_number}`}
+                                              whileHover={{ scale: 1.2 }}
+                                              whileTap={{ scale: 0.9 }}
+                                            >
+                                              <Trash2Icon className="w-4 h-4 text-red-500" />
+                                            </motion.button>
+                                          </>
+                                        )}
+                                      </div>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            ) : (
+                              <p className="text-center text-gray-500 py-4 dark:text-dark-muted">
+                                No installments have been paid for this loan
+                                yet.
+                              </p>
+                            )}
+                          </div>
+                        </motion.div>
+                      </td>
+                    </tr>
+                  )}
+                </AnimatePresence>
+              </React.Fragment>
+            );
+          })}
+        </tbody>
       </table>
 
       {/* Mobile stacked cards */}
@@ -881,193 +868,195 @@ const LoanTableView: React.FC = () => {
       </div>
 
       {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-dark-border">
-          <div className="text-sm text-gray-600 dark:text-dark-muted">
-            Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-            {Math.min(currentPage * itemsPerPage, sortedLoans.length)} of{" "}
-            {sortedLoans.length} loans
-          </div>
-          <div className="flex gap-2 flex-wrap justify-center">
-            <button
-              onClick={() => setCurrentPage(1)}
-              disabled={currentPage === 1}
-              className="px-3 py-1 rounded border border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
-            >
-              First
-            </button>
-            <button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-1 rounded border border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
-            >
-              Previous
-            </button>
+      {
+        totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-dark-border">
+            <div className="text-sm text-gray-600 dark:text-dark-muted">
+              Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+              {Math.min(currentPage * itemsPerPage, sortedLoans.length)} of{" "}
+              {sortedLoans.length} loans
+            </div>
+            <div className="flex gap-2 flex-wrap justify-center">
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1 rounded border border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
+              >
+                First
+              </button>
+              <button
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 rounded border border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
+              >
+                Previous
+              </button>
 
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-              if (
-                page === 1 ||
-                page === totalPages ||
-                Math.abs(page - currentPage) <= 1
-              ) {
-                return (
-                  <button
-                    key={page}
-                    onClick={() => {
-                      setCurrentPage(page);
-                      setPagePickerOpen(null);
-                    }}
-                    className={`px-3 py-1 rounded border ${currentPage === page
-                      ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
-                      : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
-                      }`}
-                  >
-                    {page}
-                  </button>
-                );
-              }
-              // Start ellipsis - pages between 1 and current-1
-              if (page === 2 && currentPage > 3) {
-                const startPages = Array.from({ length: currentPage - 3 }, (_, i) => i + 2);
-                const maxOffset = Math.max(0, Math.ceil(startPages.length / 9) - 1);
-                const visiblePages = startPages.slice(pagePickerOffset * 9, (pagePickerOffset + 1) * 9);
-
-                return (
-                  <div key="dots-start" className="relative">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                if (
+                  page === 1 ||
+                  page === totalPages ||
+                  Math.abs(page - currentPage) <= 1
+                ) {
+                  return (
                     <button
+                      key={page}
                       onClick={() => {
-                        setPagePickerOpen(pagePickerOpen === 'start' ? null : 'start');
-                        setPagePickerOffset(0);
+                        setCurrentPage(page);
+                        setPagePickerOpen(null);
                       }}
-                      className="px-2 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded"
-                      title="Click to show more pages"
+                      className={`px-3 py-1 rounded border ${currentPage === page
+                        ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
+                        : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
+                        }`}
                     >
-                      ...
+                      {page}
                     </button>
-                    {pagePickerOpen === 'start' && (
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-lg p-2 z-50 min-w-[140px]">
-                        <div className="flex items-center justify-between mb-2 px-1">
-                          <button
-                            onClick={() => setPagePickerOffset(Math.max(0, pagePickerOffset - 1))}
-                            disabled={pagePickerOffset === 0}
-                            className="p-1 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed"
-                          >
-                            ‹
-                          </button>
-                          <span className="text-xs text-gray-500 dark:text-dark-muted">
-                            {pagePickerOffset * 9 + 1}-{Math.min((pagePickerOffset + 1) * 9, startPages.length)} of {startPages.length}
-                          </span>
-                          <button
-                            onClick={() => setPagePickerOffset(Math.min(maxOffset, pagePickerOffset + 1))}
-                            disabled={pagePickerOffset >= maxOffset}
-                            className="p-1 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed"
-                          >
-                            ›
-                          </button>
-                        </div>
-                        <div className="grid grid-cols-3 gap-1">
-                          {visiblePages.map((p) => (
+                  );
+                }
+                // Start ellipsis - pages between 1 and current-1
+                if (page === 2 && currentPage > 3) {
+                  const startPages = Array.from({ length: currentPage - 3 }, (_, i) => i + 2);
+                  const maxOffset = Math.max(0, Math.ceil(startPages.length / 9) - 1);
+                  const visiblePages = startPages.slice(pagePickerOffset * 9, (pagePickerOffset + 1) * 9);
+
+                  return (
+                    <div key="dots-start" className="relative">
+                      <button
+                        onClick={() => {
+                          setPagePickerOpen(pagePickerOpen === 'start' ? null : 'start');
+                          setPagePickerOffset(0);
+                        }}
+                        className="px-2 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded"
+                        title="Click to show more pages"
+                      >
+                        ...
+                      </button>
+                      {pagePickerOpen === 'start' && (
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-lg p-2 z-50 min-w-[140px]">
+                          <div className="flex items-center justify-between mb-2 px-1">
                             <button
-                              key={p}
-                              onClick={() => {
-                                setCurrentPage(p);
-                                setPagePickerOpen(null);
-                              }}
-                              className={`px-2 py-1 text-sm rounded ${currentPage === p
+                              onClick={() => setPagePickerOffset(Math.max(0, pagePickerOffset - 1))}
+                              disabled={pagePickerOffset === 0}
+                              className="p-1 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              ‹
+                            </button>
+                            <span className="text-xs text-gray-500 dark:text-dark-muted">
+                              {pagePickerOffset * 9 + 1}-{Math.min((pagePickerOffset + 1) * 9, startPages.length)} of {startPages.length}
+                            </span>
+                            <button
+                              onClick={() => setPagePickerOffset(Math.min(maxOffset, pagePickerOffset + 1))}
+                              disabled={pagePickerOffset >= maxOffset}
+                              className="p-1 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              ›
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-3 gap-1">
+                            {visiblePages.map((p) => (
+                              <button
+                                key={p}
+                                onClick={() => {
+                                  setCurrentPage(p);
+                                  setPagePickerOpen(null);
+                                }}
+                                className={`px-2 py-1 text-sm rounded ${currentPage === p
                                   ? "bg-indigo-600 text-white"
                                   : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
-                                }`}
-                            >
-                              {p}
-                            </button>
-                          ))}
+                                  }`}
+                              >
+                                {p}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-              // End ellipsis - pages between current+1 and totalPages-1
-              if (page === totalPages - 1 && currentPage < totalPages - 2) {
-                const endPages = Array.from({ length: totalPages - currentPage - 2 }, (_, i) => currentPage + 2 + i);
-                const maxOffset = Math.max(0, Math.ceil(endPages.length / 9) - 1);
-                const visiblePages = endPages.slice(pagePickerOffset * 9, (pagePickerOffset + 1) * 9);
+                      )}
+                    </div>
+                  );
+                }
+                // End ellipsis - pages between current+1 and totalPages-1
+                if (page === totalPages - 1 && currentPage < totalPages - 2) {
+                  const endPages = Array.from({ length: totalPages - currentPage - 2 }, (_, i) => currentPage + 2 + i);
+                  const maxOffset = Math.max(0, Math.ceil(endPages.length / 9) - 1);
+                  const visiblePages = endPages.slice(pagePickerOffset * 9, (pagePickerOffset + 1) * 9);
 
-                return (
-                  <div key="dots-end" className="relative">
-                    <button
-                      onClick={() => {
-                        setPagePickerOpen(pagePickerOpen === 'end' ? null : 'end');
-                        setPagePickerOffset(0);
-                      }}
-                      className="px-2 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded"
-                      title="Click to show more pages"
-                    >
-                      ...
-                    </button>
-                    {pagePickerOpen === 'end' && (
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-lg p-2 z-50 min-w-[140px]">
-                        <div className="flex items-center justify-between mb-2 px-1">
-                          <button
-                            onClick={() => setPagePickerOffset(Math.max(0, pagePickerOffset - 1))}
-                            disabled={pagePickerOffset === 0}
-                            className="p-1 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed"
-                          >
-                            ‹
-                          </button>
-                          <span className="text-xs text-gray-500 dark:text-dark-muted">
-                            {pagePickerOffset * 9 + 1}-{Math.min((pagePickerOffset + 1) * 9, endPages.length)} of {endPages.length}
-                          </span>
-                          <button
-                            onClick={() => setPagePickerOffset(Math.min(maxOffset, pagePickerOffset + 1))}
-                            disabled={pagePickerOffset >= maxOffset}
-                            className="p-1 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed"
-                          >
-                            ›
-                          </button>
-                        </div>
-                        <div className="grid grid-cols-3 gap-1">
-                          {visiblePages.map((p) => (
+                  return (
+                    <div key="dots-end" className="relative">
+                      <button
+                        onClick={() => {
+                          setPagePickerOpen(pagePickerOpen === 'end' ? null : 'end');
+                          setPagePickerOffset(0);
+                        }}
+                        className="px-2 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded"
+                        title="Click to show more pages"
+                      >
+                        ...
+                      </button>
+                      {pagePickerOpen === 'end' && (
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-lg p-2 z-50 min-w-[140px]">
+                          <div className="flex items-center justify-between mb-2 px-1">
                             <button
-                              key={p}
-                              onClick={() => {
-                                setCurrentPage(p);
-                                setPagePickerOpen(null);
-                              }}
-                              className={`px-2 py-1 text-sm rounded ${currentPage === p
+                              onClick={() => setPagePickerOffset(Math.max(0, pagePickerOffset - 1))}
+                              disabled={pagePickerOffset === 0}
+                              className="p-1 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              ‹
+                            </button>
+                            <span className="text-xs text-gray-500 dark:text-dark-muted">
+                              {pagePickerOffset * 9 + 1}-{Math.min((pagePickerOffset + 1) * 9, endPages.length)} of {endPages.length}
+                            </span>
+                            <button
+                              onClick={() => setPagePickerOffset(Math.min(maxOffset, pagePickerOffset + 1))}
+                              disabled={pagePickerOffset >= maxOffset}
+                              className="p-1 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                              ›
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-3 gap-1">
+                            {visiblePages.map((p) => (
+                              <button
+                                key={p}
+                                onClick={() => {
+                                  setCurrentPage(p);
+                                  setPagePickerOpen(null);
+                                }}
+                                className={`px-2 py-1 text-sm rounded ${currentPage === p
                                   ? "bg-indigo-600 text-white"
                                   : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
-                                }`}
-                            >
-                              {p}
-                            </button>
-                          ))}
+                                  }`}
+                              >
+                                {p}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-              return null;
-            })}
+                      )}
+                    </div>
+                  );
+                }
+                return null;
+              })}
 
-            <button
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
-              className="px-3 py-1 rounded border border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
-            >
-              Next
-            </button>
-            <button
-              onClick={() => setCurrentPage(totalPages)}
-              disabled={currentPage === totalPages}
-              className="px-3 py-1 rounded border border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
-            >
-              Last
-            </button>
+              <button
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 rounded border border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
+              >
+                Next
+              </button>
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 rounded border border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
+              >
+                Last
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* ... (All modal logic remains unchanged) ... */}
 
@@ -1308,7 +1297,7 @@ const LoanTableView: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </GlassCard>
+    </GlassCard >
   );
 };
 

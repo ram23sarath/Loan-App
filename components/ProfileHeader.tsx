@@ -162,10 +162,60 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   const [notificationLoading, setNotificationLoading] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
 
+  const [isClearing, setIsClearing] = useState(false);
+
   // Expose openMenu method to parent via ref
   useImperativeHandle(ref, () => ({
     openMenu: () => setShowMenu(true),
   }));
+
+  // ... (Keep existing handleNotificationClick)
+
+  const handleClearNotifications = async () => {
+    if (notifications.length === 0 || isClearing || isScopedCustomer) return;
+
+    setIsClearing(true);
+
+    try {
+      // Trigger animations first (wait 1.5s for "snap" effect)
+      await new Promise(r => setTimeout(r, 1500));
+
+      // Delete from DB (delete all rows)
+      // Note: This requires RLS allowing DELETE for the user
+      const IDs = notifications.map(n => n.id);
+
+      // Delete in batches or logic to delete all. Using a simpler approach:
+      // Since we don't want to iterate 1000s, assume we just clear what is visible or all.
+      // Let's delete strictly the IDs we fetched (most recent 10).
+      if (IDs.length > 0) {
+        const { error } = await supabase
+          .from('system_notifications')
+          .delete()
+          .in('id', IDs);
+
+        if (error) throw error;
+      }
+
+      setNotifications([]);
+    } catch (err) {
+      console.error("Failed to clear notifications:", err);
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
+  const notificationItemVariants = {
+    hidden: { opacity: 0, scale: 0.8, filter: 'blur(10px)' },
+    visible: { opacity: 1, scale: 1, filter: 'blur(0px)' },
+    exit: {
+      opacity: 0,
+      scale: 0.9,
+      x: [0, 20, -20, 0], // Shake
+      filter: ['blur(0px)', 'blur(5px)', 'blur(10px)'],
+      transition: { duration: 0.8, ease: "easeInOut" }
+    }
+  };
+
 
   // Handle Escape key to close modals
   useEffect(() => {
@@ -424,15 +474,17 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                     👤 View Profile
                   </motion.button>
 
-                  <motion.button
-                    variants={menuItemVariants}
-                    onClick={handleNotificationClick}
-                    className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2 dark:text-dark-text dark:hover:bg-slate-700 dark:active:bg-slate-600"
-                    whileHover={{ x: 4, backgroundColor: 'rgba(99, 102, 241, 0.05)' }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    🔔 Notification
-                  </motion.button>
+                  {!isScopedCustomer && (
+                    <motion.button
+                      variants={menuItemVariants}
+                      onClick={handleNotificationClick}
+                      className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2 dark:text-dark-text dark:hover:bg-slate-700 dark:active:bg-slate-600"
+                      whileHover={{ x: 4, backgroundColor: 'rgba(99, 102, 241, 0.05)' }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      🔔 Notification
+                    </motion.button>
+                  )}
 
                   <motion.button
                     variants={menuItemVariants}
@@ -517,9 +569,21 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
               className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md relative dark:bg-dark-card dark:border dark:border-dark-border max-h-[80vh] flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-bold text-gray-800 mb-4 dark:text-dark-text flex items-center gap-2 flex-shrink-0">
-                🔔 System Notifications
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-gray-800 dark:text-dark-text flex items-center gap-2 flex-shrink-0">
+                  🔔 System Notifications
+                </h3>
+
+                {notifications.length > 0 && !isScopedCustomer && (
+                  <button
+                    onClick={handleClearNotifications}
+                    disabled={isClearing}
+                    className="text-xs px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 transition-colors disabled:opacity-50 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 mr-8"
+                  >
+                    {isClearing ? 'Snapping...' : 'Clear Messages'}
+                  </button>
+                )}
+              </div>
 
               <button
                 onClick={() => setShowNotificationModal(false)}
@@ -528,7 +592,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                 ✕
               </button>
 
-              <div className="flex-1 overflow-y-auto min-h-[100px]">
+              <div className="flex-1 overflow-y-auto min-h-[100px] overflow-x-hidden p-1">
                 {notificationLoading ? (
                   <div className="flex flex-col items-center justify-center h-full gap-3 text-indigo-600 dark:text-indigo-400 py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-current"></div>
@@ -536,34 +600,43 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {notifications.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500 dark:text-dark-muted">
-                        No recent system notifications found.
-                        <p className="text-xs mt-2 opacity-70">(Ensure the system_notifications table exists)</p>
-                      </div>
-                    ) : (
-                      notifications.map((note) => (
+                    <AnimatePresence mode='popLayout'>
+                      {notifications.length === 0 ? (
                         <motion.div
-                          key={note.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className={`w-full p-3 rounded-xl border flex items-start gap-3 ${note.status === 'success'
-                            ? 'bg-green-50 border-green-100 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300'
-                            : 'bg-red-50 border-red-100 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'
-                            }`}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="text-center py-8 text-gray-500 dark:text-dark-muted"
                         >
-                          <span className="text-lg flex-shrink-0 mt-0.5">
-                            {note.status === 'success' ? '✅' : '❌'}
-                          </span>
-                          <div className="flex flex-col gap-0.5">
-                            <span className="font-medium text-sm">{note.message}</span>
-                            <span className="text-[10px] opacity-70">
-                              {new Date(note.created_at).toLocaleString()}
-                            </span>
-                          </div>
+                          No recent system notifications found.
+                          <p className="text-xs mt-2 opacity-70">(Ensure the system_notifications table exists)</p>
                         </motion.div>
-                      ))
-                    )}
+                      ) : (
+                        notifications.map((note) => (
+                          <motion.div
+                            key={note.id}
+                            layout
+                            variants={notificationItemVariants}
+                            initial="hidden"
+                            animate={isClearing ? "exit" : "visible"}
+                            exit="exit"
+                            className={`w-full p-3 rounded-xl border flex items-start gap-3 relative overflow-hidden ${note.status === 'success'
+                              ? 'bg-green-50 border-green-100 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300'
+                              : 'bg-red-50 border-red-100 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'
+                              }`}
+                          >
+                            <span className="text-lg flex-shrink-0 mt-0.5">
+                              {note.status === 'success' ? '✅' : '❌'}
+                            </span>
+                            <div className="flex flex-col gap-0.5 relative z-10">
+                              <span className="font-medium text-sm">{note.message}</span>
+                              <span className="text-[10px] opacity-70">
+                                {new Date(note.created_at).toLocaleString()}
+                              </span>
+                            </div>
+                          </motion.div>
+                        ))
+                      )}
+                    </AnimatePresence>
                   </div>
                 )}
               </div>

@@ -156,12 +156,13 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   const [adminName, setAdminName] = useState('');
   const [isSavingAdminName, setIsSavingAdminName] = useState(false);
 
-  // Notification Modal State
+
+  // Notification Modal State - Refactored to list
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const [notificationLoading, setNotificationLoading] = useState(false);
-  const [notificationMessage, setNotificationMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [notifications, setNotifications] = useState<any[]>([]);
 
-  // Expose openMenu method to parent via ref (must be before early return)
+  // Expose openMenu method to parent via ref
   useImperativeHandle(ref, () => ({
     openMenu: () => setShowMenu(true),
   }));
@@ -170,7 +171,6 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        // Close modals in priority order (most specific first)
         if (showLogoutConfirm) {
           setShowLogoutConfirm(false);
         } else if (showChangePasswordModal) {
@@ -181,8 +181,9 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
           setShowProfilePanel(false);
         } else if (showMenu) {
           setShowMenu(false);
+        } else if (showNotificationModal) {
+          setShowNotificationModal(false);
         } else if (backupRunning && (backupProgress >= 100 || backupCurrentStep.startsWith('❌'))) {
-          // Only allow closing backup overlay when complete or error
           if (backupPollRef.current) {
             clearInterval(backupPollRef.current);
             backupPollRef.current = null;
@@ -200,7 +201,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [showMenu, showChangePasswordModal, showToolsModal, showProfilePanel, showLogoutConfirm, backupRunning, backupProgress, backupCurrentStep]);
+  }, [showMenu, showChangePasswordModal, showToolsModal, showProfilePanel, showLogoutConfirm, backupRunning, backupProgress, showNotificationModal]);
 
   if (!session || !session.user) return null;
 
@@ -217,6 +218,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   const displayName = isScopedCustomer && customerDetails?.name
     ? customerDetails.name
     : (adminNameFromMeta || userEmail);
+
   const initials = (displayName && displayName.trim().charAt(0).toUpperCase()) || 'U';
 
   // Initialize station name when profile panel opens
@@ -235,31 +237,12 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
     }
   }, [showProfilePanel, isScopedCustomer, adminNameFromMeta]);
 
-  // Close menu when clicking outside - DISABLED: Now using backdrop in portal
-  // React.useEffect(() => {
-  //   const handleClickOutside = (event: MouseEvent) => {
-  //     if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-  //       setShowMenu(false);
-  //     }
-  //   };
-
-  //   if (showMenu) {
-  //     document.addEventListener('mousedown', handleClickOutside);
-  //   }
-
-  //   return () => {
-  //     document.removeEventListener('mousedown', handleClickOutside);
-  //   };
-  // }, [showMenu]);
-
   const handleViewProfile = () => {
-    console.log('handleViewProfile clicked');
     setShowMenu(false);
     setShowProfilePanel(true);
   };
 
   const handleChangePassword = () => {
-    console.log('handleChangePassword clicked');
     setShowChangePasswordModal(true);
     setShowMenu(false);
   };
@@ -296,8 +279,6 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   };
 
   const handleSignOut = () => {
-    console.log('handleSignOut clicked');
-    // Open confirmation dialog instead of signing out immediately
     setShowLogoutConfirm(true);
   };
 
@@ -317,35 +298,33 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
     setShowMenu(false);
     setShowNotificationModal(true);
     setNotificationLoading(true);
-    setNotificationMessage(null);
 
     try {
-      const response = await fetch('/.netlify/functions/ping-supabase');
+      // Fetch recent system notifications
+      const { data, error } = await supabase
+        .from('system_notifications')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
 
-      // Check for HTML response (common with 404s/500s in some envs)
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("text/html")) {
-        throw new Error("Received HTML response instead of text/json. The function may be missing or crashing.");
-      }
-
-      const text = await response.text();
-
-      if (response.ok) {
-        setNotificationMessage({ type: 'success', text: text });
+      if (error) {
+        // Fallback if table doesn't exist
+        console.warn("Could not fetch notifications (table might be missing)", error);
+        setNotifications([]);
       } else {
-        setNotificationMessage({ type: 'error', text: `Ping failed: ${text}` });
+        setNotifications(data || []);
       }
-    } catch (error: any) {
-      // Clean up error message if it's the HTML error
-      let errorMsg = error.message || 'Unknown error';
-      if (errorMsg.includes("Received HTML response")) {
-        errorMsg = "Server Error: Function returned invalid format";
-      }
-      setNotificationMessage({ type: 'error', text: `Error: ${errorMsg}` });
+    } catch (error) {
+      console.error("Error fetching notifications", error);
+      setNotifications([]);
     } finally {
       setNotificationLoading(false);
     }
   };
+
+  // ...
+
+
 
 
   return (
@@ -535,11 +514,11 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-              className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm relative dark:bg-dark-card dark:border dark:border-dark-border"
+              className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md relative dark:bg-dark-card dark:border dark:border-dark-border max-h-[80vh] flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-bold text-gray-800 mb-4 dark:text-dark-text flex items-center gap-2">
-                🔔 Notification
+              <h3 className="text-lg font-bold text-gray-800 mb-4 dark:text-dark-text flex items-center gap-2 flex-shrink-0">
+                🔔 System Notifications
               </h3>
 
               <button
@@ -549,32 +528,43 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                 ✕
               </button>
 
-              <div className="flex flex-col items-center justify-center min-h-[100px]">
+              <div className="flex-1 overflow-y-auto min-h-[100px]">
                 {notificationLoading ? (
-                  <div className="flex flex-col items-center gap-3 text-indigo-600 dark:text-indigo-400">
+                  <div className="flex flex-col items-center justify-center h-full gap-3 text-indigo-600 dark:text-indigo-400 py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-current"></div>
-                    <span className="text-sm font-medium">Checking connection...</span>
+                    <span className="text-sm font-medium">Loading activity log...</span>
                   </div>
                 ) : (
-                  notificationMessage && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`w-full p-4 rounded-xl border ${notificationMessage.type === 'success'
-                        ? 'bg-green-50 border-green-100 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-400'
-                        : 'bg-red-50 border-red-100 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400'
-                        }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">
-                          {notificationMessage.type === 'success' ? '✅' : '❌'}
-                        </span>
-                        <p className="font-semibold text-sm md:text-base">
-                          {notificationMessage.text}
-                        </p>
+                  <div className="space-y-3">
+                    {notifications.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500 dark:text-dark-muted">
+                        No recent system notifications found.
+                        <p className="text-xs mt-2 opacity-70">(Ensure the system_notifications table exists)</p>
                       </div>
-                    </motion.div>
-                  )
+                    ) : (
+                      notifications.map((note) => (
+                        <motion.div
+                          key={note.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={`w-full p-3 rounded-xl border flex items-start gap-3 ${note.status === 'success'
+                            ? 'bg-green-50 border-green-100 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300'
+                            : 'bg-red-50 border-red-100 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'
+                            }`}
+                        >
+                          <span className="text-lg flex-shrink-0 mt-0.5">
+                            {note.status === 'success' ? '✅' : '❌'}
+                          </span>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-medium text-sm">{note.message}</span>
+                            <span className="text-[10px] opacity-70">
+                              {new Date(note.created_at).toLocaleString()}
+                            </span>
+                          </div>
+                        </motion.div>
+                      ))
+                    )}
+                  </div>
                 )}
               </div>
             </motion.div>

@@ -272,6 +272,26 @@ export type Database = {
             referencedColumns: ["id"]
           }
         ]
+      },
+      system_notifications: {
+        Row: {
+          id: string
+          created_at: string
+          type: string
+          message: string
+          status: string
+        }
+        Insert: {
+          type: string
+          message: string
+          status: string
+        }
+        Update: {
+          type?: string
+          message?: string
+          status?: string
+        }
+        Relationships: []
       }
     }
     Views: {

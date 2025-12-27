@@ -156,6 +156,11 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   const [adminName, setAdminName] = useState('');
   const [isSavingAdminName, setIsSavingAdminName] = useState(false);
 
+  // Notification Modal State
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [notificationLoading, setNotificationLoading] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   // Expose openMenu method to parent via ref (must be before early return)
   useImperativeHandle(ref, () => ({
     openMenu: () => setShowMenu(true),
@@ -308,6 +313,40 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
     }
   };
 
+  const handleNotificationClick = async () => {
+    setShowMenu(false);
+    setShowNotificationModal(true);
+    setNotificationLoading(true);
+    setNotificationMessage(null);
+
+    try {
+      const response = await fetch('/.netlify/functions/ping-supabase');
+
+      // Check for HTML response (common with 404s/500s in some envs)
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("text/html")) {
+        throw new Error("Received HTML response instead of text/json. The function may be missing or crashing.");
+      }
+
+      const text = await response.text();
+
+      if (response.ok) {
+        setNotificationMessage({ type: 'success', text: text });
+      } else {
+        setNotificationMessage({ type: 'error', text: `Ping failed: ${text}` });
+      }
+    } catch (error: any) {
+      // Clean up error message if it's the HTML error
+      let errorMsg = error.message || 'Unknown error';
+      if (errorMsg.includes("Received HTML response")) {
+        errorMsg = "Server Error: Function returned invalid format";
+      }
+      setNotificationMessage({ type: 'error', text: `Error: ${errorMsg}` });
+    } finally {
+      setNotificationLoading(false);
+    }
+  };
+
 
   return (
     <>
@@ -408,6 +447,16 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
 
                   <motion.button
                     variants={menuItemVariants}
+                    onClick={handleNotificationClick}
+                    className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2 dark:text-dark-text dark:hover:bg-slate-700 dark:active:bg-slate-600"
+                    whileHover={{ x: 4, backgroundColor: 'rgba(99, 102, 241, 0.05)' }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    🔔 Notification
+                  </motion.button>
+
+                  <motion.button
+                    variants={menuItemVariants}
                     onClick={() => {
                       window.location.reload();
                     }}
@@ -470,6 +519,69 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
           )
         }
       </AnimatePresence>
+
+      {/* Notification Modal */}
+      {showNotificationModal && typeof document !== 'undefined' && ReactDOM.createPortal(
+        <AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 px-4"
+            onClick={() => setShowNotificationModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+              className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm relative dark:bg-dark-card dark:border dark:border-dark-border"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-bold text-gray-800 mb-4 dark:text-dark-text flex items-center gap-2">
+                🔔 Notification
+              </h3>
+
+              <button
+                onClick={() => setShowNotificationModal(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors dark:text-dark-muted dark:hover:text-dark-text"
+              >
+                ✕
+              </button>
+
+              <div className="flex flex-col items-center justify-center min-h-[100px]">
+                {notificationLoading ? (
+                  <div className="flex flex-col items-center gap-3 text-indigo-600 dark:text-indigo-400">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-current"></div>
+                    <span className="text-sm font-medium">Checking connection...</span>
+                  </div>
+                ) : (
+                  notificationMessage && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`w-full p-4 rounded-xl border ${notificationMessage.type === 'success'
+                        ? 'bg-green-50 border-green-100 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-400'
+                        : 'bg-red-50 border-red-100 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400'
+                        }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">
+                          {notificationMessage.type === 'success' ? '✅' : '❌'}
+                        </span>
+                        <p className="font-semibold text-sm md:text-base">
+                          {notificationMessage.text}
+                        </p>
+                      </div>
+                    </motion.div>
+                  )
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* Tools Modal - Admin Only (rendered via portal for proper centering) */}
       {showToolsModal && typeof document !== 'undefined' && ReactDOM.createPortal(

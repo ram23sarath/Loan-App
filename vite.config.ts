@@ -12,5 +12,14 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, '.'),
     }
-  }
+  },
+  server: {
+    proxy: {
+      '/.netlify': {
+        target: 'http://localhost:8888',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
 });

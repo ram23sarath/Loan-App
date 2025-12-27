@@ -204,7 +204,11 @@ const LoanSeniorityPage = () => {
       <GlassCard className="!p-4">
         <h3 className="text-xl font-bold mb-3 text-gray-800 dark:text-dark-text">Loan Seniority List</h3>
         {(!seniorityList || seniorityList.length === 0) ? (
-          <div className="text-sm text-gray-500 dark:text-dark-muted">No customers added yet. Search above and click Add to include a customer.</div>
+          <div className="text-sm text-gray-500 dark:text-dark-muted">
+            {isScopedCustomer
+              ? "No seniority entries found."
+              : "No customers added yet. Search above and click Add to include a customer."}
+          </div>
         ) : (
           <>
             {/* Desktop table */}

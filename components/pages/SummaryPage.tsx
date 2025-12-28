@@ -1887,352 +1887,353 @@ const SummaryPage = () => {
 
 
           {/* Financial Year Section - separate visualization for selected FY */}
+          {/* Hidden for scoped users */}
+          {!isScopedCustomer && (
+            <div className="w-full mt-6 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-gray-700 rounded-lg p-4">
 
-          <div className="w-full mt-6 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-gray-700 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
 
-            <div className="flex items-center justify-between mb-3">
+                <div>
 
-              <div>
+                  <div className="text-2xl font-bold text-gray-700 dark:text-gray-200 uppercase">
 
-                <div className="text-2xl font-bold text-gray-700 dark:text-gray-200 uppercase">
+                    Financial Year Summary — FY {fyLabel(selectedFYStart)}
 
-                  Financial Year Summary — FY {fyLabel(selectedFYStart)}
+                  </div>
+
+                  <div className="text-xs text-gray-400">
+
+                    Select a fiscal year (Apr - Mar) to visualize collections
+
+                  </div>
 
                 </div>
 
-                <div className="text-xs text-gray-400">
+                <div className="flex items-center gap-3 no-print">
 
-                  Select a fiscal year (Apr - Mar) to visualize collections
+                  <select
+
+                    value={selectedFYStart}
+
+                    onChange={(e) => setSelectedFYStart(Number(e.target.value))}
+
+                    className="px-5 py-2 rounded border bg-white dark:bg-slate-700 text-base dark:text-white dark:border-slate-600"
+
+                    style={{ minWidth: 150 }}
+
+                  >
+
+                    {fyOptions.map((y) => (
+
+                      <option key={y} value={y}>
+
+                        {fyLabel(y)}
+
+                      </option>
+
+                    ))}
+
+                  </select>
 
                 </div>
 
               </div>
 
-              <div className="flex items-center gap-3 no-print">
 
-                <select
 
-                  value={selectedFYStart}
+              <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
 
-                  onChange={(e) => setSelectedFYStart(Number(e.target.value))}
-
-                  className="px-5 py-2 rounded border bg-white dark:bg-slate-700 text-base dark:text-white dark:border-slate-600"
-
-                  style={{ minWidth: 150 }}
-
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  className="p-4 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 flex flex-col items-start transition-shadow hover:shadow-md"
                 >
 
-                  {fyOptions.map((y) => (
+                  <div className="flex items-center justify-between w-full">
 
-                    <option key={y} value={y}>
+                    <div className="text-xs text-gray-600 dark:text-gray-200">Subscriptions (FY)</div>
 
-                      {fyLabel(y)}
+                    <button
 
-                    </option>
+                      onClick={() => openBreakdown("subscriptions")}
 
-                  ))}
-
-                </select>
-
-              </div>
-
-            </div>
-
-
-
-            <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-
-              <motion.div
-                whileHover={{ y: -5 }}
-                className="p-4 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 flex flex-col items-start transition-shadow hover:shadow-md"
-              >
-
-                <div className="flex items-center justify-between w-full">
-
-                  <div className="text-xs text-gray-600 dark:text-gray-200">Subscriptions (FY)</div>
-
-                  <button
-
-                    onClick={() => openBreakdown("subscriptions")}
-
-                    className="text-xs text-indigo-600 underline"
-
-                  >
-
-                    Details
-
-                  </button>
-
-                </div>
-
-                <div className="text-xl font-bold text-cyan-800 dark:text-cyan-200 mt-2">
-
-                  <AnimatedNumber value={fySubscriptionCollected} />
-                </div>
-
-              </motion.div>
-              <motion.div
-                whileHover={{ y: -5 }}
-                className="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 flex flex-col items-start transition-shadow hover:shadow-md"
-              >
-
-                <div className="flex items-center justify-between w-full">
-
-                  <div className="text-xs text-gray-600 dark:text-gray-200">Interest (FY)</div>
-
-                  <button
-
-                    onClick={() => openBreakdown("interest")}
-
-                    className="text-xs text-indigo-600 underline"
-
-                  >
-
-                    Details
-
-                  </button>
-
-                </div>
-
-                <div className="text-xl font-bold text-green-800 dark:text-green-200 mt-2">
-
-                  <AnimatedNumber value={fyInterestCollected} />
-                </div>
-
-              </motion.div>
-              <motion.div
-                whileHover={{ y: -5 }}
-                className="p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 flex flex-col items-start transition-shadow hover:shadow-md"
-              >
-
-                <div className="flex items-center justify-between w-full">
-
-                  <div className="text-xs text-gray-600 dark:text-gray-200">Late Fees (FY)</div>
-
-                  <button
-
-                    onClick={() => openBreakdown("latefees")}
-
-                    className="text-xs text-indigo-600 underline"
-
-                  >
-
-                    Details
-
-                  </button>
-
-                </div>
-
-                <div className="text-xl font-bold text-orange-800 dark:text-orange-200 mt-2">
-
-                  <AnimatedNumber value={fyLateFees} />
-                </div>
-
-              </motion.div>
-              <motion.div
-                whileHover={{ y: -5 }}
-                className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 flex flex-col items-start transition-shadow hover:shadow-md"
-              >
-
-                <div className="flex items-center justify-between w-full">
-
-                  <div className="text-xs text-gray-600 dark:text-gray-200">
-
-                    Loan Recovery (Principal) (FY)
-
-                  </div>
-
-                  <button
-
-                    onClick={() => openBreakdown("principal")}
-
-                    className="text-xs text-indigo-600 underline"
-
-                  >
-
-                    Details
-
-                  </button>
-
-                </div>
-
-                <div className="text-xl font-bold text-blue-800 dark:text-blue-200 mt-2">
-
-                  <AnimatedNumber value={fyPrincipalRecovered} />
-                </div>
-
-              </motion.div>
-
-              {/* FY Loans Given vs Recovery Balance */}
-              <motion.div
-                whileHover={{ y: -5 }}
-                className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 flex flex-col items-start transition-shadow hover:shadow-md"
-              >
-
-                <div className="flex items-center justify-between w-full">
-
-                  <div className="text-xs text-gray-600 dark:text-gray-200">Loans Given (FY)</div>
-
-                  <div className="text-xs text-gray-600 dark:text-gray-200">Balance (FY)</div>
-
-                </div>
-
-                <div className="mt-2 w-full">
-
-                  <div className="flex items-center justify-between">
-
-                    <div className="text-sm text-gray-700 dark:text-gray-200">Total Loans Given</div>
-
-                    <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
-
-                      <AnimatedNumber value={fyLoansGiven} />
-                    </div>
-
-                  </div>
-
-                  <div className="flex items-center justify-between mt-1">
-
-                    <div className="text-sm text-gray-700 dark:text-gray-200">
-
-                      Loan Recovery (Principal)
-
-                    </div>
-
-                    <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
-
-                      <AnimatedNumber value={fyPrincipalRecovered} />
-                    </div>
-
-                  </div>
-
-                  <div className="flex items-center justify-between mt-2">
-
-                    <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
-
-                      Balance
-
-                    </div>
-
-                    <div
-
-                      className={`text-sm font-bold ${fyLoanBalance < 0 ? "text-red-600 dark:text-red-400" : "text-blue-800 dark:text-blue-200"
-
-                        }`}
+                      className="text-xs text-indigo-600 underline"
 
                     >
 
-                      <AnimatedNumber value={fyLoanBalance} />
-                    </div>
+                      Details
+
+                    </button>
 
                   </div>
 
-                </div>
+                  <div className="text-xl font-bold text-cyan-800 dark:text-cyan-200 mt-2">
 
-              </motion.div>
-
-              <motion.div
-                whileHover={{ y: -5 }}
-                className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 flex flex-col items-start transition-shadow hover:shadow-md"
-              >
-
-                <div className="flex items-center justify-between w-full">
-
-                  <div className="text-xs text-gray-600 dark:text-gray-200">Total (FY)</div>
-
-                  <button
-
-                    onClick={() => openBreakdown("total")}
-
-                    className="text-xs text-indigo-600 underline"
-
-                  >
-
-                    Details
-
-                  </button>
-
-                </div>
-
-                <div className="text-xl font-bold text-indigo-800 dark:text-indigo-200 mt-2">
-
-                  <AnimatedNumber value={fySubscriptionCollected + fyInterestCollected + fyLateFees + fyPrincipalRecovered} />
-                </div>
-
-              </motion.div>
-
-              {/* FY Expenses card (deductible) */}
-              <motion.div
-                whileHover={{ y: -5 }}
-                className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex flex-col items-start transition-shadow hover:shadow-md"
-              >
-
-                <div className="flex items-center justify-between w-full">
-
-                  <div className="text-xs text-gray-600 dark:text-gray-200">
-
-                    FY Expenses (selected subtypes)
-
+                    <AnimatedNumber value={fySubscriptionCollected} />
                   </div>
 
-                </div>
+                </motion.div>
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  className="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 flex flex-col items-start transition-shadow hover:shadow-md"
+                >
 
-                <div className="text-xl font-bold text-red-800 dark:text-red-200 mt-2">
+                  <div className="flex items-center justify-between w-full">
 
-                  <AnimatedNumber value={fyExpensesTotal} />
-                </div>
+                    <div className="text-xs text-gray-600 dark:text-gray-200">Interest (FY)</div>
 
-                <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">Breakdown:</div>
+                    <button
 
-                <div className="mt-2 space-y-1 w-full">
+                      onClick={() => openBreakdown("interest")}
 
-                  {fyExpenseSubtypes.map((s) => (
-
-                    <div
-
-                      key={s}
-
-                      className="flex items-center justify-between text-sm"
+                      className="text-xs text-indigo-600 underline"
 
                     >
 
-                      <div className="text-gray-700 dark:text-gray-200">{s}</div>
+                      Details
 
-                      <div className="font-medium text-red-700 dark:text-red-300">
+                    </button>
 
-                        <AnimatedNumber value={fyExpensesBySubtype[s] || 0} />
+                  </div>
+
+                  <div className="text-xl font-bold text-green-800 dark:text-green-200 mt-2">
+
+                    <AnimatedNumber value={fyInterestCollected} />
+                  </div>
+
+                </motion.div>
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  className="p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 flex flex-col items-start transition-shadow hover:shadow-md"
+                >
+
+                  <div className="flex items-center justify-between w-full">
+
+                    <div className="text-xs text-gray-600 dark:text-gray-200">Late Fees (FY)</div>
+
+                    <button
+
+                      onClick={() => openBreakdown("latefees")}
+
+                      className="text-xs text-indigo-600 underline"
+
+                    >
+
+                      Details
+
+                    </button>
+
+                  </div>
+
+                  <div className="text-xl font-bold text-orange-800 dark:text-orange-200 mt-2">
+
+                    <AnimatedNumber value={fyLateFees} />
+                  </div>
+
+                </motion.div>
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 flex flex-col items-start transition-shadow hover:shadow-md"
+                >
+
+                  <div className="flex items-center justify-between w-full">
+
+                    <div className="text-xs text-gray-600 dark:text-gray-200">
+
+                      Loan Recovery (Principal) (FY)
+
+                    </div>
+
+                    <button
+
+                      onClick={() => openBreakdown("principal")}
+
+                      className="text-xs text-indigo-600 underline"
+
+                    >
+
+                      Details
+
+                    </button>
+
+                  </div>
+
+                  <div className="text-xl font-bold text-blue-800 dark:text-blue-200 mt-2">
+
+                    <AnimatedNumber value={fyPrincipalRecovered} />
+                  </div>
+
+                </motion.div>
+
+                {/* FY Loans Given vs Recovery Balance */}
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 flex flex-col items-start transition-shadow hover:shadow-md"
+                >
+
+                  <div className="flex items-center justify-between w-full">
+
+                    <div className="text-xs text-gray-600 dark:text-gray-200">Loans Given (FY)</div>
+
+                    <div className="text-xs text-gray-600 dark:text-gray-200">Balance (FY)</div>
+
+                  </div>
+
+                  <div className="mt-2 w-full">
+
+                    <div className="flex items-center justify-between">
+
+                      <div className="text-sm text-gray-700 dark:text-gray-200">Total Loans Given</div>
+
+                      <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
+
+                        <AnimatedNumber value={fyLoansGiven} />
                       </div>
 
                     </div>
 
-                  ))}
+                    <div className="flex items-center justify-between mt-1">
 
-                </div>
+                      <div className="text-sm text-gray-700 dark:text-gray-200">
 
-              </motion.div>
+                        Loan Recovery (Principal)
 
-              {/* Net FY Total (collections - expenses) */}
-              <motion.div
-                whileHover={{ y: -5 }}
-                className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 flex flex-col items-start transition-shadow hover:shadow-md"
-              >
+                      </div>
 
-                <div className="flex items-center justify-between w-full">
+                      <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
 
-                  <div className="text-xs text-gray-600 dark:text-emerald-200">Net Total (FY)</div>
+                        <AnimatedNumber value={fyPrincipalRecovered} />
+                      </div>
 
-                </div>
+                    </div>
 
-                <div className="text-xl font-bold text-emerald-800 dark:text-emerald-200 mt-2">
+                    <div className="flex items-center justify-between mt-2">
 
-                  <AnimatedNumber value={fySubscriptionCollected + fyInterestCollected + fyLateFees + fyPrincipalRecovered - fyExpensesTotal} />
-                </div>
+                      <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
 
-              </motion.div>
+                        Balance
+
+                      </div>
+
+                      <div
+
+                        className={`text-sm font-bold ${fyLoanBalance < 0 ? "text-red-600 dark:text-red-400" : "text-blue-800 dark:text-blue-200"
+
+                          }`}
+
+                      >
+
+                        <AnimatedNumber value={fyLoanBalance} />
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                </motion.div>
+
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 flex flex-col items-start transition-shadow hover:shadow-md"
+                >
+
+                  <div className="flex items-center justify-between w-full">
+
+                    <div className="text-xs text-gray-600 dark:text-gray-200">Total (FY)</div>
+
+                    <button
+
+                      onClick={() => openBreakdown("total")}
+
+                      className="text-xs text-indigo-600 underline"
+
+                    >
+
+                      Details
+
+                    </button>
+
+                  </div>
+
+                  <div className="text-xl font-bold text-indigo-800 dark:text-indigo-200 mt-2">
+
+                    <AnimatedNumber value={fySubscriptionCollected + fyInterestCollected + fyLateFees + fyPrincipalRecovered} />
+                  </div>
+
+                </motion.div>
+
+                {/* FY Expenses card (deductible) */}
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex flex-col items-start transition-shadow hover:shadow-md"
+                >
+
+                  <div className="flex items-center justify-between w-full">
+
+                    <div className="text-xs text-gray-600 dark:text-gray-200">
+
+                      FY Expenses (selected subtypes)
+
+                    </div>
+
+                  </div>
+
+                  <div className="text-xl font-bold text-red-800 dark:text-red-200 mt-2">
+
+                    <AnimatedNumber value={fyExpensesTotal} />
+                  </div>
+
+                  <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">Breakdown:</div>
+
+                  <div className="mt-2 space-y-1 w-full">
+
+                    {fyExpenseSubtypes.map((s) => (
+
+                      <div
+
+                        key={s}
+
+                        className="flex items-center justify-between text-sm"
+
+                      >
+
+                        <div className="text-gray-700 dark:text-gray-200">{s}</div>
+
+                        <div className="font-medium text-red-700 dark:text-red-300">
+
+                          <AnimatedNumber value={fyExpensesBySubtype[s] || 0} />
+                        </div>
+
+                      </div>
+
+                    ))}
+
+                  </div>
+
+                </motion.div>
+
+                {/* Net FY Total (collections - expenses) */}
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 flex flex-col items-start transition-shadow hover:shadow-md"
+                >
+
+                  <div className="flex items-center justify-between w-full">
+
+                    <div className="text-xs text-gray-600 dark:text-emerald-200">Net Total (FY)</div>
+
+                  </div>
+
+                  <div className="text-xl font-bold text-emerald-800 dark:text-emerald-200 mt-2">
+
+                    <AnimatedNumber value={fySubscriptionCollected + fyInterestCollected + fyLateFees + fyPrincipalRecovered - fyExpensesTotal} />
+                  </div>
+
+                </motion.div>
+
+              </div>
 
             </div>
-
-          </div>
-
+          )}
 
 
 

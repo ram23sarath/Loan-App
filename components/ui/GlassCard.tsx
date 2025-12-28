@@ -7,6 +7,7 @@ type GlassCardProps = {
   hover3D?: boolean;
   hoverScale?: boolean;
   hoverGlow?: boolean;
+  disable3D?: boolean;
 } & MotionProps;
 
 // Enhanced card variants with 3D perspective hover
@@ -52,6 +53,7 @@ const GlassCard: React.FC<GlassCardProps> = ({
   hover3D = false,
   hoverScale = true,
   hoverGlow = true,
+  disable3D = false,
   ...props
 }) => {
   const [mousePosition, setMousePosition] = React.useState({ x: 0, y: 0 });
@@ -70,7 +72,10 @@ const GlassCard: React.FC<GlassCardProps> = ({
     setMousePosition({ x: 0, y: 0 });
   };
 
-  const transform3D = hover3D ? {
+  const effectiveHover3D = hover3D && !disable3D;
+  const effectiveHoverScale = hoverScale && !disable3D;
+
+  const transform3D = effectiveHover3D ? {
     rotateY: mousePosition.x * 5,
     rotateX: -mousePosition.y * 5,
     transformPerspective: 1000,
@@ -82,13 +87,13 @@ const GlassCard: React.FC<GlassCardProps> = ({
       className={`bg-white dark:bg-dark-card rounded-2xl border border-gray-200 dark:border-dark-border shadow-sm p-6 ${hoverGlow ? 'hover:shadow-lg hover:shadow-indigo-500/5 dark:hover:shadow-indigo-400/5' : ''} transition-shadow duration-300 ${className}`}
       initial="initial"
       animate="animate"
-      whileHover={hoverScale ? "hover" : undefined}
-      whileTap={hoverScale ? "tap" : undefined}
-      variants={hoverScale ? cardVariants : undefined}
+      whileHover={effectiveHoverScale ? "hover" : undefined}
+      whileTap={effectiveHoverScale ? "tap" : undefined}
+      variants={effectiveHoverScale ? cardVariants : undefined}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       style={{
-        transformStyle: hover3D ? 'preserve-3d' : undefined,
+        transformStyle: effectiveHover3D ? 'preserve-3d' : undefined,
         ...transform3D,
       }}
       {...props}

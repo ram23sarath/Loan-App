@@ -125,6 +125,22 @@ const CustomerListPage = () => {
     setDeleteCounts(null);
   };
 
+  // Close delete customer modal with Escape key
+  React.useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (deleteCustomerTarget) {
+        setDeleteCustomerTarget(null);
+        setDeleteCounts(null);
+      }
+    };
+    if (deleteCustomerTarget) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+    return;
+  }, [deleteCustomerTarget]);
+
   const categorizedCustomers = useMemo(() => {
     let processedCustomers = [...customers];
 

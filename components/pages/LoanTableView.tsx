@@ -1,4 +1,5 @@
 import React from "react";
+import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from "framer-motion";
 import { useData } from "../../context/DataContext";
 import { Trash2Icon, WhatsAppIcon } from "../../constants";
@@ -248,10 +249,30 @@ const LoanTableView: React.FC = () => {
     }
   }
 
+  // Close delete confirmation modals with Escape key
+  React.useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (deleteTarget) {
+        setDeleteTarget(null);
+        return;
+      }
+      if (deleteLoanTarget) {
+        setDeleteLoanTarget(null);
+        return;
+      }
+    };
+    if (deleteTarget || deleteLoanTarget) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+    return;
+  }, [deleteTarget, deleteLoanTarget]);
+
 
 
   return (
-    <GlassCard className="overflow-x-auto">
+    <GlassCard className="overflow-x-auto" disable3D>
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-4">
         <div className="relative w-full sm:w-64 md:flex-1">
           <input
@@ -436,6 +457,9 @@ const LoanTableView: React.FC = () => {
                       <div className="flex gap-2">
                         <button
                           onClick={() => setEditLoanTarget(loan)}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
+                          onPointerDown={(e) => (e as any).stopPropagation()}
                           className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
                         >
                           Edit
@@ -447,7 +471,10 @@ const LoanTableView: React.FC = () => {
                               customer: loan.customers?.name ?? null,
                             })
                           }
-                          className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
+                          onPointerDown={(e) => (e as any).stopPropagation()}
+                          className="px-2 py-1 rounded bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
                           title="Delete loan"
                         >
                           <Trash2Icon className="w-5 h-5 text-red-500" />
@@ -562,6 +589,9 @@ const LoanTableView: React.FC = () => {
                                                     inst.receipt_number || "",
                                                 });
                                               }}
+                                              onMouseDown={(e) => e.stopPropagation()}
+                                              onTouchStart={(e) => e.stopPropagation()}
+                                              onPointerDown={(e) => (e as any).stopPropagation()}
                                               className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700 ml-2"
                                               aria-label={`Edit installment #${inst.installment_number}`}
                                               whileHover={{ scale: 1.05 }}
@@ -576,10 +606,13 @@ const LoanTableView: React.FC = () => {
                                                   number: inst.installment_number,
                                                 })
                                               }
-                                              className="p-1 rounded-full hover:bg-red-500/10 transition-colors ml-2"
+                                              onMouseDown={(e) => e.stopPropagation()}
+                                              onTouchStart={(e) => e.stopPropagation()}
+                                              onPointerDown={(e) => (e as any).stopPropagation()}
+                                              className="px-2 py-1 rounded bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors ml-2"
                                               aria-label={`Delete installment #${inst.installment_number}`}
-                                              whileHover={{ scale: 1.2 }}
-                                              whileTap={{ scale: 0.9 }}
+                                              whileHover={{ scale: 1.02 }}
+                                              whileTap={{ scale: 0.98 }}
                                             >
                                               <Trash2Icon className="w-4 h-4 text-red-500" />
                                             </motion.button>
@@ -735,6 +768,9 @@ const LoanTableView: React.FC = () => {
                   {!isScopedCustomer && (
                     <button
                       onClick={() => setEditLoanTarget(loan)}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => (e as any).stopPropagation()}
                       className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
                     >
                       Edit
@@ -748,6 +784,9 @@ const LoanTableView: React.FC = () => {
                           customer: customer?.name ?? null,
                         })
                       }
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => (e as any).stopPropagation()}
                       className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
                       aria-label={`Delete loan for ${customer?.name}`}
                       title="Delete loan"
@@ -835,6 +874,9 @@ const LoanTableView: React.FC = () => {
                                           receipt_number: inst.receipt_number || "",
                                         });
                                       }}
+                                      onMouseDown={(e) => e.stopPropagation()}
+                                      onTouchStart={(e) => e.stopPropagation()}
+                                      onPointerDown={(e) => (e as any).stopPropagation()}
                                       className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
                                     >
                                       Edit
@@ -847,6 +889,9 @@ const LoanTableView: React.FC = () => {
                                           number: inst.installment_number,
                                         });
                                       }}
+                                      onMouseDown={(e) => e.stopPropagation()}
+                                      onTouchStart={(e) => e.stopPropagation()}
+                                      onPointerDown={(e) => (e as any).stopPropagation()}
                                       className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
                                     >
                                       <Trash2Icon className="w-4 h-4" />
@@ -1201,102 +1246,108 @@ const LoanTableView: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Delete Loan Confirmation Modal */}
-      <AnimatePresence>
-        {deleteLoanTarget && (
-          <motion.div
-            variants={modalBackdropVariants}
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          >
+      {/* Delete Loan Confirmation Modal (portal) */}
+      {ReactDOM.createPortal(
+        <AnimatePresence>
+          {deleteLoanTarget && (
             <motion.div
-              variants={modalContentVariants}
-              className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              key="delete-loan-backdrop"
             >
-              <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 dark:text-dark-text">
-                Delete Loan
-              </h3>
-              <p className="mb-4 sm:mb-6 text-sm sm:text-base dark:text-dark-muted">
-                Are you sure you want to delete the entire loan for{' '}
-                <span className="font-semibold">
-                  {deleteLoanTarget.customer ?? "this customer"}
-                </span>
-                ? This will remove the loan and all its installments.
-              </p>
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setDeleteLoanTarget(null)}
-                  className="px-3 py-2 rounded text-xs sm:text-base bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={async () => {
-                    if (deleteLoanTarget) {
+              <motion.div
+                className="bg-white rounded-xl shadow-lg p-6 md:p-8 w-[90%] max-w-md flex flex-col items-center dark:bg-dark-card dark:border dark:border-dark-border"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                key="delete-loan-content"
+              >
+                <Trash2Icon className="w-10 h-10 text-red-500 mb-2" />
+                <h3 className="text-lg font-bold mb-2 text-center text-gray-800 dark:text-dark-text">Delete Loan?</h3>
+                <p className="text-gray-700 text-center mb-4 dark:text-dark-muted">
+                  Are you sure you want to delete the entire loan for{' '}
+                  <span className="font-semibold">{deleteLoanTarget.customer ?? 'this customer'}</span>?
+                </p>
+                <div className="flex gap-4 w-full justify-center">
+                  <button
+                    onClick={() => setDeleteLoanTarget(null)}
+                    className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!deleteLoanTarget) return;
                       try {
                         await deleteLoan(deleteLoanTarget.id);
                       } catch (err: any) {
                         alert(err?.message || String(err));
                       }
                       setDeleteLoanTarget(null);
-                    }
-                  }}
-                  className="px-3 py-2 rounded text-xs sm:text-base bg-red-600 text-white hover:bg-red-700"
-                >
-                  Delete Loan
-                </button>
-              </div>
+                    }}
+                    className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
-      {/* Delete Confirmation Modal */}
-      <AnimatePresence>
-        {deleteTarget && (
-          <motion.div
-            variants={modalBackdropVariants}
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          >
+      {/* Delete Installment Confirmation Modal (portal) */}
+      {ReactDOM.createPortal(
+        <AnimatePresence>
+          {deleteTarget && (
             <motion.div
-              variants={modalContentVariants}
-              className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              key="delete-inst-backdrop"
             >
-              <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 dark:text-dark-text">
-                Delete Installment
-              </h3>
-              <p className="mb-4 sm:mb-6 text-sm sm:text-base dark:text-dark-muted">
-                Are you sure you want to delete installment #
-                {deleteTarget.number}?
-              </p>
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setDeleteTarget(null)}
-                  className="px-3 py-2 rounded text-xs sm:text-base bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={async () => {
-                    if (deleteTarget) {
+              <motion.div
+                className="bg-white rounded-xl shadow-lg p-6 md:p-8 w-[90%] max-w-md flex flex-col items-center dark:bg-dark-card dark:border dark:border-dark-border"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                key="delete-inst-content"
+              >
+                <Trash2Icon className="w-10 h-10 text-red-500 mb-2" />
+                <h3 className="text-lg font-bold mb-2 text-center text-gray-800 dark:text-dark-text">Delete Installment?</h3>
+                <p className="text-gray-700 text-center mb-4 dark:text-dark-muted">
+                  Are you sure you want to delete installment #{deleteTarget.number}?
+                </p>
+                <div className="flex gap-4 w-full justify-center">
+                  <button
+                    onClick={() => setDeleteTarget(null)}
+                    className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!deleteTarget) return;
                       await deleteInstallment(deleteTarget.id);
                       setDeleteTarget(null);
-                    }
-                  }}
-                  className="px-3 py-2 rounded text-xs sm:text-base bg-red-600 text-white hover:bg-red-700"
-                >
-                  Delete
-                </button>
-              </div>
+                    }}
+                    className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </GlassCard >
   );
 };

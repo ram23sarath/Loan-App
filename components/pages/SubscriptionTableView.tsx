@@ -162,7 +162,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
   }
 
   return (
-    <GlassCard className="overflow-x-auto">
+    <GlassCard className="overflow-x-auto" disable3D>
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-4">
         <div className="relative w-full sm:w-64">
           <input
@@ -296,12 +296,18 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                       <>
                         <button
                           onClick={() => setEditSubscriptionTarget(sub)}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
+                          onPointerDown={(e) => (e as any).stopPropagation()}
                           className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => onDelete(sub)}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
+                          onPointerDown={(e) => (e as any).stopPropagation()}
                           className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
                           aria-label={`Delete subscription for ${customer?.name}`}
                           disabled={deletingId === sub.id}
@@ -429,6 +435,9 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                   {!isScopedCustomer && (
                     <button
                       onClick={() => setEditSubscriptionTarget(sub)}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => (e as any).stopPropagation()}
                       className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
                     >
                       Edit
@@ -436,7 +445,10 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                   )}
                   {!isScopedCustomer && (
                     <button
-                      onClick={() => onDelete(sub)}
+                      onClick={(e) => { e.stopPropagation(); onDelete(sub); }}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => (e as any).stopPropagation()}
                       className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
                       aria-label={`Delete subscription for ${customer?.name}`}
                       disabled={deletingId === sub.id}

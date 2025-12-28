@@ -56,11 +56,19 @@ const EditModal: React.FC<EditModalProps> = ({
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        try {
+          e.stopPropagation();
+          // stopImmediatePropagation may not exist on all event types in some envs
+          if (typeof (e as any).stopImmediatePropagation === 'function') {
+            (e as any).stopImmediatePropagation();
+          }
+        } catch (_) {}
         onClose();
       }
     };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    // Use capture so this listener runs before other bubble-phase listeners
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => document.removeEventListener('keydown', handleKeyDown, true);
   }, [onClose]);
 
   return ReactDOM.createPortal(

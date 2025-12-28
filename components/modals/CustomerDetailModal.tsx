@@ -145,13 +145,26 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
+      if (event.key !== 'Escape') return;
+      // If a delete confirmation is open, close it first
+      if (deleteInstTarget) {
+        setDeleteInstTarget(null);
+        return;
       }
+      if (deleteSubTarget) {
+        setDeleteSubTarget(null);
+        return;
+      }
+      if (deleteLoanTarget) {
+        setDeleteLoanTarget(null);
+        return;
+      }
+      // Otherwise close the whole modal
+      onClose();
     };
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [onClose]);
+  }, [deleteInstTarget, deleteSubTarget, deleteLoanTarget, onClose]);
 
   const confirmDeleteLoan = async () => {
     if (!deleteLoanTarget) return;
@@ -246,7 +259,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
         exit="exit"
         onClick={e => e.stopPropagation()}
       >
-        <GlassCard className="!p-0 w-full flex-shrink-0 dark:bg-dark-card dark:border-dark-border">
+        <GlassCard className="!p-0 w-full flex-shrink-0 dark:bg-dark-card dark:border-dark-border" disable3D>
           <div className="flex items-center justify-between p-3 sm:p-6 border-b border-gray-200 dark:border-dark-border">
             <div>
               <h2 className="text-xl sm:text-3xl font-bold dark:text-dark-text">{customer.name}</h2>
@@ -275,7 +288,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
         <div className="mt-2 sm:mt-4 space-y-3 sm:space-y-6 overflow-y-auto overflow-x-hidden scrollbar-thin">
           {/* Loans Section */}
-          <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border">
+          <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border" disable3D>
             <h3 className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-lg sm:text-2xl font-semibold dark:text-dark-text">
               <LandmarkIcon className="w-5 h-5 sm:w-6 sm:h-6" /> Loans
               {loans.length > 0 && (
@@ -347,7 +360,10 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                                 )}
                                 <button
                                   onClick={() => setDeleteLoanTarget(loan)}
-                                  className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors"
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  onTouchStart={(e) => e.stopPropagation()}
+                                  onPointerDown={(e) => (e as any).stopPropagation()}
+                                  className="px-2 py-1 rounded bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
                                 >
                                   <Trash2Icon className="w-4 h-4 text-red-500" />
                                 </button>
@@ -387,9 +403,12 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                                             </span>
                                             <motion.button
                                               onClick={() => setDeleteInstTarget(inst)}
-                                              className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors"
-                                              whileHover={{ scale: 1.2 }}
-                                              whileTap={{ scale: 0.9 }}
+                                              onMouseDown={(e) => e.stopPropagation()}
+                                              onTouchStart={(e) => e.stopPropagation()}
+                                              onPointerDown={(e) => (e as any).stopPropagation()}
+                                              className="px-2 py-1 rounded bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                                              whileHover={{ scale: 1.02 }}
+                                              whileTap={{ scale: 0.98 }}
                                             >
                                               <Trash2Icon className="w-4 h-4 text-red-500" />
                                             </motion.button>
@@ -501,9 +520,12 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                                       )}
                                       <motion.button
                                         onClick={() => setDeleteInstTarget(inst)}
-                                        className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors"
-                                        whileHover={{ scale: 1.2 }}
-                                        whileTap={{ scale: 0.9 }}
+                                        onMouseDown={(e) => e.stopPropagation()}
+                                        onTouchStart={(e) => e.stopPropagation()}
+                                        onPointerDown={(e) => (e as any).stopPropagation()}
+                                        className="px-2 py-1 rounded bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
                                       >
                                         <Trash2Icon className="w-3 h-3 text-red-500" />
                                       </motion.button>
@@ -519,6 +541,9 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                           {onEditLoan && (
                             <button
                               onClick={() => onEditLoan(loan)}
+                              onMouseDown={(e) => e.stopPropagation()}
+                              onTouchStart={(e) => e.stopPropagation()}
+                              onPointerDown={(e) => (e as any).stopPropagation()}
                               className="flex-1 px-3 py-2 rounded bg-blue-600 dark:bg-blue-500 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-400"
                             >
                               Edit
@@ -526,6 +551,9 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                           )}
                           <button
                             onClick={() => setDeleteLoanTarget(loan)}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}
+                            onPointerDown={(e) => (e as any).stopPropagation()}
                             className="px-3 py-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
                           >
                             <Trash2Icon className="w-5 h-5" />
@@ -542,7 +570,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           </GlassCard>
 
           {/* Subscriptions Section */}
-          <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border">
+          <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border" disable3D>
             <h3 className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-lg sm:text-2xl font-semibold dark:text-dark-text">
               <HistoryIcon className="w-5 h-5 sm:w-6 sm:h-6" /> Subscriptions
               {subscriptions.length > 0 && (
@@ -580,6 +608,9 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                             {onEditSubscription && (
                               <button
                                 onClick={() => onEditSubscription(sub)}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onTouchStart={(e) => e.stopPropagation()}
+                                onPointerDown={(e) => (e as any).stopPropagation()}
                                 className="px-2 py-1 rounded bg-blue-600 dark:bg-blue-500 text-white text-xs hover:bg-blue-700 dark:hover:bg-blue-400"
                               >
                                 Edit
@@ -651,7 +682,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           </GlassCard>
 
           {/* Data Entries Section */}
-          <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border">
+          <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border" disable3D>
             <div className="mb-3 sm:mb-4">
               <h3 className="flex items-center gap-2 sm:gap-3 text-lg sm:text-2xl font-semibold text-pink-700 dark:text-pink-400">Misc Data Entries</h3>
             </div>
@@ -766,122 +797,146 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           </GlassCard>
         </div>
 
-        {/* Delete Loan Confirmation Modal */}
-        <AnimatePresence>
-          {deleteLoanTarget && (
-            <motion.div
-              variants={backdropVariants}
-              initial="hidden"
-              animate="visible"
-              exit="hidden"
-              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
-              onClick={() => setDeleteLoanTarget(null)}
-            >
+        {/* Delete Loan Confirmation Modal (render into its own portal to avoid stacking issues) */}
+        {ReactDOM.createPortal(
+          <AnimatePresence>
+            {deleteLoanTarget && (
               <motion.div
-                variants={modalVariants}
-                className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border"
-                onClick={e => e.stopPropagation()}
+                key="cust-delete-loan-backdrop"
+                variants={backdropVariants}
+                initial="hidden"
+                animate="visible"
+                exit="hidden"
+                className="fixed inset-0 z-[99999] bg-black/40"
+                onClick={() => setDeleteLoanTarget(null)}
               >
-                <h3 className="text-lg font-bold mb-3 dark:text-dark-text">Delete Loan?</h3>
-                <p className="mb-4 text-sm text-gray-600 dark:text-dark-muted">
-                  Are you sure you want to delete the loan from <span className="font-semibold dark:text-dark-text">{formatDate(deleteLoanTarget.payment_date)}</span>? This will also delete all its installments.
-                </p>
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => setDeleteLoanTarget(null)}
-                    className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={confirmDeleteLoan}
-                    className="px-3 py-2 rounded bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
-                  >
-                    Delete Loan
-                  </button>
-                </div>
+                <motion.div
+                  key="cust-delete-loan-content"
+                  variants={modalVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border relative z-[100000]"
+                  onClick={e => e.stopPropagation()}
+                >
+                  <h3 className="text-lg font-bold mb-3 dark:text-dark-text">Delete Loan?</h3>
+                  <p className="mb-4 text-sm text-gray-600 dark:text-dark-muted">
+                    Are you sure you want to delete the loan from <span className="font-semibold dark:text-dark-text">{formatDate(deleteLoanTarget.payment_date)}</span>? This will also delete all its installments.
+                  </p>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => setDeleteLoanTarget(null)}
+                      className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={confirmDeleteLoan}
+                      className="px-3 py-2 rounded bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+                    >
+                      Delete Loan
+                    </button>
+                  </div>
+                </motion.div>
               </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
 
-        {/* Delete Subscription Confirmation Modal */}
-        <AnimatePresence>
-          {deleteSubTarget && (
-            <motion.div
-              variants={backdropVariants}
-              initial="hidden"
-              animate="visible"
-              exit="hidden"
-              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
-              onClick={() => setDeleteSubTarget(null)}
-            >
+        {/* Delete Subscription Confirmation Modal (separate portal) */}
+        {ReactDOM.createPortal(
+          <AnimatePresence>
+            {deleteSubTarget && (
               <motion.div
-                variants={modalVariants}
-                className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border"
-                onClick={e => e.stopPropagation()}
+                key="cust-delete-sub-backdrop"
+                variants={backdropVariants}
+                initial="hidden"
+                animate="visible"
+                exit="hidden"
+                className="fixed inset-0 z-[99999] bg-black/40"
+                onClick={() => setDeleteSubTarget(null)}
               >
-                <h3 className="text-lg font-bold mb-3 dark:text-dark-text">Delete Subscription?</h3>
-                <p className="mb-4 text-sm text-gray-600 dark:text-dark-muted">
-                  Are you sure you want to delete the subscription from <span className="font-semibold dark:text-dark-text">{formatDate(deleteSubTarget.date)}</span>?
-                </p>
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => setDeleteSubTarget(null)}
-                    className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={confirmDeleteSubscription}
-                    className="px-3 py-2 rounded bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
-                  >
-                    Delete
-                  </button>
-                </div>
+                <motion.div
+                  key="cust-delete-sub-content"
+                  variants={modalVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border relative z-[100000]"
+                  onClick={e => e.stopPropagation()}
+                >
+                  <h3 className="text-lg font-bold mb-3 dark:text-dark-text">Delete Subscription?</h3>
+                  <p className="mb-4 text-sm text-gray-600 dark:text-dark-muted">
+                    Are you sure you want to delete the subscription from <span className="font-semibold dark:text-dark-text">{formatDate(deleteSubTarget.date)}</span>?
+                  </p>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => setDeleteSubTarget(null)}
+                      className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={confirmDeleteSubscription}
+                      className="px-3 py-2 rounded bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </motion.div>
               </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
 
-        {/* Delete Installment Confirmation Modal */}
-        <AnimatePresence>
-          {deleteInstTarget && (
-            <motion.div
-              variants={backdropVariants}
-              initial="hidden"
-              animate="visible"
-              exit="hidden"
-              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
-              onClick={() => setDeleteInstTarget(null)}
-            >
+        {/* Delete Installment Confirmation Modal (separate portal) */}
+        {ReactDOM.createPortal(
+          <AnimatePresence>
+            {deleteInstTarget && (
               <motion.div
-                variants={modalVariants}
-                className="bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border"
-                onClick={e => e.stopPropagation()}
+                key="cust-delete-inst-backdrop"
+                variants={backdropVariants}
+                initial="hidden"
+                animate="visible"
+                exit="hidden"
+                className="fixed inset-0 z-[99999] bg-black/40"
+                onClick={() => setDeleteInstTarget(null)}
               >
-                <h3 className="text-lg font-bold mb-3 dark:text-dark-text">Delete Installment?</h3>
-                <p className="mb-4 text-sm text-gray-600 dark:text-dark-muted">
-                  Are you sure you want to delete installment <span className="font-semibold dark:text-dark-text">#{deleteInstTarget.installment_number}</span>?
-                </p>
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => setDeleteInstTarget(null)}
-                    className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={confirmDeleteInstallment}
-                    className="px-3 py-2 rounded bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
-                  >
-                    Delete
-                  </button>
-                </div>
+                <motion.div
+                  key="cust-delete-inst-content"
+                  variants={modalVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border relative z-[100000]"
+                  onClick={e => e.stopPropagation()}
+                >
+                  <h3 className="text-lg font-bold mb-3 dark:text-dark-text">Delete Installment?</h3>
+                  <p className="mb-4 text-sm text-gray-600 dark:text-dark-muted">
+                    Are you sure you want to delete installment <span className="font-semibold dark:text-dark-text">#{deleteInstTarget.installment_number}</span>?
+                  </p>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => setDeleteInstTarget(null)}
+                      className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={confirmDeleteInstallment}
+                      className="px-3 py-2 rounded bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </motion.div>
               </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
       </motion.div>
     </motion.div>,
     document.body

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import { PencilIcon, Trash2Icon } from '../../constants';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../../context/DataContext';
@@ -145,6 +146,36 @@ const DataPage = () => {
     document.addEventListener('mousedown', handleClickOutsideNotes);
     return () => document.removeEventListener('mousedown', handleClickOutsideNotes);
   }, [expandedNoteId]);
+
+  // Close edit modal with Escape (capture phase to prevent parent handlers)
+  useEffect(() => {
+    if (!editEntryId) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      try {
+        e.stopPropagation();
+        if (typeof (e as any).stopImmediatePropagation === 'function') (e as any).stopImmediatePropagation();
+      } catch (_) {}
+      setEditEntryId(null);
+    };
+    document.addEventListener('keydown', handleEscape, true);
+    return () => document.removeEventListener('keydown', handleEscape, true);
+  }, [editEntryId]);
+
+  // Close delete modal with Escape (capture phase)
+  useEffect(() => {
+    if (!deleteId) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      try {
+        e.stopPropagation();
+        if (typeof (e as any).stopImmediatePropagation === 'function') (e as any).stopImmediatePropagation();
+      } catch (_) {}
+      setDeleteId(null);
+    };
+    document.addEventListener('keydown', handleEscape, true);
+    return () => document.removeEventListener('keydown', handleEscape, true);
+  }, [deleteId]);
 
 
   // --- HANDLERS ---
@@ -588,73 +619,79 @@ const DataPage = () => {
         </motion.div>
 
         {/* --- LOGIC FIX --- */}
-        {/* Modals are moved here to the top level. They are no longer rendered inside a loop. */}
-        {/* This fixes both the performance issue and the broken table layout. */}
-        <AnimatePresence>
-          {editEntryId && (
-            <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <motion.div role="dialog" aria-modal="true" aria-labelledby="edit-entry-modal-title" variants={modalVariants} initial="hidden" animate="visible" exit="exit" className="bg-white rounded-xl shadow-lg p-4 w-full max-w-sm max-h-[90vh] overflow-y-auto mx-4 dark:bg-dark-card dark:border dark:border-dark-border">
-                <div id="edit-entry-modal-title" className="text-lg font-semibold text-gray-800 mb-4 dark:text-dark-text">Edit Entry</div>
-                <div className="grid grid-cols-1 gap-3">
-                  <label className={labelBaseStyle}>Customer</label>
-                  <select name="customerId" value={editEntryForm.customerId} onChange={e => setEditEntryForm(prev => ({ ...prev, customerId: e.target.value }))} className={inputBaseStyle}>
-                    <option value="">Select Customer</option>
-                    {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
+        {/* Modals are moved here to the top level and portaled to document.body. */}
+        {/* This ensures they center relative to the viewport and are not affected by transformed ancestors. */}
+        {typeof document !== 'undefined' && ReactDOM.createPortal(
+          <AnimatePresence>
+            {editEntryId && (
+              <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditEntryId(null)}>
+                <motion.div role="dialog" aria-modal="true" aria-labelledby="edit-entry-modal-title" variants={modalVariants} initial="hidden" animate="visible" exit="exit" className="bg-white rounded-xl shadow-lg p-4 w-full max-w-sm max-h-[90vh] overflow-y-auto mx-4 dark:bg-dark-card dark:border dark:border-dark-border" onClick={(e) => e.stopPropagation()}>
+                  <div id="edit-entry-modal-title" className="text-lg font-semibold text-gray-800 mb-4 dark:text-dark-text">Edit Entry</div>
+                  <div className="grid grid-cols-1 gap-3">
+                    <label className={labelBaseStyle}>Customer</label>
+                    <select name="customerId" value={editEntryForm.customerId} onChange={e => setEditEntryForm(prev => ({ ...prev, customerId: e.target.value }))} className={inputBaseStyle}>
+                      <option value="">Select Customer</option>
+                      {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
 
-                  <label className={labelBaseStyle}>Date</label>
-                  <input type="date" name="date" value={editEntryForm.date} onChange={e => setEditEntryForm(prev => ({ ...prev, date: e.target.value }))} className={dateInputStyle} style={dateInputInlineStyles} />
+                    <label className={labelBaseStyle}>Date</label>
+                    <input type="date" name="date" value={editEntryForm.date} onChange={e => setEditEntryForm(prev => ({ ...prev, date: e.target.value }))} className={dateInputStyle} style={dateInputInlineStyles} />
 
-                  <label className={labelBaseStyle}>Type</label>
-                  <select name="type" value={editEntryForm.type} onChange={e => setEditEntryForm(prev => ({ ...prev, type: e.target.value }))} className={inputBaseStyle}>
-                    <option value="credit">Credit</option>
-                    <option value="expenditure">Expenditure</option>
-                  </select>
+                    <label className={labelBaseStyle}>Type</label>
+                    <select name="type" value={editEntryForm.type} onChange={e => setEditEntryForm(prev => ({ ...prev, type: e.target.value }))} className={inputBaseStyle}>
+                      <option value="credit">Credit</option>
+                      <option value="expenditure">Expenditure</option>
+                    </select>
 
-                  <label className={labelBaseStyle}>Subtype</label>
-                  <select name="subtype" value={editEntryForm.subtype} onChange={e => setEditEntryForm(prev => ({ ...prev, subtype: e.target.value }))} className={inputBaseStyle}>
-                    <option value="">None</option>
-                    {editEntryForm.type !== 'credit' && <option value="Subscription Return">Subscription Return</option>}
-                    <option value="Retirement Gift">Retirement Gift</option>
-                    <option value="Death Fund">Death Fund</option>
-                    <option value="Misc Expense">Misc Expense</option>
-                  </select>
+                    <label className={labelBaseStyle}>Subtype</label>
+                    <select name="subtype" value={editEntryForm.subtype} onChange={e => setEditEntryForm(prev => ({ ...prev, subtype: e.target.value }))} className={inputBaseStyle}>
+                      <option value="">None</option>
+                      {editEntryForm.type !== 'credit' && <option value="Subscription Return">Subscription Return</option>}
+                      <option value="Retirement Gift">Retirement Gift</option>
+                      <option value="Death Fund">Death Fund</option>
+                      <option value="Misc Expense">Misc Expense</option>
+                    </select>
 
-                  <label className={labelBaseStyle}>Amount</label>
-                  <input id="edit-amount" type="number" name="amount" value={editEntryForm.amount} onChange={e => setEditEntryForm(prev => ({ ...prev, amount: e.target.value }))} className={inputBaseStyle} />
+                    <label className={labelBaseStyle}>Amount</label>
+                    <input id="edit-amount" type="number" name="amount" value={editEntryForm.amount} onChange={e => setEditEntryForm(prev => ({ ...prev, amount: e.target.value }))} className={inputBaseStyle} />
 
-                  <label className={labelBaseStyle}>Receipt Number</label>
-                  <input type="text" name="receipt" value={editEntryForm.receipt} onChange={e => setEditEntryForm(prev => ({ ...prev, receipt: e.target.value }))} className={inputBaseStyle} />
+                    <label className={labelBaseStyle}>Receipt Number</label>
+                    <input type="text" name="receipt" value={editEntryForm.receipt} onChange={e => setEditEntryForm(prev => ({ ...prev, receipt: e.target.value }))} className={inputBaseStyle} />
 
-                  <label className={labelBaseStyle}>Notes</label>
-                  <textarea name="notes" value={editEntryForm.notes} onChange={e => setEditEntryForm(prev => ({ ...prev, notes: e.target.value }))} className={`${inputBaseStyle} min-h-[80px]`} />
-                </div>
+                    <label className={labelBaseStyle}>Notes</label>
+                    <textarea name="notes" value={editEntryForm.notes} onChange={e => setEditEntryForm(prev => ({ ...prev, notes: e.target.value }))} className={`${inputBaseStyle} min-h-[80px]`} />
+                  </div>
 
-                <div className="flex gap-3 mt-4">
-                  <button type="button" className="flex-1 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition dark:bg-slate-700 dark:text-dark-text dark:hover:bg-slate-600" onClick={() => setEditEntryId(null)} disabled={editEntryLoading}>Cancel</button>
-                  <button type="button" className="flex-1 py-2 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition" onClick={handleSaveEditEntry} disabled={editEntryLoading}>
-                    {editEntryLoading ? 'Saving...' : 'Save'}
-                  </button>
-                </div>
+                  <div className="flex gap-3 mt-4">
+                    <button type="button" className="flex-1 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition dark:bg-slate-700 dark:text-dark-text dark:hover:bg-slate-600" onClick={() => setEditEntryId(null)} disabled={editEntryLoading}>Cancel</button>
+                    <button type="button" className="flex-1 py-2 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition" onClick={handleSaveEditEntry} disabled={editEntryLoading}>
+                      {editEntryLoading ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                </motion.div>
               </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
 
-        <AnimatePresence>
-          {deleteId && (
-            <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <motion.div role="dialog" aria-modal="true" aria-labelledby="delete-modal-title" variants={modalVariants} initial="hidden" animate="visible" exit="exit" className="bg-white rounded-xl shadow-lg p-6 md:p-8 w-[90%] max-w-md flex flex-col items-center dark:bg-dark-card dark:border dark:border-dark-border">
-                <div id="delete-modal-title" className="text-lg font-semibold text-gray-800 mb-4 dark:text-dark-text">Delete Entry?</div>
-                <p className="text-gray-600 mb-6 text-center dark:text-dark-muted">Are you sure? This action cannot be undone.</p>
-                <div className="flex gap-3 w-full">
-                  <button type="button" className="flex-1 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition dark:bg-slate-700 dark:text-dark-text dark:hover:bg-slate-600" onClick={() => setDeleteId(null)}>Cancel</button>
-                  <button type="button" className="flex-1 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition" onClick={confirmDelete}>Delete</button>
-                </div>
+        {typeof document !== 'undefined' && ReactDOM.createPortal(
+          <AnimatePresence>
+            {deleteId && (
+              <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setDeleteId(null)}>
+                <motion.div role="dialog" aria-modal="true" aria-labelledby="delete-modal-title" variants={modalVariants} initial="hidden" animate="visible" exit="exit" className="bg-white rounded-xl shadow-lg p-6 md:p-8 w-[90%] max-w-md flex flex-col items-center dark:bg-dark-card dark:border dark:border-dark-border" onClick={(e) => e.stopPropagation()}>
+                  <div id="delete-modal-title" className="text-lg font-semibold text-gray-800 mb-4 dark:text-dark-text">Delete Entry?</div>
+                  <p className="text-gray-600 mb-6 text-center dark:text-dark-muted">Are you sure? This action cannot be undone.</p>
+                  <div className="flex gap-3 w-full">
+                    <button type="button" className="flex-1 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition dark:bg-slate-700 dark:text-dark-text dark:hover:bg-slate-600" onClick={() => setDeleteId(null)}>Cancel</button>
+                    <button type="button" className="flex-1 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition" onClick={confirmDelete}>Delete</button>
+                  </div>
+                </motion.div>
               </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
 
         <div className="fixed top-4 right-4 z-50">
           <AnimatePresence>

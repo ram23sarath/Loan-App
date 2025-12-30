@@ -279,7 +279,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
       onClick={onClose}
     >
       <motion.div
-        className="w-full max-w-5xl flex flex-col max-h-[90vh]"
+        className="w-full max-w-6xl flex flex-col max-h-[95vh]"
         variants={modalVariants}
         exit="exit"
         onClick={e => e.stopPropagation()}
@@ -311,7 +311,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           </div>
         </GlassCard>
 
-        <div className="mt-2 sm:mt-4 space-y-3 sm:space-y-6 overflow-y-auto overflow-x-hidden scrollbar-thin">
+        <div className="mt-2 sm:mt-4 space-y-3 sm:space-y-6 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-slate-600 dark:scrollbar-track-slate-800">
           {/* Loans Section */}
           <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border" disable3D>
             <h3 className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-lg sm:text-2xl font-semibold dark:text-dark-text">

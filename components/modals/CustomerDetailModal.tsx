@@ -111,6 +111,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 }) => {
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const [expandedLoanId, setExpandedLoanId] = useState<string | null>(null);
+  const [subscriptionSortBy, setSubscriptionSortBy] = useState<'date' | 'receipt' | 'amount'>('date');
+  const [subscriptionSortOrder, setSubscriptionSortOrder] = useState<'asc' | 'desc'>('desc');
   const noteRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   // Lookup map for O(1) installment access by loan_id
@@ -123,6 +125,27 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     });
     return map;
   }, [installments]);
+
+  // Sorted subscriptions
+  const sortedSubscriptions = useMemo(() => {
+    const sorted = [...subscriptions];
+    sorted.sort((a, b) => {
+      let compareValue = 0;
+      
+      if (subscriptionSortBy === 'date') {
+        compareValue = new Date(a.date).getTime() - new Date(b.date).getTime();
+      } else if (subscriptionSortBy === 'receipt') {
+        const receiptA = a.receipt || '';
+        const receiptB = b.receipt || '';
+        compareValue = receiptA.localeCompare(receiptB);
+      } else if (subscriptionSortBy === 'amount') {
+        compareValue = a.amount - b.amount;
+      }
+      
+      return subscriptionSortOrder === 'desc' ? -compareValue : compareValue;
+    });
+    return sorted;
+  }, [subscriptions, subscriptionSortBy, subscriptionSortOrder]);
 
   // Delete confirmation states
   const [deleteLoanTarget, setDeleteLoanTarget] = useState<LoanWithCustomer | null>(null);
@@ -586,15 +609,51 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   <thead>
                     <tr className="bg-gray-100/70 dark:bg-slate-700">
                       <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">#</th>
-                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Date</th>
-                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Amount</th>
+                      <th
+                        onClick={() => {
+                          if (subscriptionSortBy === 'date') {
+                            setSubscriptionSortOrder(subscriptionSortOrder === 'asc' ? 'desc' : 'asc');
+                          } else {
+                            setSubscriptionSortBy('date');
+                            setSubscriptionSortOrder('desc');
+                          }
+                        }}
+                        className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text cursor-pointer hover:bg-gray-200/50 dark:hover:bg-slate-600/50 transition-colors"
+                      >
+                        Date {subscriptionSortBy === 'date' && (subscriptionSortOrder === 'desc' ? '↓' : '↑')}
+                      </th>
+                      <th
+                        onClick={() => {
+                          if (subscriptionSortBy === 'amount') {
+                            setSubscriptionSortOrder(subscriptionSortOrder === 'asc' ? 'desc' : 'asc');
+                          } else {
+                            setSubscriptionSortBy('amount');
+                            setSubscriptionSortOrder('asc');
+                          }
+                        }}
+                        className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text cursor-pointer hover:bg-gray-200/50 dark:hover:bg-slate-600/50 transition-colors"
+                      >
+                        Amount {subscriptionSortBy === 'amount' && (subscriptionSortOrder === 'desc' ? '↓' : '↑')}
+                      </th>
                       <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Late Fee</th>
-                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Receipt #</th>
+                      <th
+                        onClick={() => {
+                          if (subscriptionSortBy === 'receipt') {
+                            setSubscriptionSortOrder(subscriptionSortOrder === 'asc' ? 'desc' : 'asc');
+                          } else {
+                            setSubscriptionSortBy('receipt');
+                            setSubscriptionSortOrder('asc');
+                          }
+                        }}
+                        className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text cursor-pointer hover:bg-gray-200/50 dark:hover:bg-slate-600/50 transition-colors"
+                      >
+                        Receipt # {subscriptionSortBy === 'receipt' && (subscriptionSortOrder === 'desc' ? '↓' : '↑')}
+                      </th>
                       <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {subscriptions.map((sub, idx) => (
+                    {sortedSubscriptions.map((sub, idx) => (
                       <tr key={sub.id} className="even:bg-gray-50/50 hover:bg-cyan-50/50 transition-colors dark:even:bg-slate-700/50 dark:hover:bg-cyan-900/30">
                         <td className="px-4 py-2 border-b dark:border-dark-border font-medium text-sm text-gray-700 dark:text-dark-text">{idx + 1}</td>
                         <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">{formatDate(sub.date)}</td>
@@ -631,7 +690,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
                 {/* Mobile Cards */}
                 <div className="md:hidden space-y-3">
-                  {subscriptions.map((sub, idx) => (
+                  {sortedSubscriptions.map((sub, idx) => (
                     <div key={sub.id} className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-dark-border">
                       <div className="flex justify-between items-start mb-2">
                         <div className="text-xs text-gray-500 dark:text-dark-muted">#{idx + 1}</div>

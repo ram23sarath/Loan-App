@@ -13,6 +13,7 @@ import { useData } from './context/DataContext';
 const AddCustomerPage = React.lazy(() => import('./components/pages/AddCustomerPage'));
 const AddRecordPage = React.lazy(() => import('./components/pages/AddRecordPage'));
 const CustomerListPage = React.lazy(() => import('./components/pages/CustomerListPage'));
+const CustomerDetailPageComponent = React.lazy(() => import('./components/pages/CustomerDetailPage'));
 const LoanListPage = React.lazy(() => import('./components/pages/LoanListPage'));
 const LoanDetailPage = React.lazy(() => import('./components/pages/LoanDetailPage'));
 const LoanSeniorityPage = React.lazy(() => import('./components/pages/LoanSeniorityPage'));
@@ -65,6 +66,14 @@ const AnimatedRoutes = () => {
             element={
               <AdminOnlyRoute>
                 <CustomerListPage />
+              </AdminOnlyRoute>
+            }
+          />
+          <Route
+            path="/customers/:id"
+            element={
+              <AdminOnlyRoute>
+                <CustomerDetailPageComponent />
               </AdminOnlyRoute>
             }
           />

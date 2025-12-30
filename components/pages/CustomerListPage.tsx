@@ -29,7 +29,7 @@ const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 const CustomerListPage = () => {
-  const { customers, loans, subscriptions, installments, installmentsByLoanId, dataEntries, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, isRefreshing, signOut, updateCustomer, updateLoan, updateSubscription, isScopedCustomer } = useData();
+  const { customers, loans, subscriptions, installments, installmentsByLoanId, dataEntries, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, isRefreshing, signOut, updateCustomer, updateLoan, updateSubscription, updateInstallment, isScopedCustomer } = useData();
   const [deleteCustomerTarget, setDeleteCustomerTarget] = React.useState<{ id: string, name: string } | null>(null);
   const [deleteCounts, setDeleteCounts] = React.useState<{ dataEntries: number; loans: number; installments: number; subscriptions: number } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,7 +37,7 @@ const CustomerListPage = () => {
   const [sortOption, setSortOption] = useState('date-desc');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [editModal, setEditModal] = useState<{ type: 'customer' | 'loan' | 'subscription' | 'customer_loan'; data: any } | null>(null);
+  const [editModal, setEditModal] = useState<{ type: 'customer' | 'loan' | 'subscription' | 'customer_loan' | 'installment'; data: any } | null>(null);
 
   const [expandedSections, setExpandedSections] = useState({
     both: true,
@@ -1122,6 +1122,7 @@ const CustomerListPage = () => {
             deleteInstallment={deleteInstallment}
             onEditLoan={(loan) => setEditModal({ type: 'loan', data: loan })}
             onEditSubscription={(sub) => setEditModal({ type: 'subscription', data: sub })}
+            onEditInstallment={(installment) => setEditModal({ type: 'installment', data: installment })}
           />
         )}
       </AnimatePresence>
@@ -1166,6 +1167,13 @@ const CustomerListPage = () => {
                       receipt: updated.subscription.receipt,
                     });
                   }
+                } else if (editModal.type === 'installment') {
+                  await updateInstallment(updated.id, {
+                    amount: updated.amount,
+                    late_fee: updated.late_fee ?? 0,
+                    date: updated.date,
+                    receipt_number: updated.receipt_number,
+                  });
                 }
                 setEditModal(null);
               } catch (err: any) {

@@ -4,6 +4,8 @@ import { motion, Variants, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
 import type { Customer, LoanWithCustomer, SubscriptionWithCustomer, Installment, DataEntry } from '../../types';
 import GlassCard from '../ui/GlassCard';
+import RecordLoanModal from './RecordLoanModal';
+import RecordSubscriptionModal from './RecordSubscriptionModal';
 import { XIcon, FileDownIcon, LandmarkIcon, HistoryIcon, Trash2Icon } from '../../constants';
 import { formatDate } from '../../utils/dateFormatter';
 
@@ -153,6 +155,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   const [deleteLoanTarget, setDeleteLoanTarget] = useState<LoanWithCustomer | null>(null);
   const [deleteSubTarget, setDeleteSubTarget] = useState<SubscriptionWithCustomer | null>(null);
   const [deleteInstTarget, setDeleteInstTarget] = useState<Installment | null>(null);
+  const [showRecordLoan, setShowRecordLoan] = useState<boolean>(false);
+  const [showRecordSubscription, setShowRecordSubscription] = useState<boolean>(false);
 
   const handleNoteClick = (id: string) => {
     setExpandedNoteId(expandedNoteId === id ? null : id);
@@ -321,6 +325,14 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   (Total: {formatCurrency(loans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0))})
                 </span>
               )}
+              <div className="ml-auto">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowRecordLoan(true); }}
+                  className="ml-2 px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700"
+                >
+                  Record Loan
+                </button>
+              </div>
             </h3>
             {loans.length > 0 ? (
               <div className="overflow-x-auto">
@@ -631,6 +643,14 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   (Total: {formatCurrency(subscriptions.reduce((acc, sub) => acc + sub.amount, 0))})
                 </span>
               )}
+              <div className="ml-auto">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowRecordSubscription(true); }}
+                  className="ml-2 px-3 py-1 rounded bg-cyan-600 text-white text-sm hover:bg-cyan-700"
+                >
+                  Record Subscription
+                </button>
+              </div>
             </h3>
             {subscriptions.length > 0 ? (
               <div className="overflow-x-auto">
@@ -770,6 +790,13 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
             )}
           </GlassCard>
 
+          {showRecordSubscription && (
+            <RecordSubscriptionModal
+              customer={customer}
+              onClose={() => setShowRecordSubscription(false)}
+            />
+          )}
+
           {/* Data Entries Section */}
           <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border" disable3D>
             <div className="mb-3 sm:mb-4">
@@ -885,6 +912,13 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
             )}
           </GlassCard>
         </div>
+
+        {showRecordLoan && (
+          <RecordLoanModal
+            customer={customer}
+            onClose={() => setShowRecordLoan(false)}
+          />
+        )}
 
         {/* Delete Loan Confirmation Modal (render into its own portal to avoid stacking issues) */}
         {ReactDOM.createPortal(

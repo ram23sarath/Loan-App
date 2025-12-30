@@ -8,7 +8,7 @@ import type {
 } from "../../types";
 
 interface EditModalProps {
-  type: "customer" | "loan" | "subscription" | "customer_loan";
+  type: "customer" | "loan" | "subscription" | "customer_loan" | "installment";
   data: any;
   onSave: (updated: any) => void;
   onClose: () => void;
@@ -496,6 +496,109 @@ const EditModal: React.FC<EditModalProps> = ({
                 onChange={handleChange}
                 className="w-full border border-gray-300 dark:border-gray-700 dark:bg-slate-700 dark:text-gray-100 rounded px-3 py-2"
                 min="0"
+              />
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={onClose} className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-gray-100">Cancel</button>
+              <button type="submit" className="px-3 py-2 rounded bg-indigo-600 dark:bg-indigo-500 text-white">Save</button>
+            </div>
+          </form>
+        )}
+        {type === "installment" && (
+          <form
+            className="space-y-3 w-full"
+            onSubmit={(e) => {
+              e.preventDefault();
+              onSave(form);
+            }}
+          >
+            <div>
+              <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+                Installment Number
+              </label>
+              <input
+                name="installment_number"
+                type="number"
+                value={form.installment_number || ""}
+                onChange={handleChange}
+                className="w-full border border-gray-300 dark:border-gray-700 dark:bg-slate-700 dark:text-gray-100 rounded px-3 py-2"
+                readOnly
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+                Payment Date
+              </label>
+              <input
+                name="date"
+                type="date"
+                value={form.date ? form.date.slice(0, 10) : ""}
+                onChange={handleChange}
+                className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-base bg-white dark:bg-slate-700 dark:text-gray-100 block"
+                style={{ minHeight: '42px', WebkitAppearance: 'none' }}
+                min="1980-01-01"
+                max="2050-12-31"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+                Amount Paid
+              </label>
+              <div className="relative">
+                <span
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 select-none font-sans"
+                  style={{
+                    fontFamily:
+                      "Segoe UI Symbol, Arial Unicode MS, sans-serif",
+                  }}
+                >
+                  &#8377;
+                </span>
+                <input
+                  name="amount"
+                  type="number"
+                  value={form.amount || ""}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 dark:border-gray-700 dark:bg-slate-700 dark:text-gray-100 rounded px-3 py-2 pl-7"
+                  style={{ fontFamily: "inherit" }}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+                Late Fee
+              </label>
+              <div className="relative">
+                <span
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 select-none font-sans"
+                  style={{
+                    fontFamily:
+                      "Segoe UI Symbol, Arial Unicode MS, sans-serif",
+                  }}
+                >
+                  &#8377;
+                </span>
+                <input
+                  name="late_fee"
+                  type="number"
+                  value={form.late_fee ?? ""}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 dark:border-gray-700 dark:bg-slate-700 dark:text-gray-100 rounded px-3 py-2 pl-7"
+                  style={{ fontFamily: "inherit" }}
+                  min="0"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+                Receipt Number
+              </label>
+              <input
+                name="receipt_number"
+                type="text"
+                value={form.receipt_number || ""}
+                onChange={handleChange}
+                className="w-full border border-gray-300 dark:border-gray-700 dark:bg-slate-700 dark:text-gray-100 rounded px-3 py-2"
               />
             </div>
             <div className="mt-4 flex justify-end gap-2">

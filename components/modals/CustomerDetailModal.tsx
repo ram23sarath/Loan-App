@@ -19,6 +19,7 @@ interface CustomerDetailModalProps {
   deleteInstallment: (installmentId: string) => Promise<void>;
   onEditLoan?: (loan: LoanWithCustomer) => void;
   onEditSubscription?: (sub: SubscriptionWithCustomer) => void;
+  onEditInstallment?: (installment: Installment) => void;
 }
 
 const backdropVariants: Variants = {
@@ -108,6 +109,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   deleteInstallment,
   onEditLoan,
   onEditSubscription,
+  onEditInstallment,
 }) => {
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const [expandedLoanId, setExpandedLoanId] = useState<string | null>(null);
@@ -417,13 +419,26 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                                             <span className="text-gray-600 dark:text-dark-muted">{formatDate(inst.date)}</span>
                                             <span className="text-gray-600 dark:text-dark-muted">Receipt: {inst.receipt_number}</span>
                                           </div>
-                                          <div className="flex items-center gap-3">
+                                          <div className="flex items-center gap-2">
                                             <span className="font-semibold text-green-600 dark:text-green-400">
                                               {formatCurrency(inst.amount)}
                                               {inst.late_fee && inst.late_fee > 0 && (
                                                 <span className="ml-1 text-xs text-orange-500">(+{formatCurrency(inst.late_fee)} late)</span>
                                               )}
                                             </span>
+                                            {onEditInstallment && (
+                                              <motion.button
+                                                onClick={() => onEditInstallment(inst)}
+                                                onMouseDown={(e) => e.stopPropagation()}
+                                                onTouchStart={(e) => e.stopPropagation()}
+                                                onPointerDown={(e) => (e as any).stopPropagation()}
+                                                className="px-2 py-1 rounded bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                                                whileHover={{ scale: 1.02 }}
+                                                whileTap={{ scale: 0.98 }}
+                                              >
+                                                Edit
+                                              </motion.button>
+                                            )}
                                             <motion.button
                                               onClick={() => setDeleteInstTarget(inst)}
                                               onMouseDown={(e) => e.stopPropagation()}
@@ -541,17 +556,32 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                                       {inst.late_fee && inst.late_fee > 0 && (
                                         <span className="text-xs text-orange-500">+{formatCurrency(inst.late_fee)} late</span>
                                       )}
-                                      <motion.button
-                                        onClick={() => setDeleteInstTarget(inst)}
-                                        onMouseDown={(e) => e.stopPropagation()}
-                                        onTouchStart={(e) => e.stopPropagation()}
-                                        onPointerDown={(e) => (e as any).stopPropagation()}
-                                        className="px-2 py-1 rounded bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-                                        whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
-                                      >
-                                        <Trash2Icon className="w-3 h-3 text-red-500" />
-                                      </motion.button>
+                                      <div className="flex gap-1">
+                                        {onEditInstallment && (
+                                          <motion.button
+                                            onClick={() => onEditInstallment(inst)}
+                                            onMouseDown={(e) => e.stopPropagation()}
+                                            onTouchStart={(e) => e.stopPropagation()}
+                                            onPointerDown={(e) => (e as any).stopPropagation()}
+                                            className="px-2 py-1 rounded bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors text-xs"
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
+                                          >
+                                            Edit
+                                          </motion.button>
+                                        )}
+                                        <motion.button
+                                          onClick={() => setDeleteInstTarget(inst)}
+                                          onMouseDown={(e) => e.stopPropagation()}
+                                          onTouchStart={(e) => e.stopPropagation()}
+                                          onPointerDown={(e) => (e as any).stopPropagation()}
+                                          className="px-2 py-1 rounded bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                                          whileHover={{ scale: 1.02 }}
+                                          whileTap={{ scale: 0.98 }}
+                                        >
+                                          <Trash2Icon className="w-3 h-3 text-red-500" />
+                                        </motion.button>
+                                      </div>
                                     </div>
                                   </div>
                                 ))}

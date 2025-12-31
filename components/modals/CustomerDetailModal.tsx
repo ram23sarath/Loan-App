@@ -350,8 +350,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
         </GlassCard>
 
         <div
-          className="mt-2 sm:mt-4 space-y-3 sm:space-y-6 flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-slate-600 dark:scrollbar-track-slate-800"
-          style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+          className="mt-2 sm:mt-4 space-y-3 sm:space-y-6 flex-1 min-h-0 pb-6 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-slate-600 dark:scrollbar-track-slate-800"
+          style={{ paddingBottom: 'calc(3rem + env(safe-area-inset-bottom))' }}
         >
           {/* Loans Section */}
           <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border" disable3D>

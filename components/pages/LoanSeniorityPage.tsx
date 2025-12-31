@@ -1,4 +1,5 @@
 import React, { useMemo, useEffect, useState } from 'react';
+import ReactDOM from 'react-dom';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import PageWrapper from '../ui/PageWrapper';
 import GlassCard from '../ui/GlassCard';
@@ -367,111 +368,114 @@ const LoanSeniorityPage = () => {
         </GlassCard>
       )}
 
-      {/* Entry modal */}
-      <AnimatePresence>
-        {modalCustomer && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-            variants={modalBackdropVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            onClick={closeModal}
-          >
+      {/* Entry modal - WRAPPED IN PORTAL */}
+      {ReactDOM.createPortal(
+        <AnimatePresence>
+          {modalCustomer && (
             <motion.div
-              className="bg-white dark:bg-dark-card rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-md"
-              variants={modalContentVariants}
-              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+              variants={modalBackdropVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              onClick={closeModal}
             >
-              <div className="flex items-center justify-between mb-4">
-                <motion.h3
-                  className="text-lg font-semibold text-gray-800 dark:text-dark-text"
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 }}
-                >
-                  {modalEditingId ? 'Edit' : 'Add'} Seniority Entry for {modalCustomer.name}
-                </motion.h3>
-                <motion.button
-                  onClick={closeModal}
-                  className="text-gray-500 dark:text-dark-muted hover:text-gray-700 dark:hover:text-dark-text"
-                  whileHover={{ scale: 1.2, rotate: 90 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  ✕
-                </motion.button>
-              </div>
               <motion.div
-                className="space-y-3"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.15 }}
+                className="bg-white dark:bg-dark-card rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-md"
+                variants={modalContentVariants}
+                onClick={(e) => e.stopPropagation()}
               >
+                <div className="flex items-center justify-between mb-4">
+                  <motion.h3
+                    className="text-lg font-semibold text-gray-800 dark:text-dark-text"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 }}
+                  >
+                    {modalEditingId ? 'Edit' : 'Add'} Seniority Entry for {modalCustomer.name}
+                  </motion.h3>
+                  <motion.button
+                    onClick={closeModal}
+                    className="text-gray-500 dark:text-dark-muted hover:text-gray-700 dark:hover:text-dark-text"
+                    whileHover={{ scale: 1.2, rotate: 90 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    ✕
+                  </motion.button>
+                </div>
                 <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
+                  className="space-y-3"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.15 }}
                 >
-                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">Station Name</label>
-                  <input value={stationName} onChange={(e) => setStationName(e.target.value)} className="w-full border border-gray-300 dark:border-dark-border rounded px-3 py-2 bg-white dark:bg-dark-bg text-gray-800 dark:text-dark-text focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-shadow" />
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                  >
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">Station Name</label>
+                    <input value={stationName} onChange={(e) => setStationName(e.target.value)} className="w-full border border-gray-300 dark:border-dark-border rounded px-3 py-2 bg-white dark:bg-dark-bg text-gray-800 dark:text-dark-text focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-shadow" />
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.25 }}
+                  >
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">Loan Type</label>
+                    <select value={loanType} onChange={(e) => setLoanType(e.target.value)} className="w-full border border-gray-300 dark:border-dark-border rounded px-3 py-2 bg-white dark:bg-dark-bg text-gray-800 dark:text-dark-text focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-shadow">
+                      <option value="General">General</option>
+                      <option value="Medical">Medical</option>
+                    </select>
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">Loan Request Date</label>
+                    <input
+                      value={loanRequestDate}
+                      onChange={(e) => setLoanRequestDate(e.target.value)}
+                      type="date"
+                      className="w-full border border-gray-300 dark:border-dark-border rounded px-3 py-2 text-base bg-white dark:bg-dark-bg block text-gray-800 dark:text-dark-text focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-shadow"
+                      style={{ minHeight: '42px', WebkitAppearance: 'none' }}
+                    />
+                  </motion.div>
                 </motion.div>
                 <motion.div
+                  className="mt-4 flex justify-end gap-2"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.25 }}
+                  transition={{ delay: 0.35 }}
                 >
-                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">Loan Type</label>
-                  <select value={loanType} onChange={(e) => setLoanType(e.target.value)} className="w-full border border-gray-300 dark:border-dark-border rounded px-3 py-2 bg-white dark:bg-dark-bg text-gray-800 dark:text-dark-text focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-shadow">
-                    <option value="General">General</option>
-                    <option value="Medical">Medical</option>
-                  </select>
+                  <motion.button
+                    onClick={closeModal}
+                    className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-dark-text"
+                    variants={buttonVariants}
+                    initial="idle"
+                    whileHover="hover"
+                    whileTap="tap"
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    onClick={saveModalEntry}
+                    className="px-3 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white"
+                    variants={buttonVariants}
+                    initial="idle"
+                    whileHover="hover"
+                    whileTap="tap"
+                  >
+                    Save
+                  </motion.button>
                 </motion.div>
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">Loan Request Date</label>
-                  <input
-                    value={loanRequestDate}
-                    onChange={(e) => setLoanRequestDate(e.target.value)}
-                    type="date"
-                    className="w-full border border-gray-300 dark:border-dark-border rounded px-3 py-2 text-base bg-white dark:bg-dark-bg block text-gray-800 dark:text-dark-text focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-shadow"
-                    style={{ minHeight: '42px', WebkitAppearance: 'none' }}
-                  />
-                </motion.div>
-              </motion.div>
-              <motion.div
-                className="mt-4 flex justify-end gap-2"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.35 }}
-              >
-                <motion.button
-                  onClick={closeModal}
-                  className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-dark-text"
-                  variants={buttonVariants}
-                  initial="idle"
-                  whileHover="hover"
-                  whileTap="tap"
-                >
-                  Cancel
-                </motion.button>
-                <motion.button
-                  onClick={saveModalEntry}
-                  className="px-3 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white"
-                  variants={buttonVariants}
-                  initial="idle"
-                  whileHover="hover"
-                  whileTap="tap"
-                >
-                  Save
-                </motion.button>
               </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       <GlassCard className="!p-4" hoverScale={false}>
         <motion.h3
@@ -652,68 +656,71 @@ const LoanSeniorityPage = () => {
         )}
       </GlassCard>
 
-      {/* Delete Confirmation Modal */}
-      <AnimatePresence>
-        {deleteTarget && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-            variants={modalBackdropVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            onClick={() => setDeleteTarget(null)}
-          >
+      {/* Delete Confirmation Modal - WRAPPED IN PORTAL */}
+      {ReactDOM.createPortal(
+        <AnimatePresence>
+          {deleteTarget && (
             <motion.div
-              className="bg-white dark:bg-dark-card rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md"
-              variants={modalContentVariants}
-              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+              variants={modalBackdropVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              onClick={() => setDeleteTarget(null)}
             >
-              <motion.h3
-                className="text-lg font-bold mb-3 text-gray-800 dark:text-dark-text"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                Remove from Seniority List?
-              </motion.h3>
-              <motion.p
-                className="mb-4 text-sm text-gray-600 dark:text-dark-muted"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.1 }}
-              >
-                Are you sure you want to remove <span className="font-semibold text-gray-800 dark:text-dark-text">{deleteTarget.name}</span> from the seniority list?
-              </motion.p>
               <motion.div
-                className="flex justify-end gap-2"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 }}
+                className="bg-white dark:bg-dark-card rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md"
+                variants={modalContentVariants}
+                onClick={(e) => e.stopPropagation()}
               >
-                <motion.button
-                  onClick={() => setDeleteTarget(null)}
-                  className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-dark-text"
-                  variants={buttonVariants}
-                  initial="idle"
-                  whileHover="hover"
-                  whileTap="tap"
+                <motion.h3
+                  className="text-lg font-bold mb-3 text-gray-800 dark:text-dark-text"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
                 >
-                  Cancel
-                </motion.button>
-                <motion.button
-                  onClick={confirmDelete}
-                  className="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700"
-                  variants={buttonVariants}
-                  initial="idle"
-                  whileHover="hover"
-                  whileTap="tap"
+                  Remove from Seniority List?
+                </motion.h3>
+                <motion.p
+                  className="mb-4 text-sm text-gray-600 dark:text-dark-muted"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.1 }}
                 >
-                  Remove
-                </motion.button>
+                  Are you sure you want to remove <span className="font-semibold text-gray-800 dark:text-dark-text">{deleteTarget.name}</span> from the seniority list?
+                </motion.p>
+                <motion.div
+                  className="flex justify-end gap-2"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                >
+                  <motion.button
+                    onClick={() => setDeleteTarget(null)}
+                    className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-dark-text"
+                    variants={buttonVariants}
+                    initial="idle"
+                    whileHover="hover"
+                    whileTap="tap"
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    onClick={confirmDelete}
+                    className="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                    variants={buttonVariants}
+                    initial="idle"
+                    whileHover="hover"
+                    whileTap="tap"
+                  >
+                    Remove
+                  </motion.button>
+                </motion.div>
               </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </PageWrapper>
   );
 };

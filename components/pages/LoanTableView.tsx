@@ -1132,119 +1132,122 @@ const LoanTableView: React.FC = () => {
           />
         )}
       </AnimatePresence>
-
       {/* Installment Edit Modal */}
-      <AnimatePresence>
-        {editTarget && (
-          <motion.div
-            variants={modalBackdropVariants}
-            initial="hidden"
-            animate="visible"
-            exit="hidden"
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-2"
-          >
+      {ReactDOM.createPortal(
+        <AnimatePresence>
+          {editTarget && (
             <motion.div
-              variants={modalContentVariants}
-              className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-xs sm:max-w-sm dark:bg-dark-card dark:border dark:border-dark-border"
+              variants={modalBackdropVariants}
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-2"
             >
-              <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 dark:text-dark-text">
-                Edit Installment #{editTarget.installment_number}
-              </h3>
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  if (editTarget) {
-                    await updateInstallment(editTarget.id, {
-                      date: editForm.date,
-                      amount: Number(editForm.amount),
-                      late_fee: Number(editForm.late_fee) || 0,
-                      receipt_number: editForm.receipt_number,
-                    });
-                    setEditTarget(null);
-                  }
-                }}
-                className="space-y-3"
+              <motion.div
+                variants={modalContentVariants}
+                className="bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-xs sm:max-w-sm dark:bg-dark-card dark:border dark:border-dark-border"
+                onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
               >
-                <div>
-                  <label className="block text-sm font-medium mb-1 dark:text-dark-text">Date</label>
-                  <input
-                    type="date"
-                    className="border rounded px-2 py-1 w-full text-base bg-white block dark:bg-slate-700 dark:border-dark-border dark:text-dark-text"
-                    style={{ minHeight: '42px', WebkitAppearance: 'none' }}
-                    value={editForm.date}
-                    onChange={(e) =>
-                      setEditForm((f) => ({ ...f, date: e.target.value }))
+                <h3 className="text-base sm:text-lg font-bold mb-3 sm:mb-4 dark:text-dark-text">
+                  Edit Installment #{editTarget.installment_number}
+                </h3>
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (editTarget) {
+                      await updateInstallment(editTarget.id, {
+                        date: editForm.date,
+                        amount: Number(editForm.amount),
+                        late_fee: Number(editForm.late_fee) || 0,
+                        receipt_number: editForm.receipt_number,
+                      });
+                      setEditTarget(null);
                     }
-                    required
-                    min="1980-01-01"
-                    max="2050-12-31"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1 dark:text-dark-text">
-                    Amount
-                  </label>
-                  <input
-                    type="number"
-                    className="border rounded px-2 py-1 w-full dark:bg-slate-700 dark:border-dark-border dark:text-dark-text"
-                    value={editForm.amount}
-                    onChange={(e) =>
-                      setEditForm((f) => ({ ...f, amount: e.target.value }))
-                    }
-                    required
-                    min="1"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1 dark:text-dark-text">
-                    Late Fee
-                  </label>
-                  <input
-                    type="number"
-                    className="border rounded px-2 py-1 w-full dark:bg-slate-700 dark:border-dark-border dark:text-dark-text"
-                    value={editForm.late_fee}
-                    onChange={(e) =>
-                      setEditForm((f) => ({ ...f, late_fee: e.target.value }))
-                    }
-                    min="0"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1 dark:text-dark-text">
-                    Receipt Number
-                  </label>
-                  <input
-                    type="text"
-                    className="border rounded px-2 py-1 w-full dark:bg-slate-700 dark:border-dark-border dark:text-dark-text"
-                    value={editForm.receipt_number}
-                    onChange={(e) =>
-                      setEditForm((f) => ({
-                        ...f,
-                        receipt_number: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="flex justify-end gap-2 mt-4">
-                  <button
-                    type="button"
-                    onClick={() => setEditTarget(null)}
-                    className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
-                  >
-                    Save
-                  </button>
-                </div>
-              </form>
+                  }}
+                  className="space-y-3"
+                >
+                  <div>
+                    <label className="block text-sm font-medium mb-1 dark:text-dark-text">Date</label>
+                    <input
+                      type="date"
+                      className="border rounded px-2 py-1 w-full text-base bg-white block dark:bg-slate-700 dark:border-dark-border dark:text-dark-text"
+                      style={{ minHeight: '42px', WebkitAppearance: 'none' }}
+                      value={editForm.date}
+                      onChange={(e) =>
+                        setEditForm((f) => ({ ...f, date: e.target.value }))
+                      }
+                      required
+                      min="1980-01-01"
+                      max="2050-12-31"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 dark:text-dark-text">
+                      Amount
+                    </label>
+                    <input
+                      type="number"
+                      className="border rounded px-2 py-1 w-full dark:bg-slate-700 dark:border-dark-border dark:text-dark-text"
+                      value={editForm.amount}
+                      onChange={(e) =>
+                        setEditForm((f) => ({ ...f, amount: e.target.value }))
+                      }
+                      required
+                      min="1"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 dark:text-dark-text">
+                      Late Fee
+                    </label>
+                    <input
+                      type="number"
+                      className="border rounded px-2 py-1 w-full dark:bg-slate-700 dark:border-dark-border dark:text-dark-text"
+                      value={editForm.late_fee}
+                      onChange={(e) =>
+                        setEditForm((f) => ({ ...f, late_fee: e.target.value }))
+                      }
+                      min="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 dark:text-dark-text">
+                      Receipt Number
+                    </label>
+                    <input
+                      type="text"
+                      className="border rounded px-2 py-1 w-full dark:bg-slate-700 dark:border-dark-border dark:text-dark-text"
+                      value={editForm.receipt_number}
+                      onChange={(e) =>
+                        setEditForm((f) => ({
+                          ...f,
+                          receipt_number: e.target.value,
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2 mt-4">
+                    <button
+                      type="button"
+                      onClick={() => setEditTarget(null)}
+                      className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* Delete Loan Confirmation Modal (portal) */}
       {ReactDOM.createPortal(

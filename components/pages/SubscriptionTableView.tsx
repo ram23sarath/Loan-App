@@ -124,10 +124,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
     currentPage * itemsPerPage
   );
 
-  // Check if any entry on the current page has a late fee
-  const hasLateFee = paginatedSubscriptions.some(
-    (sub) => typeof sub.late_fee === "number" && sub.late_fee > 0
-  );
+  // Always show Late Fee column; don't hide it based on page contents
 
   // Reset to page 1 when filter changes
   React.useEffect(() => {
@@ -216,14 +213,12 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
             >
               Receipt
             </th>
-            {hasLateFee && (
-              <th
-                className="px-4 py-2 border-b text-center cursor-pointer dark:border-dark-border dark:text-dark-text"
-                onClick={() => handleSort("late_fee")}
-              >
-                Late Fee
-              </th>
-            )}
+            <th
+              className="px-4 py-2 border-b text-center cursor-pointer dark:border-dark-border dark:text-dark-text"
+              onClick={() => handleSort("late_fee")}
+            >
+              Late Fee
+            </th>
             {!isScopedCustomer && (
               <th className="px-4 py-2 border-b text-center dark:border-dark-border dark:text-dark-text">Actions</th>
             )}
@@ -270,13 +265,11 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                   {sub.date ? formatDate(sub.date) : "-"}
                 </td>
                 <td className="px-4 py-2 border-b text-center dark:border-dark-border dark:text-dark-text">{sub.receipt || "-"}</td>
-                {hasLateFee && (
-                  <td className="px-4 py-2 border-b text-center dark:border-dark-border dark:text-dark-text">
-                    {typeof sub.late_fee === "number" && sub.late_fee > 0
-                      ? `₹${sub.late_fee}`
-                      : "-"}
-                  </td>
-                )}
+                <td className="px-4 py-2 border-b text-center dark:border-dark-border dark:text-dark-text">
+                  {typeof sub.late_fee === "number" && sub.late_fee > 0
+                    ? `₹${sub.late_fee}`
+                    : "-"}
+                </td>
                 {!isScopedCustomer && (
                   <td className="px-4 py-2 border-b dark:border-dark-border">
                     <div className="flex gap-2 items-center justify-center">

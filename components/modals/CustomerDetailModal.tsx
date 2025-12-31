@@ -309,7 +309,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   return ReactDOM.createPortal(
     <motion.div
       className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-black/40 p-4"
-      style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
+      style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
       variants={backdropVariants}
       initial="hidden"
       animate="visible"
@@ -349,7 +349,10 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           </div>
         </GlassCard>
 
-        <div className="mt-2 sm:mt-4 space-y-3 sm:space-y-6 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-slate-600 dark:scrollbar-track-slate-800">
+        <div
+          className="mt-2 sm:mt-4 space-y-3 sm:space-y-6 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-slate-600 dark:scrollbar-track-slate-800"
+          style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+        >
           {/* Loans Section */}
           <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border" disable3D>
             <h3 className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-lg sm:text-2xl font-semibold dark:text-dark-text">
@@ -1028,7 +1031,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               </motion.div>
             )}
           </AnimatePresence>,
-          document.body
+          document.documentElement
         )}
 
         {/* Delete Subscription Confirmation Modal (separate portal) */}
@@ -1076,7 +1079,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               </motion.div>
             )}
           </AnimatePresence>,
-          document.body
+          document.documentElement
         )}
 
         {/* Delete Installment Confirmation Modal (separate portal) */}
@@ -1124,11 +1127,11 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               </motion.div>
             )}
           </AnimatePresence>,
-          document.body
+          document.documentElement
         )}
       </motion.div>
     </motion.div>,
-    document.body
+    document.documentElement
   );
 };
 

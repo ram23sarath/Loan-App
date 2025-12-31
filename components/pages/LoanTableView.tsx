@@ -1132,6 +1132,7 @@ const LoanTableView: React.FC = () => {
           />
         )}
       </AnimatePresence>
+      
       {/* Installment Edit Modal */}
       {ReactDOM.createPortal(
         <AnimatePresence>

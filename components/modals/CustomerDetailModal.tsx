@@ -287,6 +287,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   return ReactDOM.createPortal(
     <motion.div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      style={{ paddingTop: 'env(safe-area-inset-top, 1rem)', paddingBottom: 'env(safe-area-inset-bottom, 1rem)' }}
       variants={backdropVariants}
       initial="hidden"
       animate="visible"

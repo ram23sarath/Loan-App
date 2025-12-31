@@ -8,47 +8,47 @@ import { useData } from '../../context/DataContext';
 import Toast from '../ui/Toast';
 import type { Customer } from '../../types';
 
-type Props = {
-  customer: Customer;
-  onClose: () => void;
-};
+type Props = { customer: Customer; onClose: () => void };
 
 type FormInputs = {
+  type: 'credit' | 'expenditure';
+  subtype?: string;
   amount: number;
   date: string;
   receipt?: string;
-  late_fee?: number | null;
+  notes?: string;
 };
 
-const getToday = () => new Date().toISOString().slice(0, 10);
+const today = () => new Date().toISOString().slice(0, 10);
 
-const RecordSubscriptionModal: React.FC<Props> = ({ customer, onClose }) => {
-  const { addSubscription } = useData();
-  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<FormInputs>({ defaultValues: { date: getToday(), late_fee: 0 } });
+const RecordDataEntryModal: React.FC<Props> = ({ customer, onClose }) => {
+  const { addDataEntry } = useData();
+  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<FormInputs>({ defaultValues: { type: 'credit', date: today(), subtype: '' } });
   const [toast, setToast] = React.useState<{ show: boolean; message: string; type?: 'success' | 'error' }>({ show: false, message: '', type: 'success' });
 
-  const closeWithSuccess = (message: string) => {
-    // Close immediately; keep toast transient locally
+  const closeWithSuccess = (msg: string) => {
+    // Close immediately; show transient toast locally
     try { onClose(); } finally {
-      setToast({ show: true, message, type: 'success' });
+      setToast({ show: true, message: msg, type: 'success' });
       setTimeout(() => setToast({ show: false, message: '' }), 900);
     }
   };
 
   const onSubmit: SubmitHandler<FormInputs> = async (data) => {
     try {
-      const payload = {
+      await addDataEntry({
         customer_id: customer.id,
-        amount: Number(data.amount),
         date: data.date,
-        receipt: data.receipt || '',
-        late_fee: data.late_fee != null ? Number(data.late_fee) : null,
-      };
-      await addSubscription(payload);
+        amount: Number(data.amount),
+        type: data.type as any,
+        subtype: data.subtype || null,
+        receipt_number: data.receipt || '',
+        notes: data.notes || '',
+      } as any);
       reset();
       onClose();
     } catch (err: any) {
-      setToast({ show: true, message: err?.message || 'Failed to record subscription', type: 'error' });
+      setToast({ show: true, message: err?.message || 'Failed to record entry', type: 'error' });
     }
   };
 
@@ -66,7 +66,7 @@ const RecordSubscriptionModal: React.FC<Props> = ({ customer, onClose }) => {
   }, [onClose]);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
-  useFocusTrap(containerRef, '#subscription_amount_input');
+  useFocusTrap(containerRef, '#dataentry_amount_input');
 
   return ReactDOM.createPortal(
     <motion.div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/40" onClick={onClose}
@@ -82,11 +82,24 @@ const RecordSubscriptionModal: React.FC<Props> = ({ customer, onClose }) => {
         transition={{ type: 'spring', stiffness: 300, damping: 24 }}
       >
         <GlassCard className="!p-4">
-          <h3 className="text-lg font-semibold mb-3">Record Subscription for {customer.name}</h3>
+          <h3 className="text-lg font-semibold mb-3">Record Misc Entry for {customer.name}</h3>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
             <div>
+              <label className="block text-sm text-gray-600">Type</label>
+              <select {...register('type')} className="w-full p-2 border border-gray-300 rounded dark:bg-dark-bg dark:border-dark-border dark:text-dark-text">
+                <option value="credit">Credit</option>
+                <option value="expenditure">Expenditure</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm text-gray-600">Subtype (optional)</label>
+              <input type="text" {...register('subtype')} className="w-full p-2 border border-gray-300 rounded dark:bg-dark-bg dark:border-dark-border dark:text-dark-text" />
+            </div>
+
+            <div>
               <label className="block text-sm text-gray-600">Amount</label>
-              <input id="subscription_amount_input" autoFocus type="number" step="0.01" {...register('amount', { required: 'Required', min: { value: 0, message: 'Must be >= 0' } })} className="w-full p-2 border border-gray-300 rounded dark:bg-dark-bg dark:border-dark-border dark:text-dark-text" />
+              <input id="dataentry_amount_input" autoFocus type="number" step="0.01" {...register('amount', { required: 'Required', min: { value: 0.01, message: 'Must be positive' } })} className="w-full p-2 border border-gray-300 rounded dark:bg-dark-bg dark:border-dark-border dark:text-dark-text" />
               {errors.amount && <div className="text-red-500 text-xs">{errors.amount.message as any}</div>}
             </div>
 
@@ -101,13 +114,13 @@ const RecordSubscriptionModal: React.FC<Props> = ({ customer, onClose }) => {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-600">Late Fee (optional)</label>
-              <input type="number" step="0.01" {...register('late_fee')} className="w-full p-2 border border-gray-300 rounded dark:bg-dark-bg dark:border-dark-border dark:text-dark-text" />
+              <label className="block text-sm text-gray-600">Notes (optional)</label>
+              <textarea {...register('notes')} className="w-full p-2 border border-gray-300 rounded dark:bg-dark-bg dark:border-dark-border dark:text-dark-text" rows={3} />
             </div>
 
             <div className="flex justify-end gap-2">
               <button type="button" onClick={onClose} className="px-3 py-1 rounded bg-gray-200 dark:bg-slate-700 dark:text-dark-text">Cancel</button>
-              <button type="submit" disabled={isSubmitting} className={`px-3 py-1 rounded bg-cyan-600 text-white dark:bg-cyan-600 flex items-center justify-center ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}>
+              <button type="submit" disabled={isSubmitting} className={`px-3 py-1 rounded bg-pink-600 text-white dark:bg-pink-700 flex items-center justify-center ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}>
                 {isSubmitting ? (
                   <>
                     <svg className="animate-spin h-4 w-4 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -116,7 +129,7 @@ const RecordSubscriptionModal: React.FC<Props> = ({ customer, onClose }) => {
                     </svg>
                     Saving...
                   </>
-                ) : 'Save Subscription'}
+                ) : 'Save Entry'}
               </button>
             </div>
           </form>
@@ -128,4 +141,4 @@ const RecordSubscriptionModal: React.FC<Props> = ({ customer, onClose }) => {
   );
 };
 
-export default RecordSubscriptionModal;
+export default RecordDataEntryModal;

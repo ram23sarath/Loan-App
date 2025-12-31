@@ -206,6 +206,28 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [deleteInstTarget, deleteSubTarget, deleteLoanTarget, onClose]);
 
+  // Prevent background scrolling while modal is open (handle iOS/Android correctly)
+  const scrollYRef = useRef<number>(0);
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    scrollYRef.current = window.scrollY || window.pageYOffset || 0;
+    const bodyStyle = document.body.style;
+    bodyStyle.position = 'fixed';
+    bodyStyle.top = `-${scrollYRef.current}px`;
+    bodyStyle.left = '0';
+    bodyStyle.right = '0';
+    bodyStyle.width = '100%';
+
+    return () => {
+      bodyStyle.position = '';
+      bodyStyle.top = '';
+      bodyStyle.left = '';
+      bodyStyle.right = '';
+      bodyStyle.width = '';
+      window.scrollTo(0, scrollYRef.current);
+    };
+  }, []);
+
   const confirmDeleteLoan = async () => {
     if (!deleteLoanTarget) return;
     try {

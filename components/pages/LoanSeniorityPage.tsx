@@ -675,7 +675,7 @@ const LoanSeniorityPage = () => {
               >
                 <motion.h3
                   className="text-lg font-bold mb-3 text-gray-800 dark:text-dark-text"
-                  initial={{ opacity: 0, y: -10 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                 >
                   Remove from Seniority List?

@@ -6,6 +6,8 @@ import type { Customer, LoanWithCustomer, SubscriptionWithCustomer, Installment,
 import GlassCard from '../ui/GlassCard';
 import RecordLoanModal from './RecordLoanModal';
 import RecordSubscriptionModal from './RecordSubscriptionModal';
+import RecordDataEntryModal from './RecordDataEntryModal';
+import useFocusTrap from '../hooks/useFocusTrap';
 import { XIcon, FileDownIcon, LandmarkIcon, HistoryIcon, Trash2Icon } from '../../constants';
 import { formatDate } from '../../utils/dateFormatter';
 
@@ -157,6 +159,15 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   const [deleteInstTarget, setDeleteInstTarget] = useState<Installment | null>(null);
   const [showRecordLoan, setShowRecordLoan] = useState<boolean>(false);
   const [showRecordSubscription, setShowRecordSubscription] = useState<boolean>(false);
+  const [showRecordDataEntry, setShowRecordDataEntry] = useState<boolean>(false);
+
+  const deleteLoanRef = useRef<HTMLDivElement | null>(null);
+  const deleteSubRef = useRef<HTMLDivElement | null>(null);
+  const deleteInstRef = useRef<HTMLDivElement | null>(null);
+
+  useFocusTrap(deleteLoanRef, 'button');
+  useFocusTrap(deleteSubRef, 'button');
+  useFocusTrap(deleteInstRef, 'button');
 
   const handleNoteClick = (id: string) => {
     setExpandedNoteId(expandedNoteId === id ? null : id);
@@ -800,7 +811,17 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           {/* Data Entries Section */}
           <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border" disable3D>
             <div className="mb-3 sm:mb-4">
-              <h3 className="flex items-center gap-2 sm:gap-3 text-lg sm:text-2xl font-semibold text-pink-700 dark:text-pink-400">Misc Data Entries</h3>
+              <h3 className="flex items-center gap-2 sm:gap-3 text-lg sm:text-2xl font-semibold text-pink-700 dark:text-pink-400">
+                Misc Data Entries
+                <div className="ml-auto">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowRecordDataEntry(true); }}
+                    className="ml-2 px-3 py-1 rounded bg-pink-600 text-white text-sm hover:bg-pink-700"
+                  >
+                    Record Entry
+                  </button>
+                </div>
+              </h3>
             </div>
             {dataEntries.length > 0 ? (
               <div>
@@ -913,12 +934,31 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           </GlassCard>
         </div>
 
-        {showRecordLoan && (
-          <RecordLoanModal
-            customer={customer}
-            onClose={() => setShowRecordLoan(false)}
-          />
-        )}
+        <AnimatePresence>
+          {showRecordLoan && (
+            <RecordLoanModal
+              key="record-loan"
+              customer={customer}
+              onClose={() => setShowRecordLoan(false)}
+            />
+          )}
+
+          {showRecordSubscription && (
+            <RecordSubscriptionModal
+              key="record-subscription"
+              customer={customer}
+              onClose={() => setShowRecordSubscription(false)}
+            />
+          )}
+
+          {showRecordDataEntry && (
+            <RecordDataEntryModal
+              key="record-dataentry"
+              customer={customer}
+              onClose={() => setShowRecordDataEntry(false)}
+            />
+          )}
+        </AnimatePresence>
 
         {/* Delete Loan Confirmation Modal (render into its own portal to avoid stacking issues) */}
         {ReactDOM.createPortal(
@@ -939,6 +979,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   initial="hidden"
                   animate="visible"
                   exit="exit"
+                  ref={deleteLoanRef}
                   className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border relative z-[100000]"
                   onClick={e => e.stopPropagation()}
                 >
@@ -986,6 +1027,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   initial="hidden"
                   animate="visible"
                   exit="exit"
+                  ref={deleteSubRef}
                   className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border relative z-[100000]"
                   onClick={e => e.stopPropagation()}
                 >
@@ -1033,6 +1075,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   initial="hidden"
                   animate="visible"
                   exit="exit"
+                  ref={deleteInstRef}
                   className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border relative z-[100000]"
                   onClick={e => e.stopPropagation()}
                 >

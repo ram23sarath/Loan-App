@@ -513,9 +513,9 @@ const CustomerListPage = () => {
                                     const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
                                     const rowNumber = (currentPages.both - 1) * itemsPerPage + idx + 1;
                                     return (
-                                      <motion.tr key={customer.id} className="bg-white hover:bg-indigo-50/50 transition dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
+                                      <motion.tr key={customer.id} className="bg-white hover:bg-indigo-50/50 transition dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50" onTap={() => setSelectedCustomer(customer)} onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                         <td className="px-2 py-2 text-gray-400 text-sm dark:text-dark-muted dark:border-dark-border">{rowNumber}</td>
-                                        <td className="px-4 py-2 font-bold dark:border-dark-border"><Link to={`/customers/${customer.id}`} className="text-indigo-700 dark:text-indigo-400 hover:underline" onClick={(e) => e.stopPropagation()}>{customer.name}</Link></td>
+                                        <td className="px-4 py-2 font-bold dark:border-dark-border"><Link to={`/customers/${customer.id}`} className="text-indigo-700 dark:text-indigo-400 hover:underline" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>{customer.name}</Link></td>
                                         <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">{customer.phone}</td>
                                         <td className="px-4 py-2 text-gray-700 dark:text-dark-text dark:border-dark-border">{customerLoans.length}</td>
                                         <td className="px-4 py-2 text-green-600 dark:text-green-400 dark:border-dark-border">{formatCurrency(loanValue)}</td>
@@ -558,6 +558,7 @@ const CustomerListPage = () => {
                                     )}
                                     <motion.div
                                       className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
+                                      onTap={() => setSelectedCustomer(customer)}
                                       onClick={() => setSelectedCustomer(customer)}
                                       initial={{ opacity: 0 }}
                                       animate={{ opacity: 1 }}
@@ -582,7 +583,7 @@ const CustomerListPage = () => {
                                     >
                                       <div className="flex items-center gap-1">
                                         <span className="text-xs text-gray-400 dark:text-dark-muted">#{rowNumber}</span>
-                                        <Link to={`/customers/${customer.id}`} className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate" onClick={(e) => e.stopPropagation()}>{customer.name}</Link>
+                                        <Link to={`/customers/${customer.id}`} className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>{customer.name}</Link>
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
                                         Phone: <span className="font-semibold text-gray-700 dark:text-dark-text">{customer.phone}</span>
@@ -680,9 +681,9 @@ const CustomerListPage = () => {
                                     const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
                                     const rowNumber = (currentPages.loans - 1) * itemsPerPage + idx + 1;
                                     return (
-                                      <motion.tr key={customer.id} className="bg-white hover:bg-blue-50/50 transition dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
+                                      <motion.tr key={customer.id} className="bg-white hover:bg-blue-50/50 transition dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50" onTap={() => setSelectedCustomer(customer)} onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                         <td className="px-2 py-2 text-gray-400 text-sm dark:text-dark-muted dark:border-dark-border">{rowNumber}</td>
-                                        <td className="px-4 py-2 font-bold dark:border-dark-border"><Link to={`/customers/${customer.id}`} className="text-indigo-700 dark:text-indigo-400 hover:underline" onClick={(e) => e.stopPropagation()}>{customer.name}</Link></td>
+                                        <td className="px-4 py-2 font-bold dark:border-dark-border"><Link to={`/customers/${customer.id}`} className="text-indigo-700 dark:text-indigo-400 hover:underline" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>{customer.name}</Link></td>
                                         <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">{customer.phone}</td>
                                         <td className="px-4 py-2 text-gray-700 dark:text-dark-text dark:border-dark-border">{customerLoans.length}</td>
                                         <td className="px-4 py-2 text-green-600 dark:text-green-400 dark:border-dark-border">{formatCurrency(loanValue)}</td>
@@ -723,6 +724,7 @@ const CustomerListPage = () => {
                                     )}
                                     <motion.div
                                       className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
+                                      onTap={() => setSelectedCustomer(customer)}
                                       onClick={() => setSelectedCustomer(customer)}
                                       initial={{ opacity: 0 }}
                                       animate={{ opacity: 1 }}
@@ -747,7 +749,7 @@ const CustomerListPage = () => {
                                     >
                                       <div className="flex items-center gap-1">
                                         <span className="text-xs text-gray-400 dark:text-dark-muted">#{rowNumber}</span>
-                                        <Link to={`/customers/${customer.id}`} className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate" onClick={(e) => e.stopPropagation()}>{customer.name}</Link>
+                                        <Link to={`/customers/${customer.id}`} className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>{customer.name}</Link>
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
                                         Phone: <span className="font-semibold text-gray-700 dark:text-dark-text">{customer.phone}</span>
@@ -842,9 +844,9 @@ const CustomerListPage = () => {
                                     const subValue = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
                                     const rowNumber = (currentPages.subs - 1) * itemsPerPage + idx + 1;
                                     return (
-                                      <motion.tr key={customer.id} className="bg-white hover:bg-cyan-50/50 transition dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
+                                      <motion.tr key={customer.id} className="bg-white hover:bg-cyan-50/50 transition dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50" onTap={() => setSelectedCustomer(customer)} onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                         <td className="px-2 py-2 text-gray-400 text-sm dark:text-dark-muted dark:border-dark-border">{rowNumber}</td>
-                                        <td className="px-4 py-2 font-bold dark:border-dark-border"><Link to={`/customers/${customer.id}`} className="text-indigo-700 dark:text-indigo-400 hover:underline" onClick={(e) => e.stopPropagation()}>{customer.name}</Link></td>
+                                        <td className="px-4 py-2 font-bold dark:border-dark-border"><Link to={`/customers/${customer.id}`} className="text-indigo-700 dark:text-indigo-400 hover:underline" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>{customer.name}</Link></td>
                                         <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">{customer.phone}</td>
                                         <td className="px-4 py-2 text-cyan-600 dark:text-cyan-400 dark:border-dark-border">{customerSubscriptions.length}</td>
                                         <td className="px-4 py-2 text-cyan-600 dark:text-cyan-400 dark:border-dark-border">{formatCurrency(subValue)}</td>
@@ -885,6 +887,7 @@ const CustomerListPage = () => {
                                     )}
                                     <motion.div
                                       className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
+                                      onTap={() => setSelectedCustomer(customer)}
                                       onClick={() => setSelectedCustomer(customer)}
                                       initial={{ opacity: 0 }}
                                       animate={{ opacity: 1 }}
@@ -909,7 +912,7 @@ const CustomerListPage = () => {
                                     >
                                       <div className="flex items-center gap-1">
                                         <span className="text-xs text-gray-400 dark:text-dark-muted">#{rowNumber}</span>
-                                        <Link to={`/customers/${customer.id}`} className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate" onClick={(e) => e.stopPropagation()}>{customer.name}</Link>
+                                        <Link to={`/customers/${customer.id}`} className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>{customer.name}</Link>
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
                                         Phone: <span className="font-semibold text-gray-700 dark:text-dark-text">{customer.phone}</span>
@@ -1001,9 +1004,9 @@ const CustomerListPage = () => {
                                   {paginatedCustomers.map((customer, idx) => {
                                     const rowNumber = (currentPages.neither - 1) * itemsPerPage + idx + 1;
                                     return (
-                                      <motion.tr key={customer.id} className="bg-white hover:bg-gray-50/50 transition dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50" onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
+                                      <motion.tr key={customer.id} className="bg-white hover:bg-gray-50/50 transition dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50" onTap={() => setSelectedCustomer(customer)} onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
                                         <td className="px-2 py-2 text-gray-400 text-sm dark:text-dark-muted dark:border-dark-border">{rowNumber}</td>
-                                        <td className="px-4 py-2 font-bold dark:border-dark-border"><Link to={`/customers/${customer.id}`} className="text-indigo-700 dark:text-indigo-400 hover:underline" onClick={(e) => e.stopPropagation()}>{customer.name}</Link></td>
+                                        <td className="px-4 py-2 font-bold dark:border-dark-border"><Link to={`/customers/${customer.id}`} className="text-indigo-700 dark:text-indigo-400 hover:underline" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>{customer.name}</Link></td>
                                         <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">{customer.phone}</td>
                                         <td className="px-4 py-2 dark:border-dark-border">
                                           <div className="flex justify-center gap-2">
@@ -1040,6 +1043,7 @@ const CustomerListPage = () => {
                                     )}
                                     <motion.div
                                       className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
+                                      onTap={() => setSelectedCustomer(customer)}
                                       onClick={() => setSelectedCustomer(customer)}
                                       initial={{ opacity: 0 }}
                                       animate={{ opacity: 1 }}
@@ -1064,7 +1068,7 @@ const CustomerListPage = () => {
                                     >
                                       <div className="flex items-center gap-1">
                                         <span className="text-xs text-gray-400 dark:text-dark-muted">#{rowNumber}</span>
-                                        <Link to={`/customers/${customer.id}`} className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate" onClick={(e) => e.stopPropagation()}>{customer.name}</Link>
+                                        <Link to={`/customers/${customer.id}`} className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>{customer.name}</Link>
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
                                         Phone: <span className="font-semibold text-gray-700 dark:text-dark-text">{customer.phone}</span>

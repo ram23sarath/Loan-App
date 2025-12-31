@@ -2,8 +2,8 @@ name: Database Backup
 
 on:
   schedule:
-    # Weekly on Sunday at 03:00 UTC (was daily)
-    - cron: '0 3 * * 0'
+    # Daily at 09:00 PM IST (15:30 UTC)
+    - cron: '30 15 * * *'
   workflow_dispatch:
     inputs:
       reason:

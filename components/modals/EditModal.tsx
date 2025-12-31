@@ -609,7 +609,11 @@ const EditModal: React.FC<EditModalProps> = ({
         )}
       </motion.div>
     </motion.div>,
-    document.body
+    // Attach modal to the documentElement instead of `body` so it's
+    // positioned relative to the viewport even when `body` is made
+    // `position: fixed` by other modals (prevents centering relative
+    // to the page content).
+    document.documentElement
   );
 };
 

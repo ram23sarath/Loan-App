@@ -624,7 +624,14 @@ const DataPage = () => {
         {typeof document !== 'undefined' && ReactDOM.createPortal(
           <AnimatePresence>
             {editEntryId && (
-              <motion.div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditEntryId(null)}>
+              <motion.div
+                className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-black/30 p-4"
+                style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setEditEntryId(null)}
+              >
                 <motion.div role="dialog" aria-modal="true" aria-labelledby="edit-entry-modal-title" variants={modalVariants} initial="hidden" animate="visible" exit="exit" className="bg-white rounded-xl shadow-lg p-4 w-full max-w-sm max-h-[90vh] overflow-y-auto mx-4 dark:bg-dark-card dark:border dark:border-dark-border" onClick={(e) => e.stopPropagation()}>
                   <div id="edit-entry-modal-title" className="text-lg font-semibold text-gray-800 mb-4 dark:text-dark-text">Edit Entry</div>
                   <div className="grid grid-cols-1 gap-3">

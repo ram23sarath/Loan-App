@@ -189,6 +189,10 @@ const SummaryPage = () => {
 
     useState<number>(defaultFYStart);
 
+  const [showAllFYOptions, setShowAllFYOptions] = useState(false);
+  const [fyDropdownOpen, setFyDropdownOpen] = useState(false);
+  const fyDropdownRef = React.useRef<HTMLDivElement>(null);
+
 
 
   // Build FY options from earliest date in data to latest
@@ -241,7 +245,15 @@ const SummaryPage = () => {
 
     const minYear = Math.max(2013, rawMinYear);
 
-    const maxYear = Math.max(...allDates.map((d) => getFYStartYearForDate(d)));
+    // Ensure the current FY (based on today's date) is always available even if no data exists yet
+
+    const maxYear = Math.max(
+
+      ...allDates.map((d) => getFYStartYearForDate(d)),
+
+      defaultFYStart
+
+    );
 
     const opts: number[] = [];
 
@@ -251,7 +263,21 @@ const SummaryPage = () => {
 
   }, [subscriptions, installments, dataEntries, defaultFYStart]);
 
-
+  // Handle FY dropdown click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (fyDropdownRef.current && !fyDropdownRef.current.contains(event.target as Node)) {
+        setFyDropdownOpen(false);
+        setShowAllFYOptions(false);
+      }
+    };
+    if (fyDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [fyDropdownOpen]);
 
   const fyLabel = (startYear: number) =>
 
@@ -668,27 +694,16 @@ const SummaryPage = () => {
         );
 
         insts.forEach((inst) => {
-
           // approximate: interest portion is amount beyond remaining principal, but we don't have amortization schedule;
-
           items.push({
-
             id: inst.id,
-
             date: inst.date,
-
-            amount: 0,
-
+            amount: inst.amount || 0,
             receipt: inst.receipt_number,
-
             source: "Installment (interest portion)",
-
             customer: loan.customers?.name || "",
-
           });
-
         });
-
       });
 
       // We'll include a note that amounts are aggregated above; actual per-installment interest split is not exactly stored
@@ -1910,30 +1925,55 @@ const SummaryPage = () => {
                 </div>
 
                 <div className="flex items-center gap-3 no-print">
-
-                  <select
-
-                    value={selectedFYStart}
-
-                    onChange={(e) => setSelectedFYStart(Number(e.target.value))}
-
-                    className="px-5 py-2 rounded border bg-white dark:bg-slate-700 text-base dark:text-white dark:border-slate-600"
-
-                    style={{ minWidth: 150 }}
-
-                  >
-
-                    {fyOptions.map((y) => (
-
-                      <option key={y} value={y}>
-
-                        {fyLabel(y)}
-
-                      </option>
-
-                    ))}
-
-                  </select>
+                  <div className="relative" ref={fyDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setFyDropdownOpen(!fyDropdownOpen)}
+                      className="bg-white dark:bg-dark-bg border border-gray-300 dark:border-dark-border rounded-lg py-2 px-4 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 flex justify-between items-center text-gray-800 dark:text-dark-text"
+                      style={{ minWidth: 150 }}
+                    >
+                      <span>{fyLabel(selectedFYStart)}</span>
+                      <svg
+                        className={`w-4 h-4 ml-2 transition-transform ${fyDropdownOpen ? 'rotate-180' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {fyDropdownOpen && (
+                      <div className="absolute z-10 mt-1 w-full bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border rounded-lg shadow-lg max-h-60 overflow-auto animate-fadeIn">
+                        <ul>
+                          {(showAllFYOptions ? fyOptions : fyOptions.slice(0, 5)).map((y) => (
+                            <li
+                              key={y}
+                              onClick={() => {
+                                setSelectedFYStart(y);
+                                setFyDropdownOpen(false);
+                                setShowAllFYOptions(false);
+                              }}
+                              className={`px-4 py-2 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-gray-800 dark:text-dark-text ${
+                                selectedFYStart === y ? 'bg-indigo-50 dark:bg-indigo-900/50 font-bold' : ''
+                              }`}
+                            >
+                              {fyLabel(y)}
+                            </li>
+                          ))}
+                          {!showAllFYOptions && fyOptions.length > 5 && (
+                            <li
+                              key="view-more"
+                              onClick={() => setShowAllFYOptions(true)}
+                              className="px-4 py-2 cursor-pointer text-gray-500 dark:text-gray-400 italic hover:bg-gray-100 dark:hover:bg-gray-700 border-t border-gray-200 dark:border-dark-border"
+                            >
+                              -- View More --
+                            </li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
 
                 </div>
 

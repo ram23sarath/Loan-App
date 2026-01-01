@@ -1097,6 +1097,13 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               customer={customer}
               onClose={() => setShowRecordLoan(false)}
               hasOngoingLoan={hasOngoingLoan}
+              ongoingLoanId={loans.find(l => {
+                const loanInstallments = installmentsByLoanId.get(l.id) || [];
+                const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
+                const totalRepayable = l.original_amount + l.interest_amount;
+                const paymentPercentage = (amountPaid / totalRepayable) * 100;
+                return paymentPercentage < 80;
+              })?.id || ''}
             />
           )}
 

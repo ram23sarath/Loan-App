@@ -177,19 +177,6 @@ const EditModal: React.FC<EditModalProps> = ({
                 />
               </div>
               <div className="mt-3">
-                <label className="block text-sm font-medium mb-1 dark:text-gray-200">
-                  Installment Number
-                </label>
-                <input
-                  name="installment_number"
-                  data-section="loan"
-                  type="number"
-                  value={form.loan?.installment_number || ""}
-                  onChange={handleCombinedChange}
-                  className="w-full border border-gray-300 dark:border-gray-700 dark:bg-slate-700 dark:text-gray-100 rounded px-3 py-2"
-                />
-              </div>
-              <div className="mt-3">
                 <label className="block text-sm font-medium mb-1">
                   Total Repayable
                 </label>

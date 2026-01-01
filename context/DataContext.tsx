@@ -951,6 +951,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                             } catch (e) { }
                         } else {
                             const successData = await resp.json().catch(() => ({}));
+                            console.log('✅ Background user auto-created:', successData.user_id || '<unknown>');
                             try {
                                 if (typeof window !== 'undefined') {
                                     window.dispatchEvent(new CustomEvent('background-user-create', {
@@ -1052,7 +1053,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                         const errData = await resp.json().catch(() => ({}));
                         console.warn('Warning: failed to delete linked auth user:', errData.error || resp.statusText);
                     } else {
-                        // User deleted successfully
+                        console.log('✅ Linked auth user deleted for customer', customerId);
                     }
                 } catch (e) {
                     console.warn('Warning: error calling delete-user-from-customer function', e);

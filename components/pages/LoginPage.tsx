@@ -27,6 +27,15 @@ const LoginPage = () => {
   const [showLoginOnMobile, setShowLoginOnMobile] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const defaultLandingPath = "/";
+  const heroWords = [
+    "Welcome",
+    "to",
+    "Chittor",
+    "District",
+    "Welfare",
+    "Association",
+    "LoanApp!",
+  ];
 
   // Detect if screen is mobile size
   useEffect(() => {
@@ -98,6 +107,28 @@ const LoginPage = () => {
       x: 0,
     },
   };
+  const wordContainerVariants = {
+    hidden: { opacity: 0, y: 14 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.7,
+        ease: "easeOut",
+        staggerChildren: 0.08,
+        delayChildren: 0.15,
+      },
+    },
+  };
+  const wordVariants = {
+    hidden: { opacity: 0, y: 22, filter: "blur(8px)" },
+    visible: {
+      opacity: 1,
+      y: 0,
+      filter: "blur(0px)",
+      transition: { duration: 0.6, ease: "easeOut" },
+    },
+  };
 
   // If user is already logged in and we are not showing animation, redirect
   if (session && !showAnimation) {
@@ -115,24 +146,42 @@ const LoginPage = () => {
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
-        <motion.h1 
-          className="text-5xl font-extrabold mb-6 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 dark:from-indigo-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent leading-tight"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
+        <motion.h1
+          className="text-5xl font-extrabold mb-6 leading-tight tracking-tight text-center md:text-left"
+          variants={wordContainerVariants}
+          initial="hidden"
+          animate="visible"
         >
-          Welcome to Chittor District Welfare Association LoanApp!
+          {heroWords.map((word, index) => (
+            <motion.span key={index} variants={wordVariants} className="inline-block px-1">
+              <span className="premium-gradient-text drop-shadow-[0_8px_28px_rgba(99,102,241,0.32)]">
+                {word}
+              </span>
+            </motion.span>
+          ))}
         </motion.h1>
         <motion.div
-          className="flex flex-col gap-2 mt-4"
+          className="flex flex-col gap-2 mt-4 text-center md:text-left"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.6, delay: 0.5 }}
         >
-          <p className="text-lg text-gray-600 dark:text-gray-400 font-medium">Developed and Maintained By</p>
-          <p className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+          <motion.p
+            className="text-lg text-gray-600 dark:text-gray-400 font-medium"
+            style={{ willChange: "opacity" }}
+            animate={{ opacity: [0.82, 1, 0.86] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          >
+            Developed and Maintained By
+          </motion.p>
+          <motion.p
+            className="text-3xl font-bold premium-gradient-text drop-shadow-[0_12px_30px_rgba(236,72,153,0.35)]"
+            style={{ willChange: "transform" }}
+            animate={{ y: [0, -4, 0] }}
+            transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
+          >
             I J Reddy
-          </p>
+          </motion.p>
         </motion.div>
         <button
           onClick={handleScrollToLogin}

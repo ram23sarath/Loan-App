@@ -206,7 +206,7 @@ const LoginPage = () => {
               animate={{ y: [0, -4, 0] }}
               transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
             >
-              I J Reddy
+              I J Reddy DOP Chittor Fire Station
             </motion.p>
           </motion.div>
           <button

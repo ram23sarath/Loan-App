@@ -201,6 +201,41 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     setExpandedNoteId(expandedNoteId === id ? null : id);
   };
 
+  // Calculate if customer has an ongoing loan
+  const hasOngoingLoan = useMemo(() => {
+    return loans.some((loan) => {
+      const loanInstallments = installmentsByLoanId.get(loan.id) || [];
+      const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
+      const totalRepayable = loan.original_amount + loan.interest_amount;
+      const paymentPercentage = (amountPaid / totalRepayable) * 100;
+      return paymentPercentage < 80; // Ongoing if less than 80% paid
+    });
+  }, [loans, installmentsByLoanId]);
+
+  // Get details of ongoing loan for tooltip
+  const ongoingLoanInfo = useMemo(() => {
+    const ongoing = loans.find((loan) => {
+      const loanInstallments = installmentsByLoanId.get(loan.id) || [];
+      const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
+      const totalRepayable = loan.original_amount + loan.interest_amount;
+      const paymentPercentage = (amountPaid / totalRepayable) * 100;
+      return paymentPercentage < 80;
+    });
+    
+    if (!ongoing) return null;
+    
+    const loanInstallments = installmentsByLoanId.get(ongoing.id) || [];
+    const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
+    const totalRepayable = ongoing.original_amount + ongoing.interest_amount;
+    const paymentPercentage = Math.round((amountPaid / totalRepayable) * 100);
+    
+    return {
+      paymentPercentage,
+      amountPaid,
+      totalRepayable,
+    };
+  }, [loans, installmentsByLoanId]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (expandedNoteId && noteRefs.current[expandedNoteId] && !noteRefs.current[expandedNoteId]?.contains(event.target as Node)) {
@@ -405,12 +440,22 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 </span>
               )}
               <div className="ml-auto">
-                <button
+                <motion.button
                   onClick={(e) => { e.stopPropagation(); setShowRecordLoan(true); }}
-                  className="ml-2 px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700"
+                  disabled={hasOngoingLoan}
+                  className={`ml-2 px-3 py-1 rounded text-white text-sm ${
+                    hasOngoingLoan
+                      ? 'bg-gray-400 cursor-not-allowed opacity-60'
+                      : 'bg-indigo-600 hover:bg-indigo-700'
+                  }`}
+                  title={hasOngoingLoan ? `Ongoing loan at ${ongoingLoanInfo?.paymentPercentage}% paid. Customer must pay >80% before recording new loan.` : ''}
+                  variants={buttonVariants}
+                  initial="idle"
+                  whileHover={!hasOngoingLoan ? "hover" : undefined}
+                  whileTap={!hasOngoingLoan ? "tap" : undefined}
                 >
                   Record Loan
-                </button>
+                </motion.button>
               </div>
             </h3>
             {loans.length > 0 ? (

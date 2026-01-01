@@ -77,6 +77,41 @@ const AddRecordPage = () => {
     return loans.filter((loan) => loan.customer_id === selectedCustomerId);
   }, [selectedCustomerId, loans]);
 
+  // Calculate if customer has an ongoing loan
+  const hasOngoingLoan = useMemo(() => {
+    return customerLoans.some((loan) => {
+      const loanInstallments = installmentsByLoanId.get(loan.id) || [];
+      const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
+      const totalRepayable = loan.original_amount + loan.interest_amount;
+      const paymentPercentage = (amountPaid / totalRepayable) * 100;
+      return paymentPercentage < 80; // Ongoing if less than 80% paid
+    });
+  }, [customerLoans, installmentsByLoanId]);
+
+  // Get details of ongoing loan for tooltip
+  const ongoingLoanInfo = useMemo(() => {
+    const ongoing = customerLoans.find((loan) => {
+      const loanInstallments = installmentsByLoanId.get(loan.id) || [];
+      const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
+      const totalRepayable = loan.original_amount + loan.interest_amount;
+      const paymentPercentage = (amountPaid / totalRepayable) * 100;
+      return paymentPercentage < 80;
+    });
+
+    if (!ongoing) return null;
+
+    const loanInstallments = installmentsByLoanId.get(ongoing.id) || [];
+    const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
+    const totalRepayable = ongoing.original_amount + ongoing.interest_amount;
+    const paymentPercentage = Math.round((amountPaid / totalRepayable) * 100);
+
+    return {
+      paymentPercentage,
+      amountPaid,
+      totalRepayable,
+    };
+  }, [customerLoans, installmentsByLoanId]);
+
   const loanForm = useForm<LoanInputs>();
   const subscriptionForm = useForm<SubscriptionInputs>();
   const installmentForm = useForm<InstallmentInputs>();
@@ -539,11 +574,16 @@ const AddRecordPage = () => {
                   {hasCustomerLoans ? (
                     <>
                       <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
+                        whileHover={{ scale: !hasOngoingLoan ? 1.05 : 1 }}
+                        whileTap={{ scale: !hasOngoingLoan ? 0.95 : 1 }}
                         onClick={() => setAction("loan")}
-                        disabled={isAnySubmitting}
-                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={isAnySubmitting || hasOngoingLoan}
+                        className={`font-bold py-2 px-6 rounded-lg transition-colors ${
+                          hasOngoingLoan
+                            ? 'bg-gray-400 text-gray-700 cursor-not-allowed opacity-60'
+                            : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                        title={hasOngoingLoan ? `Ongoing loan at ${ongoingLoanInfo?.paymentPercentage}% paid. Customer must pay >80% before recording new loan.` : ''}
                       >
                         Record Another Loan
                       </motion.button>

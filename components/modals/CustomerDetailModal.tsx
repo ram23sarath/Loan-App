@@ -21,9 +21,11 @@ interface CustomerDetailModalProps {
   deleteLoan: (loanId: string) => Promise<void>;
   deleteSubscription: (subscriptionId: string) => Promise<void>;
   deleteInstallment: (installmentId: string) => Promise<void>;
+  deleteDataEntry?: (dataEntryId: string) => Promise<void>;
   onEditLoan?: (loan: LoanWithCustomer) => void;
   onEditSubscription?: (sub: SubscriptionWithCustomer) => void;
   onEditInstallment?: (installment: Installment) => void;
+  onEditDataEntry?: (dataEntry: DataEntry) => void;
 }
 
 const backdropVariants: Variants = {
@@ -101,6 +103,26 @@ const installmentCardVariants: Variants = {
   },
 };
 
+const buttonVariants: Variants = {
+  idle: { scale: 1 },
+  hover: {
+    scale: 1.05,
+    transition: {
+      type: 'spring',
+      stiffness: 400,
+      damping: 20,
+    },
+  },
+  tap: {
+    scale: 0.95,
+    transition: {
+      type: 'spring',
+      stiffness: 400,
+      damping: 20,
+    },
+  },
+};
+
 const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   customer,
   loans,
@@ -111,9 +133,11 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   deleteLoan,
   deleteSubscription,
   deleteInstallment,
+  deleteDataEntry,
   onEditLoan,
   onEditSubscription,
   onEditInstallment,
+  onEditDataEntry,
 }) => {
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const [expandedLoanId, setExpandedLoanId] = useState<string | null>(null);
@@ -157,17 +181,21 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   const [deleteLoanTarget, setDeleteLoanTarget] = useState<LoanWithCustomer | null>(null);
   const [deleteSubTarget, setDeleteSubTarget] = useState<SubscriptionWithCustomer | null>(null);
   const [deleteInstTarget, setDeleteInstTarget] = useState<Installment | null>(null);
+  const [deleteDataEntryTarget, setDeleteDataEntryTarget] = useState<DataEntry | null>(null);
   const [showRecordLoan, setShowRecordLoan] = useState<boolean>(false);
   const [showRecordSubscription, setShowRecordSubscription] = useState<boolean>(false);
   const [showRecordDataEntry, setShowRecordDataEntry] = useState<boolean>(false);
+  const [editingDataEntry, setEditingDataEntry] = useState<DataEntry | null>(null);
 
   const deleteLoanRef = useRef<HTMLDivElement | null>(null);
   const deleteSubRef = useRef<HTMLDivElement | null>(null);
   const deleteInstRef = useRef<HTMLDivElement | null>(null);
+  const deleteDataEntryRef = useRef<HTMLDivElement | null>(null);
 
   useFocusTrap(deleteLoanRef, 'button');
   useFocusTrap(deleteSubRef, 'button');
   useFocusTrap(deleteInstRef, 'button');
+  useFocusTrap(deleteDataEntryRef, 'button');
 
   const handleNoteClick = (id: string) => {
     setExpandedNoteId(expandedNoteId === id ? null : id);
@@ -187,6 +215,10 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       // If a delete confirmation is open, close it first
+      if (deleteDataEntryTarget) {
+        setDeleteDataEntryTarget(null);
+        return;
+      }
       if (deleteInstTarget) {
         setDeleteInstTarget(null);
         return;
@@ -204,7 +236,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     };
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [deleteInstTarget, deleteSubTarget, deleteLoanTarget, onClose]);
+  }, [deleteDataEntryTarget, deleteInstTarget, deleteSubTarget, deleteLoanTarget, onClose]);
 
   // Prevent background scrolling while modal is open (handle iOS/Android correctly)
   const scrollYRef = useRef<number>(0);
@@ -253,6 +285,16 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     try {
       await deleteInstallment(deleteInstTarget.id);
       setDeleteInstTarget(null);
+    } catch (error: any) {
+      alert(error.message);
+    }
+  };
+
+  const confirmDeleteDataEntry = async () => {
+    if (!deleteDataEntryTarget || !deleteDataEntry) return;
+    try {
+      await deleteDataEntry(deleteDataEntryTarget.id);
+      setDeleteDataEntryTarget(null);
     } catch (error: any) {
       alert(error.message);
     }
@@ -859,7 +901,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                     <div className="col-span-2 text-center">Type</div>
                     <div className="col-span-2 text-right">Amount</div>
                     <div className="col-span-2 text-center">Receipt #</div>
-                    <div className="col-span-4 text-left">Notes</div>
+                    <div className="col-span-2 text-left">Notes</div>
+                    <div className="col-span-2 text-right">Actions</div>
                   </div>
                   {/* Rows */}
                   {dataEntries.map(entry => (
@@ -880,7 +923,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                         {formatCurrency(entry.amount)}
                       </div>
                       <div className="col-span-2 text-center text-gray-600 dark:text-dark-muted">{entry.receipt_number}</div>
-                      <div className="col-span-4 text-left text-gray-600 dark:text-dark-muted">
+                      <div className="col-span-2 text-left text-gray-600 dark:text-dark-muted">
                         <div
                           ref={(el) => (noteRefs.current[entry.id] = el)}
                           onClick={() => handleNoteClick(entry.id)}
@@ -895,6 +938,30 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                             {entry.notes || '-'}
                           </motion.p>
                         </div>
+                      </div>
+                      <div className="col-span-2 text-right flex gap-1 justify-end">
+                        <motion.button
+                          onClick={() => setEditingDataEntry(entry)}
+                          className="px-2 py-1 rounded text-xs bg-blue-600 text-white hover:bg-blue-700"
+                          aria-label="Edit data entry"
+                          variants={buttonVariants}
+                          initial="idle"
+                          whileHover="hover"
+                          whileTap="tap"
+                        >
+                          Edit
+                        </motion.button>
+                        <motion.button
+                          onClick={() => setDeleteDataEntryTarget(entry)}
+                          className="p-1 rounded hover:bg-red-500/10 transition-colors"
+                          aria-label="Delete data entry"
+                          variants={buttonVariants}
+                          initial="idle"
+                          whileHover="hover"
+                          whileTap="tap"
+                        >
+                          <Trash2Icon className="w-4 h-4 text-red-500" />
+                        </motion.button>
                       </div>
                     </div>
                   ))}
@@ -950,6 +1017,30 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                           </div>
                         )}
                       </div>
+                      <div className="flex gap-2 mt-3 pt-3 border-t border-pink-200 dark:border-pink-900/30">
+                        <motion.button
+                          onClick={() => setEditingDataEntry(entry)}
+                          className="flex-1 px-3 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+                          aria-label="Edit"
+                          variants={buttonVariants}
+                          initial="idle"
+                          whileHover="hover"
+                          whileTap="tap"
+                        >
+                          Edit
+                        </motion.button>
+                        <motion.button
+                          onClick={() => setDeleteDataEntryTarget(entry)}
+                          className="p-2 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400"
+                          aria-label="Delete"
+                          variants={buttonVariants}
+                          initial="idle"
+                          whileHover="hover"
+                          whileTap="tap"
+                        >
+                          <Trash2Icon className="w-4 h-4" />
+                        </motion.button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -982,6 +1073,15 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               key="record-dataentry"
               customer={customer}
               onClose={() => setShowRecordDataEntry(false)}
+            />
+          )}
+
+          {editingDataEntry && (
+            <RecordDataEntryModal
+              key="edit-dataentry"
+              customer={customer}
+              dataEntry={editingDataEntry}
+              onClose={() => setEditingDataEntry(null)}
             />
           )}
         </AnimatePresence>
@@ -1118,6 +1218,54 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                     </button>
                     <button
                       onClick={confirmDeleteInstallment}
+                      className="px-3 py-2 rounded bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.documentElement
+        )}
+
+        {/* Delete Data Entry Confirmation Modal (separate portal) */}
+        {ReactDOM.createPortal(
+          <AnimatePresence>
+            {deleteDataEntryTarget && (
+              <motion.div
+                key="cust-delete-dataentry-backdrop"
+                variants={backdropVariants}
+                initial="hidden"
+                animate="visible"
+                exit="hidden"
+                className="fixed inset-0 z-[99999] bg-black/40"
+                onClick={() => setDeleteDataEntryTarget(null)}
+              >
+                <motion.div
+                  key="cust-delete-dataentry-content"
+                  variants={modalVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  ref={deleteDataEntryRef}
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border relative z-[100000]"
+                  onClick={e => e.stopPropagation()}
+                >
+                  <h3 className="text-lg font-bold mb-3 dark:text-dark-text">Delete Data Entry?</h3>
+                  <p className="mb-4 text-sm text-gray-600 dark:text-dark-muted">
+                    Are you sure you want to delete the data entry from <span className="font-semibold dark:text-dark-text">{formatDate(deleteDataEntryTarget.date)}</span>?
+                  </p>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => setDeleteDataEntryTarget(null)}
+                      className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={confirmDeleteDataEntry}
                       className="px-3 py-2 rounded bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
                     >
                       Delete

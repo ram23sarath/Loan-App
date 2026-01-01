@@ -77,7 +77,6 @@ const fetchAllRecords = async <T,>(
     while (hasMore) {
         batchNum++;
         const { data, error } = await queryBuilder().range(from, from + BATCH_SIZE - 1);
-        console.log(`📦 ${tableName || 'table'} batch ${batchNum}: fetched ${data?.length || 0} records (from ${from})`);
         if (error) throw error;
         if (data && data.length > 0) {
             allRecords.push(...(data as T[]));
@@ -87,7 +86,6 @@ const fetchAllRecords = async <T,>(
             hasMore = false;
         }
     }
-    console.log(`📦 ${tableName || 'table'} TOTAL: ${allRecords.length} records`);
     return allRecords;
 };
 
@@ -237,7 +235,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     () => supabase.from('subscriptions').select('*, customers(name, phone)').order('created_at', { ascending: false }),
                     'subscriptions'
                 );
-                console.log('📋 Fetched subscriptions:', { count: subscriptionsData?.length, first3: subscriptionsData?.slice(0, 3) });
                 setSubscriptions(subscriptionsData);
 
                 const installmentsData = await fetchAllRecords<Installment>(
@@ -621,8 +618,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                             });
                         } else {
                             // Admin/full data fetch - use pagination to get ALL records
-                            console.log('🔄 Admin init: fetching all data with pagination...');
-
                             const customersData = await fetchAllRecords<Customer>(
                                 () => supabase.from('customers').select('*').order('created_at', { ascending: false }),
                                 'customers'
@@ -828,8 +823,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     }
 
                     // Admin/full data fetch - use pagination to get ALL records
-                    console.log('🔄 Admin refetch: fetching all data with pagination...');
-
                     const customersData = await fetchAllRecords<Customer>(
                         () => supabase.from('customers').select('*').order('created_at', { ascending: false }),
                         'customers'
@@ -958,7 +951,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                             } catch (e) { }
                         } else {
                             const successData = await resp.json().catch(() => ({}));
-                            console.log('✅ Background user auto-created:', successData.user_id || '<unknown>');
                             try {
                                 if (typeof window !== 'undefined') {
                                     window.dispatchEvent(new CustomEvent('background-user-create', {
@@ -1005,17 +997,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const addSubscription = async (subscriptionData: NewSubscription): Promise<Subscription> => {
         if (isScopedCustomer) throw new Error('Read-only access: scoped customers cannot add subscriptions');
         try {
-            console.log('📝 Adding subscription:', subscriptionData);
             const { data, error } = await supabase.from('subscriptions').insert([subscriptionData] as any).select().single();
-            console.log('📝 Insert result:', { data, error });
             if (error || !data) throw error;
-
-            console.log('📝 Calling fetchData after subscription insert...');
             await fetchData();
-            console.log('📝 fetchData complete, subscriptions count:', subscriptions.length);
             return data as Subscription;
         } catch (error) {
-            console.error('📝 Subscription error:', error);
             throw new Error(parseSupabaseError(error, 'adding subscription'));
         }
     };
@@ -1066,7 +1052,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                         const errData = await resp.json().catch(() => ({}));
                         console.warn('Warning: failed to delete linked auth user:', errData.error || resp.statusText);
                     } else {
-                        console.log('✅ Linked auth user deleted for customer', customerId);
+                        // User deleted successfully
                     }
                 } catch (e) {
                     console.warn('Warning: error calling delete-user-from-customer function', e);

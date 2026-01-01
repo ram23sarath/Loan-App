@@ -30,7 +30,7 @@ const LoginPage = () => {
   const heroWords = [
     "Welcome",
     "to",
-    "Chittor",
+    "Chittoor",
     "District",
     "Welfare",
     "Association",
@@ -206,7 +206,7 @@ const LoginPage = () => {
               animate={{ y: [0, -4, 0] }}
               transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
             >
-              I J Reddy DOP Chittor Fire Station
+              I J Reddy DOP Chittoor Fire Station
             </motion.p>
           </motion.div>
           <button

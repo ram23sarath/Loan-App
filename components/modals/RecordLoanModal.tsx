@@ -13,6 +13,7 @@ type Props = {
   customer: Customer;
   onClose: () => void;
   hasOngoingLoan?: boolean;
+  ongoingLoanId?: string;
 };
 
 type FormInputs = {
@@ -28,7 +29,7 @@ const getToday = () => {
   return d.toISOString().slice(0, 10);
 };
 
-const RecordLoanModal: React.FC<Props> = ({ customer, onClose, hasOngoingLoan = false }) => {
+const RecordLoanModal: React.FC<Props> = ({ customer, onClose, hasOngoingLoan = false, ongoingLoanId = '' }) => {
   const { addLoan, addInstallment, loans, installmentsByLoanId } = useData();
   const [mode, setMode] = useState<'loan' | 'installment'>(hasOngoingLoan ? 'installment' : 'loan');
   const [toast, setToast] = useState<{ show: boolean; message: string; type?: 'success' | 'error' | 'info' }>({ show: false, message: '', type: 'success' });
@@ -41,8 +42,29 @@ const RecordLoanModal: React.FC<Props> = ({ customer, onClose, hasOngoingLoan = 
 
   const customerLoans: LoanWithCustomer[] = useMemo(() => loans.filter(l => l.customer_id === customer.id), [loans, customer.id]);
 
+  // Filter to show only ongoing loans (< 80% paid) when in installment mode
+  const availableLoans = useMemo(() => {
+    if (mode === 'installment') {
+      return customerLoans.filter(l => {
+        const loanInstallments = installmentsByLoanId.get(l.id) || [];
+        const amountPaid = loanInstallments.reduce((acc: number, inst: any) => acc + inst.amount, 0);
+        const totalRepayable = l.original_amount + l.interest_amount;
+        const paymentPercentage = (amountPaid / totalRepayable) * 100;
+        return paymentPercentage < 80; // Only ongoing loans
+      });
+    }
+    return customerLoans;
+  }, [mode, customerLoans, installmentsByLoanId]);
+
   const selectedLoanId = watchInst('loan_id');
-  const selectedLoan = useMemo(() => customerLoans.find(l => l.id === selectedLoanId) || null, [customerLoans, selectedLoanId]);
+  const selectedLoan = useMemo(() => availableLoans.find(l => l.id === selectedLoanId) || null, [availableLoans, selectedLoanId]);
+
+  // Auto-select ongoing loan when mode switches to installment
+  useEffect(() => {
+    if (mode === 'installment' && ongoingLoanId && !selectedLoanId) {
+      setInstValue('loan_id', ongoingLoanId);
+    }
+  }, [mode, ongoingLoanId, selectedLoanId, setInstValue]);
 
   // compute available installment numbers for selected loan
   const availableInstallmentNumbers = useMemo(() => {
@@ -232,7 +254,7 @@ const RecordLoanModal: React.FC<Props> = ({ customer, onClose, hasOngoingLoan = 
                 <label className="block text-sm text-gray-600">Select Loan</label>
                 <select {...regInst('loan_id')} className="w-full p-2 border border-gray-300 rounded dark:bg-dark-bg dark:border-dark-border dark:text-dark-text">
                   <option value="">-- select loan --</option>
-                  {customerLoans.map(l => (
+                  {availableLoans.map(l => (
                     <option key={l.id} value={l.id}>{`${formatDate(l.payment_date)} • ₹${l.original_amount} (inst: ${l.total_instalments})`}</option>
                   ))}
                 </select>

@@ -12,6 +12,7 @@ import type { Customer, LoanWithCustomer } from '../../types';
 type Props = {
   customer: Customer;
   onClose: () => void;
+  hasOngoingLoan?: boolean;
 };
 
 type FormInputs = {
@@ -27,9 +28,9 @@ const getToday = () => {
   return d.toISOString().slice(0, 10);
 };
 
-const RecordLoanModal: React.FC<Props> = ({ customer, onClose }) => {
+const RecordLoanModal: React.FC<Props> = ({ customer, onClose, hasOngoingLoan = false }) => {
   const { addLoan, addInstallment, loans, installmentsByLoanId } = useData();
-  const [mode, setMode] = useState<'loan' | 'installment'>('loan');
+  const [mode, setMode] = useState<'loan' | 'installment'>(hasOngoingLoan ? 'installment' : 'loan');
   const [toast, setToast] = useState<{ show: boolean; message: string; type?: 'success' | 'error' | 'info' }>({ show: false, message: '', type: 'success' });
 
   // Loan form
@@ -136,7 +137,9 @@ const RecordLoanModal: React.FC<Props> = ({ customer, onClose }) => {
               <button
                 type="button"
                 onClick={() => setMode('loan')}
-                className={`px-3 py-1 rounded ${mode === 'loan' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-slate-700 dark:text-dark-text'}`}
+                disabled={hasOngoingLoan}
+                title={hasOngoingLoan ? 'Cannot record new loan while one is ongoing' : ''}
+                className={`px-3 py-1 rounded ${mode === 'loan' ? 'bg-indigo-600 text-white' : hasOngoingLoan ? 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-slate-600 dark:text-slate-400' : 'bg-gray-100 dark:bg-slate-700 dark:text-dark-text'}`}
               >
                 Loan
               </button>

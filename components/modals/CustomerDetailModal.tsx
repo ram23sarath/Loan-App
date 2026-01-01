@@ -442,17 +442,11 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               <div className="ml-auto">
                 <motion.button
                   onClick={(e) => { e.stopPropagation(); setShowRecordLoan(true); }}
-                  disabled={hasOngoingLoan}
-                  className={`ml-2 px-3 py-1 rounded text-white text-sm ${
-                    hasOngoingLoan
-                      ? 'bg-gray-400 cursor-not-allowed opacity-60'
-                      : 'bg-indigo-600 hover:bg-indigo-700'
-                  }`}
-                  title={hasOngoingLoan ? `Ongoing loan at ${ongoingLoanInfo?.paymentPercentage}% paid. Customer must pay >80% before recording new loan.` : ''}
+                  className="ml-2 px-3 py-1 rounded text-white text-sm bg-indigo-600 hover:bg-indigo-700"
                   variants={buttonVariants}
                   initial="idle"
-                  whileHover={!hasOngoingLoan ? "hover" : undefined}
-                  whileTap={!hasOngoingLoan ? "tap" : undefined}
+                  whileHover="hover"
+                  whileTap="tap"
                 >
                   Record Loan
                 </motion.button>
@@ -1102,6 +1096,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               key="record-loan"
               customer={customer}
               onClose={() => setShowRecordLoan(false)}
+              hasOngoingLoan={hasOngoingLoan}
             />
           )}
 

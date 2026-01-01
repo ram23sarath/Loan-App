@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { motion } from 'framer-motion';
 import useFocusTrap from '../hooks/useFocusTrap';
@@ -6,9 +6,9 @@ import { useForm, SubmitHandler } from 'react-hook-form';
 import GlassCard from '../ui/GlassCard';
 import { useData } from '../../context/DataContext';
 import Toast from '../ui/Toast';
-import type { Customer } from '../../types';
+import type { Customer, DataEntry } from '../../types';
 
-type Props = { customer: Customer; onClose: () => void };
+type Props = { customer: Customer; onClose: () => void; dataEntry?: DataEntry };
 
 type FormInputs = {
   type: 'credit' | 'expenditure';
@@ -21,10 +21,31 @@ type FormInputs = {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-const RecordDataEntryModal: React.FC<Props> = ({ customer, onClose }) => {
-  const { addDataEntry } = useData();
-  const { register, handleSubmit, formState: { errors, isSubmitting }, reset } = useForm<FormInputs>({ defaultValues: { type: 'credit', date: today(), subtype: '' } });
+const RecordDataEntryModal: React.FC<Props> = ({ customer, onClose, dataEntry }) => {
+  const { addDataEntry, updateDataEntry } = useData();
+  const isEditing = !!dataEntry;
+  const { register, handleSubmit, formState: { errors, isSubmitting }, reset, setValue } = useForm<FormInputs>({ 
+    defaultValues: { 
+      type: 'credit', 
+      date: today(), 
+      subtype: '',
+      amount: 0,
+      receipt: '',
+      notes: ''
+    } 
+  });
   const [toast, setToast] = React.useState<{ show: boolean; message: string; type?: 'success' | 'error' }>({ show: false, message: '', type: 'success' });
+
+  useEffect(() => {
+    if (isEditing && dataEntry) {
+      setValue('type', dataEntry.type as any);
+      setValue('subtype', dataEntry.subtype || '');
+      setValue('amount', dataEntry.amount);
+      setValue('date', dataEntry.date);
+      setValue('receipt', dataEntry.receipt_number || '');
+      setValue('notes', dataEntry.notes || '');
+    }
+  }, [isEditing, dataEntry, setValue]);
 
   const closeWithSuccess = (msg: string) => {
     // Close immediately; show transient toast locally
@@ -36,15 +57,26 @@ const RecordDataEntryModal: React.FC<Props> = ({ customer, onClose }) => {
 
   const onSubmit: SubmitHandler<FormInputs> = async (data) => {
     try {
-      await addDataEntry({
-        customer_id: customer.id,
-        date: data.date,
-        amount: Number(data.amount),
-        type: data.type as any,
-        subtype: data.subtype || null,
-        receipt_number: data.receipt || '',
-        notes: data.notes || '',
-      } as any);
+      if (isEditing && dataEntry) {
+        await updateDataEntry(dataEntry.id, {
+          date: data.date,
+          amount: Number(data.amount),
+          type: data.type as any,
+          subtype: data.subtype || null,
+          receipt_number: data.receipt || '',
+          notes: data.notes || '',
+        } as any);
+      } else {
+        await addDataEntry({
+          customer_id: customer.id,
+          date: data.date,
+          amount: Number(data.amount),
+          type: data.type as any,
+          subtype: data.subtype || null,
+          receipt_number: data.receipt || '',
+          notes: data.notes || '',
+        } as any);
+      }
       reset();
       onClose();
     } catch (err: any) {
@@ -82,10 +114,10 @@ const RecordDataEntryModal: React.FC<Props> = ({ customer, onClose }) => {
         transition={{ type: 'spring', stiffness: 300, damping: 24 }}
       >
         <GlassCard className="!p-4">
-          <h3 className="text-lg font-semibold mb-3">Record Misc Entry for {customer.name}</h3>
+          <h3 className="text-lg font-semibold mb-3">{isEditing ? 'Edit' : 'Record'} Misc Entry for {customer.name}</h3>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
             <div>
-              <label className="block text-sm text-gray-600">Type</label>
+              <label className="block text-sm text-gray-600 dark:text-dark-muted">Type</label>
               <select {...register('type')} className="w-full p-2 border border-gray-300 rounded dark:bg-dark-bg dark:border-dark-border dark:text-dark-text">
                 <option value="credit">Credit</option>
                 <option value="expenditure">Expenditure</option>
@@ -93,28 +125,28 @@ const RecordDataEntryModal: React.FC<Props> = ({ customer, onClose }) => {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-600">Subtype (optional)</label>
+              <label className="block text-sm text-gray-600 dark:text-dark-muted">Subtype (optional)</label>
               <input type="text" {...register('subtype')} className="w-full p-2 border border-gray-300 rounded dark:bg-dark-bg dark:border-dark-border dark:text-dark-text" />
             </div>
 
             <div>
-              <label className="block text-sm text-gray-600">Amount</label>
+              <label className="block text-sm text-gray-600 dark:text-dark-muted">Amount</label>
               <input id="dataentry_amount_input" autoFocus type="number" step="0.01" {...register('amount', { required: 'Required', min: { value: 0.01, message: 'Must be positive' } })} className="w-full p-2 border border-gray-300 rounded dark:bg-dark-bg dark:border-dark-border dark:text-dark-text" />
               {errors.amount && <div className="text-red-500 text-xs">{errors.amount.message as any}</div>}
             </div>
 
             <div>
-              <label className="block text-sm text-gray-600">Date</label>
+              <label className="block text-sm text-gray-600 dark:text-dark-muted">Date</label>
               <input type="date" {...register('date', { required: 'Required' })} className="w-full p-2 border border-gray-300 rounded dark:bg-dark-bg dark:border-dark-border dark:text-dark-text" />
             </div>
 
             <div>
-              <label className="block text-sm text-gray-600">Receipt # (optional)</label>
+              <label className="block text-sm text-gray-600 dark:text-dark-muted">Receipt # (optional)</label>
               <input type="text" {...register('receipt')} className="w-full p-2 border border-gray-300 rounded dark:bg-dark-bg dark:border-dark-border dark:text-dark-text" />
             </div>
 
             <div>
-              <label className="block text-sm text-gray-600">Notes (optional)</label>
+              <label className="block text-sm text-gray-600 dark:text-dark-muted">Notes (optional)</label>
               <textarea {...register('notes')} className="w-full p-2 border border-gray-300 rounded dark:bg-dark-bg dark:border-dark-border dark:text-dark-text" rows={3} />
             </div>
 
@@ -127,9 +159,9 @@ const RecordDataEntryModal: React.FC<Props> = ({ customer, onClose }) => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
                     </svg>
-                    Saving...
+                    {isEditing ? 'Updating...' : 'Saving...'}
                   </>
-                ) : 'Save Entry'}
+                ) : isEditing ? 'Update Entry' : 'Save Entry'}
               </button>
             </div>
           </form>

@@ -163,6 +163,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   const [notifications, setNotifications] = useState<any[]>([]);
 
   const [isClearing, setIsClearing] = useState(false);
+  const [deletingNotificationId, setDeletingNotificationId] = useState<number | null>(null);
 
   // Expose openMenu method to parent via ref
   useImperativeHandle(ref, () => ({
@@ -170,6 +171,31 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   }));
 
   // ... (Keep existing handleNotificationClick)
+
+  const handleDeleteNotification = async (notificationId: number) => {
+    if (isScopedCustomer) return;
+
+    setDeletingNotificationId(notificationId);
+
+    try {
+      // Trigger animation first (wait for exit animation)
+      await new Promise(r => setTimeout(r, 600));
+
+      // Delete from DB
+      const { error } = await supabase
+        .from('system_notifications')
+        .delete()
+        .eq('id', notificationId);
+
+      if (error) throw error;
+
+      // Remove from local state
+      setNotifications(notifications.filter(n => n.id !== notificationId));
+    } catch (err) {
+      console.error("Failed to delete notification:", err);
+      setDeletingNotificationId(null);
+    }
+  };
 
   const handleClearNotifications = async () => {
     if (notifications.length === 0 || isClearing || isScopedCustomer) return;
@@ -620,9 +646,9 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                               layout
                               variants={notificationItemVariants}
                               initial="hidden"
-                              animate={isClearing ? "exit" : "visible"}
+                              animate={isClearing || deletingNotificationId === note.id ? "exit" : "visible"}
                               exit="exit"
-                              className={`w-full p-3 rounded-xl border flex items-start gap-3 relative overflow-hidden ${note.status === 'success'
+                              className={`w-full p-3 rounded-xl border flex items-start gap-3 relative overflow-hidden group ${note.status === 'success'
                                 ? 'bg-green-50 border-green-100 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300'
                                 : note.status === 'processing'
                                   ? 'bg-blue-50 border-blue-100 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300'
@@ -632,12 +658,25 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                               <span className="text-lg flex-shrink-0 mt-0.5">
                                 {note.status === 'success' ? '✅' : note.status === 'processing' ? '⏳' : '❌'}
                               </span>
-                              <div className="flex flex-col gap-0.5 relative z-10">
+                              <div className="flex flex-col gap-0.5 relative z-10 flex-1">
                                 <span className="font-medium text-sm">{note.message}</span>
                                 <span className="text-[10px] opacity-70">
                                   {new Date(note.created_at).toLocaleString()}
                                 </span>
                               </div>
+                              {!isScopedCustomer && (
+                                <button
+                                  onClick={() => handleDeleteNotification(note.id)}
+                                  disabled={deletingNotificationId === note.id || isClearing}
+                                  className="flex-shrink-0 ml-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed mt-0.5"
+                                  title="Delete notification"
+                                  aria-label="Delete notification"
+                                >
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                  </svg>
+                                </button>
+                              )}
                             </motion.div>
                           ))
                         )}

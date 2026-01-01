@@ -93,7 +93,7 @@ const AddRecordPage = () => {
     const ongoing = customerLoans.find((loan) => {
       const loanInstallments = installmentsByLoanId.get(loan.id) || [];
       const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
-      const totalRepayable = loan.original_amount + loan.interest_amount;
+      const totalRepayable = ongoing.original_amount + ongoing.interest_amount;
       const paymentPercentage = (amountPaid / totalRepayable) * 100;
       return paymentPercentage < 80;
     });
@@ -117,35 +117,23 @@ const AddRecordPage = () => {
   const installmentForm = useForm<InstallmentInputs>();
 
   const resetAll = useCallback(() => {
-    // Reset all forms but do not touch the success banner here. The
-    // success banner lifecycle is managed by showTemporarySuccess so
-    // it can be displayed briefly without being immediately cleared.
     loanForm.reset({ payment_date: getTodayDateString() });
     subscriptionForm.reset();
     installmentForm.reset();
   }, [loanForm, subscriptionForm, installmentForm]);
 
-  // Helper to show a success message briefly, reset forms and optionally
-  // restore a follow-up action after the banner disappears.
   const successTimeoutRef = useRef<number | null>(null);
   const showTemporarySuccess = (message: string, followUp?: () => void) => {
-    // Clear any existing timeout
     if (successTimeoutRef.current) {
       window.clearTimeout(successTimeoutRef.current);
       successTimeoutRef.current = null;
     }
 
-    // Reset forms so the UI state is clean
     resetAll();
-    // Close any open action UI to avoid layout jitter while showing success
     setAction(null);
     setShowSuccess(message);
-
-    // Don't auto-hide anymore - let user click action buttons to close
-    // The follow-up callback is now handled by action button clicks
   };
 
-  // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (successTimeoutRef.current) {
@@ -232,8 +220,6 @@ const AddRecordPage = () => {
       return;
     }
 
-    const interest_amount = data.totalRepayableAmount - data.original_amount;
-
     const newLoanData: NewLoan = {
       customer_id: selectedCustomerId,
       original_amount: data.original_amount,
@@ -246,7 +232,6 @@ const AddRecordPage = () => {
     try {
       await addLoan(newLoanData);
       const selectedCustomer = customerMap.get(selectedCustomerId);
-      // Store record data for WhatsApp sharing
       setLastRecordData({
         type: 'loan',
         customerPhone: selectedCustomer?.phone,
@@ -258,7 +243,6 @@ const AddRecordPage = () => {
           total_instalments: data.total_instalments,
         }
       });
-      // Reset forms and show transient success banner
       showTemporarySuccess("Loan recorded successfully!");
     } catch (error: any) {
       setToast({ show: true, message: error.message || "An error occurred." });
@@ -269,7 +253,6 @@ const AddRecordPage = () => {
     data
   ) => {
     if (!selectedCustomerId) return;
-    // Sanitize late_fee: convert NaN or undefined to null
     const sanitizedLateFee = (data.late_fee != null && !isNaN(data.late_fee)) ? data.late_fee : null;
     const newSubscriptionData: NewSubscription = {
       ...data,
@@ -280,7 +263,6 @@ const AddRecordPage = () => {
     try {
       await addSubscription(newSubscriptionData);
       const selectedCustomer = customerMap.get(selectedCustomerId);
-      // Store record data for WhatsApp sharing
       setLastRecordData({
         type: 'subscription',
         customerPhone: selectedCustomer?.phone,
@@ -292,8 +274,6 @@ const AddRecordPage = () => {
           late_fee: data.late_fee,
         }
       });
-      // Show transient success and, after it hides, open installment form
-      // if there is an active loan for this customer.
       showTemporarySuccess("Subscription recorded successfully!", () => {
         if (activeLoan) setAction("installment");
         else setAction(null);
@@ -308,7 +288,6 @@ const AddRecordPage = () => {
   ) => {
     if (!activeLoan) return;
 
-    // Calculate total paid so far for this loan
     const loanInstallments = installmentsByLoanId.get(activeLoan.id) || [];
     const totalPaid = loanInstallments.reduce(
       (sum, inst) => sum + inst.amount,
@@ -339,7 +318,6 @@ const AddRecordPage = () => {
 
     try {
       const newInstallment = await addInstallment(installmentPayload);
-      // Store record data for WhatsApp sharing
       const selectedCustomer = customerMap.get(selectedCustomerId);
       setLastRecordData({
         type: 'installment',
@@ -356,25 +334,19 @@ const AddRecordPage = () => {
         }
       });
 
-      // Show success message
       setShowSuccess(`Installment #${data.installment_number} recorded!`);
-
-      // Update paid installment numbers
       const updatedPaidNumbers = new Set(paidInstallmentNumbers);
       updatedPaidNumbers.add(data.installment_number);
       setPaidInstallmentNumbers(updatedPaidNumbers);
 
-      // Prepare form for next installment
       const nextInstallmentNumber = data.installment_number + 1;
       if (nextInstallmentNumber <= activeLoan.total_instalments) {
-        // Prefill with same amount and next installment number
         installmentForm.setValue("amount", data.amount);
         installmentForm.setValue("installment_number", nextInstallmentNumber);
         installmentForm.setValue("receipt_number", "");
         installmentForm.setValue("late_fee", 0);
         installmentForm.setValue("date", getTodayDateString());
       } else {
-        // All installments paid - reset form
         installmentForm.reset();
         setAction(null);
       }
@@ -384,14 +356,50 @@ const AddRecordPage = () => {
   };
 
   const formVariants = {
-    hidden: { opacity: 0, y: -20, height: 0 },
+    hidden: { opacity: 0, y: -20, height: 0, overflow: 'hidden' },
     visible: {
       opacity: 1,
       y: 0,
       height: "auto",
+      overflow: 'visible',
       transition: { duration: 0.4 },
     },
-    exit: { opacity: 0, y: -20, height: 0, transition: { duration: 0.3 } },
+    exit: { opacity: 0, y: -20, height: 0, overflow: 'hidden', transition: { duration: 0.3 } },
+  };
+
+  // UPDATED: Added marginTop/marginBottom control to exit variant to prevent 'space-y' snap
+  const actionButtonsVariants = {
+    hidden: { 
+      opacity: 0, 
+      y: 10, 
+      height: 0, 
+      marginTop: 0, 
+      marginBottom: 0, 
+      overflow: 'hidden' 
+    },
+    visible: {
+      opacity: 1,
+      y: 0,
+      height: "auto",
+      // We don't force margin here so Tailwind classes apply, 
+      // but Framer Motion will measure them for the exit animation.
+      overflow: 'visible',
+      transition: { duration: 0.3, ease: "easeOut" }
+    },
+    exit: {
+      opacity: 0,
+      y: 10,
+      height: 0,
+      marginTop: 0, // Collapses the space-y margin
+      marginBottom: 0,
+      overflow: 'hidden',
+      transition: { 
+        height: { duration: 0.3, ease: "easeInOut" },
+        marginTop: { duration: 0.3, ease: "easeInOut" },
+        marginBottom: { duration: 0.3, ease: "easeInOut" },
+        opacity: { duration: 0.2 } // Fade out slightly faster than collapse
+      }
+    },
   };
 
   const monthlyInstallment = activeLoan
@@ -421,11 +429,9 @@ const AddRecordPage = () => {
   const isAnySubmitting =
     isSubmittingLoan || isSubmittingSubscription || isSubmittingInstallment;
 
-  // Custom dropdown with search inside
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
-  // Memoize filtered customers to prevent recalculation on every render
   const filteredCustomers = useMemo(() => {
     return customers.filter(
       (c) =>
@@ -434,7 +440,6 @@ const AddRecordPage = () => {
     );
   }, [customers, debouncedCustomerSearch]);
 
-  // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -545,8 +550,8 @@ const AddRecordPage = () => {
                         <li
                           key={customer.id}
                           className={`px-4 py-2 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-gray-800 dark:text-dark-text ${selectedCustomerId === customer.id
-                              ? "bg-indigo-50 dark:bg-indigo-900/50 font-bold"
-                              : ""
+                            ? "bg-indigo-50 dark:bg-indigo-900/50 font-bold"
+                            : ""
                             }`}
                           onClick={() => {
                             setSelectedCustomerId(customer.id);
@@ -566,86 +571,88 @@ const AddRecordPage = () => {
               {selectedCustomerId && (
                 <motion.div
                   key="action-buttons"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  className="flex flex-wrap justify-center gap-3 py-4"
+                  variants={actionButtonsVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="overflow-hidden"
                 >
-                  {hasCustomerLoans ? (
-                    <>
-                      <motion.button
-                        whileHover={{ scale: !hasOngoingLoan ? 1.05 : 1 }}
-                        whileTap={{ scale: !hasOngoingLoan ? 0.95 : 1 }}
-                        onClick={() => setAction("loan")}
-                        disabled={isAnySubmitting || hasOngoingLoan}
-                        className={`font-bold py-2 px-6 rounded-lg transition-colors ${
-                          hasOngoingLoan
+                  <div className="flex flex-wrap justify-center gap-3 py-4">
+                    {hasCustomerLoans ? (
+                      <>
+                        <motion.button
+                          whileHover={{ scale: !hasOngoingLoan ? 1.05 : 1 }}
+                          whileTap={{ scale: !hasOngoingLoan ? 0.95 : 1 }}
+                          onClick={() => setAction("loan")}
+                          disabled={isAnySubmitting || hasOngoingLoan}
+                          className={`font-bold py-2 px-6 rounded-lg transition-colors ${hasOngoingLoan
                             ? 'bg-gray-400 text-gray-700 cursor-not-allowed opacity-60'
                             : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
-                        } disabled:opacity-50 disabled:cursor-not-allowed`}
-                        title={hasOngoingLoan ? `Ongoing loan at ${ongoingLoanInfo?.paymentPercentage}% paid. Customer must pay >80% before recording new loan.` : ''}
-                      >
-                        Record Another Loan
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => activeLoan && setAction("installment")}
-                        disabled={!activeLoan || isAnySubmitting}
-                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Record Installment
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setAction("subscription")}
-                        disabled={isAnySubmitting}
-                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Record Subscription
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={handleSwitchCustomer}
-                        disabled={isAnySubmitting}
-                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Switch Customer
-                      </motion.button>
-                    </>
-                  ) : (
-                    <>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setAction("loan")}
-                        disabled={isAnySubmitting}
-                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-100 dark:bg-gray-700 hover:bg-indigo-600 hover:text-white text-gray-800 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Record Loan
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setAction("subscription")}
-                        disabled={isAnySubmitting}
-                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-100 dark:bg-gray-700 hover:bg-indigo-600 hover:text-white text-gray-800 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Record Subscription
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={handleSwitchCustomer}
-                        disabled={isAnySubmitting}
-                        className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Switch Customer
-                      </motion.button>
-                    </>
-                  )}
+                            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                          title={hasOngoingLoan ? `Ongoing loan at ${ongoingLoanInfo?.paymentPercentage}% paid. Customer must pay >80% before recording new loan.` : ''}
+                        >
+                          Record Another Loan
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => activeLoan && setAction("installment")}
+                          disabled={!activeLoan || isAnySubmitting}
+                          className="font-bold py-2 px-6 rounded-lg transition-colors bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Record Installment
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => setAction("subscription")}
+                          disabled={isAnySubmitting}
+                          className="font-bold py-2 px-6 rounded-lg transition-colors bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Record Subscription
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={handleSwitchCustomer}
+                          disabled={isAnySubmitting}
+                          className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Switch Customer
+                        </motion.button>
+                      </>
+                    ) : (
+                      <>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => setAction("loan")}
+                          disabled={isAnySubmitting}
+                          className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-100 dark:bg-gray-700 hover:bg-indigo-600 hover:text-white text-gray-800 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Record Loan
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => setAction("subscription")}
+                          disabled={isAnySubmitting}
+                          className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-100 dark:bg-gray-700 hover:bg-indigo-600 hover:text-white text-gray-800 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Record Subscription
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={handleSwitchCustomer}
+                          disabled={isAnySubmitting}
+                          className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Switch Customer
+                        </motion.button>
+                      </>
+                    )}
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -1057,7 +1064,6 @@ const AddRecordPage = () => {
                       <span className="font-semibold text-lg">{showSuccess}</span>
                     </div>
 
-                    {/* WhatsApp Button */}
                     {lastRecordData && lastRecordData.customerPhone && (
                       <div className="flex justify-center mb-4">
                         <motion.button
@@ -1083,8 +1089,6 @@ const AddRecordPage = () => {
                         </motion.button>
                       </div>
                     )}
-
-                    {/* Success actions removed now that controls live in the unified button bar */}
                   </motion.div>
                 )}
               </AnimatePresence>

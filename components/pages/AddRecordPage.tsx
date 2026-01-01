@@ -93,7 +93,7 @@ const AddRecordPage = () => {
     const ongoing = customerLoans.find((loan) => {
       const loanInstallments = installmentsByLoanId.get(loan.id) || [];
       const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
-      const totalRepayable = ongoing.original_amount + ongoing.interest_amount;
+      const totalRepayable = loan.original_amount + loan.interest_amount;
       const paymentPercentage = (amountPaid / totalRepayable) * 100;
       return paymentPercentage < 80;
     });

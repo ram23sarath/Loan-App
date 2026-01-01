@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -23,7 +23,30 @@ const LoginPage = () => {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [isWiggling, setIsWiggling] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const [showLoginOnMobile, setShowLoginOnMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const defaultLandingPath = "/";
+
+  // Detect if screen is mobile size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const handleScrollToLogin = () => {
+    if (!showLoginOnMobile) setShowLoginOnMobile(true);
+    // wait for the card to render on mobile then scroll
+    setTimeout(() => {
+      if (cardRef.current) {
+        cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 60);
+  };
 
   const normalizeLoginIdentifier = (value: string) => {
     const v = value.trim();
@@ -82,11 +105,47 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen px-4 py-8 sm:px-0">
+    <div className="flex flex-col md:flex-row items-center justify-center md:justify-between min-h-screen px-4 py-8 sm:px-0 md:pr-16 md:pl-16">
       {showAnimation && <FireTruckAnimation onComplete={handleAnimationComplete} />}
       <Toast message={toastMessage} show={showToast} onClose={() => setShowToast(false)} type="error" />
-      <GlassCard className="w-full max-w-md" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
-        <h2 className="text-3xl font-bold text-center mb-6 text-gray-800 dark:text-dark-text">Loan Management Login</h2>
+
+      <motion.div 
+        className="w-full flex flex-col items-center md:items-start md:justify-center md:w-1/2 pr-8 mb-6 md:mb-0"
+        initial={{ opacity: 0, x: -50 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+      >
+        <motion.h1 
+          className="text-5xl font-extrabold mb-6 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 dark:from-indigo-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent leading-tight"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          Welcome to Chittor District Welfare Association LoanApp!
+        </motion.h1>
+        <motion.div
+          className="flex flex-col gap-2 mt-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+        >
+          <p className="text-lg text-gray-600 dark:text-gray-400 font-medium">Developed and Maintained By</p>
+          <p className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+            I J Reddy
+          </p>
+        </motion.div>
+        <button
+          onClick={handleScrollToLogin}
+          className="mt-6 md:hidden inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors"
+        >
+          Login
+        </button>
+      </motion.div>
+
+      {(!isMobile || showLoginOnMobile) && (
+        <div ref={cardRef} className="w-full max-w-md">
+          <GlassCard className="w-full" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
+            <h2 className="text-3xl font-bold text-center mb-6 text-gray-800 dark:text-dark-text">Loan Management Login</h2>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div>
             <label htmlFor="email" className="block text-sm font-medium mb-2 text-gray-700 dark:text-dark-text">Phone Number</label>
@@ -141,6 +200,8 @@ const LoginPage = () => {
           </motion.button>
         </form>
       </GlassCard>
+        </div>
+      )}
     </div>
   );
 };

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../../context/DataContext';
 import { formatDate } from '../../utils/dateFormatter';
 import { useDebounce } from '../../utils/useDebounce';
+import { formatNumberIndian } from '../../utils/numberFormatter';
 import PageWrapper from '../ui/PageWrapper';
 
 const DataPage = () => {
@@ -484,10 +485,10 @@ const DataPage = () => {
                                       <div className="font-semibold truncate">{group.name}</div>
                                       <div className="text-xs text-gray-500 dark:text-dark-muted whitespace-nowrap">{group.entries.length} entries</div>
                                     </div>
-                                    <div className="mt-1 text-xs flex gap-2 text-gray-600 dark:text-dark-muted">
-                                      <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" />+₹{creditTotal.toLocaleString()}</span>
-                                      {expenseTotal > 0 && <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" />-₹{expenseTotal.toLocaleString()}</span>}
-                                    </div>
+                                        <div className="mt-1 text-xs flex gap-2 text-gray-600 dark:text-dark-muted">
+                                          <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" />+₹{formatNumberIndian(creditTotal)}</span>
+                                          {expenseTotal > 0 && <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" />-₹{formatNumberIndian(expenseTotal)}</span>}
+                                        </div>
                                   </button>
                                 );
                               })}
@@ -546,7 +547,7 @@ const DataPage = () => {
                                       )}
                                     </td>
                                     <td className="px-4 py-3 text-gray-600 text-left dark:text-dark-muted">{entry.subtype || '-'}</td>
-                                    <td className={`px-4 py-3 font-bold text-left ${entry.type === 'credit' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>{entry.type === 'credit' ? '+' : ''}₹{entry.amount.toLocaleString()}</td>
+                                    <td className={`px-4 py-3 font-bold text-left ${entry.type === 'credit' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>{entry.type === 'credit' ? '+' : ''}₹{formatNumberIndian(entry.amount)}</td>
                                     <td className="px-4 py-3 text-gray-600 text-left dark:text-dark-muted">{entry.receipt_number || '-'}</td>
                                     <td ref={(el) => (notesRefs.current[entry.id] = el)} className="px-4 py-3 text-gray-600 text-left dark:text-dark-muted">
                                       <div className={`cursor-pointer break-words whitespace-pre-wrap ${!isExpanded ? 'line-clamp-2' : ''}`} onClick={() => handleNoteClick(entry.id)}>
@@ -598,7 +599,7 @@ const DataPage = () => {
                                       <div className="font-semibold text-gray-900 truncate dark:text-dark-text"><span className="text-gray-400 font-normal dark:text-dark-muted">#{actualIndex}</span> {customerMap.get(entry.customer_id) || 'Unknown'}</div>
                                       <div className="text-sm text-gray-600 truncate dark:text-dark-muted">{entry.subtype || entry.type}</div>
                                     </div>
-                                    <div className={`ml-2 text-right font-bold text-base ${entry.type === 'credit' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>{entry.type === 'credit' ? '+' : ''}₹{entry.amount.toLocaleString()}</div>
+                                    <div className={`ml-2 text-right font-bold text-base ${entry.type === 'credit' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>{entry.type === 'credit' ? '+' : ''}₹{formatNumberIndian(entry.amount)}</div>
                                   </div>
                                   <div className="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-dark-muted">
                                     <div>{formatDate(entry.date)}</div>

@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect } from "react";
+import ReactDOM from "react-dom";
 import { XIcon } from "../../constants";
 import { formatCurrencyIN } from "../../utils/numberFormatter";
 import { formatDate } from "../../utils/dateFormatter";
@@ -35,10 +36,20 @@ const FYBreakdownModal: React.FC<Props> = ({
 }) => {
   if (!open) return null;
 
+  const target = typeof document !== "undefined" ? document.body : null;
   const hasSource = items.some((it) => !!it.source);
   const hasRemaining = items.some((it) => (it as any).remaining !== undefined);
 
-  return (
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto dark:text-gray-100">
         <div className="flex items-center justify-between mb-4">
@@ -130,6 +141,11 @@ const FYBreakdownModal: React.FC<Props> = ({
       </div>
     </div>
   );
+
+  if (!target) return modalContent;
+  return ReactDOM.createPortal(modalContent, target);
+
+  
 };
 
 export default FYBreakdownModal;

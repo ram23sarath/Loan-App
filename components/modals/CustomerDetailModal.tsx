@@ -202,6 +202,21 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     setExpandedNoteId(expandedNoteId === id ? null : id);
   };
 
+  // Calculate summary totals
+  const summaryTotals = useMemo(() => {
+    const totalLoan = loans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
+    const totalSubscription = subscriptions.reduce((acc, sub) => acc + sub.amount, 0);
+    const totalMiscEntries = dataEntries.reduce((acc, entry) => acc + entry.amount, 0);
+    const netTotal = totalSubscription - totalMiscEntries;
+
+    return {
+      totalLoan,
+      totalSubscription,
+      totalMiscEntries,
+      netTotal,
+    };
+  }, [loans, subscriptions, dataEntries]);
+
   // Calculate if customer has an ongoing loan
   const hasOngoingLoan = useMemo(() => {
     return loans.some((loan) => {
@@ -404,7 +419,21 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           <div className="flex items-center justify-between p-3 sm:p-6 border-b border-gray-200 dark:border-dark-border">
             <div>
               <h2 className="text-xl sm:text-3xl font-bold dark:text-dark-text">{customer.name}</h2>
-              <p className="text-sm sm:text-base text-gray-500 dark:text-dark-muted">{customer.phone}</p>
+              <p className="text-sm sm:text-base text-gray-500 dark:text-dark-muted mb-3">{customer.phone}</p>
+              <div className="grid grid-cols-3 gap-4 text-sm sm:text-base">
+                <div>
+                  <span className="text-gray-600 dark:text-dark-muted text-sm sm:text-base">Loan:</span>
+                  <p className="font-bold text-green-600 dark:text-green-400 text-base sm:text-lg">{formatCurrency(summaryTotals.totalLoan)}</p>
+                </div>
+                <div>
+                  <span className="text-gray-600 dark:text-dark-muted text-sm sm:text-base">Subscription:</span>
+                  <p className="font-bold text-cyan-600 dark:text-cyan-400 text-base sm:text-lg">{formatCurrency(summaryTotals.totalSubscription)}</p>
+                </div>
+                <div>
+                  <span className="text-gray-600 dark:text-dark-muted text-sm sm:text-base">Net:</span>
+                  <p className={`font-bold text-base sm:text-lg ${summaryTotals.netTotal >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-red-600 dark:text-red-400'}`}>{formatCurrency(summaryTotals.netTotal)}</p>
+                </div>
+              </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-4">
               <motion.button

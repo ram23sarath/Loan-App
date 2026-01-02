@@ -48,6 +48,10 @@ const DataPage = () => {
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const customerDropdownRef = useRef<HTMLDivElement>(null);
 
+  // State for customer list search sidebar
+  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+  const debouncedCustomerSearchTerm = useDebounce(customerSearchTerm, 300);
+
   // Form state
   const [form, setForm] = useState({
     customerId: '',
@@ -65,11 +69,16 @@ const DataPage = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(isScopedCustomer ? scopedCustomerId ?? null : null);
   const notesRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 25;
+  const itemsPerPage = 10;
+
+  // Sorting state
+  const [sortColumn, setSortColumn] = useState<'date' | 'type' | 'subtype' | 'amount' | 'receipt' | 'notes' | null>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // --- LOGIC FIX & OPTIMIZATION ---
   // Create a performant customer lookup map to avoid using .find() in a loop.
@@ -85,19 +94,100 @@ const DataPage = () => {
     return dataEntries;
   }, [dataEntries, isScopedCustomer, scopedCustomerId]);
 
+  // Group entries by customer for two-pane layout
+  const customerEntryGroups = useMemo(() => {
+    const map = new Map<string, { customerId: string; name: string; entries: typeof dataEntries }>();
+    displayedDataEntries.forEach((entry) => {
+      const key = entry.customer_id;
+      if (!map.has(key)) {
+        map.set(key, { customerId: key, name: customerMap.get(key) || 'Unknown', entries: [] });
+      }
+      map.get(key)?.entries.push(entry);
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [displayedDataEntries, customerMap]);
+
+  // Filter customer groups by search term
+  const filteredCustomerGroups = useMemo(() => {
+    if (!debouncedCustomerSearchTerm.trim()) return customerEntryGroups;
+    const searchLower = debouncedCustomerSearchTerm.toLowerCase();
+    return customerEntryGroups.filter((group) =>
+      group.name.toLowerCase().includes(searchLower)
+    );
+  }, [customerEntryGroups, debouncedCustomerSearchTerm]);
+
+  // Ensure a selected customer exists whenever groups change
+  useEffect(() => {
+    if (!customerEntryGroups.length) {
+      setSelectedCustomerId(null);
+      return;
+    }
+
+    // If search is active and selected customer is not in filtered results, clear selection
+    if (debouncedCustomerSearchTerm.trim()) {
+      const selectedInFiltered = filteredCustomerGroups.some((g) => g.customerId === selectedCustomerId);
+      if (!selectedInFiltered) {
+        setSelectedCustomerId(null);
+      }
+      return;
+    }
+
+    // If no search is active, auto-select first customer if none selected
+    const hasSelection = selectedCustomerId && customerEntryGroups.some((g) => g.customerId === selectedCustomerId);
+    if (!hasSelection) {
+      setSelectedCustomerId(customerEntryGroups[0].customerId);
+      setCurrentPage(1);
+    }
+  }, [customerEntryGroups, selectedCustomerId, filteredCustomerGroups, debouncedCustomerSearchTerm]);
+
+  const selectedGroupEntries = useMemo(() => {
+    if (!selectedCustomerId) return [] as typeof displayedDataEntries;
+    const group = customerEntryGroups.find((g) => g.customerId === selectedCustomerId);
+    return group?.entries || [];
+  }, [customerEntryGroups, selectedCustomerId]);
+
+  // Sorting logic
+  const sortedEntries = useMemo(() => {
+    if (!sortColumn) return selectedGroupEntries;
+
+    const sorted = [...selectedGroupEntries].sort((a, b) => {
+      let compareA: any = a[sortColumn as keyof typeof a];
+      let compareB: any = b[sortColumn as keyof typeof b];
+
+      // Handle different data types
+      if (sortColumn === 'date') {
+        compareA = new Date(compareA).getTime();
+        compareB = new Date(compareB).getTime();
+      } else if (sortColumn === 'amount') {
+        compareA = Number(compareA) || 0;
+        compareB = Number(compareB) || 0;
+      } else if (sortColumn === 'type' || sortColumn === 'subtype' || sortColumn === 'receipt' || sortColumn === 'notes') {
+        compareA = String(compareA || '').toLowerCase();
+        compareB = String(compareB || '').toLowerCase();
+      }
+
+      if (compareA < compareB) return sortDirection === 'asc' ? -1 : 1;
+      if (compareA > compareB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return sorted;
+  }, [selectedGroupEntries, sortColumn, sortDirection]);
+
   // Pagination logic
-  const totalPages = Math.ceil(displayedDataEntries.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedEntries.length / itemsPerPage);
   const paginatedEntries = useMemo(() => {
-    return displayedDataEntries.slice(
+    return sortedEntries.slice(
       (currentPage - 1) * itemsPerPage,
       currentPage * itemsPerPage
     );
-  }, [displayedDataEntries, currentPage, itemsPerPage]);
+  }, [sortedEntries, currentPage, itemsPerPage]);
 
   // Reset to page 1 when data changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [displayedDataEntries.length]);
+  }, [sortedEntries.length]);
 
   // Memoized list of customers for the form's dropdown
   const filteredCustomers = useMemo(() => {
@@ -176,6 +266,25 @@ const DataPage = () => {
     document.addEventListener('keydown', handleEscape, true);
     return () => document.removeEventListener('keydown', handleEscape, true);
   }, [deleteId]);
+
+  // Sorting handler
+  const handleSortColumn = (column: 'date' | 'type' | 'subtype' | 'amount' | 'receipt' | 'notes') => {
+    if (sortColumn === column) {
+      // Toggle direction if clicking the same column
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new column and default to ascending
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+    setCurrentPage(1);
+  };
+
+  // Helper function to render sort indicator
+  const getSortIndicator = (column: 'date' | 'type' | 'subtype' | 'amount' | 'receipt' | 'notes') => {
+    if (sortColumn !== column) return ' ↕️';
+    return sortDirection === 'asc' ? ' ↑' : ' ↓';
+  };
 
 
   // --- HANDLERS ---
@@ -333,211 +442,267 @@ const DataPage = () => {
             <AnimatePresence mode="wait">
               {showTable ? (
                 <motion.div key="table" variants={viewVariants} initial="hidden" animate="visible" exit="exit">
-                  {/* Pagination Controls removed from top and moved to bottom */}
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="md:w-1/3 lg:w-1/4 bg-white border border-gray-200 rounded-lg shadow-sm p-3 dark:bg-dark-card dark:border-dark-border">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-semibold text-gray-700 dark:text-dark-text">Customers</h3>
+                        <span className="text-xs text-gray-500 dark:text-dark-muted">{filteredCustomerGroups.length}</span>
+                      </div>
+                      {customerEntryGroups.length === 0 ? (
+                        <div className="text-center text-gray-500 py-10 text-sm dark:text-dark-muted">No data entries found.</div>
+                      ) : (
+                        <>
+                          <div className="mb-3">
+                            <input
+                              type="text"
+                              placeholder="Search customer..."
+                              value={customerSearchTerm}
+                              onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 scrollbar-thin dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted"
+                            />
+                          </div>
+                          {filteredCustomerGroups.length === 0 ? (
+                            <div className="text-center text-gray-500 py-8 text-sm dark:text-dark-muted">
+                              {customerSearchTerm.trim() ? 'No customers found.' : 'No data entries found.'}
+                            </div>
+                          ) : (
+                            <div className="space-y-2 max-h-[470px] overflow-y-auto pr-1 scrollbar-thin">
+                              {filteredCustomerGroups.map((group) => {
+                                const creditTotal = group.entries.filter((e) => e.type === 'credit').reduce((sum, e) => sum + e.amount, 0);
+                                const expenseTotal = group.entries.filter((e) => e.type !== 'credit').reduce((sum, e) => sum + e.amount, 0);
+                                return (
+                                  <button
+                                    key={group.customerId}
+                                    type="button"
+                                    className={`w-full text-left px-3 py-2 rounded-lg border transition-colors duration-150 ${selectedCustomerId === group.customerId
+                                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-500/60 dark:bg-indigo-900/20 dark:text-indigo-200'
+                                      : 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50 dark:border-dark-border dark:hover:border-indigo-800 dark:hover:bg-slate-700/50 dark:text-dark-text'
+                                      }`}
+                                    onClick={() => { setSelectedCustomerId(group.customerId); setCurrentPage(1); }}
+                                  >
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="font-semibold truncate">{group.name}</div>
+                                      <div className="text-xs text-gray-500 dark:text-dark-muted whitespace-nowrap">{group.entries.length} entries</div>
+                                    </div>
+                                    <div className="mt-1 text-xs flex gap-2 text-gray-600 dark:text-dark-muted">
+                                      <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" />+₹{creditTotal.toLocaleString()}</span>
+                                      {expenseTotal > 0 && <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" />-₹{expenseTotal.toLocaleString()}</span>}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
 
-                  <div className="w-full border border-gray-200 rounded-lg overflow-hidden dark:border-dark-border">
-                    {/* Desktop Table */}
-                    <table className="hidden md:table w-full" style={{ tableLayout: 'auto' }}>
-                      <thead className="bg-indigo-50 dark:bg-indigo-900/30">
-                        <tr className="text-left text-xs font-bold text-indigo-700 uppercase tracking-wider dark:text-indigo-400">
-                          <th className="px-4 py-3 resize-x overflow-auto cursor-col-resize" style={{ minWidth: '40px' }}>#</th>
-                          <th className="px-4 py-3 resize-x overflow-auto cursor-col-resize" style={{ minWidth: '80px' }}>Name</th>
-                          <th className="px-4 py-3 text-center resize-x overflow-auto cursor-col-resize" style={{ minWidth: '80px' }}>Date</th>
-                          <th className="px-4 py-3 text-center resize-x overflow-auto cursor-col-resize" style={{ minWidth: '60px' }}>Type</th>
-                          <th className="px-4 py-3 resize-x overflow-auto cursor-col-resize" style={{ minWidth: '80px' }}>Subtype</th>
-                          <th className="px-4 py-3 resize-x overflow-auto cursor-col-resize" style={{ minWidth: '80px' }}>Amount</th>
-                          <th className="px-4 py-3 resize-x overflow-auto cursor-col-resize" style={{ minWidth: '70px' }}>Receipt #</th>
-                          <th className="px-4 py-3 resize-x overflow-auto cursor-col-resize" style={{ minWidth: '150px' }}>Notes</th>
-                          {!isScopedCustomer && <th className="px-4 py-3 text-center text-red-600 dark:text-red-400" style={{ minWidth: '100px' }}>Actions</th>}
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white dark:bg-dark-card">
-                        {displayedDataEntries.length === 0 ? (
-                          <tr>
-                            <td colSpan={9} className="text-center text-gray-500 py-16 text-base dark:text-dark-muted">
-                              {isScopedCustomer && scopedCustomerId
+                    <div className="flex-1">
+                      <div className="w-full border border-gray-200 rounded-lg overflow-hidden dark:border-dark-border">
+                        {/* Desktop Table */}
+                        <table className="hidden md:table w-full" style={{ tableLayout: 'auto' }}>
+                          <thead className="bg-indigo-50 dark:bg-indigo-900/30">
+                            <tr className="text-left text-xs font-bold text-indigo-700 uppercase tracking-wider dark:text-indigo-400">
+                              <th className="px-4 py-3 resize-x overflow-auto cursor-col-resize" style={{ minWidth: '40px' }}>#</th>
+                              <th className="px-4 py-3 text-left resize-x overflow-auto cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/50" style={{ minWidth: '120px' }} onClick={() => handleSortColumn('date')}>Date{getSortIndicator('date')}</th>
+                              <th className="px-4 py-3 text-center resize-x overflow-auto cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/50" style={{ minWidth: '60px' }} onClick={() => handleSortColumn('type')}>Type{getSortIndicator('type')}</th>
+                              <th className="px-4 py-3 resize-x overflow-auto cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/50" style={{ minWidth: '80px' }} onClick={() => handleSortColumn('subtype')}>Subtype{getSortIndicator('subtype')}</th>
+                              <th className="px-4 py-3 resize-x overflow-auto cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/50" style={{ minWidth: '90px' }} onClick={() => handleSortColumn('amount')}>Amount{getSortIndicator('amount')}</th>
+                              <th className="px-4 py-3 resize-x overflow-auto cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/50" style={{ minWidth: '90px' }} onClick={() => handleSortColumn('receipt')}>Receipt #{getSortIndicator('receipt')}</th>
+                              <th className="px-4 py-3 resize-x overflow-auto cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/50" style={{ minWidth: '180px' }} onClick={() => handleSortColumn('notes')}>Notes{getSortIndicator('notes')}</th>
+                              {!isScopedCustomer && <th className="px-4 py-3 text-center text-red-600 dark:text-red-400" style={{ minWidth: '100px' }}>Actions</th>}
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white dark:bg-dark-card">
+                            {!selectedCustomerId || customerEntryGroups.length === 0 || selectedGroupEntries.length === 0 ? (
+                              <tr>
+                                <td colSpan={8} className="text-center text-gray-500 py-16 text-base dark:text-dark-muted">
+                                  {!selectedCustomerId
+                                    ? 'Select a customer to view entries.'
+                                    : isScopedCustomer && scopedCustomerId
+                                    ? (() => {
+                                      const customerName = customerMap.get(scopedCustomerId);
+                                      return `No Entries for ${customerName || 'you'} yet!`;
+                                    })()
+                                    : 'No entries for this customer.'}
+                                </td>
+                              </tr>
+                            ) : (
+                              paginatedEntries.map((entry, idx) => {
+                                const isExpanded = expandedNoteId === entry.id;
+                                const actualIndex = (currentPage - 1) * itemsPerPage + idx + 1;
+                                return (
+                                  <tr
+                                    key={`desktop-${entry.id}`}
+                                    className="border-b border-gray-200 last:border-b-0 hover:bg-indigo-50/50 text-sm align-top dark:border-dark-border dark:hover:bg-slate-700/50"
+                                  >
+                                    <td className="px-4 py-3 text-gray-500 text-left dark:text-dark-muted">{actualIndex}</td>
+                                    <td className="px-4 py-3 text-gray-600 text-left dark:text-dark-muted">{formatDate(entry.date)}</td>
+                                    <td className="px-4 py-3 text-center">
+                                      {entry.type === 'credit' ? (
+                                        <span className="inline-block px-2 py-1 rounded-full bg-green-100 text-green-800 font-semibold text-xs dark:bg-green-900/30 dark:text-green-400">Credit</span>
+                                      ) : (
+                                        <span className="inline-block px-2 py-1 rounded-full bg-red-100 text-red-800 font-semibold text-xs dark:bg-red-900/30 dark:text-red-400">Expense</span>
+                                      )}
+                                    </td>
+                                    <td className="px-4 py-3 text-gray-600 text-left dark:text-dark-muted">{entry.subtype || '-'}</td>
+                                    <td className={`px-4 py-3 font-bold text-left ${entry.type === 'credit' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>{entry.type === 'credit' ? '+' : ''}₹{entry.amount.toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-gray-600 text-left dark:text-dark-muted">{entry.receipt_number || '-'}</td>
+                                    <td ref={(el) => (notesRefs.current[entry.id] = el)} className="px-4 py-3 text-gray-600 text-left dark:text-dark-muted">
+                                      <div className={`cursor-pointer break-words whitespace-pre-wrap ${!isExpanded ? 'line-clamp-2' : ''}`} onClick={() => handleNoteClick(entry.id)}>
+                                        {entry.notes || '-'}
+                                      </div>
+                                    </td>
+                                    {!isScopedCustomer && (
+                                      <td className="px-4 py-3 text-center">
+                                        <div className="flex items-center justify-center gap-2">
+                                          <button type="button" className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
+                                            Edit
+                                          </button>
+                                          <button type="button" className="p-1 rounded-full hover:bg-red-500/10 transition-colors" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }}>
+                                            <Trash2Icon className="w-5 h-5 text-red-500" />
+                                          </button>
+                                        </div>
+                                      </td>
+                                    )}
+                                  </tr>
+                                );
+                              })
+                            )}
+                          </tbody>
+                        </table>
+
+                        {/* Mobile Cards */}
+                        <div className="md:hidden bg-white dark:bg-dark-card">
+                          {!selectedCustomerId || customerEntryGroups.length === 0 || selectedGroupEntries.length === 0 ? (
+                            <div className="text-center text-gray-500 py-16 text-base dark:text-dark-muted">
+                              {!selectedCustomerId
+                                ? 'Select a customer to view entries.'
+                                : isScopedCustomer && scopedCustomerId
                                 ? (() => {
                                   const customerName = customerMap.get(scopedCustomerId);
                                   return `No Entries for ${customerName || 'you'} yet!`;
                                 })()
-                                : 'No data entries found.'}
-                            </td>
-                          </tr>
-                        ) : (
-                          paginatedEntries.map((entry, idx) => {
-                            const customerName = customerMap.get(entry.customer_id) || 'Unknown';
-                            const isExpanded = expandedNoteId === entry.id;
-                            const actualIndex = (currentPage - 1) * itemsPerPage + idx + 1;
-                            return (
-                              <tr
-                                key={`desktop-${entry.id}`}
-                                className="border-b border-gray-200 last:border-b-0 hover:bg-indigo-50/50 text-sm align-top dark:border-dark-border dark:hover:bg-slate-700/50"
-                              >
-                                <td className="px-4 py-3 text-gray-500 text-left dark:text-dark-muted">{actualIndex}</td>
-                                <td className="px-4 py-3 font-medium text-gray-900 text-left dark:text-dark-text">{customerName}</td>
-                                <td className="px-4 py-3 text-gray-600 text-center dark:text-dark-muted">{formatDate(entry.date)}</td>
-                                <td className="px-4 py-3 text-center">
-                                  {entry.type === 'credit' ? (
-                                    <span className="inline-block px-2 py-1 rounded-full bg-green-100 text-green-800 font-semibold text-xs dark:bg-green-900/30 dark:text-green-400">Credit</span>
-                                  ) : (
-                                    <span className="inline-block px-2 py-1 rounded-full bg-red-100 text-red-800 font-semibold text-xs dark:bg-red-900/30 dark:text-red-400">Expense</span>
-                                  )}
-                                </td>
-                                <td className="px-4 py-3 text-gray-600 text-left dark:text-dark-muted">{entry.subtype || '-'}</td>
-                                <td className={`px-4 py-3 font-bold text-left ${entry.type === 'credit' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>{entry.type === 'credit' ? '+' : ''}₹{entry.amount.toLocaleString()}</td>
-                                <td className="px-4 py-3 text-gray-600 text-left dark:text-dark-muted">{entry.receipt_number || '-'}</td>
-                                <td ref={(el) => (notesRefs.current[entry.id] = el)} className="px-4 py-3 text-gray-600 text-left dark:text-dark-muted">
-                                  <div className={`cursor-pointer break-words whitespace-pre-wrap ${!isExpanded ? 'line-clamp-2' : ''}`} onClick={() => handleNoteClick(entry.id)}>
-                                    {entry.notes || '-'}
-                                  </div>
-                                </td>
-                                {!isScopedCustomer && (
-                                  <td className="px-4 py-3 text-center">
-                                    <div className="flex items-center justify-center gap-2">
-                                      <button type="button" className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
-                                        Edit
-                                      </button>
-                                      <button type="button" className="p-1 rounded-full hover:bg-red-500/10 transition-colors" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }}>
-                                        <Trash2Icon className="w-5 h-5 text-red-500" />
-                                      </button>
-                                    </div>
-                                  </td>
-                                )}
-                              </tr>
-                            );
-                          })
-                        )}
-                      </tbody>
-                    </table>
-
-                    {/* Mobile Cards */}
-                    <div className="md:hidden bg-white dark:bg-dark-card">
-                      {displayedDataEntries.length === 0 ? (
-                        <div className="text-center text-gray-500 py-16 text-base dark:text-dark-muted">
-                          {isScopedCustomer && scopedCustomerId
-                            ? (() => {
-                              const customerName = customerMap.get(scopedCustomerId);
-                              return `No Entries for ${customerName || 'you'} yet!`;
-                            })()
-                            : 'No data entries found.'}
-                        </div>
-                      ) : (
-                        paginatedEntries.map((entry, idx) => {
-                          const customerName = customerMap.get(entry.customer_id) || 'Unknown';
-                          const actualIndex = (currentPage - 1) * itemsPerPage + idx + 1;
-                          return (
-                            <div
-                              key={`mobile-${entry.id}`}
-                              className="px-4 py-4 border-b last:border-b-0 hover:bg-indigo-50/30 dark:border-dark-border dark:hover:bg-slate-700/30"
-                            >
-                              <div className="flex justify-between items-start gap-3">
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-semibold text-gray-900 truncate dark:text-dark-text"><span className="text-gray-400 font-normal dark:text-dark-muted">#{actualIndex}</span> {customerName}</div>
-                                  <div className="text-sm text-gray-600 truncate dark:text-dark-muted">{entry.subtype || entry.type}</div>
-                                </div>
-                                <div className={`ml-2 text-right font-bold text-base ${entry.type === 'credit' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>{entry.type === 'credit' ? '+' : ''}₹{entry.amount.toLocaleString()}</div>
-                              </div>
-                              <div className="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-dark-muted">
-                                <div>{formatDate(entry.date)}</div>
-                                <div className="flex items-center gap-3">
-                                  {entry.receipt_number && <div className="px-2 py-1 bg-gray-100 rounded text-xs dark:bg-slate-700">#{entry.receipt_number}</div>}
-                                  {!isScopedCustomer && (
-                                    <>
-                                      <button type="button" className="px-3 py-1 rounded bg-blue-600 text-white text-sm" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
-                                        Edit
-                                      </button>
-                                      <button aria-label="Delete entry" type="button" className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }}>
-                                        <Trash2Icon className="w-5 h-5" />
-                                      </button>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                              {entry.notes && (
-                                <div className="mt-3 pt-3 border-t border-gray-200/80 dark:border-dark-border">
-                                  <p className="text-sm text-gray-700 break-words dark:text-dark-muted">{entry.notes}</p>
-                                </div>
-                              )}
+                                : 'No entries for this customer.'}
                             </div>
-                          );
-                        })
+                          ) : (
+                            paginatedEntries.map((entry, idx) => {
+                              const actualIndex = (currentPage - 1) * itemsPerPage + idx + 1;
+                              return (
+                                <div
+                                  key={`mobile-${entry.id}`}
+                                  className="px-4 py-4 border-b last:border-b-0 hover:bg-indigo-50/30 dark:border-dark-border dark:hover:bg-slate-700/30"
+                                >
+                                  <div className="flex justify-between items-start gap-3">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="font-semibold text-gray-900 truncate dark:text-dark-text"><span className="text-gray-400 font-normal dark:text-dark-muted">#{actualIndex}</span> {customerMap.get(entry.customer_id) || 'Unknown'}</div>
+                                      <div className="text-sm text-gray-600 truncate dark:text-dark-muted">{entry.subtype || entry.type}</div>
+                                    </div>
+                                    <div className={`ml-2 text-right font-bold text-base ${entry.type === 'credit' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>{entry.type === 'credit' ? '+' : ''}₹{entry.amount.toLocaleString()}</div>
+                                  </div>
+                                  <div className="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-dark-muted">
+                                    <div>{formatDate(entry.date)}</div>
+                                    <div className="flex items-center gap-3">
+                                      {entry.receipt_number && <div className="px-2 py-1 bg-gray-100 rounded text-xs dark:bg-slate-700">#{entry.receipt_number}</div>}
+                                      {!isScopedCustomer && (
+                                        <>
+                                          <button type="button" className="px-3 py-1 rounded bg-blue-600 text-white text-sm" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
+                                            Edit
+                                          </button>
+                                          <button aria-label="Delete entry" type="button" className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }}>
+                                            <Trash2Icon className="w-5 h-5" />
+                                          </button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {entry.notes && (
+                                    <div className="mt-3 pt-3 border-t border-gray-200/80 dark:border-dark-border">
+                                      <p className="text-sm text-gray-700 break-words dark:text-dark-muted">{entry.notes}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                        </div>
+
+                      {/* Pagination Controls - Bottom */}
+                      {totalPages > 1 && (
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-dark-border">
+                          <div className="text-sm text-gray-600 dark:text-dark-muted">
+                            Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+                            {Math.min(currentPage * itemsPerPage, sortedEntries.length)} of{" "}
+                            {sortedEntries.length} entries
+                          </div>
+                          <div className="flex gap-2 flex-wrap justify-center">
+                            <button
+                              onClick={() => setCurrentPage(1)}
+                              disabled={currentPage === 1}
+                              className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700"
+                            >
+                              First
+                            </button>
+                            <button
+                              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                              disabled={currentPage === 1}
+                              className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700"
+                            >
+                              Previous
+                            </button>
+
+                            {/* Page numbers */}
+                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                              // Show first, last, current, and neighbors
+                              if (
+                                page === 1 ||
+                                page === totalPages ||
+                                Math.abs(page - currentPage) <= 1
+                              ) {
+                                return (
+                                  <button
+                                    key={page}
+                                    onClick={() => setCurrentPage(page)}
+                                    className={`px-3 py-1 rounded border ${currentPage === page
+                                      ? "bg-indigo-600 text-white border-indigo-600"
+                                      : "border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700"
+                                      }`}
+                                  >
+                                    {page}
+                                  </button>
+                                );
+                              }
+                              // Show dots for skipped pages
+                              if (page === 2 && currentPage > 3) {
+                                return <span key="dots-start" className="px-2 dark:text-dark-muted">...</span>;
+                              }
+                              if (page === totalPages - 1 && currentPage < totalPages - 2) {
+                                return <span key="dots-end" className="px-2 dark:text-dark-muted">...</span>;
+                              }
+                              return null;
+                            })}
+
+                            <button
+                              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                              disabled={currentPage === totalPages}
+                              className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700"
+                            >
+                              Next
+                            </button>
+                            <button
+                              onClick={() => setCurrentPage(totalPages)}
+                              disabled={currentPage === totalPages}
+                              className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700"
+                            >
+                              Last
+                            </button>
+                          </div>
+                        </div>
                       )}
-                    </div>
-                    </div>
 
-                  {/* Pagination Controls - Bottom */}
-                  {totalPages > 1 && (
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-dark-border">
-                      <div className="text-sm text-gray-600 dark:text-dark-muted">
-                        Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-                        {Math.min(currentPage * itemsPerPage, displayedDataEntries.length)} of{" "}
-                        {displayedDataEntries.length} entries
-                      </div>
-                      <div className="flex gap-2 flex-wrap justify-center">
-                        <button
-                          onClick={() => setCurrentPage(1)}
-                          disabled={currentPage === 1}
-                          className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700"
-                        >
-                          First
-                        </button>
-                        <button
-                          onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                          disabled={currentPage === 1}
-                          className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700"
-                        >
-                          Previous
-                        </button>
-
-                        {/* Page numbers */}
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                          // Show first, last, current, and neighbors
-                          if (
-                            page === 1 ||
-                            page === totalPages ||
-                            Math.abs(page - currentPage) <= 1
-                          ) {
-                            return (
-                              <button
-                                key={page}
-                                onClick={() => setCurrentPage(page)}
-                                className={`px-3 py-1 rounded border ${currentPage === page
-                                  ? "bg-indigo-600 text-white border-indigo-600"
-                                  : "border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700"
-                                  }`}
-                              >
-                                {page}
-                              </button>
-                            );
-                          }
-                          // Show dots for skipped pages
-                          if (page === 2 && currentPage > 3) {
-                            return <span key="dots-start" className="px-2 dark:text-dark-muted">...</span>;
-                          }
-                          if (page === totalPages - 1 && currentPage < totalPages - 2) {
-                            return <span key="dots-end" className="px-2 dark:text-dark-muted">...</span>;
-                          }
-                          return null;
-                        })}
-
-                        <button
-                          onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                          disabled={currentPage === totalPages}
-                          className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700"
-                        >
-                          Next
-                        </button>
-                        <button
-                          onClick={() => setCurrentPage(totalPages)}
-                          disabled={currentPage === totalPages}
-                          className="px-3 py-1 rounded border border-gray-300 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700"
-                        >
-                          Last
-                        </button>
                       </div>
                     </div>
-                  )}
-
                   </motion.div>
               ) : (
                 <motion.div key="form" variants={viewVariants} initial="hidden" animate="visible" exit="exit" className="w-full h-full flex flex-col">
@@ -556,7 +721,7 @@ const DataPage = () => {
                         </button>
                         <AnimatePresence>
                           {showCustomerDropdown && (
-                            <motion.div variants={dropdownVariants} initial="hidden" animate="visible" exit="exit" className="absolute top-full left-0 z-20 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-52 overflow-y-auto mt-1 dark:bg-dark-card dark:border-dark-border">
+                            <motion.div variants={dropdownVariants} initial="hidden" animate="visible" exit="exit" className="absolute top-full left-0 z-20 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-52 overflow-y-auto mt-1 scrollbar-thin dark:bg-dark-card dark:border-dark-border">
                               <div className="p-2 sticky top-0 bg-white z-10 border-b border-gray-200 dark:bg-dark-card dark:border-dark-border">
                                 <input type="text" placeholder="Search customer..." value={customerFilter} onChange={e => setCustomerFilter(e.target.value)} className="p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-200 text-sm w-full dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted" autoFocus />
                               </div>
@@ -632,7 +797,7 @@ const DataPage = () => {
                 exit={{ opacity: 0 }}
                 onClick={() => setEditEntryId(null)}
               >
-                <motion.div role="dialog" aria-modal="true" aria-labelledby="edit-entry-modal-title" variants={modalVariants} initial="hidden" animate="visible" exit="exit" className="bg-white rounded-xl shadow-lg p-4 w-full max-w-sm max-h-[90vh] overflow-y-auto mx-4 dark:bg-dark-card dark:border dark:border-dark-border" onClick={(e) => e.stopPropagation()}>
+                <motion.div role="dialog" aria-modal="true" aria-labelledby="edit-entry-modal-title" variants={modalVariants} initial="hidden" animate="visible" exit="exit" className="bg-white rounded-xl shadow-lg p-4 w-full max-w-sm max-h-[90vh] overflow-y-auto mx-4 scrollbar-thin dark:bg-dark-card dark:border dark:border-dark-border" onClick={(e) => e.stopPropagation()}>
                   <div id="edit-entry-modal-title" className="text-lg font-semibold text-gray-800 mb-4 dark:text-dark-text">Edit Entry</div>
                   <div className="grid grid-cols-1 gap-3">
                     <label className={labelBaseStyle}>Customer</label>

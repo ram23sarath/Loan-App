@@ -168,7 +168,9 @@ const RecordLoanModal: React.FC<Props> = ({ customer, onClose, hasOngoingLoan = 
               <button
                 type="button"
                 onClick={() => setMode('installment')}
-                className={`px-3 py-1 rounded ${mode === 'installment' ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-slate-700 dark:text-dark-text'}`}
+                disabled={!hasOngoingLoan}
+                title={!hasOngoingLoan ? 'Must have an ongoing loan to record installments' : ''}
+                className={`px-3 py-1 rounded ${mode === 'installment' ? 'bg-indigo-600 text-white' : !hasOngoingLoan ? 'bg-gray-300 text-gray-500 cursor-not-allowed dark:bg-slate-600 dark:text-slate-400' : 'bg-gray-100 dark:bg-slate-700 dark:text-dark-text'}`}
               >
                 Installment
               </button>

@@ -10,6 +10,7 @@ import RecordDataEntryModal from './RecordDataEntryModal';
 import useFocusTrap from '../hooks/useFocusTrap';
 import { XIcon, FileDownIcon, LandmarkIcon, HistoryIcon, Trash2Icon } from '../../constants';
 import { formatDate } from '../../utils/dateFormatter';
+import { formatNumberIndian } from '../../utils/numberFormatter';
 
 interface CustomerDetailModalProps {
   customer: Customer;
@@ -39,7 +40,7 @@ const modalVariants: Variants = {
   exit: { opacity: 0, y: 50, scale: 0.9 },
 };
 
-const formatCurrency = (amount: number) => `₹${amount.toLocaleString()}`;
+const formatCurrency = (amount: number) => `₹${formatNumberIndian(amount)}`;
 
 // Define variants for the note's expansion
 const noteVariants: Variants = {

@@ -1123,6 +1123,7 @@ const CustomerListPage = () => {
             dataEntries={dataEntries.filter(d => d.customer_id === selectedCustomer.id)}
             onClose={() => setSelectedCustomer(null)}
             deleteLoan={deleteLoan}
+            deleteDataEntry={deleteDataEntry}
             deleteSubscription={deleteSubscription}
             deleteInstallment={deleteInstallment}
             onEditLoan={(loan) => setEditModal({ type: 'loan', data: loan })}

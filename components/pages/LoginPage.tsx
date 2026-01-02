@@ -160,9 +160,13 @@ const LoginPage = () => {
     return <Navigate to={defaultLandingPath} replace />;
   }
 
+  // Show only the animation when it's active
+  if (showAnimation) {
+    return <FireTruckAnimation onComplete={handleAnimationComplete} />;
+  }
+
   return (
     <div className="flex flex-col md:flex-row items-center justify-center md:justify-between min-h-screen px-4 py-8 sm:px-0 md:pr-16 md:pl-16">
-      {showAnimation && <FireTruckAnimation onComplete={handleAnimationComplete} />}
       <Toast message={toastMessage} show={showToast} onClose={() => setShowToast(false)} type="error" />
 
       {(!isMobile || !showLoginOnMobile) && (

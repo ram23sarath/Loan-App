@@ -153,6 +153,167 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
   }
 }
 
+/* Premium shimmer text effect */
+.premium-shimmer-text {
+  background: linear-gradient(
+    90deg,
+    #818cf8 0%,
+    #c084fc 25%,
+    #f0abfc 50%,
+    #c084fc 75%,
+    #818cf8 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmerFlow 3s ease-in-out infinite;
+}
+
+@keyframes shimmerFlow {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: -100% 50%;
+  }
+}
+
+/* Elegant glow text */
+.premium-glow-text {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 
+    0 0 20px rgba(102, 126, 234, 0.5),
+    0 0 40px rgba(118, 75, 162, 0.3),
+    0 0 60px rgba(240, 147, 251, 0.2);
+  filter: drop-shadow(0 4px 20px rgba(118, 75, 162, 0.4));
+}
+
+/* Luxurious gold accent text */
+.premium-gold-text {
+  background: linear-gradient(
+    135deg,
+    #f6d365 0%,
+    #fda085 25%,
+    #f6d365 50%,
+    #ffecd2 75%,
+    #f6d365 100%
+  );
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: goldShift 4s ease-in-out infinite;
+  text-shadow: 0 2px 10px rgba(246, 211, 101, 0.4);
+}
+
+@keyframes goldShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Animated underline effect */
+.premium-underline {
+  position: relative;
+  display: inline-block;
+}
+
+.premium-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, #818cf8, #c084fc, #f472b6, #22d3ee);
+  background-size: 200% 100%;
+  border-radius: 2px;
+  animation: underlineShimmer 3s ease-in-out infinite;
+}
+
+@keyframes underlineShimmer {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Floating animation for emphasis */
+.premium-float {
+  animation: elegantFloat 6s ease-in-out infinite;
+}
+
+@keyframes elegantFloat {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* Subtle pulse glow */
+.premium-pulse-glow {
+  animation: pulseGlow 3s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(129, 140, 248, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(192, 132, 252, 0.6));
+  }
+}
+
+/* Letter spacing animation */
+.premium-breathe {
+  animation: breatheSpacing 8s ease-in-out infinite;
+}
+
+@keyframes breatheSpacing {
+  0%, 100% {
+    letter-spacing: 0.02em;
+  }
+  50% {
+    letter-spacing: 0.08em;
+  }
+}
+
+/* Elegant fade-in from below */
+.premium-reveal {
+  animation: revealUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes revealUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* Staggered text reveal */
+.premium-stagger-1 { animation-delay: 0.1s; }
+.premium-stagger-2 { animation-delay: 0.2s; }
+.premium-stagger-3 { animation-delay: 0.3s; }
+.premium-stagger-4 { animation-delay: 0.4s; }
+.premium-stagger-5 { animation-delay: 0.5s; }
+
 @keyframes modalIn {
   from {
     opacity: 0;

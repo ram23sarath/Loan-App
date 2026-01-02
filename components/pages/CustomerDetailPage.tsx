@@ -9,7 +9,7 @@ import GlassCard from '../ui/GlassCard';
 const CustomerDetailPage: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { customers, loans, subscriptions, installments, dataEntries, loading, updateCustomer, updateLoan, updateSubscription, updateInstallment, deleteLoan, deleteSubscription, deleteInstallment } = useData();
+  const { customers, loans, subscriptions, installments, dataEntries, loading, updateCustomer, updateLoan, updateSubscription, updateInstallment, deleteLoan, deleteSubscription, deleteInstallment, deleteDataEntry } = useData();
   const [editModal, setEditModal] = useState<{ type: 'customer' | 'loan' | 'subscription' | 'customer_loan' | 'installment'; data: any } | null>(null);
 
   if (loading) {
@@ -67,6 +67,7 @@ const CustomerDetailPage: React.FC = () => {
           deleteLoan={deleteLoan}
           deleteSubscription={deleteSubscription}
           deleteInstallment={deleteInstallment}
+          deleteDataEntry={deleteDataEntry}
           onEditLoan={(loan) => setEditModal({ type: 'loan', data: loan })}
           onEditSubscription={(sub) => setEditModal({ type: 'subscription', data: sub })}
           onEditInstallment={(installment) => setEditModal({ type: 'installment', data: installment })}

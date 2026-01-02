@@ -8,6 +8,7 @@ import ProfileHeader from './components/ProfileHeader';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import { useData } from './context/DataContext';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Lazy load page components for better initial bundle size
 const AddCustomerPage = React.lazy(() => import('./components/pages/AddCustomerPage'));
@@ -81,7 +82,14 @@ const AnimatedRoutes = () => {
           <Route path="/loan-seniority" element={<LoanSeniorityPage />} />
           <Route path="/loans/:id" element={<LoanDetailPage />} />
           <Route path="/subscriptions" element={<SubscriptionListPage />} />
-          <Route path="/summary" element={<SummaryPage />} />
+          <Route
+            path="/summary"
+            element={
+              <ErrorBoundary fallback={<div className="p-4 text-red-600">Something went wrong loading the summary. Please try again.</div>}>
+                <SummaryPage />
+              </ErrorBoundary>
+            }
+          />
           <Route path="/data" element={<DataPage />} />
         </Routes>
       </AnimatePresence>

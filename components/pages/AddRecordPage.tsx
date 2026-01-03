@@ -431,6 +431,7 @@ const AddRecordPage = () => {
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   const filteredCustomers = useMemo(() => {
     return customers.filter(
@@ -466,7 +467,8 @@ const AddRecordPage = () => {
     setActiveLoan(null);
     setPaidInstallmentNumbers(new Set());
     resetAll();
-    setDropdownOpen(false);
+    setDropdownOpen(true);
+    setTimeout(() => searchInputRef.current?.focus(), 0);
   };
 
   return (
@@ -525,6 +527,7 @@ const AddRecordPage = () => {
                         placeholder="Search by name or phone..."
                         value={customerSearch}
                         onChange={(e) => setCustomerSearch(e.target.value)}
+                        ref={searchInputRef}
                         className="w-full bg-white dark:bg-dark-bg border-b border-gray-200 dark:border-dark-border rounded-t-lg py-2 px-4 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-400 dark:placeholder-dark-muted text-gray-800 dark:text-dark-text"
                       />
                       {customerSearch && (

@@ -392,13 +392,16 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
           .filter((s: any) => s?.status === 'success' && s?.userId)
           .sort((a: any, b: any) => (b?.timestamp || 0) - (a?.timestamp || 0))
           .slice(0, 5)
-          .map((s: any) => ({
-            id: `local-${s.timestamp}-${s.userId}`,
-            status: s.status,
-            message: s.message || `Auth user created for customer ${s.customerId}: ${s.userId}`,
-            created_at: new Date(s.timestamp || Date.now()).toISOString(),
-            isLocal: true,
-          }));
+          .map((s: any) => {
+            const customerName = customerMap?.get(s.customerId)?.name || s.customerId;
+            return {
+              id: `local-${s.timestamp}-${s.userId}`,
+              status: s.status,
+              message: `User account for ${customerName} created`,
+              created_at: new Date(s.timestamp || Date.now()).toISOString(),
+              isLocal: true,
+            };
+          });
       } catch (err) {
         console.error('Failed to load local auth user creations', err);
         return [];

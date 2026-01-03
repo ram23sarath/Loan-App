@@ -30,7 +30,7 @@ const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 const CustomerListPage = () => {
-  const { customers, loans, subscriptions, installments, installmentsByLoanId, dataEntries, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, isRefreshing, signOut, updateCustomer, updateLoan, updateSubscription, updateInstallment, isScopedCustomer } = useData();
+  const { customers, loans, subscriptions, installments, installmentsByLoanId, dataEntries, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, deleteDataEntry, isRefreshing, signOut, updateCustomer, updateLoan, updateSubscription, updateInstallment, isScopedCustomer } = useData();
   const [deleteCustomerTarget, setDeleteCustomerTarget] = React.useState<{ id: string, name: string } | null>(null);
   const [deleteCounts, setDeleteCounts] = React.useState<{ dataEntries: number; loans: number; installments: number; subscriptions: number } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');

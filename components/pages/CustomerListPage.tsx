@@ -558,7 +558,6 @@ const CustomerListPage = () => {
                                     )}
                                     <motion.div
                                       className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
-                                      onTap={() => setSelectedCustomer(customer)}
                                       onClick={() => setSelectedCustomer(customer)}
                                       initial={{ opacity: 0 }}
                                       animate={{ opacity: 1 }}
@@ -724,7 +723,6 @@ const CustomerListPage = () => {
                                     )}
                                     <motion.div
                                       className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
-                                      onTap={() => setSelectedCustomer(customer)}
                                       onClick={() => setSelectedCustomer(customer)}
                                       initial={{ opacity: 0 }}
                                       animate={{ opacity: 1 }}
@@ -887,7 +885,6 @@ const CustomerListPage = () => {
                                     )}
                                     <motion.div
                                       className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
-                                      onTap={() => setSelectedCustomer(customer)}
                                       onClick={() => setSelectedCustomer(customer)}
                                       initial={{ opacity: 0 }}
                                       animate={{ opacity: 1 }}
@@ -1043,7 +1040,6 @@ const CustomerListPage = () => {
                                     )}
                                     <motion.div
                                       className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
-                                      onTap={() => setSelectedCustomer(customer)}
                                       onClick={() => setSelectedCustomer(customer)}
                                       initial={{ opacity: 0 }}
                                       animate={{ opacity: 1 }}

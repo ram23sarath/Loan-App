@@ -172,22 +172,30 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
 
   // ... (Keep existing handleNotificationClick)
 
-  const handleDeleteNotification = async (notificationId: number) => {
+  const handleDeleteNotification = async (notificationId: number | string) => {
     if (isScopedCustomer) return;
 
-    setDeletingNotificationId(notificationId);
+    const target = notifications.find(n => n.id === notificationId);
+    if (target?.isLocal) {
+      setNotifications(notifications.filter(n => n.id !== notificationId));
+      return;
+    }
+
+    setDeletingNotificationId(typeof notificationId === 'number' ? notificationId : null);
 
     try {
       // Trigger animation first (wait for exit animation)
       await new Promise(r => setTimeout(r, 600));
 
-      // Delete from DB
-      const { error } = await supabase
-        .from('system_notifications')
-        .delete()
-        .eq('id', notificationId);
+      if (typeof notificationId === 'number') {
+        // Delete from DB
+        const { error } = await supabase
+          .from('system_notifications')
+          .delete()
+          .eq('id', notificationId);
 
-      if (error) throw error;
+        if (error) throw error;
+      }
 
       // Remove from local state
       setNotifications(notifications.filter(n => n.id !== notificationId));
@@ -375,6 +383,28 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
     setShowNotificationModal(true);
     setNotificationLoading(true);
 
+    const localNotifications = (() => {
+      try {
+        const saved = localStorage.getItem('loan_app_user_creation_history');
+        if (!saved) return [];
+
+        return JSON.parse(saved)
+          .filter((s: any) => s?.status === 'success' && s?.userId)
+          .sort((a: any, b: any) => (b?.timestamp || 0) - (a?.timestamp || 0))
+          .slice(0, 5)
+          .map((s: any) => ({
+            id: `local-${s.timestamp}-${s.userId}`,
+            status: s.status,
+            message: s.message || `Auth user created for customer ${s.customerId}: ${s.userId}`,
+            created_at: new Date(s.timestamp || Date.now()).toISOString(),
+            isLocal: true,
+          }));
+      } catch (err) {
+        console.error('Failed to load local auth user creations', err);
+        return [];
+      }
+    })();
+
     try {
       // Fetch recent system notifications
       const { data, error } = await supabase
@@ -386,13 +416,15 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
       if (error) {
         // Fallback if table doesn't exist
         console.warn("Could not fetch notifications (table might be missing)", error);
-        setNotifications([]);
+        setNotifications(localNotifications);
       } else {
-        setNotifications(data || []);
+        const merged = [...localNotifications, ...(data || [])]
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        setNotifications(merged);
       }
     } catch (error) {
       console.error("Error fetching notifications", error);
-      setNotifications([]);
+      setNotifications(localNotifications);
     } finally {
       setNotificationLoading(false);
     }
@@ -664,7 +696,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                                   {new Date(note.created_at).toLocaleString()}
                                 </span>
                               </div>
-                              {!isScopedCustomer && (
+                              {!isScopedCustomer && !note.isLocal && (
                                 <button
                                   onClick={() => handleDeleteNotification(note.id)}
                                   disabled={deletingNotificationId === note.id || isClearing}

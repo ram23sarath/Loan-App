@@ -20,7 +20,7 @@ const AddCustomerPage = () => {
   const [toast, setToast] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
   const [shakeButton, setShakeButton] = useState(false);
   const STORAGE_KEY = 'loan_app_user_creation_history';
-  const [userCreationStatuses, setUserCreationStatuses] = useState<any[]>([]);
+  const [, setUserCreationStatuses] = useState<any[]>([]);
 
   // Load persisted history and listen for background events
   useEffect(() => {
@@ -133,45 +133,6 @@ const AddCustomerPage = () => {
         </GlassCard>
       </div>
 
-      {/* Recently created users table (last 5 successful creations) */}
-      <div className="max-w-3xl mx-auto mt-6 px-4">
-        {userCreationStatuses && userCreationStatuses.filter(s => s.status === 'success' && s.userId).length > 0 && (
-          <div className="rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm overflow-hidden">
-            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-dark-border flex items-center justify-between">
-              <div className="text-sm font-semibold text-gray-800 dark:text-dark-text">Recently Created Auth Users</div>
-              <div className="text-xs text-gray-500 dark:text-dark-muted">Newest first — showing up to 5</div>
-            </div>
-            <div className="p-3">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="text-xs text-gray-600 dark:text-dark-muted">
-                      <th className="py-2 pr-4">Customer ID</th>
-                      <th className="py-2 pr-4">User ID</th>
-                      <th className="py-2 pr-4">Status</th>
-                      <th className="py-2">Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {userCreationStatuses
-                      .filter(s => s.status === 'success' && s.userId)
-                      .sort((a, b) => b.timestamp - a.timestamp)
-                      .slice(0, 5)
-                      .map(s => (
-                        <tr key={s.customerId + '-' + s.userId} className="border-t border-gray-100 dark:border-dark-border">
-                          <td className="py-2 pr-4 align-top text-xs text-gray-800 dark:text-dark-text break-all">{s.customerId}</td>
-                          <td className="py-2 pr-4 align-top text-xs text-gray-700 dark:text-dark-muted break-all">{s.userId}</td>
-                          <td className="py-2 pr-4 align-top text-xs text-green-700 dark:text-green-400">{s.status}</td>
-                          <td className="py-2 align-top text-xs text-gray-500 dark:text-dark-muted">{new Date(s.timestamp).toLocaleString()}</td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
     </PageWrapper>
   );
 };

@@ -565,7 +565,7 @@ const CustomerListPage = () => {
                                       transition={{ duration: 0.3, delay: idx * 0.03 }}
                                       drag="x"
                                       dragConstraints={{ left: 0, right: 0 }}
-                                      dragElastic={0.3}
+                                      dragElastic={0}
                                       dragMomentum={false}
                                       dragDirectionLock={true}
                                       style={{ touchAction: "pan-y" }}
@@ -730,7 +730,7 @@ const CustomerListPage = () => {
                                       transition={{ duration: 0.3, delay: idx * 0.03 }}
                                       drag="x"
                                       dragConstraints={{ left: 0, right: 0 }}
-                                      dragElastic={0.3}
+                                      dragElastic={0}
                                       dragMomentum={false}
                                       dragDirectionLock={true}
                                       style={{ touchAction: "pan-y" }}
@@ -892,7 +892,7 @@ const CustomerListPage = () => {
                                       transition={{ duration: 0.3, delay: idx * 0.03 }}
                                       drag="x"
                                       dragConstraints={{ left: 0, right: 0 }}
-                                      dragElastic={0.3}
+                                      dragElastic={0}
                                       dragMomentum={false}
                                       dragDirectionLock={true}
                                       style={{ touchAction: "pan-y" }}
@@ -1047,7 +1047,7 @@ const CustomerListPage = () => {
                                       transition={{ duration: 0.3, delay: idx * 0.03 }}
                                       drag="x"
                                       dragConstraints={{ left: 0, right: 0 }}
-                                      dragElastic={0.3}
+                                      dragElastic={0}
                                       dragMomentum={false}
                                       dragDirectionLock={true}
                                       style={{ touchAction: "pan-y" }}

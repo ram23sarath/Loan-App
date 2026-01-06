@@ -276,8 +276,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 return;
             }
 
-            let query = supabase.from('loan_seniority').select('*, customers(name, phone)').order('loan_request_date', { ascending: true, nullsFirst: false });
+            let query = supabase.from('loan_seniority').select('*, customers(name, phone)').order('created_at', { ascending: true });
             // All users (including scoped) see the full seniority list
+            // Sorted by created_at ensures same-day requests are ordered by time (morning before evening)
 
             const { data, error } = await query;
             if (error) {
@@ -674,7 +675,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                         }
 
                         // All users (including scoped) see the full seniority list
-                        let query = supabase.from('loan_seniority').select('*, customers(name, phone)').order('loan_request_date', { ascending: true, nullsFirst: false });
+                        // Sorted by created_at ensures same-day requests are ordered by time (morning before evening)
+                        let query = supabase.from('loan_seniority').select('*, customers(name, phone)').order('created_at', { ascending: true });
                         const { data, error } = await query;
                         if (error) throw error;
                         const seniorityData = (data as any[]) || [];

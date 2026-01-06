@@ -139,13 +139,13 @@ const DataPage = () => {
       return;
     }
 
-    // If no search is active, auto-select first customer if none selected
-    const hasSelection = selectedCustomerId && customerEntryGroups.some((g) => g.customerId === selectedCustomerId);
-    if (!hasSelection) {
-      setSelectedCustomerId(customerEntryGroups[0].customerId);
+    // For scoped customers, auto-select their customer on load
+    if (isScopedCustomer && scopedCustomerId && !selectedCustomerId) {
+      setSelectedCustomerId(scopedCustomerId);
       setCurrentPage(1);
     }
-  }, [customerEntryGroups, selectedCustomerId, filteredCustomerGroups, debouncedCustomerSearchTerm]);
+    // For admin users, do NOT auto-select - let them choose a customer manually
+  }, [customerEntryGroups, selectedCustomerId, filteredCustomerGroups, debouncedCustomerSearchTerm, isScopedCustomer, scopedCustomerId]);
 
   const selectedGroupEntries = useMemo(() => {
     if (!selectedCustomerId) return [] as typeof displayedDataEntries;
@@ -272,6 +272,21 @@ const DataPage = () => {
     document.addEventListener('keydown', handleEscape, true);
     return () => document.removeEventListener('keydown', handleEscape, true);
   }, [deleteId]);
+
+  // Close customer modal with Escape (capture phase)
+  useEffect(() => {
+    if (!showCustomerModal) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      try {
+        e.stopPropagation();
+        if (typeof (e as any).stopImmediatePropagation === 'function') (e as any).stopImmediatePropagation();
+      } catch (_) {}
+      setShowCustomerModal(false);
+    };
+    document.addEventListener('keydown', handleEscape, true);
+    return () => document.removeEventListener('keydown', handleEscape, true);
+  }, [showCustomerModal]);
 
   // Sorting handler
   const handleSortColumn = (column: 'date' | 'type' | 'subtype' | 'amount' | 'receipt' | 'notes') => {
@@ -539,7 +554,7 @@ const DataPage = () => {
                               <tr>
                                 <td colSpan={8} className="text-center text-gray-500 py-16 text-base dark:text-dark-muted">
                                   {!selectedCustomerId
-                                    ? 'Select a customer to view entries.'
+                                    ? 'Select a customer to view their entries'
                                     : isScopedCustomer && scopedCustomerId
                                     ? (() => {
                                       const customerName = customerMap.get(scopedCustomerId);
@@ -567,7 +582,7 @@ const DataPage = () => {
                                       )}
                                     </td>
                                     <td className="px-4 py-3 text-gray-600 text-left dark:text-dark-muted">{entry.subtype || '-'}</td>
-                                    <td className={`px-4 py-3 font-bold text-left ${entry.type === 'credit' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>{entry.type === 'credit' ? '+' : ''}₹{formatNumberIndian(entry.amount)}</td>
+                                    <td className={`px-4 py-3 font-bold text-left ${entry.type === 'credit' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>₹{formatNumberIndian(entry.amount)}</td>
                                     <td className="px-4 py-3 text-gray-600 text-left dark:text-dark-muted">{entry.receipt_number || '-'}</td>
                                     <td ref={(el) => (notesRefs.current[entry.id] = el)} className="px-4 py-3 text-gray-600 text-left dark:text-dark-muted">
                                       <div className={`cursor-pointer break-words whitespace-pre-wrap ${!isExpanded ? 'line-clamp-2' : ''}`} onClick={() => handleNoteClick(entry.id)}>
@@ -598,7 +613,7 @@ const DataPage = () => {
                           {!selectedCustomerId || customerEntryGroups.length === 0 || selectedGroupEntries.length === 0 ? (
                             <div className="text-center text-gray-500 py-16 text-base dark:text-dark-muted">
                               {!selectedCustomerId
-                                ? 'Select a customer to view entries.'
+                                ? 'Select a customer to view their entries'
                                 : isScopedCustomer && scopedCustomerId
                                 ? (() => {
                                   const customerName = customerMap.get(scopedCustomerId);
@@ -612,62 +627,88 @@ const DataPage = () => {
                               return (
                                 <div
                                   key={`mobile-${entry.id}`}
-                                  className="px-3 py-3 sm:px-4 sm:py-4 border-b last:border-b-0 hover:bg-indigo-50/30 dark:border-dark-border dark:hover:bg-slate-700/30 bg-white dark:bg-dark-card"
+                                  className="mx-3 my-3 sm:mx-4 sm:my-4 p-3 sm:p-4 border border-gray-200 rounded-xl hover:shadow-md dark:border-dark-border dark:hover:shadow-lg bg-white dark:bg-dark-card transition-shadow"
                                 >
-                                  {/* Header: Customer Name and Amount */}
-                                  <div className="flex justify-between items-start gap-2 mb-2">
+                                  {/* Header Row: Entry Number + Customer + Amount */}
+                                  <div className="flex items-start justify-between gap-3 mb-3">
                                     <div className="flex-1 min-w-0">
-                                      <div className="font-semibold text-gray-900 text-sm dark:text-dark-text">
-                                        <span className="text-gray-400 font-normal dark:text-dark-muted">#{actualIndex}</span> {customerMap.get(entry.customer_id) || 'Unknown'}
+                                      <div className="text-xs text-gray-500 dark:text-dark-muted mb-1">
+                                        Entry #{actualIndex}
                                       </div>
+                                      <h3 className="font-bold text-sm sm:text-base text-gray-900 dark:text-dark-text truncate">
+                                        {customerMap.get(entry.customer_id) || 'Unknown'}
+                                      </h3>
                                     </div>
-                                    <div className={`ml-2 text-right font-bold text-base whitespace-nowrap ${entry.type === 'credit' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
-                                      {entry.type === 'credit' ? '+' : '-'}₹{formatNumberIndian(entry.amount)}
+                                    <div className={`text-right flex-shrink-0`}>
+                                      <div className={`font-bold text-base sm:text-lg ${entry.type === 'credit' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                                        ₹{formatNumberIndian(entry.amount)}
+                                      </div>
                                     </div>
                                   </div>
 
-                                  {/* Type and Subtype Badges */}
-                                  <div className="flex flex-wrap gap-2 mb-2">
-                                    <div>
-                                      {entry.type === 'credit' ? (
-                                        <span className="inline-block px-2 py-0.5 rounded-full bg-green-100 text-green-800 font-semibold text-xs dark:bg-green-900/30 dark:text-green-400">Credit</span>
-                                      ) : (
-                                        <span className="inline-block px-2 py-0.5 rounded-full bg-red-100 text-red-800 font-semibold text-xs dark:bg-red-900/30 dark:text-red-400">Expense</span>
-                                      )}
-                                    </div>
+                                  {/* Type & Subtype Badges */}
+                                  <div className="flex flex-wrap gap-2 mb-3">
+                                    {entry.type === 'credit' ? (
+                                      <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-green-100 text-green-800 font-semibold text-xs dark:bg-green-900/30 dark:text-green-400">
+                                        ✓ Credit
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-red-100 text-red-800 font-semibold text-xs dark:bg-red-900/30 dark:text-red-400">
+                                        ↗ Expense
+                                      </span>
+                                    )}
                                     {entry.subtype && (
-                                      <div className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-semibold text-xs dark:bg-indigo-900/30 dark:text-indigo-400">
+                                      <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-800 font-semibold text-xs dark:bg-indigo-900/30 dark:text-indigo-400">
                                         {entry.subtype}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {/* Details Grid */}
+                                  <div className="grid grid-cols-2 gap-3 py-3 border-t border-b border-gray-100 dark:border-slate-700/50 mb-3">
+                                    <div>
+                                      <span className="text-xs font-semibold text-gray-500 dark:text-dark-muted block mb-1">Date</span>
+                                      <span className="text-sm font-medium text-gray-900 dark:text-dark-text">{formatDate(entry.date)}</span>
+                                    </div>
+                                    {entry.receipt_number && (
+                                      <div>
+                                        <span className="text-xs font-semibold text-gray-500 dark:text-dark-muted block mb-1">Receipt</span>
+                                        <span className="text-sm font-medium text-gray-900 dark:text-dark-text">#{entry.receipt_number}</span>
                                       </div>
                                     )}
                                   </div>
 
-                                  {/* Date and Receipt */}
-                                  <div className="flex flex-wrap justify-between items-center gap-2 text-xs text-gray-600 dark:text-dark-muted mb-2">
-                                    <div className="flex items-center gap-2">
-                                      <span>{formatDate(entry.date)}</span>
-                                      {entry.receipt_number && <span className="px-2 py-0.5 bg-gray-100 dark:bg-slate-700 rounded">#{entry.receipt_number}</span>}
-                                    </div>
-                                  </div>
-
-                                  {/* Notes */}
+                                  {/* Notes Section */}
                                   {entry.notes && (
-                                    <div className="mt-2 pt-2 border-t border-gray-200/50 dark:border-dark-border/50">
-                                      <p className="text-xs sm:text-sm text-gray-700 dark:text-dark-muted break-words whitespace-pre-wrap line-clamp-2">{entry.notes}</p>
+                                    <div className="mb-3 p-2.5 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-100 dark:border-slate-700/50">
+                                      <span className="text-xs font-semibold text-gray-500 dark:text-dark-muted block mb-1">Notes</span>
+                                      <p className="text-xs sm:text-sm text-gray-700 dark:text-dark-muted break-words whitespace-pre-wrap line-clamp-2">
+                                        {entry.notes}
+                                      </p>
                                     </div>
                                   )}
 
                                   {/* Action Buttons */}
                                   {!isScopedCustomer && (
-                                    <div className="mt-3 flex gap-2 items-center justify-end">
-                                      <button type="button" className="px-3 py-1.5 rounded bg-blue-600 text-white text-xs sm:text-sm font-semibold hover:bg-blue-700 transition" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
+                                    <div className="flex gap-2 pt-2">
+                                      <button
+                                        type="button"
+                                        className="flex-1 px-3 py-2 rounded-lg bg-blue-600 text-white text-xs sm:text-sm font-semibold hover:bg-blue-700 active:scale-95 transition"
+                                        aria-label="Edit entry"
+                                        onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}
+                                      >
                                         Edit
                                       </button>
-                                          <button aria-label="Delete entry" type="button" className="p-1.5 sm:p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 transition" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }}>
-                                            <Trash2Icon className="w-4 h-4 sm:w-5 sm:h-5" />
-                                          </button>
-                                        </div>
-                                      )}
+                                      <button
+                                        type="button"
+                                        className="px-3 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50 transition"
+                                        aria-label="Delete entry"
+                                        onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }}
+                                      >
+                                        <Trash2Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })
@@ -936,14 +977,16 @@ const DataPage = () => {
                               </div>
                             </div>
                             <div className="mt-1 text-xs flex gap-2 text-gray-600 dark:text-dark-muted">
-                              <span className="inline-flex items-center gap-1">
-                                <span className="h-2 w-2 rounded-full bg-green-500" />
-                                +₹{formatNumberIndian(creditTotal)}
-                              </span>
+                              {creditTotal > 0 && (
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="h-2 w-2 rounded-full bg-green-500" />
+                                  ₹{formatNumberIndian(creditTotal)}
+                                </span>
+                              )}
                               {expenseTotal > 0 && (
                                 <span className="inline-flex items-center gap-1">
                                   <span className="h-2 w-2 rounded-full bg-red-500" />
-                                  -₹{formatNumberIndian(expenseTotal)}
+                                  ₹{formatNumberIndian(expenseTotal)}
                                 </span>
                               )}
                             </div>

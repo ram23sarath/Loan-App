@@ -520,9 +520,9 @@ const DataPage = () => {
                                       <div className="font-semibold truncate">{group.name}</div>
                                       <div className="text-xs text-gray-500 dark:text-dark-muted whitespace-nowrap">{group.entries.length} entries</div>
                                     </div>
-                                        <div className="mt-1 text-xs flex gap-2 text-gray-600 dark:text-dark-muted">
-                                          <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" />+₹{formatNumberIndian(creditTotal)}</span>
-                                          {expenseTotal > 0 && <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" />-₹{formatNumberIndian(expenseTotal)}</span>}
+                                        <div className="mt-1 text-xs flex gap-2">
+                                          {creditTotal > 0 && <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-green-500" /><span className="text-green-700 dark:text-green-400">+₹{formatNumberIndian(creditTotal)}</span></span>}
+                                          {expenseTotal > 0 && <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" /><span className="text-red-700 dark:text-red-400">₹{formatNumberIndian(expenseTotal)}</span></span>}
                                         </div>
                                   </button>
                                 );

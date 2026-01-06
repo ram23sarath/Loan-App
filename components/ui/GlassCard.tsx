@@ -81,15 +81,25 @@ const GlassCard: React.FC<GlassCardProps> = ({
     transformPerspective: 1000,
   } : {};
 
+  const isClient = typeof window !== 'undefined';
+  const isMobileLayout = isClient ? window.innerWidth < 768 : false;
+  const shouldAnimate = isClient ? !isMobileLayout : true;
+
+  const animationProps: Partial<MotionProps> = shouldAnimate
+    ? {
+        initial: 'initial',
+        animate: 'animate',
+        variants: cardVariants,
+        whileHover: effectiveHoverScale ? 'hover' : undefined,
+        whileTap: effectiveHoverScale ? 'tap' : undefined,
+      }
+    : {};
+
   return (
     <motion.div
       ref={cardRef}
       className={`bg-white dark:bg-dark-card rounded-2xl border border-gray-200 dark:border-dark-border shadow-sm p-6 ${hoverGlow ? 'hover:shadow-lg hover:shadow-indigo-500/5 dark:hover:shadow-indigo-400/5' : ''} transition-shadow duration-300 ${className}`}
-      initial="initial"
-      animate="animate"
-      whileHover={effectiveHoverScale ? "hover" : undefined}
-      whileTap={effectiveHoverScale ? "tap" : undefined}
-      variants={effectiveHoverScale ? cardVariants : undefined}
+      {...animationProps}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       style={{

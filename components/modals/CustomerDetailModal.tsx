@@ -31,13 +31,23 @@ interface CustomerDetailModalProps {
 
 const backdropVariants: Variants = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1 },
+  visible: { opacity: 1, transition: { duration: 0.3, ease: 'easeInOut' } },
 };
 
 const modalVariants: Variants = {
-  hidden: { opacity: 0, y: 50, scale: 0.9 },
-  visible: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 100 } },
-  exit: { opacity: 0, y: 50, scale: 0.9 },
+  hidden: { opacity: 0, y: 50, scale: 0.95 },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1, 
+    transition: { 
+      duration: 0.4, 
+      ease: 'easeOut',
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    } 
+  },
+  exit: { opacity: 0, y: 50, scale: 0.95, transition: { duration: 0.25, ease: 'easeIn' } },
 };
 
 const formatCurrency = (amount: number) => `₹${formatNumberIndian(amount)}`;
@@ -438,19 +448,19 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
             <div className="flex items-center gap-2 flex-shrink-0">
               <motion.button
                 onClick={handleIndividualExport}
-                className="flex items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm font-semibold transition-colors bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text whitespace-nowrap"
+                className="flex items-center justify-center gap-2 px-4 h-10 text-xs sm:text-sm font-semibold transition-colors bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text whitespace-nowrap leading-none"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                <FileDownIcon className="w-4 h-4 sm:w-5 sm:h-5" /> <span className="hidden sm:inline">Export Details</span><span className="sm:hidden">Export</span>
+                <FileDownIcon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" /> <span className="hidden sm:inline">Export Details</span><span className="sm:hidden">Export</span>
               </motion.button>
               <motion.button
                 onClick={onClose}
-                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-700 dark:text-dark-text flex-shrink-0"
+                className="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text flex-shrink-0 transition-colors leading-none"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
               >
-                <XIcon className="w-5 h-5 sm:w-6 sm:h-6" />
+                <XIcon className="w-5 h-5" />
               </motion.button>
             </div>
           </div>

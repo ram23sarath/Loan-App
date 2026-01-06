@@ -53,6 +53,11 @@ const DataPage = () => {
   const [customerSearchTerm, setCustomerSearchTerm] = useState('');
   const debouncedCustomerSearchTerm = useDebounce(customerSearchTerm, 300);
 
+  // Mobile customer modal state
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [mobileCustomerSearch, setMobileCustomerSearch] = useState('');
+  const debouncedMobileCustomerSearch = useDebounce(mobileCustomerSearch, 300);
+
   // Form state
   const [form, setForm] = useState({
     customerId: '',
@@ -443,8 +448,23 @@ const DataPage = () => {
             <AnimatePresence mode="wait">
               {showTable ? (
                 <motion.div key="table" variants={viewVariants} initial="hidden" animate="visible" exit="exit">
+                  {/* Mobile Customer Selection Button - Hidden on Desktop */}
+                  <div className="md:hidden mb-4">
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-2">Select Customer</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomerModal(true)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text text-left font-medium bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors"
+                    >
+                      {selectedCustomerId 
+                        ? (customerMap.get(selectedCustomerId) || 'Select Customer')
+                        : '-- All Customers --'}
+                    </button>
+                  </div>
+
                   <div className="flex flex-col md:flex-row gap-4">
-                    <div className="md:w-1/3 lg:w-1/4 bg-white border border-gray-200 rounded-lg shadow-sm p-3 dark:bg-dark-card dark:border-dark-border">
+                    {/* Desktop Customer Sidebar - Hidden on Mobile */}
+                    <div className="hidden md:block md:w-1/3 lg:w-1/4 bg-white border border-gray-200 rounded-lg shadow-sm p-3 dark:bg-dark-card dark:border-dark-border">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="text-sm font-semibold text-gray-700 dark:text-dark-text">Customers</h3>
                         <span className="text-xs text-gray-500 dark:text-dark-muted">{filteredCustomerGroups.length}</span>
@@ -498,7 +518,7 @@ const DataPage = () => {
                       )}
                     </div>
 
-                    <div className="flex-1">
+                    <div className="flex-1 md:min-w-0">
                       <div className="w-full border border-gray-200 rounded-lg overflow-hidden dark:border-dark-border">
                         {/* Desktop Table */}
                         <table className="hidden md:table w-full" style={{ tableLayout: 'auto' }}>
@@ -592,36 +612,62 @@ const DataPage = () => {
                               return (
                                 <div
                                   key={`mobile-${entry.id}`}
-                                  className="px-4 py-4 border-b last:border-b-0 hover:bg-indigo-50/30 dark:border-dark-border dark:hover:bg-slate-700/30"
+                                  className="px-3 py-3 sm:px-4 sm:py-4 border-b last:border-b-0 hover:bg-indigo-50/30 dark:border-dark-border dark:hover:bg-slate-700/30 bg-white dark:bg-dark-card"
                                 >
-                                  <div className="flex justify-between items-start gap-3">
+                                  {/* Header: Customer Name and Amount */}
+                                  <div className="flex justify-between items-start gap-2 mb-2">
                                     <div className="flex-1 min-w-0">
-                                      <div className="font-semibold text-gray-900 truncate dark:text-dark-text"><span className="text-gray-400 font-normal dark:text-dark-muted">#{actualIndex}</span> {customerMap.get(entry.customer_id) || 'Unknown'}</div>
-                                      <div className="text-sm text-gray-600 truncate dark:text-dark-muted">{entry.subtype || entry.type}</div>
+                                      <div className="font-semibold text-gray-900 text-sm dark:text-dark-text">
+                                        <span className="text-gray-400 font-normal dark:text-dark-muted">#{actualIndex}</span> {customerMap.get(entry.customer_id) || 'Unknown'}
+                                      </div>
                                     </div>
-                                    <div className={`ml-2 text-right font-bold text-base ${entry.type === 'credit' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>{entry.type === 'credit' ? '+' : ''}₹{formatNumberIndian(entry.amount)}</div>
+                                    <div className={`ml-2 text-right font-bold text-base whitespace-nowrap ${entry.type === 'credit' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                                      {entry.type === 'credit' ? '+' : '-'}₹{formatNumberIndian(entry.amount)}
+                                    </div>
                                   </div>
-                                  <div className="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-dark-muted">
-                                    <div>{formatDate(entry.date)}</div>
-                                    <div className="flex items-center gap-3">
-                                      {entry.receipt_number && <div className="px-2 py-1 bg-gray-100 rounded text-xs dark:bg-slate-700">#{entry.receipt_number}</div>}
-                                      {!isScopedCustomer && (
-                                        <>
-                                          <button type="button" className="px-3 py-1 rounded bg-blue-600 text-white text-sm" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
-                                            Edit
-                                          </button>
-                                          <button aria-label="Delete entry" type="button" className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }}>
-                                            <Trash2Icon className="w-5 h-5" />
-                                          </button>
-                                        </>
+
+                                  {/* Type and Subtype Badges */}
+                                  <div className="flex flex-wrap gap-2 mb-2">
+                                    <div>
+                                      {entry.type === 'credit' ? (
+                                        <span className="inline-block px-2 py-0.5 rounded-full bg-green-100 text-green-800 font-semibold text-xs dark:bg-green-900/30 dark:text-green-400">Credit</span>
+                                      ) : (
+                                        <span className="inline-block px-2 py-0.5 rounded-full bg-red-100 text-red-800 font-semibold text-xs dark:bg-red-900/30 dark:text-red-400">Expense</span>
                                       )}
                                     </div>
+                                    {entry.subtype && (
+                                      <div className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-semibold text-xs dark:bg-indigo-900/30 dark:text-indigo-400">
+                                        {entry.subtype}
+                                      </div>
+                                    )}
                                   </div>
+
+                                  {/* Date and Receipt */}
+                                  <div className="flex flex-wrap justify-between items-center gap-2 text-xs text-gray-600 dark:text-dark-muted mb-2">
+                                    <div className="flex items-center gap-2">
+                                      <span>{formatDate(entry.date)}</span>
+                                      {entry.receipt_number && <span className="px-2 py-0.5 bg-gray-100 dark:bg-slate-700 rounded">#{entry.receipt_number}</span>}
+                                    </div>
+                                  </div>
+
+                                  {/* Notes */}
                                   {entry.notes && (
-                                    <div className="mt-3 pt-3 border-t border-gray-200/80 dark:border-dark-border">
-                                      <p className="text-sm text-gray-700 break-words dark:text-dark-muted">{entry.notes}</p>
+                                    <div className="mt-2 pt-2 border-t border-gray-200/50 dark:border-dark-border/50">
+                                      <p className="text-xs sm:text-sm text-gray-700 dark:text-dark-muted break-words whitespace-pre-wrap line-clamp-2">{entry.notes}</p>
                                     </div>
                                   )}
+
+                                  {/* Action Buttons */}
+                                  {!isScopedCustomer && (
+                                    <div className="mt-3 flex gap-2 items-center justify-end">
+                                      <button type="button" className="px-3 py-1.5 rounded bg-blue-600 text-white text-xs sm:text-sm font-semibold hover:bg-blue-700 transition" aria-label="Edit entry" onClick={(e) => { e.stopPropagation(); openEditEntry(entry); }}>
+                                        Edit
+                                      </button>
+                                          <button aria-label="Delete entry" type="button" className="p-1.5 sm:p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 transition" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry.id); }}>
+                                            <Trash2Icon className="w-4 h-4 sm:w-5 sm:h-5" />
+                                          </button>
+                                        </div>
+                                      )}
                                 </div>
                               );
                             })
@@ -787,6 +833,141 @@ const DataPage = () => {
         {/* --- LOGIC FIX --- */}
         {/* Modals are moved here to the top level and portaled to document.body. */}
         {/* This ensures they center relative to the viewport and are not affected by transformed ancestors. */}
+
+        {/* Mobile Customer Selection Modal */}
+        {typeof document !== 'undefined' && ReactDOM.createPortal(
+          <AnimatePresence>
+            {showCustomerModal && (
+              <motion.div
+                className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-black/30 p-4"
+                style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowCustomerModal(false)}
+              >
+                <motion.div
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="customer-modal-title"
+                  variants={modalVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="bg-white rounded-xl shadow-lg p-4 w-full max-w-sm max-h-[85vh] flex flex-col mx-4 dark:bg-dark-card dark:border dark:border-dark-border"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Modal Header */}
+                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 dark:border-dark-border">
+                    <h2 id="customer-modal-title" className="text-lg font-semibold text-gray-800 dark:text-dark-text">Select Customer</h2>
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomerModal(false)}
+                      className="text-gray-500 hover:text-gray-700 dark:text-dark-muted dark:hover:text-dark-text"
+                      aria-label="Close modal"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Search Bar */}
+                  <div className="mb-4">
+                    <input
+                      type="text"
+                      placeholder="Search customers..."
+                      value={mobileCustomerSearch}
+                      onChange={(e) => setMobileCustomerSearch(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted"
+                      autoFocus
+                    />
+                  </div>
+
+                  {/* Customer List */}
+                  <div className="flex-1 overflow-y-auto scrollbar-thin space-y-2">
+                    {/* All Customers Option */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCustomerId(null);
+                        setCurrentPage(1);
+                        setShowCustomerModal(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${
+                        selectedCustomerId === null
+                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-500/60 dark:bg-indigo-900/20 dark:text-indigo-200'
+                          : 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50 dark:border-dark-border dark:hover:border-indigo-800 dark:hover:bg-slate-700/50 dark:text-dark-text'
+                      }`}
+                    >
+                      <div className="font-semibold">All Customers</div>
+                      <div className="text-xs text-gray-500 dark:text-dark-muted">Show entries from all customers</div>
+                    </button>
+
+                    {/* Individual Customers */}
+                    {filteredCustomerGroups
+                      .filter((group) =>
+                        debouncedMobileCustomerSearch.trim()
+                          ? group.name.toLowerCase().includes(debouncedMobileCustomerSearch.toLowerCase())
+                          : true
+                      )
+                      .map((group) => {
+                        const creditTotal = group.entries.filter((e) => e.type === 'credit').reduce((sum, e) => sum + e.amount, 0);
+                        const expenseTotal = group.entries.filter((e) => e.type !== 'credit').reduce((sum, e) => sum + e.amount, 0);
+                        return (
+                          <button
+                            key={group.customerId}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCustomerId(group.customerId);
+                              setCurrentPage(1);
+                              setShowCustomerModal(false);
+                            }}
+                            className={`w-full text-left px-3 py-3 rounded-lg border transition-colors ${
+                              selectedCustomerId === group.customerId
+                                ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-500/60 dark:bg-indigo-900/20 dark:text-indigo-200'
+                                : 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50 dark:border-dark-border dark:hover:border-indigo-800 dark:hover:bg-slate-700/50 dark:text-dark-text'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <div className="font-semibold truncate">{group.name}</div>
+                              <div className="text-xs whitespace-nowrap px-2 py-0.5 bg-gray-100 dark:bg-slate-700 rounded">
+                                {group.entries.length}
+                              </div>
+                            </div>
+                            <div className="mt-1 text-xs flex gap-2 text-gray-600 dark:text-dark-muted">
+                              <span className="inline-flex items-center gap-1">
+                                <span className="h-2 w-2 rounded-full bg-green-500" />
+                                +₹{formatNumberIndian(creditTotal)}
+                              </span>
+                              {expenseTotal > 0 && (
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="h-2 w-2 rounded-full bg-red-500" />
+                                  -₹{formatNumberIndian(expenseTotal)}
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+
+                    {/* No Results */}
+                    {debouncedMobileCustomerSearch.trim() &&
+                      !filteredCustomerGroups.some((group) =>
+                        group.name.toLowerCase().includes(debouncedMobileCustomerSearch.toLowerCase())
+                      ) && (
+                        <div className="text-center text-gray-500 py-8 text-sm dark:text-dark-muted">
+                          No customers found.
+                        </div>
+                      )}
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
+
         {typeof document !== 'undefined' && ReactDOM.createPortal(
           <AnimatePresence>
             {editEntryId && (

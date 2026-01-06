@@ -11,10 +11,11 @@ type Props = {
   defaultStation?: string;
   defaultLoanType?: string;
   defaultDate?: string;
+  isScopedCustomer?: boolean;
 };
 
-const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaultStation = '', defaultLoanType = 'General', defaultDate = '' }: Props) => {
-  const { addToSeniority } = useData();
+const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaultStation = '', defaultLoanType = 'General', defaultDate = '', isScopedCustomer = false }: Props) => {
+  const { addToSeniority, seniorityList } = useData();
   const navigate = useNavigate();
   const [stationName, setStationName] = React.useState(defaultStation);
   const [loanType, setLoanType] = React.useState(defaultLoanType);
@@ -43,7 +44,16 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
     }, EXIT_DURATION);
   };
 
+  const alreadyRequested = React.useMemo(() => {
+    return seniorityList.some((entry) => entry.customer_id === customerId);
+  }, [seniorityList, customerId]);
+
   const handleSubmit = async () => {
+    if (alreadyRequested) {
+      alert('You already have a pending request in the loan seniority list.');
+      return;
+    }
+
     setIsSaving(true);
     try {
       await addToSeniority(customerId, {
@@ -127,9 +137,10 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
                 <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">Requested Date</label>
                 <input
                   value={loanRequestDate}
-                  onChange={(e) => setLoanRequestDate(e.target.value)}
+                  onChange={(e) => !isScopedCustomer && setLoanRequestDate(e.target.value)}
                   type="date"
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-base text-gray-800 bg-white block focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted"
+                  disabled={isScopedCustomer}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-base text-gray-800 bg-white block focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{ minHeight: '42px', WebkitAppearance: 'none' }}
                 />
               </div>
@@ -143,8 +154,8 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={isSaving}
-                className="px-3 py-2 rounded bg-yellow-600 text-white hover:bg-yellow-700 disabled:opacity-50 transition-colors dark:bg-yellow-700 dark:hover:bg-yellow-800"
+                disabled={isSaving || alreadyRequested}
+                className="px-3 py-2 rounded bg-yellow-600 text-white hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:bg-yellow-700 dark:hover:bg-yellow-800"
               >
                 {isSaving ? 'Saving...' : 'Submit Request'}
               </button>

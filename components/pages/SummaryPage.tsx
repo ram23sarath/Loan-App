@@ -335,10 +335,18 @@ const SummaryPage = () => {
   const [breakdownSummary, setBreakdownSummary] = React.useState<
     { label: string; value: number }[]
   >([]);
+  const [breakdownType, setBreakdownType] = React.useState<
+    "subscriptions" | "interest" | "latefees" | "principal" | "total" | null
+  >(null);
+  const [breakdownPage, setBreakdownPage] = React.useState(1);
+  const BREAKDOWN_PAGE_SIZE = 10;
 
   const openBreakdown = (
     type: "subscriptions" | "interest" | "latefees" | "principal" | "total"
   ) => {
+    setBreakdownType(type);
+    setBreakdownPage(1);
+    setBreakdownSummary([]);
     setBreakdownTitle(() => {
       switch (type) {
         case "subscriptions":
@@ -511,6 +519,38 @@ const SummaryPage = () => {
 
     setBreakdownOpen(true);
   };
+
+  const isPaginatedBreakdown =
+    breakdownType === "subscriptions" || breakdownType === "interest" || breakdownType === "latefees" || breakdownType === "principal" || breakdownType === "total";
+
+  const paginatedBreakdownItems = React.useMemo(() => {
+    if (isPaginatedBreakdown && breakdownItems.length > BREAKDOWN_PAGE_SIZE) {
+      const start = (breakdownPage - 1) * BREAKDOWN_PAGE_SIZE;
+      return breakdownItems.slice(start, start + BREAKDOWN_PAGE_SIZE);
+    }
+    return breakdownItems;
+  }, [breakdownItems, breakdownPage, isPaginatedBreakdown]);
+
+  React.useEffect(() => {
+    if (!isPaginatedBreakdown) return;
+    const maxPage = Math.max(1, Math.ceil(breakdownItems.length / BREAKDOWN_PAGE_SIZE));
+    setBreakdownPage((prev) => Math.min(prev, maxPage));
+  }, [breakdownItems, isPaginatedBreakdown]);
+
+  const handleBreakdownPageChange = (page: number) => {
+    const maxPage = Math.max(1, Math.ceil(breakdownItems.length / BREAKDOWN_PAGE_SIZE));
+    const clamped = Math.min(Math.max(page, 1), maxPage);
+    setBreakdownPage(clamped);
+  };
+
+  const breakdownPagination =
+    isPaginatedBreakdown && breakdownItems.length > BREAKDOWN_PAGE_SIZE
+      ? {
+          currentPage: breakdownPage,
+          totalPages: Math.ceil(breakdownItems.length / BREAKDOWN_PAGE_SIZE),
+          onPageChange: handleBreakdownPageChange,
+        }
+      : undefined;
 
   const collectedBreakdownCards = [
     {
@@ -1256,8 +1296,9 @@ const SummaryPage = () => {
           <FYBreakdownModal
             open={breakdownOpen}
             title={breakdownTitle}
-            items={breakdownItems}
+            items={paginatedBreakdownItems}
             summary={breakdownSummary}
+            pagination={breakdownPagination}
             onClose={() => setBreakdownOpen(false)}
           />
         </div>

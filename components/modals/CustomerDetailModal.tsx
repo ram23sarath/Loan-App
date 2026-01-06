@@ -416,29 +416,29 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
         onClick={e => e.stopPropagation()}
       >
         <GlassCard className="!p-0 w-full flex-shrink-0 dark:bg-dark-card dark:border-dark-border" disable3D>
-          <div className="flex items-center justify-between p-3 sm:p-6 border-b border-gray-200 dark:border-dark-border">
-            <div>
-              <h2 className="text-xl sm:text-3xl font-bold dark:text-dark-text">{customer.name}</h2>
-              <p className="text-sm sm:text-base text-gray-500 dark:text-dark-muted mb-3">{customer.phone}</p>
-              <div className="grid grid-cols-3 gap-4 text-sm sm:text-base">
-                <div>
-                  <span className="text-gray-600 dark:text-dark-muted text-sm sm:text-base">Loan:</span>
-                  <p className="font-bold text-green-600 dark:text-green-400 text-base sm:text-lg">{formatCurrency(summaryTotals.totalLoan)}</p>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 sm:p-5 md:p-6 border-b border-gray-200 dark:border-dark-border gap-4 md:gap-6">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg sm:text-2xl md:text-3xl font-bold dark:text-dark-text truncate">{customer.name}</h2>
+              <p className="text-xs sm:text-sm md:text-base text-gray-500 dark:text-dark-muted mb-4">{customer.phone}</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm md:text-base">
+                <div className="p-2 sm:p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
+                  <span className="text-gray-600 dark:text-dark-muted text-xs sm:text-sm block mb-1">Loan:</span>
+                  <p className="font-bold text-green-600 dark:text-green-400 text-sm sm:text-base">{formatCurrency(summaryTotals.totalLoan)}</p>
                 </div>
-                <div>
-                  <span className="text-gray-600 dark:text-dark-muted text-sm sm:text-base">Subscription:</span>
-                  <p className="font-bold text-cyan-600 dark:text-cyan-400 text-base sm:text-lg">{formatCurrency(summaryTotals.totalSubscription)}</p>
+                <div className="p-2 sm:p-3 rounded-lg bg-cyan-50 dark:bg-cyan-900/20">
+                  <span className="text-gray-600 dark:text-dark-muted text-xs sm:text-sm block mb-1">Subscription:</span>
+                  <p className="font-bold text-cyan-600 dark:text-cyan-400 text-sm sm:text-base">{formatCurrency(summaryTotals.totalSubscription)}</p>
                 </div>
-                <div>
-                  <span className="text-gray-600 dark:text-dark-muted text-sm sm:text-base">Net:</span>
-                  <p className={`font-bold text-base sm:text-lg ${summaryTotals.netTotal >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-red-600 dark:text-red-400'}`}>{formatCurrency(summaryTotals.netTotal)}</p>
+                <div className="p-2 sm:p-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 col-span-2 sm:col-span-1">
+                  <span className="text-gray-600 dark:text-dark-muted text-xs sm:text-sm block mb-1">Net:</span>
+                  <p className={`font-bold text-sm sm:text-base ${summaryTotals.netTotal >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-red-600 dark:text-red-400'}`}>{formatCurrency(summaryTotals.netTotal)}</p>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <motion.button
                 onClick={handleIndividualExport}
-                className="flex items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-base font-semibold transition-colors bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
+                className="flex items-center gap-1 sm:gap-2 p-2 sm:p-3 text-xs sm:text-sm font-semibold transition-colors bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text whitespace-nowrap"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -446,33 +446,36 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               </motion.button>
               <motion.button
                 onClick={onClose}
-                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-700 dark:text-dark-text"
+                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-slate-700 dark:text-dark-text flex-shrink-0"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
               >
-                <XIcon className="w-6 h-6" />
+                <XIcon className="w-5 h-5 sm:w-6 sm:h-6" />
               </motion.button>
             </div>
           </div>
         </GlassCard>
 
         <div
-          className="mt-2 sm:mt-4 space-y-3 sm:space-y-6 flex-1 min-h-0 pb-6 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-slate-600 dark:scrollbar-track-slate-800"
+          className="mt-2 sm:mt-4 space-y-3 sm:space-y-6 flex-1 min-h-0 pb-6 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-slate-600 dark:scrollbar-track-slate-800 px-2 sm:px-0"
           style={{ paddingBottom: 'calc(3rem + env(safe-area-inset-bottom))' }}
         >
           {/* Loans Section */}
           <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border" disable3D>
-            <h3 className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-lg sm:text-2xl font-semibold dark:text-dark-text">
-              <LandmarkIcon className="w-5 h-5 sm:w-6 sm:h-6" /> Loans
+            <h3 className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-base sm:text-2xl font-semibold dark:text-dark-text">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <LandmarkIcon className="w-5 h-5 sm:w-6 sm:h-6" /> 
+                <span>Loans</span>
+              </div>
               {loans.length > 0 && (
-                <span className="text-base sm:text-lg font-normal text-green-600 dark:text-green-400">
+                <span className="text-xs sm:text-lg font-normal text-green-600 dark:text-green-400 sm:ml-auto order-3 sm:order-none">
                   (Total: {formatCurrency(loans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0))})
                 </span>
               )}
-              <div className="ml-auto">
+              <div className="ml-auto sm:ml-0">
                 <motion.button
                   onClick={(e) => { e.stopPropagation(); setShowRecordLoan(true); }}
-                  className="ml-2 px-3 py-1 rounded text-white text-sm bg-indigo-600 hover:bg-indigo-700"
+                  className="w-full sm:w-auto px-3 py-2 sm:py-1 rounded text-white text-xs sm:text-sm bg-indigo-600 hover:bg-indigo-700 font-semibold"
                   variants={buttonVariants}
                   initial="idle"
                   whileHover="hover"
@@ -784,17 +787,20 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
           {/* Subscriptions Section */}
           <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border" disable3D>
-            <h3 className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-lg sm:text-2xl font-semibold dark:text-dark-text">
-              <HistoryIcon className="w-5 h-5 sm:w-6 sm:h-6" /> Subscriptions
+            <h3 className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-base sm:text-2xl font-semibold dark:text-dark-text">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <HistoryIcon className="w-5 h-5 sm:w-6 sm:h-6" /> 
+                <span>Subscriptions</span>
+              </div>
               {subscriptions.length > 0 && (
-                <span className="text-base sm:text-lg font-normal text-cyan-600 dark:text-cyan-400">
+                <span className="text-xs sm:text-lg font-normal text-cyan-600 dark:text-cyan-400 sm:ml-auto order-3 sm:order-none">
                   (Total: {formatCurrency(subscriptions.reduce((acc, sub) => acc + sub.amount, 0))})
                 </span>
               )}
-              <div className="ml-auto">
+              <div className="ml-auto sm:ml-0">
                 <button
                   onClick={(e) => { e.stopPropagation(); setShowRecordSubscription(true); }}
-                  className="ml-2 px-3 py-1 rounded bg-cyan-600 text-white text-sm hover:bg-cyan-700"
+                  className="w-full sm:w-auto px-3 py-2 sm:py-1 rounded bg-cyan-600 text-white text-xs sm:text-sm hover:bg-cyan-700 font-semibold"
                 >
                   Record Subscription
                 </button>
@@ -948,12 +954,12 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           {/* Data Entries Section */}
           <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border" disable3D>
             <div className="mb-3 sm:mb-4">
-              <h3 className="flex items-center gap-2 sm:gap-3 text-lg sm:text-2xl font-semibold text-pink-700 dark:text-pink-400">
-                Misc Data Entries
-                <div className="ml-auto">
+              <h3 className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 text-base sm:text-2xl font-semibold text-pink-700 dark:text-pink-400">
+                <span>Misc Data Entries</span>
+                <div className="ml-auto sm:ml-0 w-full sm:w-auto">
                   <button
                     onClick={(e) => { e.stopPropagation(); setShowRecordDataEntry(true); }}
-                    className="ml-2 px-3 py-1 rounded bg-pink-600 text-white text-sm hover:bg-pink-700"
+                    className="w-full sm:w-auto px-3 py-2 sm:py-1 rounded bg-pink-600 text-white text-xs sm:text-sm hover:bg-pink-700 font-semibold"
                   >
                     Record Entry
                   </button>

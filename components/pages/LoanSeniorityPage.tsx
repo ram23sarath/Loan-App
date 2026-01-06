@@ -188,6 +188,11 @@ const LoanSeniorityPage = () => {
   const addCustomerToList = async (customer: Customer) => {
     setModalCustomer({ id: customer.id, name: customer.name });
     setModalEditingId(null);
+    // Set date to today for scoped users
+    if (isScopedCustomer) {
+      const today = new Date().toISOString().split('T')[0];
+      setLoanRequestDate(today);
+    }
   };
 
   const removeFromList = async (id: string) => {
@@ -438,7 +443,8 @@ const LoanSeniorityPage = () => {
                       value={loanRequestDate}
                       onChange={(e) => setLoanRequestDate(e.target.value)}
                       type="date"
-                      className="w-full border border-gray-300 dark:border-dark-border rounded px-3 py-2 text-base bg-white dark:bg-dark-bg block text-gray-800 dark:text-dark-text focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-shadow"
+                      disabled={isScopedCustomer}
+                      className="w-full border border-gray-300 dark:border-dark-border rounded px-3 py-2 text-base bg-white dark:bg-dark-bg block text-gray-800 dark:text-dark-text focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-shadow disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-50 dark:disabled:bg-gray-900"
                       style={{ minHeight: '42px', WebkitAppearance: 'none' }}
                     />
                   </motion.div>

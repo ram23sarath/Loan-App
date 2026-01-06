@@ -164,6 +164,8 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
 
   const [isClearing, setIsClearing] = useState(false);
   const [deletingNotificationId, setDeletingNotificationId] = useState<number | null>(null);
+  const [swipedNotificationId, setSwipedNotificationId] = useState<number | string | null>(null);
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
 
   // Expose openMenu method to parent via ref
   useImperativeHandle(ref, () => ({
@@ -178,14 +180,17 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
     const target = notifications.find(n => n.id === notificationId);
     if (target?.isLocal) {
       setNotifications(notifications.filter(n => n.id !== notificationId));
+      setSwipedNotificationId(null);
+      setSwipeDirection(null);
       return;
     }
 
     setDeletingNotificationId(typeof notificationId === 'number' ? notificationId : null);
 
     try {
-      // Trigger animation first (wait for exit animation)
-      await new Promise(r => setTimeout(r, 600));
+      // Trigger animation first (wait for swipe or shake animation)
+      const animationDuration = swipedNotificationId === notificationId ? 300 : 600;
+      await new Promise(r => setTimeout(r, animationDuration));
 
       if (typeof notificationId === 'number') {
         // Delete from DB
@@ -202,6 +207,9 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
     } catch (err) {
       console.error("Failed to delete notification:", err);
       setDeletingNotificationId(null);
+    } finally {
+      setSwipedNotificationId(null);
+      setSwipeDirection(null);
     }
   };
 
@@ -247,6 +255,41 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
       x: [0, 20, -20, 0], // Shake
       filter: ['blur(0px)', 'blur(5px)', 'blur(10px)'],
       transition: { duration: 0.8, ease: "easeInOut" }
+    },
+    swipeExit: {
+      opacity: 0,
+      x: 0,
+      transition: { duration: 0.3, ease: "easeOut" }
+    }
+  };
+
+  const checkmarkVariants = {
+    hidden: { scale: 0, opacity: 0 },
+    visible: {
+      scale: 1,
+      opacity: 1,
+      transition: {
+        type: 'spring',
+        stiffness: 400,
+        damping: 20,
+      }
+    },
+    exit: {
+      scale: 0.8,
+      opacity: 0,
+      transition: { duration: 0.2 }
+    }
+  };
+
+  const checkmarkPathVariants = {
+    hidden: { pathLength: 0, opacity: 0 },
+    visible: {
+      pathLength: 1,
+      opacity: 1,
+      transition: {
+        duration: 0.4,
+        ease: "easeInOut"
+      }
     }
   };
 
@@ -675,45 +718,108 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                             No recent system notifications found.
                           </motion.div>
                         ) : (
-                          notifications.map((note) => (
-                            <motion.div
-                              key={note.id}
-                              layout
-                              variants={notificationItemVariants}
-                              initial="hidden"
-                              animate={isClearing || deletingNotificationId === note.id ? "exit" : "visible"}
-                              exit="exit"
-                              className={`w-full p-3 rounded-xl border flex items-start gap-3 relative overflow-hidden group ${note.status === 'success'
-                                ? 'bg-green-50 border-green-100 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300'
-                                : note.status === 'processing'
-                                  ? 'bg-blue-50 border-blue-100 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300'
-                                  : 'bg-red-50 border-red-100 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'
-                                }`}
-                            >
-                              <span className="text-lg flex-shrink-0 mt-0.5">
-                                {note.status === 'success' ? '✅' : note.status === 'processing' ? '⏳' : '❌'}
-                              </span>
-                              <div className="flex flex-col gap-0.5 relative z-10 flex-1">
-                                <span className="font-medium text-sm">{note.message}</span>
-                                <span className="text-[10px] opacity-70">
-                                  {new Date(note.created_at).toLocaleString()}
+                          notifications.map((note) => {
+                            const canDelete = !isScopedCustomer && !note.isLocal;
+                            const isSwipedCard = swipedNotificationId === note.id;
+                            const isBeingDeleted = deletingNotificationId === note.id || isClearing;
+                            
+                            return (
+                              <motion.div
+                                key={note.id}
+                                layout
+                                variants={notificationItemVariants}
+                                initial="hidden"
+                                animate={isSwipedCard ? "swipeExit" : (isBeingDeleted ? "exit" : "visible")}
+                                exit={isSwipedCard ? "swipeExit" : "exit"}
+                                drag={canDelete && !isBeingDeleted ? "x" : false}
+                                dragElastic={0.2}
+                                dragMomentum={false}
+                                onDragEnd={(event, info) => {
+                                  if (canDelete && !isBeingDeleted) {
+                                    const threshold = 100; // Swipe threshold in pixels
+                                    if (Math.abs(info.offset.x) > threshold) {
+                                      setSwipeDirection(info.offset.x > 0 ? 'right' : 'left');
+                                      setSwipedNotificationId(note.id);
+                                      handleDeleteNotification(note.id);
+                                    }
+                                  }
+                                }}
+                                className={`w-full p-3 rounded-xl border flex items-start gap-3 relative overflow-hidden group ${canDelete ? 'cursor-grab active:cursor-grabbing' : ''} ${note.status === 'success'
+                                  ? 'bg-green-50 border-green-100 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300'
+                                  : note.status === 'processing'
+                                    ? 'bg-blue-50 border-blue-100 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300'
+                                    : 'bg-red-50 border-red-100 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'
+                                  }`}
+                              >
+                                {/* Swipe hint background - visible on drag */}
+                                {canDelete && (
+                                  <motion.div
+                                    className="absolute inset-0 bg-red-200 dark:bg-red-900/40 flex items-center justify-center"
+                                    initial={{ opacity: 0 }}
+                                    whileHover={{ opacity: 0.15 }}
+                                  >
+                                    <span className="text-xl">🗑️</span>
+                                  </motion.div>
+                                )}
+
+                                {/* Checkmark animation when swiped */}
+                                <AnimatePresence>
+                                  {isSwipedCard && (
+                                    <motion.div
+                                      className="absolute inset-0 bg-green-500/90 dark:bg-green-600/90 rounded-xl flex items-center justify-center"
+                                      initial={{ opacity: 0 }}
+                                      animate={{ opacity: 1 }}
+                                      exit={{ opacity: 0 }}
+                                      transition={{ duration: 0.1 }}
+                                    >
+                                      <motion.svg
+                                        width="56"
+                                        height="56"
+                                        viewBox="0 0 56 56"
+                                        fill="none"
+                                        stroke="white"
+                                        strokeWidth="3"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        variants={checkmarkVariants}
+                                        initial="hidden"
+                                        animate="visible"
+                                        exit="exit"
+                                      >
+                                        <motion.path
+                                          d="M12 28L22 38L44 16"
+                                          variants={checkmarkPathVariants}
+                                        />
+                                      </motion.svg>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                                
+                                <span className="text-lg flex-shrink-0 mt-0.5 relative z-10">
+                                  {note.status === 'success' ? '✅' : note.status === 'processing' ? '⏳' : '❌'}
                                 </span>
-                              </div>
-                              {!isScopedCustomer && !note.isLocal && (
-                                <button
-                                  onClick={() => handleDeleteNotification(note.id)}
-                                  disabled={deletingNotificationId === note.id || isClearing}
-                                  className="flex-shrink-0 ml-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed mt-0.5"
-                                  title="Delete notification"
-                                  aria-label="Delete notification"
-                                >
-                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                  </svg>
-                                </button>
-                              )}
-                            </motion.div>
-                          ))
+                                <div className="flex flex-col gap-0.5 relative z-10 flex-1">
+                                  <span className="font-medium text-sm">{note.message}</span>
+                                  <span className="text-[10px] opacity-70">
+                                    {new Date(note.created_at).toLocaleString()}
+                                  </span>
+                                </div>
+                                {canDelete && (
+                                  <button
+                                    onClick={() => handleDeleteNotification(note.id)}
+                                    disabled={isBeingDeleted}
+                                    className="flex-shrink-0 ml-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed mt-0.5 relative z-10"
+                                    title="Delete notification (or swipe)"
+                                    aria-label="Delete notification"
+                                  >
+                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                    </svg>
+                                  </button>
+                                )}
+                              </motion.div>
+                            );
+                          })
                         )}
                       </AnimatePresence>
                     </div>

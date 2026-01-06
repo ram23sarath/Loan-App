@@ -116,7 +116,7 @@ const allNavItems = [
   { path: "/customers", label: "Customers", icon: UsersIcon, adminOnly: true },
   { path: "/loans", label: "Loans", icon: LandmarkIcon },
   { path: "/subscriptions", label: "Subscriptions", icon: HistoryIcon },
-  { path: "/data", label: "Misc", icon: DatabaseIcon },
+  { path: "/data", label: "Expenditure", icon: DatabaseIcon },
   { path: "/loan-seniority", label: "Loan Seniority", icon: StarIcon },
   { path: "/summary", label: "Summary", icon: BookOpenIcon },
 ];

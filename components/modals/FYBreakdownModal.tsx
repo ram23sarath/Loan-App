@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import ReactDOM from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { XIcon } from "../../constants";
 import { formatCurrencyIN } from "../../utils/numberFormatter";
 import { formatDate } from "../../utils/dateFormatter";
@@ -19,12 +20,19 @@ interface SummaryLine {
   value: number;
 }
 
+interface Pagination {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}
+
 interface Props {
   open: boolean;
   title: string;
   items: Item[];
   onClose: () => void;
   summary?: SummaryLine[];
+  pagination?: Pagination;
 }
 
 const FYBreakdownModal: React.FC<Props> = ({
@@ -33,6 +41,7 @@ const FYBreakdownModal: React.FC<Props> = ({
   items,
   onClose,
   summary = [],
+  pagination,
 }) => {
   if (!open) return null;
 
@@ -50,8 +59,27 @@ const FYBreakdownModal: React.FC<Props> = ({
   }, [open, onClose]);
 
   const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto dark:text-gray-100">
+    <AnimatePresence>
+      {open && (
+        <motion.div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              onClose();
+            }
+          }}
+        >
+          <motion.div 
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto dark:text-gray-100"
+            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-semibold">{title}</h3>
           <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
@@ -136,10 +164,37 @@ const FYBreakdownModal: React.FC<Props> = ({
                 </div>
               </div>
             ))}
+            {pagination && pagination.totalPages > 1 && (
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  Page {pagination.currentPage} of {pagination.totalPages}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={pagination.currentPage === 1}
+                    onClick={() => pagination.onPageChange(pagination.currentPage - 1)}
+                    className="px-3 py-1 rounded-md border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    disabled={pagination.currentPage === pagination.totalPages}
+                    onClick={() => pagination.onPageChange(pagination.currentPage + 1)}
+                    className="px-3 py-1 rounded-md border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
+      )}
+    </AnimatePresence>
   );
 
   if (!target) return modalContent;

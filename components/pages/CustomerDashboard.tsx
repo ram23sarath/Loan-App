@@ -7,7 +7,15 @@ import { motion } from 'framer-motion';
 import RequestSeniorityModal from '../ui/RequestSeniorityModal';
 
 const CustomerDashboard = () => {
-  const { customers, customerMap, isScopedCustomer, scopedCustomerId } = useData();
+  const {
+    customers,
+    customerMap,
+    isScopedCustomer,
+    scopedCustomerId,
+    loans,
+    installmentsByLoanId,
+    seniorityList,
+  } = useData();
   const navigate = useNavigate();
 
   const [showRequestModal, setShowRequestModal] = React.useState(false);
@@ -19,6 +27,46 @@ const CustomerDashboard = () => {
   const customer = isScopedCustomer && scopedCustomerId
     ? customerMap.get(scopedCustomerId)
     : customers.length > 0 ? customers[0] : null;
+
+  const customerLoans = React.useMemo(() => {
+    if (!customer) return [];
+    return loans.filter((loan) => loan.customer_id === customer.id);
+  }, [customer, loans]);
+
+  const hasPendingSeniorityRequest = React.useMemo(() => {
+    if (!customer) return false;
+    return seniorityList.some((entry) => entry.customer_id === customer.id);
+  }, [customer, seniorityList]);
+
+  const repaymentProgress = React.useMemo(() => {
+    if (!customerLoans.length) return 0;
+
+    let maxProgress = 0;
+    customerLoans.forEach((loan) => {
+      const loanInstallments = installmentsByLoanId.get(loan.id) || [];
+      const paidAmount = loanInstallments.reduce((sum, inst) => sum + (inst.amount || 0), 0);
+      const totalRepayable = (loan.original_amount || 0) + (loan.interest_amount || 0);
+      if (totalRepayable > 0) {
+        const progress = Math.min(paidAmount / totalRepayable, 1);
+        if (progress > maxProgress) {
+          maxProgress = progress;
+        }
+      }
+    });
+
+    return maxProgress;
+  }, [customerLoans, installmentsByLoanId]);
+
+  const meetsRepaymentThreshold = repaymentProgress >= 0.8;
+  const canRequest = Boolean(isScopedCustomer && customer && !hasPendingSeniorityRequest && meetsRepaymentThreshold);
+  const progressPercent = Math.round(repaymentProgress * 100);
+  const requestDisabledReason = !customer
+    ? 'No customer found for this account.'
+    : hasPendingSeniorityRequest
+      ? 'Request already submitted and pending.'
+      : !meetsRepaymentThreshold
+        ? `You need at least 80% repayment (current ${progressPercent}%).`
+        : undefined;
 
 
   return (
@@ -50,6 +98,7 @@ const CustomerDashboard = () => {
           defaultStation={stationName}
           defaultLoanType={loanType}
           defaultDate={loanRequestDate}
+          isScopedCustomer={isScopedCustomer}
         />
 
 
@@ -102,17 +151,29 @@ const CustomerDashboard = () => {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => {
+                    if (!canRequest) return;
                     // default requested date to today
                     const today = new Date().toISOString().slice(0, 10);
                     setLoanRequestDate(today);
                     setShowRequestModal(true);
                   }}
-                  className="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors md:col-span-2"
+                  title={requestDisabledReason}
+                  disabled={!canRequest}
+                  className="bg-yellow-600 hover:bg-yellow-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors md:col-span-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   Request Loan/Subscription
                 </motion.button>
               )}
             </div>
+            {isScopedCustomer && (
+              <p className="mt-2 text-sm text-gray-700 dark:text-dark-muted">
+                {hasPendingSeniorityRequest
+                  ? 'Your request is already in the loan seniority list.'
+                  : meetsRepaymentThreshold
+                    ? `Eligibility met: ${progressPercent}% of loan repayment completed.`
+                    : `Eligibility blocked until 80% repayment is completed. Current progress: ${progressPercent}%.`}
+              </p>
+            )}
           </GlassCard>
         </motion.div>
 

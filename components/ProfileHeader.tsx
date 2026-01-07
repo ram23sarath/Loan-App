@@ -677,7 +677,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.95, opacity: 0, y: 20 }}
                 transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-                className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md relative dark:bg-dark-card dark:border dark:border-dark-border max-h-[80vh] flex flex-col"
+                className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-2xl relative dark:bg-dark-card dark:border dark:border-dark-border max-h-[85vh] flex flex-col"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-between mb-4">
@@ -751,7 +751,9 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                                   ? 'bg-green-50 border-green-100 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300'
                                   : note.status === 'processing'
                                     ? 'bg-blue-50 border-blue-100 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300'
-                                    : 'bg-red-50 border-red-100 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'
+                                    : note.status === 'warning'
+                                      ? 'bg-amber-50 border-amber-100 text-amber-800 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-300'
+                                      : 'bg-red-50 border-red-100 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'
                                   }`}
                               >
                                 {/* Swipe hint background - visible on drag */}
@@ -799,7 +801,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                                 </AnimatePresence>
                                 
                                 <span className="text-lg flex-shrink-0 mt-0.5 relative z-10">
-                                  {note.status === 'success' ? '✅' : note.status === 'processing' ? '⏳' : '❌'}
+                                  {note.status === 'success' ? '✅' : note.status === 'processing' ? '⏳' : note.status === 'warning' ? '⚠️' : '❌'}
                                 </span>
                                 <div className="flex flex-col gap-0.5 relative z-10 flex-1">
                                   <span className="font-medium text-sm">{note.message}</span>

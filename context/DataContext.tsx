@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, ReactNode, useEffect, useCa
 import { supabase } from '../src/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import type { Customer, Loan, Subscription, Installment, NewCustomer, NewLoan, NewSubscription, NewInstallment, LoanWithCustomer, SubscriptionWithCustomer, DataEntry, NewDataEntry } from '../types';
+import { checkAndNotifyOverdueInstallments } from '../utils/notificationHelpers';
 
 // ... [parseSupabaseError function remains unchanged] ...
 const parseSupabaseError = (error: any, context: string): string => {
@@ -249,6 +250,20 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     'data_entries'
                 );
                 setDataEntries(dataEntriesData);
+
+                // Check for overdue installments and create notifications (admin only)
+                if (!effectiveIsScoped) {
+                    try {
+                        await checkAndNotifyOverdueInstallments(
+                            installmentsData,
+                            loansData,
+                            customersData
+                        );
+                    } catch (notificationErr) {
+                        console.error('Error checking overdue installments:', notificationErr);
+                        // Non-blocking: continue even if notification check fails
+                    }
+                }
             }
 
         } catch (error: any) {
@@ -652,6 +667,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                             setInstallments(installmentsData);
                             setDataEntries(dataEntriesData);
 
+                            // Check for overdue installments (admin only)
+                            if (!currentIsScoped) {
+                                try {
+                                    await checkAndNotifyOverdueInstallments(
+                                        installmentsData,
+                                        loansData,
+                                        customersData
+                                    );
+                                } catch (notificationErr) {
+                                    console.error('Error checking overdue installments during init:', notificationErr);
+                                }
+                            }
+
                             // Cache the fetched data
                             setCachedData('data_admin', {
                                 customers: customersData,
@@ -857,6 +885,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     setSubscriptions(subscriptionsData);
                     setInstallments(installmentsData);
                     setDataEntries(dataEntriesData);
+
+                    // Check for overdue installments (admin only)
+                    if (!currentIsScoped) {
+                        try {
+                            await checkAndNotifyOverdueInstallments(
+                                installmentsData,
+                                loansData,
+                                customersData
+                            );
+                        } catch (notificationErr) {
+                            console.error('Error checking overdue installments after login:', notificationErr);
+                        }
+                    }
 
                     // Cache admin data
                     setCachedData('loan_app_cache_data_admin', {

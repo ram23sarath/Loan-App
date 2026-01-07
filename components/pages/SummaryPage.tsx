@@ -219,6 +219,23 @@ const SummaryPage = () => {
     loanBalance,
   } = summaryData;
 
+  // Total Collected excluding Principal: only Subscriptions + Interest + Late Fees
+  const totalCollectedWithoutPrincipal = totalSubscriptionCollected + totalInterestCollected + totalLateFeeCollected;
+
+  // Debug logging for verification
+  useEffect(() => {
+    console.log('=== SUMMARY VALUES DEBUG ===');
+    console.log('Total Subscription Collected:', totalSubscriptionCollected);
+    console.log('Total Interest Collected:', totalInterestCollected);
+    console.log('Total Late Fee Collected:', totalLateFeeCollected);
+    console.log('Total Collected (without Principal):', totalCollectedWithoutPrincipal);
+    console.log('=== SOURCE DATA ===');
+    console.log('Subscriptions count:', subscriptions.length, 'Sum:', subscriptions.reduce((a, s) => a + (s.amount || 0), 0));
+    console.log('Installments count:', installments.length);
+    console.log('Loans count:', loans.length);
+    console.log('Data Entries count:', dataEntries.length);
+  }, [totalSubscriptionCollected, totalInterestCollected, totalLateFeeCollected, totalCollectedWithoutPrincipal, subscriptions, installments, loans, dataEntries]);
+
   // --- Data Calculation (financial year filtered totals) ---
   const { start: fyStart, end: fyEnd } = fyRange;
 
@@ -872,7 +889,7 @@ const SummaryPage = () => {
                   Total Collected
                 </span>
                 <span className="text-4xl font-bold text-indigo-700 dark:text-indigo-400 mt-1">
-                  <AnimatedNumber value={totalAllCollected} />
+                  <AnimatedNumber value={totalCollectedWithoutPrincipal} />
                 </span>
               </div>
 
@@ -1240,7 +1257,7 @@ const SummaryPage = () => {
                     </button>
                   </div>
                   <div className="text-xl font-bold text-indigo-800 dark:text-indigo-200 mt-2">
-                    <AnimatedNumber value={fySubscriptionCollected + fyInterestCollected + fyLateFees + fyPrincipalRecovered} />
+                    <AnimatedNumber value={fySubscriptionCollected + fyInterestCollected + fyLateFees} />
                   </div>
                 </motion.div>
 
@@ -1282,7 +1299,7 @@ const SummaryPage = () => {
                     <div className="text-xs text-gray-600 dark:text-emerald-200">Net Total (FY)</div>
                   </div>
                   <div className="text-xl font-bold text-emerald-800 dark:text-emerald-200 mt-2">
-                    <AnimatedNumber value={fySubscriptionCollected + fyInterestCollected + fyLateFees + fyPrincipalRecovered - fyExpensesTotal} />
+                    <AnimatedNumber value={fySubscriptionCollected + fyInterestCollected + fyLateFees - fyExpensesTotal} />
                   </div>
                 </motion.div>
               </div>

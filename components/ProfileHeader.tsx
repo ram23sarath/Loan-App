@@ -222,21 +222,24 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
       // Trigger animations first (wait 1.5s for "snap" effect)
       await new Promise(r => setTimeout(r, 1500));
 
-      // Delete from DB (delete all rows)
-      // Note: This requires RLS allowing DELETE for the user
-      const IDs = notifications.map(n => n.id);
+      // Delete from DB: collect only real DB notification IDs (not local ones)
+      // Local notification IDs start with "local-" and should only be cleared from localStorage
+      const dbIDs = notifications
+        .filter(n => !n.isLocal && typeof n.id === 'number')
+        .map(n => n.id);
 
-      // Delete in batches or logic to delete all. Using a simpler approach:
-      // Since we don't want to iterate 1000s, assume we just clear what is visible or all.
-      // Let's delete strictly the IDs we fetched (most recent 10).
-      if (IDs.length > 0) {
+      // Delete database notifications
+      if (dbIDs.length > 0) {
         const { error } = await supabase
           .from('system_notifications')
           .delete()
-          .in('id', IDs);
+          .in('id', dbIDs);
 
         if (error) throw error;
       }
+
+      // Clear local user creation history from localStorage
+      localStorage.removeItem('loan_app_user_creation_history');
 
       setNotifications([]);
     } catch (err) {

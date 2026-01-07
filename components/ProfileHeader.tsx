@@ -197,7 +197,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
         const { error } = await supabase
           .from('system_notifications')
           .delete()
-          .eq('id', notificationId);
+          .eq('id', notificationId.toString());
 
         if (error) throw error;
       }

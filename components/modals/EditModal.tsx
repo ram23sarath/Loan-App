@@ -21,7 +21,12 @@ const backdropVariants: Variants = {
 
 const modalVariants: Variants = {
   hidden: { opacity: 0, y: 50, scale: 0.9 },
-  visible: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 100 } },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { type: "spring", stiffness: 100 },
+  },
   exit: { opacity: 0, y: 50, scale: 0.9 },
 };
 
@@ -32,9 +37,104 @@ const EditModal: React.FC<EditModalProps> = ({
   onClose,
 }) => {
   const [form, setForm] = React.useState<any>(data);
+  const [loanInstallmentError, setLoanInstallmentError] = React.useState<
+    string | null
+  >(null);
+
+  const loanInstallmentLimit = React.useMemo(() => {
+    if (type === "loan") {
+      return typeof data?.total_instalments === "number"
+        ? data.total_instalments
+        : undefined;
+    }
+    if (type === "customer_loan") {
+      return typeof data?.loan?.total_instalments === "number"
+        ? data.loan.total_instalments
+        : undefined;
+    }
+    return undefined;
+  }, [data, type]);
+
+  React.useEffect(() => {
+    const currentValue =
+      type === "customer_loan"
+        ? form.loan?.total_instalments
+        : form.total_instalments;
+
+    // Allow undefined/null during initial render or if field hasn't been touched
+    if (currentValue === undefined || currentValue === null) {
+      setLoanInstallmentError(null);
+      return;
+    }
+
+    // Reject empty string as invalid
+    if (currentValue === "") {
+      setLoanInstallmentError("Total installments is required.");
+      return;
+    }
+
+    const numericValue = Number(currentValue);
+    if (Number.isNaN(numericValue)) {
+      setLoanInstallmentError("Please enter a valid number.");
+      return;
+    }
+    if (numericValue < 1) {
+      setLoanInstallmentError("Installments must be at least 1.");
+      return;
+    }
+    if (
+      loanInstallmentLimit !== undefined &&
+      numericValue > loanInstallmentLimit
+    ) {
+      setLoanInstallmentError(
+        `Cannot exceed original total of ${loanInstallmentLimit} installments.`
+      );
+      return;
+    }
+    setLoanInstallmentError(null);
+  }, [
+    type === "customer_loan"
+      ? form.loan?.total_instalments
+      : form.total_instalments,
+    loanInstallmentLimit,
+    type,
+  ]);
+  const validateLoanInstallments = React.useCallback(
+    (value: string) => {
+      if (value === "") {
+        setLoanInstallmentError(null);
+        return true;
+      }
+      const numericValue = Number(value);
+      if (Number.isNaN(numericValue)) {
+        setLoanInstallmentError(null);
+        return true;
+      }
+      if (numericValue < 1) {
+        setLoanInstallmentError("Installments must be at least 1.");
+        return false;
+      }
+      if (
+        loanInstallmentLimit !== undefined &&
+        numericValue > loanInstallmentLimit
+      ) {
+        setLoanInstallmentError(
+          `Cannot exceed original total of ${loanInstallmentLimit} installments.`
+        );
+        return false;
+      }
+      setLoanInstallmentError(null);
+      return true;
+    },
+    [loanInstallmentLimit]
+  );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === "total_instalments") {
+      validateLoanInstallments(value);
+    }
+    setForm({ ...form, [name]: value });
   };
 
   // For combined customer+loan form
@@ -43,6 +143,9 @@ const EditModal: React.FC<EditModalProps> = ({
     if (dataset.section === "customer") {
       setForm({ ...form, customer: { ...form.customer, [name]: value } });
     } else if (dataset.section === "loan") {
+      if (name === "total_instalments") {
+        validateLoanInstallments(value);
+      }
       setForm({ ...form, loan: { ...form.loan, [name]: value } });
     } else if (dataset.section === "subscription") {
       setForm({
@@ -55,11 +158,11 @@ const EditModal: React.FC<EditModalProps> = ({
   // Handle Escape key to close modal
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         try {
           e.stopPropagation();
           // stopImmediatePropagation may not exist on all event types in some envs
-          if (typeof (e as any).stopImmediatePropagation === 'function') {
+          if (typeof (e as any).stopImmediatePropagation === "function") {
             (e as any).stopImmediatePropagation();
           }
         } catch (_) {}
@@ -67,8 +170,8 @@ const EditModal: React.FC<EditModalProps> = ({
       }
     };
     // Use capture so this listener runs before other bubble-phase listeners
-    document.addEventListener('keydown', handleKeyDown, true);
-    return () => document.removeEventListener('keydown', handleKeyDown, true);
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => document.removeEventListener("keydown", handleKeyDown, true);
   }, [onClose]);
 
   return ReactDOM.createPortal(
@@ -108,7 +211,9 @@ const EditModal: React.FC<EditModalProps> = ({
                 Customer Details
               </h3>
               <div>
-                <label className="block text-sm font-medium mb-1 dark:text-gray-200">Name</label>
+                <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+                  Name
+                </label>
                 <input
                   name="name"
                   data-section="customer"
@@ -119,7 +224,9 @@ const EditModal: React.FC<EditModalProps> = ({
                 />
               </div>
               <div className="mt-3">
-                <label className="block text-sm font-medium mb-1 dark:text-gray-200">Phone</label>
+                <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+                  Phone
+                </label>
                 <input
                   name="phone"
                   data-section="customer"
@@ -200,8 +307,15 @@ const EditModal: React.FC<EditModalProps> = ({
                   type="number"
                   value={form.loan?.total_instalments || ""}
                   onChange={handleCombinedChange}
+                  min="1"
+                  max={loanInstallmentLimit ?? undefined}
                   className="w-full border border-gray-300 dark:border-gray-700 dark:bg-slate-700 dark:text-gray-100 rounded px-3 py-2"
                 />
+                {loanInstallmentError && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {loanInstallmentError}
+                  </p>
+                )}
               </div>
               <div className="mt-3">
                 <label className="block text-sm font-medium mb-1">
@@ -218,7 +332,7 @@ const EditModal: React.FC<EditModalProps> = ({
                   }
                   onChange={handleCombinedChange}
                   className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-base bg-white dark:bg-slate-700 dark:text-gray-100 block"
-                  style={{ minHeight: '42px', WebkitAppearance: 'none' }}
+                  style={{ minHeight: "42px", WebkitAppearance: "none" }}
                   min="1980-01-01"
                   max="2050-12-31"
                 />
@@ -256,7 +370,9 @@ const EditModal: React.FC<EditModalProps> = ({
                   </div>
                 </div>
                 <div className="mt-3">
-                  <label className="block text-sm font-medium mb-1 dark:text-gray-200">Date</label>
+                  <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+                    Date
+                  </label>
                   <input
                     name="date"
                     data-section="subscription"
@@ -268,7 +384,7 @@ const EditModal: React.FC<EditModalProps> = ({
                     }
                     onChange={handleCombinedChange}
                     className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-base bg-white dark:bg-slate-700 dark:text-gray-100 block"
-                    style={{ minHeight: '42px', WebkitAppearance: 'none' }}
+                    style={{ minHeight: "42px", WebkitAppearance: "none" }}
                     min="1980-01-01"
                     max="2050-12-31"
                   />
@@ -303,8 +419,20 @@ const EditModal: React.FC<EditModalProps> = ({
               </div>
             )}
             <div className="mt-4 flex justify-end gap-2">
-              <button type="button" onClick={onClose} className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-gray-100">Cancel</button>
-              <button type="submit" className="px-3 py-2 rounded bg-indigo-600 dark:bg-indigo-500 text-white">Save</button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!!loanInstallmentError}
+                className="px-3 py-2 rounded bg-indigo-600 dark:bg-indigo-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Save
+              </button>
             </div>
           </form>
         )}
@@ -317,7 +445,9 @@ const EditModal: React.FC<EditModalProps> = ({
             }}
           >
             <div>
-              <label className="block text-sm font-medium mb-1 dark:text-gray-200">Name</label>
+              <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+                Name
+              </label>
               <input
                 name="name"
                 type="text"
@@ -327,7 +457,9 @@ const EditModal: React.FC<EditModalProps> = ({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1 dark:text-gray-200">Phone</label>
+              <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+                Phone
+              </label>
               <input
                 name="phone"
                 type="tel"
@@ -339,8 +471,19 @@ const EditModal: React.FC<EditModalProps> = ({
               />
             </div>
             <div className="mt-4 flex justify-end gap-2">
-              <button type="button" onClick={onClose} className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-gray-100">Cancel</button>
-              <button type="submit" className="px-3 py-2 rounded bg-indigo-600 dark:bg-indigo-500 text-white">Save</button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-3 py-2 rounded bg-indigo-600 dark:bg-indigo-500 text-white"
+              >
+                Save
+              </button>
             </div>
           </form>
         )}
@@ -397,8 +540,15 @@ const EditModal: React.FC<EditModalProps> = ({
                 type="number"
                 value={form.total_instalments || ""}
                 onChange={handleChange}
+                min="1"
+                max={loanInstallmentLimit ?? undefined}
                 className="w-full border border-gray-300 dark:border-gray-700 dark:bg-slate-700 dark:text-gray-100 rounded px-3 py-2"
               />
+              {loanInstallmentError && (
+                <p className="text-xs text-red-500 mt-1">
+                  {loanInstallmentError}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1 dark:text-gray-200">
@@ -410,14 +560,26 @@ const EditModal: React.FC<EditModalProps> = ({
                 value={form.payment_date ? form.payment_date.slice(0, 10) : ""}
                 onChange={handleChange}
                 className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-base bg-white dark:bg-slate-700 dark:text-gray-100 block"
-                style={{ minHeight: '42px', WebkitAppearance: 'none' }}
+                style={{ minHeight: "42px", WebkitAppearance: "none" }}
                 min="1980-01-01"
                 max="2050-12-31"
               />
             </div>
             <div className="mt-4 flex justify-end gap-2">
-              <button type="button" onClick={onClose} className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-gray-100">Cancel</button>
-              <button type="submit" className="px-3 py-2 rounded bg-indigo-600 dark:bg-indigo-500 text-white">Save</button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!!loanInstallmentError}
+                className="px-3 py-2 rounded bg-indigo-600 dark:bg-indigo-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Save
+              </button>
             </div>
           </form>
         )}
@@ -430,7 +592,9 @@ const EditModal: React.FC<EditModalProps> = ({
             }}
           >
             <div>
-              <label className="block text-sm font-medium mb-1 dark:text-gray-200">Amount</label>
+              <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+                Amount
+              </label>
               <input
                 name="amount"
                 type="number"
@@ -440,20 +604,24 @@ const EditModal: React.FC<EditModalProps> = ({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1 dark:text-gray-200">Date</label>
+              <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+                Date
+              </label>
               <input
                 name="date"
                 type="date"
                 value={form.date ? form.date.slice(0, 10) : ""}
                 onChange={handleChange}
                 className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-base bg-white dark:bg-slate-700 dark:text-gray-100 block"
-                style={{ minHeight: '42px', WebkitAppearance: 'none' }}
+                style={{ minHeight: "42px", WebkitAppearance: "none" }}
                 min="1980-01-01"
                 max="2050-12-31"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1 dark:text-gray-200">Receipt</label>
+              <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+                Receipt
+              </label>
               <input
                 name="receipt"
                 type="text"
@@ -463,7 +631,9 @@ const EditModal: React.FC<EditModalProps> = ({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1 dark:text-gray-200">Late Fee</label>
+              <label className="block text-sm font-medium mb-1 dark:text-gray-200">
+                Late Fee
+              </label>
               <input
                 name="late_fee"
                 type="number"
@@ -474,8 +644,19 @@ const EditModal: React.FC<EditModalProps> = ({
               />
             </div>
             <div className="mt-4 flex justify-end gap-2">
-              <button type="button" onClick={onClose} className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-gray-100">Cancel</button>
-              <button type="submit" className="px-3 py-2 rounded bg-indigo-600 dark:bg-indigo-500 text-white">Save</button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-3 py-2 rounded bg-indigo-600 dark:bg-indigo-500 text-white"
+              >
+                Save
+              </button>
             </div>
           </form>
         )}
@@ -510,7 +691,7 @@ const EditModal: React.FC<EditModalProps> = ({
                 value={form.date ? form.date.slice(0, 10) : ""}
                 onChange={handleChange}
                 className="w-full border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-base bg-white dark:bg-slate-700 dark:text-gray-100 block"
-                style={{ minHeight: '42px', WebkitAppearance: 'none' }}
+                style={{ minHeight: "42px", WebkitAppearance: "none" }}
                 min="1980-01-01"
                 max="2050-12-31"
               />
@@ -523,8 +704,7 @@ const EditModal: React.FC<EditModalProps> = ({
                 <span
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 select-none font-sans"
                   style={{
-                    fontFamily:
-                      "Segoe UI Symbol, Arial Unicode MS, sans-serif",
+                    fontFamily: "Segoe UI Symbol, Arial Unicode MS, sans-serif",
                   }}
                 >
                   &#8377;
@@ -547,8 +727,7 @@ const EditModal: React.FC<EditModalProps> = ({
                 <span
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 select-none font-sans"
                   style={{
-                    fontFamily:
-                      "Segoe UI Symbol, Arial Unicode MS, sans-serif",
+                    fontFamily: "Segoe UI Symbol, Arial Unicode MS, sans-serif",
                   }}
                 >
                   &#8377;
@@ -577,8 +756,19 @@ const EditModal: React.FC<EditModalProps> = ({
               />
             </div>
             <div className="mt-4 flex justify-end gap-2">
-              <button type="button" onClick={onClose} className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-gray-100">Cancel</button>
-              <button type="submit" className="px-3 py-2 rounded bg-indigo-600 dark:bg-indigo-500 text-white">Save</button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-3 py-2 rounded bg-indigo-600 dark:bg-indigo-500 text-white"
+              >
+                Save
+              </button>
             </div>
           </form>
         )}

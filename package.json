@@ -15,6 +15,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.44.4",
     "chart.js": "^4.5.0",
+    "decimal.js": "^10.6.0",
     "dotenv": "^16.4.5",
     "framer-motion": "^12.23.11",
     "react": "^19.1.1",

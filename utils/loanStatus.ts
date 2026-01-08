@@ -7,6 +7,7 @@ export type LoanStatusResult = {
   requiredInstallments: number;
   hasReachedInstallmentTarget: boolean;
   isPaidOff: boolean;
+  balance: number;
   status: "Paid Off" | "In Progress";
 };
 
@@ -55,9 +56,9 @@ export const getLoanStatus = (
   const hasReachedInstallmentTarget =
     installments.length >= requiredInstallments;
 
-  const isPaidOff =
-    hasReachedInstallmentTarget &&
-    paidDecimal.greaterThanOrEqualTo(totalRepayableDecimal);
+  const balanceDecimal = totalRepayableDecimal.minus(paidDecimal);
+  const balance = Math.max(balanceDecimal.toNumber(), 0);
+  const isPaidOff = balanceDecimal.lte(0);
 
   return {
     paid,
@@ -65,6 +66,7 @@ export const getLoanStatus = (
     requiredInstallments,
     hasReachedInstallmentTarget,
     isPaidOff,
+    balance,
     status: isPaidOff ? "Paid Off" : "In Progress",
   };
 };

@@ -9,10 +9,19 @@ import { MoonIcon, SunIcon, FileDownIcon } from "../../constants";
 import { useData } from "../../context/DataContext";
 import { formatCurrencyIN } from "../../utils/numberFormatter";
 import { formatDate } from "../../utils/dateFormatter";
-import { calculateSummaryData, expenseSubtypes } from "../../utils/summaryCalculations";
+import {
+  calculateSummaryData,
+  expenseSubtypes,
+} from "../../utils/summaryCalculations";
 import { supabase } from "../../src/lib/supabase";
 
-import type { LoanWithCustomer, SubscriptionWithCustomer, Installment, DataEntry, Customer } from "../../types";
+import type {
+  LoanWithCustomer,
+  SubscriptionWithCustomer,
+  Installment,
+  DataEntry,
+  Customer,
+} from "../../types";
 
 const getButtonCenter = (button: HTMLElement) => {
   const rect = button.getBoundingClientRect();
@@ -24,7 +33,9 @@ const getButtonCenter = (button: HTMLElement) => {
 
 const AnimatedNumber = ({ value }: { value: number }) => {
   const spring = useSpring(0, { mass: 0.8, stiffness: 75, damping: 15 });
-  const display = useTransform(spring, (current) => formatCurrencyIN(Math.round(current)));
+  const display = useTransform(spring, (current) =>
+    formatCurrencyIN(Math.round(current))
+  );
 
   useEffect(() => {
     spring.set(value);
@@ -50,25 +61,45 @@ const SummaryPage = () => {
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
   // For scoped customers, fetch unfiltered data for summary calculations
-  const [loansForSummary, setLoansForSummary] = useState<LoanWithCustomer[]>([]);
-  const [installmentsForSummary, setInstallmentsForSummary] = useState<Installment[]>([]);
-  const [subscriptionsForSummary, setSubscriptionsForSummary] = useState<SubscriptionWithCustomer[]>([]);
-  const [dataEntriesForSummary, setDataEntriesForSummary] = useState<DataEntry[]>([]);
+  const [loansForSummary, setLoansForSummary] = useState<LoanWithCustomer[]>(
+    []
+  );
+  const [installmentsForSummary, setInstallmentsForSummary] = useState<
+    Installment[]
+  >([]);
+  const [subscriptionsForSummary, setSubscriptionsForSummary] = useState<
+    SubscriptionWithCustomer[]
+  >([]);
+  const [dataEntriesForSummary, setDataEntriesForSummary] = useState<
+    DataEntry[]
+  >([]);
 
   useEffect(() => {
     const fetchUnfilteredData = async () => {
       if (isScopedCustomer) {
         try {
-          const fetchAll = async (table: string, queryModifier?: (q: any) => any) => {
+          const fetchAll = async (
+            table: string,
+            queryModifier?: (q: any) => any
+          ) => {
             let allData: any[] = [];
             let from = 0;
             const batchSize = 1000;
             let hasMore = true;
             while (hasMore) {
-              let query = supabase.from(table as any).select(table === 'loans' || table === 'subscriptions' ? '*, customers(name, phone)' : '*');
+              let query = supabase
+                .from(table as any)
+                .select(
+                  table === "loans" || table === "subscriptions"
+                    ? "*, customers(name, phone)"
+                    : "*"
+                );
               if (queryModifier) query = queryModifier(query);
 
-              const { data, error } = await query.range(from, from + batchSize - 1);
+              const { data, error } = await query.range(
+                from,
+                from + batchSize - 1
+              );
               if (error) throw error;
 
               if (data && data.length > 0) {
@@ -82,20 +113,20 @@ const SummaryPage = () => {
             return allData;
           };
 
-          const [loansData, subsData, entriesData, installmentsData] = await Promise.all([
-            fetchAll('loans'),
-            fetchAll('subscriptions'),
-            fetchAll('data_entries'),
-            fetchAll('installments')
-          ]);
+          const [loansData, subsData, entriesData, installmentsData] =
+            await Promise.all([
+              fetchAll("loans"),
+              fetchAll("subscriptions"),
+              fetchAll("data_entries"),
+              fetchAll("installments"),
+            ]);
 
           setLoansForSummary(loansData as LoanWithCustomer[]);
           setSubscriptionsForSummary(subsData as SubscriptionWithCustomer[]);
           setDataEntriesForSummary(entriesData as DataEntry[]);
           setInstallmentsForSummary(installmentsData as Installment[]);
-
         } catch (error) {
-          console.error('Error fetching unfiltered data for summary:', error);
+          console.error("Error fetching unfiltered data for summary:", error);
         }
       }
     };
@@ -105,14 +136,20 @@ const SummaryPage = () => {
 
   // Use unfiltered data for scoped customers, context data for admins
   const loans = isScopedCustomer ? loansForSummary : contextLoans;
-  const installments = isScopedCustomer ? installmentsForSummary : contextInstallments;
-  const subscriptions = isScopedCustomer ? subscriptionsForSummary : contextSubscriptions;
-  const dataEntries = isScopedCustomer ? dataEntriesForSummary : contextDataEntries;
+  const installments = isScopedCustomer
+    ? installmentsForSummary
+    : contextInstallments;
+  const subscriptions = isScopedCustomer
+    ? subscriptionsForSummary
+    : contextSubscriptions;
+  const dataEntries = isScopedCustomer
+    ? dataEntriesForSummary
+    : contextDataEntries;
 
   // Lookup map for O(1) installment access by loan_id
   const localInstallmentsByLoanId = useMemo(() => {
     const map = new Map<string, Installment[]>();
-    installments.forEach(inst => {
+    installments.forEach((inst) => {
       const existing = map.get(inst.loan_id) || [];
       existing.push(inst);
       map.set(inst.loan_id, existing);
@@ -132,7 +169,8 @@ const SummaryPage = () => {
 
   const defaultFYStart = getFYStartYearForDate(today);
 
-  const [selectedFYStart, setSelectedFYStart] = useState<number>(defaultFYStart);
+  const [selectedFYStart, setSelectedFYStart] =
+    useState<number>(defaultFYStart);
   const [showAllFYOptions, setShowAllFYOptions] = useState(false);
   const [fyDropdownOpen, setFyDropdownOpen] = useState(false);
   const fyDropdownRef = React.useRef<HTMLDivElement>(null);
@@ -176,16 +214,19 @@ const SummaryPage = () => {
   // Handle FY dropdown click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (fyDropdownRef.current && !fyDropdownRef.current.contains(event.target as Node)) {
+      if (
+        fyDropdownRef.current &&
+        !fyDropdownRef.current.contains(event.target as Node)
+      ) {
         setFyDropdownOpen(false);
         setShowAllFYOptions(false);
       }
     };
     if (fyDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [fyDropdownOpen]);
 
@@ -220,21 +261,39 @@ const SummaryPage = () => {
   } = summaryData;
 
   // Total Collected excluding Principal: only Subscriptions + Interest + Late Fees
-  const totalCollectedWithoutPrincipal = totalSubscriptionCollected + totalInterestCollected + totalLateFeeCollected;
+  const totalCollectedWithoutPrincipal =
+    totalSubscriptionCollected + totalInterestCollected + totalLateFeeCollected;
 
   // Debug logging for verification
   useEffect(() => {
-    console.log('=== SUMMARY VALUES DEBUG ===');
-    console.log('Total Subscription Collected:', totalSubscriptionCollected);
-    console.log('Total Interest Collected:', totalInterestCollected);
-    console.log('Total Late Fee Collected:', totalLateFeeCollected);
-    console.log('Total Collected (without Principal):', totalCollectedWithoutPrincipal);
-    console.log('=== SOURCE DATA ===');
-    console.log('Subscriptions count:', subscriptions.length, 'Sum:', subscriptions.reduce((a, s) => a + (s.amount || 0), 0));
-    console.log('Installments count:', installments.length);
-    console.log('Loans count:', loans.length);
-    console.log('Data Entries count:', dataEntries.length);
-  }, [totalSubscriptionCollected, totalInterestCollected, totalLateFeeCollected, totalCollectedWithoutPrincipal, subscriptions, installments, loans, dataEntries]);
+    console.log("=== SUMMARY VALUES DEBUG ===");
+    console.log("Total Subscription Collected:", totalSubscriptionCollected);
+    console.log("Total Interest Collected:", totalInterestCollected);
+    console.log("Total Late Fee Collected:", totalLateFeeCollected);
+    console.log(
+      "Total Collected (without Principal):",
+      totalCollectedWithoutPrincipal
+    );
+    console.log("=== SOURCE DATA ===");
+    console.log(
+      "Subscriptions count:",
+      subscriptions.length,
+      "Sum:",
+      subscriptions.reduce((a, s) => a + (s.amount || 0), 0)
+    );
+    console.log("Installments count:", installments.length);
+    console.log("Loans count:", loans.length);
+    console.log("Data Entries count:", dataEntries.length);
+  }, [
+    totalSubscriptionCollected,
+    totalInterestCollected,
+    totalLateFeeCollected,
+    totalCollectedWithoutPrincipal,
+    subscriptions,
+    installments,
+    loans,
+    dataEntries,
+  ]);
 
   // --- Data Calculation (financial year filtered totals) ---
   const { start: fyStart, end: fyEnd } = fyRange;
@@ -467,8 +526,8 @@ const SummaryPage = () => {
           // Representative date: latest installment date within FY if present, otherwise null
           const latestInFY = instsInFY.length
             ? instsInFY.reduce((a, b) =>
-              new Date(a.date) > new Date(b.date) ? a : b
-            ).date
+                new Date(a.date) > new Date(b.date) ? a : b
+              ).date
             : null;
 
           return {
@@ -504,8 +563,8 @@ const SummaryPage = () => {
       const subItems = fySubscriptions.map((s) => ({
         id: s.id,
         date: s.date,
-        amount: s.amount,
-        receipt: s.receipt,
+        amount: s.amount || 0,
+        receipt: s.receipt || "",
         source: "Subscription",
         customer: (s as any).customers?.name || "",
       }));
@@ -514,31 +573,40 @@ const SummaryPage = () => {
         .map((i) => ({
           id: i.id,
           date: i.date,
-          amount: i.amount,
-          receipt: i.receipt_number,
+          amount: i.amount || 0,
+          receipt: i.receipt_number || "",
           source: "Installment",
           customer:
             loans.find((l) => l.id === i.loan_id)?.customers?.name || "",
         }));
       const dataItems = dataEntries
         .filter((e) => within(e.date))
-        .map((e) => ({
-          id: e.id,
-          date: e.date,
-          amount: e.amount,
-          receipt: e.receipt_number,
-          notes: e.notes,
-          source: e.subtype || "Data Entry",
-          customer: "",
-        }));
-      setBreakdownItems([...subItems, ...instItems, ...dataItems]);
+        .map((e) => {
+          const customerName =
+            contextCustomers?.find((c) => c.id === e.customer_id)?.name || "";
+          return {
+            id: e.id,
+            date: e.date,
+            amount: e.amount || 0,
+            receipt: e.receipt_number || "",
+            notes: e.notes || "",
+            source: e.subtype || "Data Entry",
+            customer: customerName,
+          };
+        });
+      const allItems = [...subItems, ...instItems, ...dataItems];
+      setBreakdownItems(allItems);
     }
 
     setBreakdownOpen(true);
   };
 
   const isPaginatedBreakdown =
-    breakdownType === "subscriptions" || breakdownType === "interest" || breakdownType === "latefees" || breakdownType === "principal" || breakdownType === "total";
+    breakdownType === "subscriptions" ||
+    breakdownType === "interest" ||
+    breakdownType === "latefees" ||
+    breakdownType === "principal" ||
+    breakdownType === "total";
 
   const paginatedBreakdownItems = React.useMemo(() => {
     if (isPaginatedBreakdown && breakdownItems.length > BREAKDOWN_PAGE_SIZE) {
@@ -550,12 +618,18 @@ const SummaryPage = () => {
 
   React.useEffect(() => {
     if (!isPaginatedBreakdown) return;
-    const maxPage = Math.max(1, Math.ceil(breakdownItems.length / BREAKDOWN_PAGE_SIZE));
+    const maxPage = Math.max(
+      1,
+      Math.ceil(breakdownItems.length / BREAKDOWN_PAGE_SIZE)
+    );
     setBreakdownPage((prev) => Math.min(prev, maxPage));
   }, [breakdownItems, isPaginatedBreakdown]);
 
   const handleBreakdownPageChange = (page: number) => {
-    const maxPage = Math.max(1, Math.ceil(breakdownItems.length / BREAKDOWN_PAGE_SIZE));
+    const maxPage = Math.max(
+      1,
+      Math.ceil(breakdownItems.length / BREAKDOWN_PAGE_SIZE)
+    );
     const clamped = Math.min(Math.max(page, 1), maxPage);
     setBreakdownPage(clamped);
   };
@@ -598,26 +672,38 @@ const SummaryPage = () => {
   };
 
   const handleExportComprehensive = () => {
-    const customerSummaryData = contextCustomers.map(customer => {
-      const customerLoans = loans.filter(l => l.customer_id === customer.id);
-      const customerSubscriptions = subscriptions.filter(s => s.customer_id === customer.id);
-      const originalAmount = customerLoans.reduce((acc, loan) => acc + loan.original_amount, 0);
-      const interestAmount = customerLoans.reduce((acc, loan) => acc + loan.interest_amount, 0);
+    const customerSummaryData = contextCustomers.map((customer) => {
+      const customerLoans = loans.filter((l) => l.customer_id === customer.id);
+      const customerSubscriptions = subscriptions.filter(
+        (s) => s.customer_id === customer.id
+      );
+      const originalAmount = customerLoans.reduce(
+        (acc, loan) => acc + loan.original_amount,
+        0
+      );
+      const interestAmount = customerLoans.reduce(
+        (acc, loan) => acc + loan.interest_amount,
+        0
+      );
       const totalAmount = originalAmount + interestAmount;
-      const subscriptionAmount = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
+      const subscriptionAmount = customerSubscriptions.reduce(
+        (acc, sub) => acc + sub.amount,
+        0
+      );
       return {
-        'Name': customer.name,
-        'Phone Number': customer.phone,
-        'Original Amount': originalAmount,
-        'Interest Amount': interestAmount,
-        'Total Amount': totalAmount,
-        'Subscription Amount': subscriptionAmount,
+        Name: customer.name,
+        "Phone Number": customer.phone,
+        "Original Amount": originalAmount,
+        "Interest Amount": interestAmount,
+        "Total Amount": totalAmount,
+        "Subscription Amount": subscriptionAmount,
       };
     });
 
-    const allLoansData = loans.map(loan => {
-      const loanInstallments = (localInstallmentsByLoanId.get(loan.id) || [])
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const allLoansData = loans.map((loan) => {
+      const loanInstallments = (
+        localInstallmentsByLoanId.get(loan.id) || []
+      ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
       let amountPaid = 0;
       let principalPaid = 0;
@@ -626,7 +712,10 @@ const SummaryPage = () => {
       for (const inst of loanInstallments) {
         amountPaid += inst.amount;
         if (principalPaid < loan.original_amount) {
-          const principalPortion = Math.min(inst.amount, loan.original_amount - principalPaid);
+          const principalPortion = Math.min(
+            inst.amount,
+            loan.original_amount - principalPaid
+          );
           principalPaid += principalPortion;
           const interestPortion = inst.amount - principalPortion;
           interestCollected += interestPortion;
@@ -639,55 +728,72 @@ const SummaryPage = () => {
       const isPaidOff = amountPaid >= totalRepayable;
 
       return {
-        'Loan ID': loan.id,
-        'Customer Name': loan.customers?.name ?? 'N/A',
-        'Original Amount': loan.original_amount,
-        'Interest Amount': loan.interest_amount,
-        'Total Repayable': totalRepayable,
-        'Amount Paid': amountPaid,
-        'Principal Paid': principalPaid,
-        'Interest Collected': interestCollected,
-        'Balance': totalRepayable - amountPaid,
-        'Loan Date': loan.payment_date,
-        'Installments': `${loanInstallments.length} / ${loan.total_instalments}`,
-        'Status': isPaidOff ? 'Paid Off' : 'In Progress',
+        "Loan ID": loan.id,
+        "Customer Name": loan.customers?.name ?? "N/A",
+        "Original Amount": loan.original_amount,
+        "Interest Amount": loan.interest_amount,
+        "Total Repayable": totalRepayable,
+        "Amount Paid": amountPaid,
+        "Principal Paid": principalPaid,
+        "Interest Collected": interestCollected,
+        Balance: totalRepayable - amountPaid,
+        "Loan Date": loan.payment_date,
+        Installments: `${loanInstallments.length} / ${loan.total_instalments}`,
+        Status: isPaidOff ? "Paid Off" : "In Progress",
       };
     });
 
-    const allSubscriptionsData = subscriptions.map(sub => ({
-      'Subscription ID': sub.id,
-      'Customer Name': sub.customers?.name ?? 'N/A',
-      'Amount': sub.amount,
-      'Date': sub.date,
-      'Receipt': sub.receipt,
+    const allSubscriptionsData = subscriptions.map((sub) => ({
+      "Subscription ID": sub.id,
+      "Customer Name": sub.customers?.name ?? "N/A",
+      Amount: sub.amount,
+      Date: sub.date,
+      Receipt: sub.receipt,
     }));
 
-    const allInstallmentsData = installments.map(inst => {
-      const parentLoan = loans.find(l => l.id === inst.loan_id);
+    const allInstallmentsData = installments.map((inst) => {
+      const parentLoan = loans.find((l) => l.id === inst.loan_id);
       return {
-        'Installment ID': inst.id,
-        'Loan ID': inst.loan_id,
-        'Customer Name': parentLoan?.customers?.name ?? 'N/A',
-        'Installment Number': inst.installment_number,
-        'Amount Paid': inst.amount,
-        'Payment Date': inst.date,
-        'Receipt Number': inst.receipt_number,
+        "Installment ID": inst.id,
+        "Loan ID": inst.loan_id,
+        "Customer Name": parentLoan?.customers?.name ?? "N/A",
+        "Installment Number": inst.installment_number,
+        "Amount Paid": inst.amount,
+        "Payment Date": inst.date,
+        "Receipt Number": inst.receipt_number,
       };
     });
 
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(customerSummaryData), 'Customer Summary');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(allLoansData), 'All Loans');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(allSubscriptionsData), 'All Subscriptions');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(allInstallmentsData), 'All Installments');
-    XLSX.writeFile(wb, 'Comprehensive_Data_Report.xlsx');
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(customerSummaryData),
+      "Customer Summary"
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(allLoansData),
+      "All Loans"
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(allSubscriptionsData),
+      "All Subscriptions"
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(allInstallmentsData),
+      "All Installments"
+    );
+    XLSX.writeFile(wb, "Comprehensive_Data_Report.xlsx");
     setExportMenuOpen(false);
   };
 
   const handleExportLoans = () => {
-    const loansData = loans.map(loan => {
-      const loanInstallments = (localInstallmentsByLoanId.get(loan.id) || [])
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const loansData = loans.map((loan) => {
+      const loanInstallments = (
+        localInstallmentsByLoanId.get(loan.id) || []
+      ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
       let amountPaid = 0;
       let principalPaid = 0;
@@ -696,7 +802,10 @@ const SummaryPage = () => {
       for (const inst of loanInstallments) {
         amountPaid += inst.amount;
         if (principalPaid < loan.original_amount) {
-          const principalPortion = Math.min(inst.amount, loan.original_amount - principalPaid);
+          const principalPortion = Math.min(
+            inst.amount,
+            loan.original_amount - principalPaid
+          );
           principalPaid += principalPortion;
           const interestPortion = inst.amount - principalPortion;
           interestCollected += interestPortion;
@@ -709,18 +818,18 @@ const SummaryPage = () => {
       const isPaidOff = amountPaid >= totalRepayable;
 
       return {
-        'Customer Name': loan.customers?.name ?? 'N/A',
-        'Customer Phone': loan.customers?.phone ?? 'N/A',
-        'Original Amount': loan.original_amount,
-        'Interest Amount': loan.interest_amount,
-        'Total Repayable': totalRepayable,
-        'Amount Paid': amountPaid,
-        'Principal Paid': principalPaid,
-        'Interest Collected': interestCollected,
-        'Balance': totalRepayable - amountPaid,
-        'Loan Date': formatDate(loan.payment_date),
-        'Installments': `${loanInstallments.length} / ${loan.total_instalments}`,
-        'Status': isPaidOff ? 'Paid Off' : 'In Progress',
+        "Customer Name": loan.customers?.name ?? "N/A",
+        "Customer Phone": loan.customers?.phone ?? "N/A",
+        "Original Amount": loan.original_amount,
+        "Interest Amount": loan.interest_amount,
+        "Total Repayable": totalRepayable,
+        "Amount Paid": amountPaid,
+        "Principal Paid": principalPaid,
+        "Interest Collected": interestCollected,
+        Balance: totalRepayable - amountPaid,
+        "Loan Date": formatDate(loan.payment_date),
+        Installments: `${loanInstallments.length} / ${loan.total_instalments}`,
+        Status: isPaidOff ? "Paid Off" : "In Progress",
       };
     });
     const ws = XLSX.utils.json_to_sheet(loansData);
@@ -732,13 +841,15 @@ const SummaryPage = () => {
 
   const handleExportSeniority = () => {
     const seniorityData = seniorityList.map((item, index) => ({
-      'Position': index + 1,
-      'Customer Name': item.customers?.name ?? 'N/A',
-      'Customer Phone': item.customers?.phone ?? 'N/A',
-      'Station Name': item.station_name ?? 'N/A',
-      'Loan Type': item.loan_type ?? 'N/A',
-      'Request Date': item.loan_request_date ? formatDate(item.loan_request_date) : 'N/A',
-      'Added Date': formatDate(item.created_at),
+      Position: index + 1,
+      "Customer Name": item.customers?.name ?? "N/A",
+      "Customer Phone": item.customers?.phone ?? "N/A",
+      "Station Name": item.station_name ?? "N/A",
+      "Loan Type": item.loan_type ?? "N/A",
+      "Request Date": item.loan_request_date
+        ? formatDate(item.loan_request_date)
+        : "N/A",
+      "Added Date": formatDate(item.created_at),
     }));
     const ws = XLSX.utils.json_to_sheet(seniorityData);
     const wb = XLSX.utils.book_new();
@@ -766,8 +877,8 @@ const SummaryPage = () => {
     },
     hover: {
       y: -5,
-      transition: { type: "spring", stiffness: 400, damping: 10 }
-    }
+      transition: { type: "spring", stiffness: 400, damping: 10 },
+    },
   };
 
   return (
@@ -791,12 +902,16 @@ const SummaryPage = () => {
                 className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-yellow-400 flex items-center justify-center shadow-md transition-colors border border-gray-200 dark:border-slate-600 no-print"
                 whileHover={{ scale: 1.05, rotate: 15 }}
                 whileTap={{ scale: 0.95 }}
-                title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+                title={
+                  theme === "dark"
+                    ? "Switch to Light Mode"
+                    : "Switch to Dark Mode"
+                }
               >
                 {theme === "dark" ? (
-                  <SunIcon className="w-5 h-5" />
+                  <SunIcon className="h-5 w-5" />
                 ) : (
-                  <MoonIcon className="w-5 h-5" />
+                  <MoonIcon className="h-5 w-5" />
                 )}
               </motion.button>
 
@@ -810,14 +925,29 @@ const SummaryPage = () => {
                   >
                     <FileDownIcon className="w-5 h-5" />
                     <span className="hidden sm:inline">Export</span>
-                    <svg className={`w-4 h-4 transition-transform ${exportMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    <svg
+                      className={`w-4 h-4 transition-transform ${
+                        exportMenuOpen ? "rotate-180" : ""
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
                     </svg>
                   </motion.button>
 
                   {exportMenuOpen && (
                     <>
-                      <div className="fixed inset-0 z-40" onClick={() => setExportMenuOpen(false)} />
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setExportMenuOpen(false)}
+                      />
                       <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 py-2">
                         <button
                           onClick={handleExportLoans}
@@ -896,12 +1026,20 @@ const SummaryPage = () => {
               {/* Quick summary: Loan Balance (keep clearly inside Income column) */}
               <div className="w-full mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 flex flex-col items-start">
-                  <div className="text-xs text-gray-600 dark:text-blue-300">Loan Balance</div>
-                  <div className="text-lg font-bold text-blue-800 dark:text-blue-200 mt-1"><AnimatedNumber value={loanBalance} /></div>
+                  <div className="text-xs text-gray-600 dark:text-blue-300">
+                    Loan Balance
+                  </div>
+                  <div className="text-lg font-bold text-blue-800 dark:text-blue-200 mt-1">
+                    <AnimatedNumber value={loanBalance} />
+                  </div>
                 </div>
                 <div className="p-3 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-100 dark:border-cyan-800 flex flex-col items-start">
-                  <div className="text-xs text-gray-600 dark:text-cyan-300">Subscription Balance</div>
-                  <div className="text-lg font-bold text-cyan-800 dark:text-cyan-200 mt-1"><AnimatedNumber value={subscriptionBalance} /></div>
+                  <div className="text-xs text-gray-600 dark:text-cyan-300">
+                    Subscription Balance
+                  </div>
+                  <div className="text-lg font-bold text-cyan-800 dark:text-cyan-200 mt-1">
+                    <AnimatedNumber value={subscriptionBalance} />
+                  </div>
                 </div>
               </div>
 
@@ -924,10 +1062,14 @@ const SummaryPage = () => {
                       key={card.label}
                       className={`flex items-center justify-between px-4 py-3 rounded-lg bg-${card.color}-50 dark:bg-${card.color}-900/20 border border-${card.color}-200 dark:border-${card.color}-800`}
                     >
-                      <span className={`text-sm font-medium text-${card.color}-700 dark:text-${card.color}-300`}>
+                      <span
+                        className={`text-sm font-medium text-${card.color}-700 dark:text-${card.color}-300`}
+                      >
                         {card.label}
                       </span>
-                      <span className={`text-lg font-bold text-${card.color}-800 dark:text-${card.color}-200`}>
+                      <span
+                        className={`text-lg font-bold text-${card.color}-800 dark:text-${card.color}-200`}
+                      >
                         <AnimatedNumber value={card.value} />
                       </span>
                     </div>
@@ -950,7 +1092,9 @@ const SummaryPage = () => {
 
                 <div className="mt-3 space-y-2">
                   <div className="flex items-center justify-between px-3 py-1 rounded-md bg-cyan-25/30 dark:bg-cyan-900/30">
-                    <div className="text-sm text-gray-700 dark:text-gray-300">Subscriptions</div>
+                    <div className="text-sm text-gray-700 dark:text-gray-300">
+                      Subscriptions
+                    </div>
                     <div className="text-sm font-medium text-cyan-700 dark:text-cyan-300">
                       <AnimatedNumber value={totalSubscriptionCollected} />
                     </div>
@@ -970,7 +1114,11 @@ const SummaryPage = () => {
                       Balance
                     </div>
                     <div
-                      className={`text-sm font-bold ${subscriptionBalance < 0 ? "text-red-600 dark:text-red-400" : "text-cyan-800 dark:text-cyan-200"}`}
+                      className={`text-sm font-bold ${
+                        subscriptionBalance < 0
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-cyan-800 dark:text-cyan-200"
+                      }`}
                     >
                       <AnimatedNumber value={subscriptionBalance} />
                     </div>
@@ -990,7 +1138,9 @@ const SummaryPage = () => {
 
                 <div className="mt-3 space-y-2">
                   <div className="flex items-center justify-between px-3 py-1 rounded-md bg-blue-25/30 dark:bg-blue-900/30">
-                    <div className="text-sm text-gray-700 dark:text-gray-300">Total Loans Given</div>
+                    <div className="text-sm text-gray-700 dark:text-gray-300">
+                      Total Loans Given
+                    </div>
                     <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
                       <AnimatedNumber value={totalLoansGiven} />
                     </div>
@@ -1006,8 +1156,16 @@ const SummaryPage = () => {
                   </div>
 
                   <div className="flex items-center justify-between px-3 py-1 rounded-md bg-blue-25/30 dark:bg-blue-900/30 border-t border-blue-100 dark:border-blue-800">
-                    <div className="text-sm font-medium text-blue-700 dark:text-blue-300">Balance</div>
-                    <div className={`text-sm font-bold ${loanBalance < 0 ? "text-red-600 dark:text-red-400" : "text-blue-800 dark:text-blue-200"}`}>
+                    <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                      Balance
+                    </div>
+                    <div
+                      className={`text-sm font-bold ${
+                        loanBalance < 0
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-blue-800 dark:text-blue-200"
+                      }`}
+                    >
                       <AnimatedNumber value={loanBalance} />
                     </div>
                   </div>
@@ -1056,7 +1214,9 @@ const SummaryPage = () => {
                         key={subtype}
                         className="flex items-center justify-between px-3 py-1 rounded-md bg-red-25/30 dark:bg-red-900/30"
                       >
-                        <div className="text-sm text-gray-700 dark:text-gray-300">{subtype}</div>
+                        <div className="text-sm text-gray-700 dark:text-gray-300">
+                          {subtype}
+                        </div>
                         <div className="text-sm font-medium text-red-700 dark:text-red-300">
                           <AnimatedNumber value={(amt as number) || 0} />
                         </div>
@@ -1091,19 +1251,28 @@ const SummaryPage = () => {
                     >
                       <span>{fyLabel(selectedFYStart)}</span>
                       <svg
-                        className={`w-4 h-4 ml-2 transition-transform ${fyDropdownOpen ? 'rotate-180' : ''}`}
+                        className={`w-4 h-4 ml-2 transition-transform ${
+                          fyDropdownOpen ? "rotate-180" : ""
+                        }`}
                         fill="none"
                         stroke="currentColor"
                         strokeWidth="2"
                         viewBox="0 0 24 24"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M19 9l-7 7-7-7"
+                        />
                       </svg>
                     </button>
                     {fyDropdownOpen && (
                       <div className="absolute z-10 mt-1 w-full bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border rounded-lg shadow-lg max-h-60 overflow-auto animate-fadeIn">
                         <ul>
-                          {(showAllFYOptions ? fyOptions : fyOptions.slice(0, 5)).map((y) => (
+                          {(showAllFYOptions
+                            ? fyOptions
+                            : fyOptions.slice(0, 5)
+                          ).map((y) => (
                             <li
                               key={y}
                               onClick={() => {
@@ -1111,8 +1280,11 @@ const SummaryPage = () => {
                                 setFyDropdownOpen(false);
                                 setShowAllFYOptions(false);
                               }}
-                              className={`px-4 py-2 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-gray-800 dark:text-dark-text ${selectedFYStart === y ? 'bg-indigo-50 dark:bg-indigo-900/50 font-bold' : ''
-                                }`}
+                              className={`px-4 py-2 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-gray-800 dark:text-dark-text ${
+                                selectedFYStart === y
+                                  ? "bg-indigo-50 dark:bg-indigo-900/50 font-bold"
+                                  : ""
+                              }`}
                             >
                               {fyLabel(y)}
                             </li>
@@ -1139,7 +1311,9 @@ const SummaryPage = () => {
                   className="p-4 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800 flex flex-col items-start transition-shadow hover:shadow-md"
                 >
                   <div className="flex items-center justify-between w-full">
-                    <div className="text-xs text-gray-600 dark:text-gray-200">Subscriptions (FY)</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-200">
+                      Subscriptions (FY)
+                    </div>
                     <button
                       onClick={() => openBreakdown("subscriptions")}
                       className="text-xs text-indigo-600 underline"
@@ -1156,7 +1330,9 @@ const SummaryPage = () => {
                   className="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 flex flex-col items-start transition-shadow hover:shadow-md"
                 >
                   <div className="flex items-center justify-between w-full">
-                    <div className="text-xs text-gray-600 dark:text-gray-200">Interest (FY)</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-200">
+                      Interest (FY)
+                    </div>
                     <button
                       onClick={() => openBreakdown("interest")}
                       className="text-xs text-indigo-600 underline"
@@ -1173,7 +1349,9 @@ const SummaryPage = () => {
                   className="p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 flex flex-col items-start transition-shadow hover:shadow-md"
                 >
                   <div className="flex items-center justify-between w-full">
-                    <div className="text-xs text-gray-600 dark:text-gray-200">Late Fees (FY)</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-200">
+                      Late Fees (FY)
+                    </div>
                     <button
                       onClick={() => openBreakdown("latefees")}
                       className="text-xs text-indigo-600 underline"
@@ -1211,13 +1389,19 @@ const SummaryPage = () => {
                   className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 flex flex-col items-start transition-shadow hover:shadow-md"
                 >
                   <div className="flex items-center justify-between w-full">
-                    <div className="text-xs text-gray-600 dark:text-gray-200">Loans Given (FY)</div>
-                    <div className="text-xs text-gray-600 dark:text-gray-200">Balance (FY)</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-200">
+                      Loans Given (FY)
+                    </div>
+                    <div className="text-xs text-gray-600 dark:text-gray-200">
+                      Balance (FY)
+                    </div>
                   </div>
 
                   <div className="mt-2 w-full">
                     <div className="flex items-center justify-between">
-                      <div className="text-sm text-gray-700 dark:text-gray-200">Total Loans Given</div>
+                      <div className="text-sm text-gray-700 dark:text-gray-200">
+                        Total Loans Given
+                      </div>
                       <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
                         <AnimatedNumber value={fyLoansGiven} />
                       </div>
@@ -1235,7 +1419,11 @@ const SummaryPage = () => {
                         Balance
                       </div>
                       <div
-                        className={`text-sm font-bold ${fyLoanBalance < 0 ? "text-red-600 dark:text-red-400" : "text-blue-800 dark:text-blue-200"}`}
+                        className={`text-sm font-bold ${
+                          fyLoanBalance < 0
+                            ? "text-red-600 dark:text-red-400"
+                            : "text-blue-800 dark:text-blue-200"
+                        }`}
                       >
                         <AnimatedNumber value={fyLoanBalance} />
                       </div>
@@ -1248,7 +1436,9 @@ const SummaryPage = () => {
                   className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 flex flex-col items-start transition-shadow hover:shadow-md"
                 >
                   <div className="flex items-center justify-between w-full">
-                    <div className="text-xs text-gray-600 dark:text-gray-200">Total (FY)</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-200">
+                      Total (FY)
+                    </div>
                     <button
                       onClick={() => openBreakdown("total")}
                       className="text-xs text-indigo-600 underline"
@@ -1257,7 +1447,13 @@ const SummaryPage = () => {
                     </button>
                   </div>
                   <div className="text-xl font-bold text-indigo-800 dark:text-indigo-200 mt-2">
-                    <AnimatedNumber value={fySubscriptionCollected + fyInterestCollected + fyLateFees} />
+                    <AnimatedNumber
+                      value={
+                        fySubscriptionCollected +
+                        fyInterestCollected +
+                        fyLateFees
+                      }
+                    />
                   </div>
                 </motion.div>
 
@@ -1274,14 +1470,18 @@ const SummaryPage = () => {
                   <div className="text-xl font-bold text-red-800 dark:text-red-200 mt-2">
                     <AnimatedNumber value={fyExpensesTotal} />
                   </div>
-                  <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">Breakdown:</div>
+                  <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    Breakdown:
+                  </div>
                   <div className="mt-2 space-y-1 w-full">
                     {fyExpenseSubtypes.map((s) => (
                       <div
                         key={s}
                         className="flex items-center justify-between text-sm"
                       >
-                        <div className="text-gray-700 dark:text-gray-200">{s}</div>
+                        <div className="text-gray-700 dark:text-gray-200">
+                          {s}
+                        </div>
                         <div className="font-medium text-red-700 dark:text-red-300">
                           <AnimatedNumber value={fyExpensesBySubtype[s] || 0} />
                         </div>
@@ -1296,10 +1496,19 @@ const SummaryPage = () => {
                   className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 flex flex-col items-start transition-shadow hover:shadow-md"
                 >
                   <div className="flex items-center justify-between w-full">
-                    <div className="text-xs text-gray-600 dark:text-emerald-200">Net Total (FY)</div>
+                    <div className="text-xs text-gray-600 dark:text-emerald-200">
+                      Net Total (FY)
+                    </div>
                   </div>
                   <div className="text-xl font-bold text-emerald-800 dark:text-emerald-200 mt-2">
-                    <AnimatedNumber value={fySubscriptionCollected + fyInterestCollected + fyLateFees - fyExpensesTotal} />
+                    <AnimatedNumber
+                      value={
+                        fySubscriptionCollected +
+                        fyInterestCollected +
+                        fyLateFees -
+                        fyExpensesTotal
+                      }
+                    />
                   </div>
                 </motion.div>
               </div>

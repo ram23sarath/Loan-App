@@ -63,6 +63,16 @@ const FYBreakdownModal: React.FC<Props> = ({
   const target = typeof document !== "undefined" ? document.body : null;
   const hasSource = safeItems.some((it) => !!it.source);
   const hasRemaining = safeItems.some((it) => it.remaining !== undefined);
+  const shouldDisplaySource =
+    hasSource &&
+    !title.includes("Late Fees") &&
+    !title.includes("Interest") &&
+    !title.includes("Subscriptions");
+
+  // Generate gridTemplateColumns based on visible columns
+  const visibleColumnCount =
+    4 + (shouldDisplaySource ? 1 : 0) + (hasRemaining ? 1 : 0); // DATE, CUSTOMER, AMOUNT, NOTES + optional SOURCE + optional REMAINING
+  const gridTemplateColumns = `repeat(${visibleColumnCount}, 1fr)`;
 
   // Apply focus trap when modal opens
   useFocusTrap(dialogRef, "button[class*='rounded']:first-of-type");
@@ -96,7 +106,7 @@ const FYBreakdownModal: React.FC<Props> = ({
         >
           <motion.div
             ref={dialogRef}
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto dark:text-gray-100"
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-4 md:p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto dark:text-gray-100"
             initial={{ scale: 0.95, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 20 }}
@@ -144,33 +154,16 @@ const FYBreakdownModal: React.FC<Props> = ({
                     <div className="mt-2 border-t pt-2" />
                   </div>
                 )}
-                <div className="grid grid-cols-12 gap-4 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase bg-gray-50 dark:bg-gray-700 p-2 rounded">
-                  <div
-                    className={`${
-                      hasSource && hasRemaining ? "col-span-2" : "col-span-3"
-                    }`}
-                  >
-                    Date
-                  </div>
-                  <div
-                    className={`${
-                      hasSource && hasRemaining ? "col-span-2" : "col-span-3"
-                    }`}
-                  >
-                    Customer
-                  </div>
-                  {hasSource && <div className="col-span-2">Source</div>}
-                  {hasRemaining && (
-                    <div className="col-span-2 text-right">Remaining</div>
-                  )}
-                  <div
-                    className={`${
-                      hasSource || hasRemaining ? "col-span-2" : "col-span-4"
-                    } text-right`}
-                  >
-                    Amount
-                  </div>
-                  <div className="col-span-2">Notes / Receipt</div>
+                <div
+                  className="hidden md:grid gap-3 text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase bg-gray-50 dark:bg-gray-700 p-2 rounded"
+                  style={{ display: "grid", gridTemplateColumns }}
+                >
+                  <div>Date</div>
+                  <div>Customer</div>
+                  {shouldDisplaySource && <div>Source</div>}
+                  {hasRemaining && <div className="text-right">Remaining</div>}
+                  <div className="text-right">Amount</div>
+                  <div>Notes / Receipt</div>
                 </div>
                 {safeItems.length === 0 ? (
                   <div className="text-center py-6 text-gray-500 dark:text-gray-400">
@@ -180,46 +173,51 @@ const FYBreakdownModal: React.FC<Props> = ({
                   safeItems.map((it, idx) => (
                     <div
                       key={it.id || idx}
-                      className="grid grid-cols-12 gap-4 px-2 py-3 items-start border-b dark:border-gray-700 last:border-b-0"
+                      className="grid gap-3 p-3 border-b dark:border-gray-700 last:border-b-0 md:gap-3 md:px-3 md:py-3 md:items-start"
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns,
+                        gridAutoRows: "auto",
+                      }}
                     >
-                      <div
-                        className={`${
-                          hasSource && hasRemaining
-                            ? "col-span-2"
-                            : "col-span-3"
-                        } text-sm text-gray-700 dark:text-gray-300`}
-                      >
+                      <div className="text-sm text-gray-700 dark:text-gray-300">
+                        <span className="block text-xs text-gray-500 dark:text-gray-500 md:hidden mb-1">
+                          Date
+                        </span>
                         {it.date ? formatDate(it.date) : "-"}
                       </div>
-                      <div
-                        className={`${
-                          hasSource && hasRemaining
-                            ? "col-span-2"
-                            : "col-span-3"
-                        } text-sm text-gray-700 dark:text-gray-300`}
-                      >
+                      <div className="text-sm text-gray-700 dark:text-gray-300 font-medium md:font-normal">
+                        <span className="block text-xs text-gray-500 dark:text-gray-500 md:hidden mb-1">
+                          Customer
+                        </span>
                         {it.customer || "-"}
                       </div>
-                      {hasSource && (
-                        <div className="col-span-2 text-sm text-gray-700 dark:text-gray-300">
+                      {shouldDisplaySource && (
+                        <div className="text-sm text-gray-700 dark:text-gray-300">
+                          <span className="block text-xs text-gray-500 dark:text-gray-500 md:hidden mb-1">
+                            Source
+                          </span>
                           {it.source || "-"}
                         </div>
                       )}
                       {hasRemaining && (
-                        <div className="col-span-2 text-sm text-right text-gray-700 dark:text-gray-300">
+                        <div className="text-sm text-right text-gray-700 dark:text-gray-300">
+                          <span className="block text-xs text-gray-500 dark:text-gray-500 md:hidden mb-1">
+                            Remaining
+                          </span>
                           {formatCurrencyIN(it.remaining ?? 0)}
                         </div>
                       )}
-                      <div
-                        className={`${
-                          hasSource || hasRemaining
-                            ? "col-span-2"
-                            : "col-span-4"
-                        } text-sm font-medium text-right text-gray-800 dark:text-gray-200`}
-                      >
+                      <div className="text-sm font-medium text-right text-gray-800 dark:text-gray-200">
+                        <span className="block text-xs text-gray-500 dark:text-gray-500 md:hidden mb-1">
+                          Amount
+                        </span>
                         {formatCurrencyIN(it.amount)}
                       </div>
-                      <div className="col-span-2 text-sm text-gray-600 dark:text-gray-400">
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        <span className="block text-xs text-gray-500 dark:text-gray-500 md:hidden mb-1">
+                          Notes / Receipt
+                        </span>
                         {it.receipt || it.notes || "-"}
                       </div>
                     </div>

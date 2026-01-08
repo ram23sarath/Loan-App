@@ -33,12 +33,33 @@ const PagePickerPopover: React.FC<PagePickerPopoverProps> = ({
   label = "Pages",
 }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
+  const buttonRefsArray = useRef<(HTMLButtonElement | null)[]>([]);
+  const [focusedButtonIndex, setFocusedButtonIndex] = React.useState<
+    number | null
+  >(null);
+
   const itemsPerPage = 9; // 3x3 grid
   const maxOffset = Math.max(0, Math.ceil(pages.length / itemsPerPage) - 1);
   const visiblePages = pages.slice(
     offset * itemsPerPage,
     (offset + 1) * itemsPerPage
   );
+
+  // Initialize button refs array when visible pages change
+  React.useEffect(() => {
+    buttonRefsArray.current = buttonRefsArray.current.slice(
+      0,
+      visiblePages.length
+    );
+  }, [visiblePages.length]);
+
+  // Auto-focus the first button when popover opens or visible pages change
+  React.useEffect(() => {
+    if (isOpen && buttonRefsArray.current[0]) {
+      buttonRefsArray.current[0].focus();
+      setFocusedButtonIndex(0);
+    }
+  }, [isOpen, visiblePages.length]);
 
   // Handle keyboard navigation and click-outside
   useEffect(() => {
@@ -52,13 +73,77 @@ const PagePickerPopover: React.FC<PagePickerPopoverProps> = ({
         return;
       }
 
-      // Arrow keys for offset navigation
-      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      // Check if the popover or any of its children has focus
+      const isPopoverFocused =
+        popoverRef.current &&
+        (document.activeElement === popoverRef.current ||
+          popoverRef.current.contains(document.activeElement));
+
+      if (!isPopoverFocused) return;
+
+      // Arrow key navigation within the grid
+      const currentFocused = focusedButtonIndex;
+      if (currentFocused === null) return;
+
+      let nextIndex: number | null = null;
+      const colsPerRow = 3;
+
+      if (e.key === "ArrowRight") {
         e.preventDefault();
-        setOffset(Math.max(0, offset - 1));
-      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        // Move right in the same row
+        if (
+          (currentFocused + 1) % colsPerRow !== 0 &&
+          currentFocused + 1 < visiblePages.length
+        ) {
+          nextIndex = currentFocused + 1;
+        } else if (
+          (currentFocused + 1) % colsPerRow === 0 ||
+          currentFocused === visiblePages.length - 1
+        ) {
+          // At right edge or last item - advance to next page set
+          if (offset < maxOffset) {
+            setOffset(Math.min(maxOffset, offset + 1));
+            // After offset changes, focus will be reset in the effect above
+            return;
+          }
+        }
+      } else if (e.key === "ArrowLeft") {
         e.preventDefault();
-        setOffset(Math.min(maxOffset, offset + 1));
+        // Move left in the same row
+        if (currentFocused % colsPerRow !== 0) {
+          nextIndex = currentFocused - 1;
+        } else if (currentFocused % colsPerRow === 0 && currentFocused > 0) {
+          // At left edge (but not first item) - go to previous page set
+          if (offset > 0) {
+            setOffset(Math.max(0, offset - 1));
+            // After offset changes, focus will be reset in the effect above
+            return;
+          }
+        } else if (currentFocused === 0 && offset > 0) {
+          // At very first visible item but not first overall - go to previous page set
+          setOffset(Math.max(0, offset - 1));
+          return;
+        }
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        // Move down one row
+        const nextRowIndex = currentFocused + colsPerRow;
+        if (nextRowIndex < visiblePages.length) {
+          nextIndex = nextRowIndex;
+        }
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        // Move up one row
+        const prevRowIndex = currentFocused - colsPerRow;
+        if (prevRowIndex >= 0) {
+          nextIndex = prevRowIndex;
+        }
+      }
+
+      // Focus the next button if found
+      if (nextIndex !== null && buttonRefsArray.current[nextIndex]) {
+        setFocusedButtonIndex(nextIndex);
+        buttonRefsArray.current[nextIndex].focus();
       }
     };
 
@@ -78,7 +163,15 @@ const PagePickerPopover: React.FC<PagePickerPopoverProps> = ({
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isOpen, offset, maxOffset, setOpen, setOffset]);
+  }, [
+    isOpen,
+    focusedButtonIndex,
+    visiblePages.length,
+    setOpen,
+    offset,
+    maxOffset,
+    setOffset,
+  ]);
 
   return (
     <div className="relative">
@@ -106,6 +199,7 @@ const PagePickerPopover: React.FC<PagePickerPopoverProps> = ({
           role="dialog"
           aria-label={`${label} picker dialog`}
           aria-modal="true"
+          tabIndex={-1}
         >
           {/* Navigation arrows */}
           <div className="flex items-center justify-between mb-2 px-1">
@@ -139,12 +233,20 @@ const PagePickerPopover: React.FC<PagePickerPopoverProps> = ({
             role="group"
             aria-label={`${label} selection`}
           >
-            {visiblePages.map((p) => (
+            {visiblePages.map((p, index) => (
               <button
                 key={p}
+                ref={(el) => {
+                  if (el) {
+                    buttonRefsArray.current[index] = el;
+                  }
+                }}
                 onClick={() => {
                   onPageChange(p);
                   setOpen(null);
+                }}
+                onFocus={() => {
+                  setFocusedButtonIndex(index);
                 }}
                 className={`px-2 py-1 text-sm rounded ${
                   currentPage === p

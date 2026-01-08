@@ -19,43 +19,6 @@ const AddCustomerPage = () => {
 
   const [toast, setToast] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
   const [shakeButton, setShakeButton] = useState(false);
-  const STORAGE_KEY = 'loan_app_user_creation_history';
-  const [, setUserCreationStatuses] = useState<any[]>([]);
-
-  // Load persisted history and listen for background events
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setUserCreationStatuses(JSON.parse(saved));
-    } catch (e) {
-      console.error('Failed to load user creation history', e);
-    }
-
-    const handler = (ev: any) => {
-      const d = ev?.detail || {};
-      const customerId = d.customerId || d.customer_id || null;
-      const status = d.status || 'unknown';
-      const userId = d.user_id || d.userId || d.userId;
-      const message = d.message || '';
-
-      const entry = {
-        customerId,
-        status,
-        userId,
-        message,
-        timestamp: Date.now(),
-      };
-
-      setUserCreationStatuses(prev => {
-        const next = [entry, ...prev].slice(0, 100); // keep some history
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch (e) { }
-        return next;
-      });
-    };
-
-    window.addEventListener('background-user-create', handler as EventListener);
-    return () => window.removeEventListener('background-user-create', handler as EventListener);
-  }, []);
 
   const onSubmit: SubmitHandler<FormInputs> = async (data) => {
     try {

@@ -301,6 +301,40 @@ const LoanTableView: React.FC = () => {
     return;
   }, [deleteTarget, deleteLoanTarget]);
 
+  React.useEffect(() => {
+    if (!editTarget) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" && event.key !== "Esc") {
+        return;
+      }
+      try {
+        event.preventDefault();
+        event.stopPropagation();
+        if (typeof (event as any).stopImmediatePropagation === "function") {
+          (event as any).stopImmediatePropagation();
+        }
+      } catch (err) {
+        // ignore
+      }
+      setEditTarget(null);
+    };
+
+    document.addEventListener("keydown", handleKeyDown, true);
+    if (typeof window !== "undefined") {
+      window.addEventListener("keydown", handleKeyDown, true);
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown, true);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("keydown", handleKeyDown, true);
+      }
+    };
+  }, [editTarget]);
+
   return (
     <GlassCard className="overflow-x-auto" disable3D>
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-4">

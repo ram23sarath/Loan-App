@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from "react";
+import React, { useMemo, useEffect, useState, useCallback } from "react";
 import ReactDOM from "react-dom";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import PageWrapper from "../ui/PageWrapper";
@@ -263,12 +263,36 @@ const LoanSeniorityPage = () => {
     }
   };
 
-  const closeModal = () => {
+  const closeModal = useCallback(() => {
     setModalCustomer(null);
     setStationName("");
     setLoanType("General");
     setLoanRequestDate("");
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!modalCustomer) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeModal();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [modalCustomer, closeModal]);
+
+  useEffect(() => {
+    if (!deleteTarget) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setDeleteTarget(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [deleteTarget]);
 
   const saveModalEntry = async () => {
     if (!modalCustomer) return;

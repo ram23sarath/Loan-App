@@ -163,7 +163,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   const [notifications, setNotifications] = useState<any[]>([]);
 
   const [isClearing, setIsClearing] = useState(false);
-  const [deletingNotificationId, setDeletingNotificationId] = useState<number | null>(null);
+  const [deletingNotificationId, setDeletingNotificationId] = useState<number | string | null>(null);
   const [swipedNotificationId, setSwipedNotificationId] = useState<number | string | null>(null);
   const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
 
@@ -177,22 +177,14 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   const handleDeleteNotification = async (notificationId: number | string) => {
     if (isScopedCustomer) return;
 
-    const target = notifications.find(n => n.id === notificationId);
-    if (target?.isLocal) {
-      setNotifications(notifications.filter(n => n.id !== notificationId));
-      setSwipedNotificationId(null);
-      setSwipeDirection(null);
-      return;
-    }
-
-    setDeletingNotificationId(typeof notificationId === 'number' ? notificationId : null);
+    setDeletingNotificationId(notificationId);
 
     try {
       // Trigger animation first (wait for swipe or shake animation)
       const animationDuration = swipedNotificationId === notificationId ? 300 : 600;
       await new Promise(r => setTimeout(r, animationDuration));
 
-      if (typeof notificationId === 'number') {
+      if (notificationId) {
         // Delete from DB
         const { error } = await supabase
           .from('system_notifications')
@@ -222,11 +214,10 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
       // Trigger animations first (wait 1.5s for "snap" effect)
       await new Promise(r => setTimeout(r, 1500));
 
-      // Delete from DB: collect only real DB notification IDs (not local ones)
-      // Local notification IDs start with "local-" and should only be cleared from localStorage
+      // Delete from DB: collect IDs
       const dbIDs = notifications
-        .filter(n => !n.isLocal && typeof n.id === 'number')
-        .map(n => n.id);
+        .map(n => n.id)
+        .filter(id => id !== null && id !== undefined);
 
       // Delete database notifications
       if (dbIDs.length > 0) {
@@ -237,9 +228,6 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
 
         if (error) throw error;
       }
-
-      // Clear local user creation history from localStorage
-      localStorage.removeItem('loan_app_user_creation_history');
 
       setNotifications([]);
     } catch (err) {
@@ -429,31 +417,6 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
     setShowNotificationModal(true);
     setNotificationLoading(true);
 
-    const localNotifications = (() => {
-      try {
-        const saved = localStorage.getItem('loan_app_user_creation_history');
-        if (!saved) return [];
-
-        return JSON.parse(saved)
-          .filter((s: any) => s?.status === 'success' && s?.userId)
-          .sort((a: any, b: any) => (b?.timestamp || 0) - (a?.timestamp || 0))
-          .slice(0, 5)
-          .map((s: any) => {
-            const customerName = customerMap?.get(s.customerId)?.name || s.customerId;
-            return {
-              id: `local-${s.timestamp}-${s.userId}`,
-              status: s.status,
-              message: `User account for ${customerName} created`,
-              created_at: new Date(s.timestamp || Date.now()).toISOString(),
-              isLocal: true,
-            };
-          });
-      } catch (err) {
-        console.error('Failed to load local auth user creations', err);
-        return [];
-      }
-    })();
-
     try {
       // Fetch recent system notifications
       const { data, error } = await supabase
@@ -465,15 +428,13 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
       if (error) {
         // Fallback if table doesn't exist
         console.warn("Could not fetch notifications (table might be missing)", error);
-        setNotifications(localNotifications);
+        setNotifications([]);
       } else {
-        const merged = [...localNotifications, ...(data || [])]
-          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-        setNotifications(merged);
+        setNotifications(data || []);
       }
     } catch (error) {
       console.error("Error fetching notifications", error);
-      setNotifications(localNotifications);
+      setNotifications([]);
     } finally {
       setNotificationLoading(false);
     }

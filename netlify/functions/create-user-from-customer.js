@@ -115,6 +115,23 @@ export default async (req, context) => {
 
     console.log(`✅ Customer updated with user_id: ${userId}`);
 
+    // Create system notification
+    const { error: notifyError } = await supabase
+      .from('system_notifications')
+      .insert({
+        type: 'user_created',
+        status: 'success',
+        message: `User account for ${name} created`,
+        metadata: { customer_id, user_id: userId }
+      });
+
+    if (notifyError) {
+      console.error('❌ Error creating notification:', notifyError.message);
+      // Don't fail the request if notification fails
+    } else {
+      console.log('✅ System notification created');
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

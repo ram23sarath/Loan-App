@@ -4,11 +4,13 @@ export type DataEntry = {
   date: string;
   amount: number;
   receipt_number: string;
+  type: "credit" | "debit" | "expense"; // Type of transaction
   notes?: string;
   subtype?: string | null;
 };
 
 export type NewDataEntry = Omit<DataEntry, 'id'>;
+
 // Base row types matching the database tables
 export type Customer = {
   id: string;
@@ -208,6 +210,7 @@ export type Database = {
           date: string;
           amount: number;
           receipt_number: string;
+          type: "credit" | "debit" | "expense";
           notes?: string;
           subtype?: string | null;
         };
@@ -216,6 +219,7 @@ export type Database = {
           date: string;
           amount: number;
           receipt_number: string;
+          type: "credit" | "debit" | "expense";
           notes?: string;
           subtype?: string | null;
         };
@@ -224,6 +228,7 @@ export type Database = {
           date?: string;
           amount?: number;
           receipt_number?: string;
+          type?: "credit" | "debit" | "expense";
           notes?: string;
           subtype?: string | null;
         };

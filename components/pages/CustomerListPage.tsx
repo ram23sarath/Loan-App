@@ -1,16 +1,21 @@
-import React, { useState, useMemo } from 'react';
-import ReactDOM from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { useData } from '../../context/DataContext';
-import GlassCard from '../ui/GlassCard';
-import PageWrapper from '../ui/PageWrapper';
-import { UsersIcon, Trash2Icon, SpinnerIcon, WhatsAppIcon } from '../../constants';
-import CustomerDetailModal from '../modals/CustomerDetailModal';
-import EditModal from '../modals/EditModal';
-import type { Customer } from '../../types';
-import { useDebounce } from '../../utils/useDebounce';
-import { openWhatsApp } from '../../utils/whatsapp';
+import React, { useState, useMemo } from "react";
+import ReactDOM from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { Link } from "react-router-dom";
+import { useData } from "../../context/DataContext";
+import GlassCard from "../ui/GlassCard";
+import PageWrapper from "../ui/PageWrapper";
+import {
+  UsersIcon,
+  Trash2Icon,
+  SpinnerIcon,
+  WhatsAppIcon,
+} from "../../constants";
+import CustomerDetailModal from "../modals/CustomerDetailModal";
+import EditModal from "../modals/EditModal";
+import type { Customer } from "../../types";
+import { useDebounce } from "../../utils/useDebounce";
+import { openWhatsApp } from "../../utils/whatsapp";
 
 // --- Icon Component ---
 const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -30,15 +35,52 @@ const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 const CustomerListPage = () => {
-  const { customers, loans, subscriptions, installments, installmentsByLoanId, dataEntries, deleteCustomer, deleteLoan, deleteSubscription, deleteInstallment, deleteDataEntry, isRefreshing, signOut, updateCustomer, updateLoan, updateSubscription, updateInstallment, isScopedCustomer } = useData();
-  const [deleteCustomerTarget, setDeleteCustomerTarget] = React.useState<{ id: string, name: string } | null>(null);
-  const [deleteCounts, setDeleteCounts] = React.useState<{ dataEntries: number; loans: number; installments: number; subscriptions: number } | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+  const {
+    customers,
+    loans,
+    subscriptions,
+    installments,
+    installmentsByLoanId,
+    dataEntries,
+    deleteCustomer,
+    deleteLoan,
+    deleteSubscription,
+    deleteInstallment,
+    deleteDataEntry,
+    isRefreshing,
+    signOut,
+    updateCustomer,
+    updateLoan,
+    updateSubscription,
+    updateInstallment,
+    isScopedCustomer,
+  } = useData();
+  const [deleteCustomerTarget, setDeleteCustomerTarget] = React.useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [deleteCounts, setDeleteCounts] = React.useState<{
+    dataEntries: number;
+    loans: number;
+    installments: number;
+    subscriptions: number;
+  } | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
-  const [sortOption, setSortOption] = useState('date-desc');
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [sortOption, setSortOption] = useState("date-desc");
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null
+  );
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [editModal, setEditModal] = useState<{ type: 'customer' | 'loan' | 'subscription' | 'customer_loan' | 'installment'; data: any } | null>(null);
+  const [editModal, setEditModal] = useState<{
+    type:
+      | "customer"
+      | "loan"
+      | "subscription"
+      | "customer_loan"
+      | "installment";
+    data: any;
+  } | null>(null);
 
   const [expandedSections, setExpandedSections] = useState({
     both: true,
@@ -59,53 +101,54 @@ const CustomerListPage = () => {
   const itemsPerPage = 25;
 
   // Page picker popup state
-  const [pagePickerOpen, setPagePickerOpen] = React.useState<{ section: 'both' | 'loans' | 'subs' | 'neither', position: 'start' | 'end' } | null>(null);
+  const [pagePickerOpen, setPagePickerOpen] = React.useState<{
+    section: "both" | "loans" | "subs" | "neither";
+    position: "start" | "end";
+  } | null>(null);
   const [pagePickerOffset, setPagePickerOffset] = React.useState(0);
 
-  const toggleSection = (key: 'both' | 'loans' | 'subs' | 'neither') => {
-    setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  const toggleSection = (key: "both" | "loans" | "subs" | "neither") => {
+    setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const setCurrentPage = (section: 'both' | 'loans' | 'subs' | 'neither', page: number) => {
-    setCurrentPages(prev => ({ ...prev, [section]: page }));
+  const setCurrentPage = (
+    section: "both" | "loans" | "subs" | "neither",
+    page: number
+  ) => {
+    setCurrentPages((prev) => ({ ...prev, [section]: page }));
   };
 
   React.useEffect(() => {
     if (debouncedSearchTerm) {
-      setExpandedSections({ both: true, loans: true, subs: true, neither: true });
+      setExpandedSections({
+        both: true,
+        loans: true,
+        subs: true,
+        neither: true,
+      });
     }
   }, [debouncedSearchTerm]);
 
-  React.useEffect(() => {
-    let timer: NodeJS.Timeout;
-    const resetTimer = () => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => {
-        signOut();
-        alert('You have been logged out due to inactivity.');
-      }, 30 * 60 * 1000); // 30 minutes
-    };
-    window.addEventListener('mousemove', resetTimer);
-    window.addEventListener('keydown', resetTimer);
-    window.addEventListener('click', resetTimer);
-    resetTimer();
-    return () => {
-      if (timer) clearTimeout(timer);
-      window.removeEventListener('mousemove', resetTimer);
-      window.removeEventListener('keydown', resetTimer);
-      window.removeEventListener('click', resetTimer);
-    };
-  }, [signOut]);
-
   const handleDeleteCustomer = (customer) => {
     const cid = customer.id;
-    const dataEntriesCount = dataEntries.filter(d => d.customer_id === cid).length;
-    const customerLoans = loans.filter(l => l.customer_id === cid);
+    const dataEntriesCount = dataEntries.filter(
+      (d) => d.customer_id === cid
+    ).length;
+    const customerLoans = loans.filter((l) => l.customer_id === cid);
     const loansCount = customerLoans.length;
-    const installmentsCount = customerLoans.reduce((acc, loan) =>
-      acc + (installmentsByLoanId.get(loan.id)?.length || 0), 0);
-    const subscriptionsCount = subscriptions.filter(s => s.customer_id === cid).length;
-    setDeleteCounts({ dataEntries: dataEntriesCount, loans: loansCount, installments: installmentsCount, subscriptions: subscriptionsCount });
+    const installmentsCount = customerLoans.reduce(
+      (acc, loan) => acc + (installmentsByLoanId.get(loan.id)?.length || 0),
+      0
+    );
+    const subscriptionsCount = subscriptions.filter(
+      (s) => s.customer_id === cid
+    ).length;
+    setDeleteCounts({
+      dataEntries: dataEntriesCount,
+      loans: loansCount,
+      installments: installmentsCount,
+      subscriptions: subscriptionsCount,
+    });
     setDeleteCustomerTarget({ id: customer.id, name: customer.name });
   };
 
@@ -129,15 +172,15 @@ const CustomerListPage = () => {
   // Close delete customer modal with Escape key
   React.useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
+      if (e.key !== "Escape") return;
       if (deleteCustomerTarget) {
         setDeleteCustomerTarget(null);
         setDeleteCounts(null);
       }
     };
     if (deleteCustomerTarget) {
-      document.addEventListener('keydown', handleEscape);
-      return () => document.removeEventListener('keydown', handleEscape);
+      document.addEventListener("keydown", handleEscape);
+      return () => document.removeEventListener("keydown", handleEscape);
     }
     return;
   }, [deleteCustomerTarget]);
@@ -147,22 +190,29 @@ const CustomerListPage = () => {
 
     processedCustomers.sort((a, b) => {
       switch (sortOption) {
-        case 'name-asc':
+        case "name-asc":
           return a.name.localeCompare(b.name);
-        case 'name-desc':
+        case "name-desc":
           return b.name.localeCompare(a.name);
-        case 'date-asc':
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        case 'date-desc':
+        case "date-asc":
+          return (
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          );
+        case "date-desc":
         default:
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          return (
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
       }
     });
 
     if (debouncedSearchTerm) {
-      processedCustomers = processedCustomers.filter(customer =>
-        customer.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-        customer.phone.includes(debouncedSearchTerm)
+      processedCustomers = processedCustomers.filter(
+        (customer) =>
+          customer.name
+            .toLowerCase()
+            .includes(debouncedSearchTerm.toLowerCase()) ||
+          customer.phone.includes(debouncedSearchTerm)
       );
     }
 
@@ -171,9 +221,11 @@ const CustomerListPage = () => {
     const withBoth: Customer[] = [];
     const withNeither: Customer[] = [];
 
-    processedCustomers.forEach(customer => {
-      const hasLoans = loans.some(l => l.customer_id === customer.id);
-      const hasSubscriptions = subscriptions.some(s => s.customer_id === customer.id);
+    processedCustomers.forEach((customer) => {
+      const hasLoans = loans.some((l) => l.customer_id === customer.id);
+      const hasSubscriptions = subscriptions.some(
+        (s) => s.customer_id === customer.id
+      );
 
       if (hasLoans && hasSubscriptions) {
         withBoth.push(customer);
@@ -190,15 +242,26 @@ const CustomerListPage = () => {
   }, [customers, loans, subscriptions, debouncedSearchTerm, sortOption]);
 
   const formatCurrency = (value: number) => {
-    return value.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 0 });
-  }
-
-  const collapseVariants = {
-    open: { opacity: 1, height: 'auto', overflow: 'hidden' },
-    collapsed: { opacity: 0, height: 0, overflow: 'hidden' }
+    return value.toLocaleString("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    });
   };
 
-  const PaginationControls = ({ section, totalItems }: { section: 'both' | 'loans' | 'subs' | 'neither', totalItems: number }) => {
+  const collapseVariants = {
+    open: { opacity: 1, height: "auto", overflow: "hidden" },
+    collapsed: { opacity: 0, height: 0, overflow: "hidden" },
+  };
+
+  const PaginationControls = ({
+    section,
+    totalItems,
+  }: {
+    section: "both" | "loans" | "subs" | "neither";
+    totalItems: number;
+  }) => {
     const totalPages = Math.ceil(totalItems / itemsPerPage);
     const currentPage = currentPages[section];
 
@@ -208,7 +271,8 @@ const CustomerListPage = () => {
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-dark-border">
         <div className="text-sm text-gray-600 dark:text-dark-muted">
           Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-          {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} customers
+          {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems}{" "}
+          customers
         </div>
         <div className="flex gap-2 flex-wrap justify-center">
           <button
@@ -219,7 +283,9 @@ const CustomerListPage = () => {
             First
           </button>
           <button
-            onClick={() => setCurrentPage(section, Math.max(1, currentPage - 1))}
+            onClick={() =>
+              setCurrentPage(section, Math.max(1, currentPage - 1))
+            }
             disabled={currentPage === 1}
             className="px-3 py-1 rounded border border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
           >
@@ -239,10 +305,11 @@ const CustomerListPage = () => {
                     setCurrentPage(section, page);
                     setPagePickerOpen(null);
                   }}
-                  className={`px-3 py-1 rounded border ${currentPage === page
-                    ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
-                    : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
-                    }`}
+                  className={`px-3 py-1 rounded border ${
+                    currentPage === page
+                      ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
+                      : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
+                  }`}
                 >
                   {page}
                 </button>
@@ -250,10 +317,21 @@ const CustomerListPage = () => {
             }
             // Start ellipsis - pages between 1 and current-1
             if (page === 2 && currentPage > 3) {
-              const startPages = Array.from({ length: currentPage - 3 }, (_, i) => i + 2);
-              const maxOffset = Math.max(0, Math.ceil(startPages.length / 9) - 1);
-              const isOpen = pagePickerOpen?.section === section && pagePickerOpen?.position === 'start';
-              const visiblePages = startPages.slice(pagePickerOffset * 9, (pagePickerOffset + 1) * 9);
+              const startPages = Array.from(
+                { length: currentPage - 3 },
+                (_, i) => i + 2
+              );
+              const maxOffset = Math.max(
+                0,
+                Math.ceil(startPages.length / 9) - 1
+              );
+              const isOpen =
+                pagePickerOpen?.section === section &&
+                pagePickerOpen?.position === "start";
+              const visiblePages = startPages.slice(
+                pagePickerOffset * 9,
+                (pagePickerOffset + 1) * 9
+              );
 
               return (
                 <div key="dots-start" className="relative">
@@ -262,7 +340,7 @@ const CustomerListPage = () => {
                       if (isOpen) {
                         setPagePickerOpen(null);
                       } else {
-                        setPagePickerOpen({ section, position: 'start' });
+                        setPagePickerOpen({ section, position: "start" });
                         setPagePickerOffset(0);
                       }
                     }}
@@ -275,17 +353,30 @@ const CustomerListPage = () => {
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-lg p-2 z-50 min-w-[140px]">
                       <div className="flex items-center justify-between mb-2 px-1">
                         <button
-                          onClick={() => setPagePickerOffset(Math.max(0, pagePickerOffset - 1))}
+                          onClick={() =>
+                            setPagePickerOffset(
+                              Math.max(0, pagePickerOffset - 1)
+                            )
+                          }
                           disabled={pagePickerOffset === 0}
                           className="p-1 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed"
                         >
                           ‹
                         </button>
                         <span className="text-xs text-gray-500 dark:text-dark-muted">
-                          {pagePickerOffset * 9 + 1}-{Math.min((pagePickerOffset + 1) * 9, startPages.length)} of {startPages.length}
+                          {pagePickerOffset * 9 + 1}-
+                          {Math.min(
+                            (pagePickerOffset + 1) * 9,
+                            startPages.length
+                          )}{" "}
+                          of {startPages.length}
                         </span>
                         <button
-                          onClick={() => setPagePickerOffset(Math.min(maxOffset, pagePickerOffset + 1))}
+                          onClick={() =>
+                            setPagePickerOffset(
+                              Math.min(maxOffset, pagePickerOffset + 1)
+                            )
+                          }
                           disabled={pagePickerOffset >= maxOffset}
                           className="p-1 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed"
                         >
@@ -300,10 +391,11 @@ const CustomerListPage = () => {
                               setCurrentPage(section, p);
                               setPagePickerOpen(null);
                             }}
-                            className={`px-2 py-1 text-sm rounded ${currentPage === p
-                              ? "bg-indigo-600 text-white"
-                              : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
-                              }`}
+                            className={`px-2 py-1 text-sm rounded ${
+                              currentPage === p
+                                ? "bg-indigo-600 text-white"
+                                : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
+                            }`}
                           >
                             {p}
                           </button>
@@ -316,10 +408,18 @@ const CustomerListPage = () => {
             }
             // End ellipsis - pages between current+1 and totalPages-1
             if (page === totalPages - 1 && currentPage < totalPages - 2) {
-              const endPages = Array.from({ length: totalPages - currentPage - 2 }, (_, i) => currentPage + 2 + i);
+              const endPages = Array.from(
+                { length: totalPages - currentPage - 2 },
+                (_, i) => currentPage + 2 + i
+              );
               const maxOffset = Math.max(0, Math.ceil(endPages.length / 9) - 1);
-              const isOpen = pagePickerOpen?.section === section && pagePickerOpen?.position === 'end';
-              const visiblePages = endPages.slice(pagePickerOffset * 9, (pagePickerOffset + 1) * 9);
+              const isOpen =
+                pagePickerOpen?.section === section &&
+                pagePickerOpen?.position === "end";
+              const visiblePages = endPages.slice(
+                pagePickerOffset * 9,
+                (pagePickerOffset + 1) * 9
+              );
 
               return (
                 <div key="dots-end" className="relative">
@@ -328,7 +428,7 @@ const CustomerListPage = () => {
                       if (isOpen) {
                         setPagePickerOpen(null);
                       } else {
-                        setPagePickerOpen({ section, position: 'end' });
+                        setPagePickerOpen({ section, position: "end" });
                         setPagePickerOffset(0);
                       }
                     }}
@@ -341,17 +441,30 @@ const CustomerListPage = () => {
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-lg p-2 z-50 min-w-[140px]">
                       <div className="flex items-center justify-between mb-2 px-1">
                         <button
-                          onClick={() => setPagePickerOffset(Math.max(0, pagePickerOffset - 1))}
+                          onClick={() =>
+                            setPagePickerOffset(
+                              Math.max(0, pagePickerOffset - 1)
+                            )
+                          }
                           disabled={pagePickerOffset === 0}
                           className="p-1 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed"
                         >
                           ‹
                         </button>
                         <span className="text-xs text-gray-500 dark:text-dark-muted">
-                          {pagePickerOffset * 9 + 1}-{Math.min((pagePickerOffset + 1) * 9, endPages.length)} of {endPages.length}
+                          {pagePickerOffset * 9 + 1}-
+                          {Math.min(
+                            (pagePickerOffset + 1) * 9,
+                            endPages.length
+                          )}{" "}
+                          of {endPages.length}
                         </span>
                         <button
-                          onClick={() => setPagePickerOffset(Math.min(maxOffset, pagePickerOffset + 1))}
+                          onClick={() =>
+                            setPagePickerOffset(
+                              Math.min(maxOffset, pagePickerOffset + 1)
+                            )
+                          }
                           disabled={pagePickerOffset >= maxOffset}
                           className="p-1 text-gray-500 dark:text-dark-muted hover:text-indigo-600 dark:hover:text-indigo-400 disabled:opacity-30 disabled:cursor-not-allowed"
                         >
@@ -366,10 +479,11 @@ const CustomerListPage = () => {
                               setCurrentPage(section, p);
                               setPagePickerOpen(null);
                             }}
-                            className={`px-2 py-1 text-sm rounded ${currentPage === p
-                              ? "bg-indigo-600 text-white"
-                              : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
-                              }`}
+                            className={`px-2 py-1 text-sm rounded ${
+                              currentPage === p
+                                ? "bg-indigo-600 text-white"
+                                : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
+                            }`}
                           >
                             {p}
                           </button>
@@ -384,7 +498,9 @@ const CustomerListPage = () => {
           })}
 
           <button
-            onClick={() => setCurrentPage(section, Math.min(totalPages, currentPage + 1))}
+            onClick={() =>
+              setCurrentPage(section, Math.min(totalPages, currentPage + 1))
+            }
             disabled={currentPage === totalPages}
             className="px-3 py-1 rounded border border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
           >
@@ -408,8 +524,12 @@ const CustomerListPage = () => {
         <h2 className="text-xl sm:text-4xl font-bold flex items-center gap-2 sm:gap-4 dark:text-dark-text">
           <UsersIcon className="w-7 h-7 sm:w-10 sm:h-10" />
           <span>All Customers</span>
-          <span className="ml-2 text-xl sm:text-4xl font-bold text-gray-400 dark:text-dark-muted">({customers.length})</span>
-          {isRefreshing && <SpinnerIcon className="w-5 h-5 sm:w-8 sm:h-8 animate-spin text-indigo-500 dark:text-indigo-400" />}
+          <span className="ml-2 text-xl sm:text-4xl font-bold text-gray-400 dark:text-dark-muted">
+            ({customers.length})
+          </span>
+          {isRefreshing && (
+            <SpinnerIcon className="w-5 h-5 sm:w-8 sm:h-8 animate-spin text-indigo-500 dark:text-indigo-400" />
+          )}
         </h2>
       </div>
 
@@ -431,8 +551,18 @@ const CustomerListPage = () => {
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-dark-muted dark:hover:text-dark-text p-1"
                   aria-label="Clear search"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               )}
@@ -452,27 +582,35 @@ const CustomerListPage = () => {
       )}
 
       {categorizedCustomers.withBoth.length === 0 &&
-        categorizedCustomers.withOnlyLoans.length === 0 &&
-        categorizedCustomers.withOnlySubscriptions.length === 0 &&
-        categorizedCustomers.withNeither.length === 0 &&
-        !isRefreshing ? (
+      categorizedCustomers.withOnlyLoans.length === 0 &&
+      categorizedCustomers.withOnlySubscriptions.length === 0 &&
+      categorizedCustomers.withNeither.length === 0 &&
+      !isRefreshing ? (
         <GlassCard>
           <p className="text-center text-gray-500 dark:text-dark-muted">
-            {searchTerm ? 'No customers match your search.' : 'No customers found. Add one to get started!'}
+            {searchTerm
+              ? "No customers match your search."
+              : "No customers found. Add one to get started!"}
           </p>
         </GlassCard>
       ) : (
         <div className="space-y-8">
-
           {/* Section: Customers with Both */}
           {categorizedCustomers.withBoth.length > 0 && (
             <GlassCard className="!p-0 bg-indigo-50 border-indigo-200 dark:bg-dark-card dark:border-dark-border overflow-hidden">
               <button
-                onClick={() => toggleSection('both')}
+                onClick={() => toggleSection("both")}
                 className="w-full flex justify-between items-center p-2 sm:p-4"
               >
-                <h3 className="text-xl font-bold text-indigo-800 dark:text-indigo-400 flex items-center gap-1"><UsersIcon className="w-5 h-5 mr-1" />Customers with Loans & Subscriptions</h3>
-                <ChevronDownIcon className={`w-6 h-6 text-indigo-800 dark:text-indigo-400 transition-transform ${expandedSections.both ? 'rotate-180' : ''}`} />
+                <h3 className="text-xl font-bold text-indigo-800 dark:text-indigo-400 flex items-center gap-1">
+                  <UsersIcon className="w-5 h-5 mr-1" />
+                  Customers with Loans & Subscriptions
+                </h3>
+                <ChevronDownIcon
+                  className={`w-6 h-6 text-indigo-800 dark:text-indigo-400 transition-transform ${
+                    expandedSections.both ? "rotate-180" : ""
+                  }`}
+                />
               </button>
               <AnimatePresence initial={true}>
                 {expandedSections.both && (
@@ -482,14 +620,20 @@ const CustomerListPage = () => {
                     animate="open"
                     exit="collapsed"
                     variants={collapseVariants}
-                    transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
+                    transition={{
+                      duration: 0.3,
+                      ease: [0.04, 0.62, 0.23, 0.98],
+                    }}
                   >
                     <div className="p-2 sm:p-4 pt-0">
                       {(() => {
-                        const totalPages = Math.ceil(categorizedCustomers.withBoth.length / itemsPerPage);
+                        const totalPages = Math.ceil(
+                          categorizedCustomers.withBoth.length / itemsPerPage
+                        );
                         const start = (currentPages.both - 1) * itemsPerPage;
                         const end = start + itemsPerPage;
-                        const paginatedCustomers = categorizedCustomers.withBoth.slice(start, end);
+                        const paginatedCustomers =
+                          categorizedCustomers.withBoth.slice(start, end);
                         return (
                           <>
                             {/* Desktop Table */}
@@ -497,33 +641,137 @@ const CustomerListPage = () => {
                               <table className="min-w-full divide-y divide-gray-200 dark:divide-dark-border">
                                 <thead className="dark:bg-slate-700">
                                   <tr>
-                                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border w-12">#</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Name</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Phone</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Loans</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Loan Value</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Subscriptions</th>
-                                    <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Actions</th>
+                                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border w-12">
+                                      #
+                                    </th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                      Name
+                                    </th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                      Phone
+                                    </th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                      Loans
+                                    </th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                      Loan Value
+                                    </th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                      Subscriptions
+                                    </th>
+                                    <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                      Actions
+                                    </th>
                                   </tr>
                                 </thead>
-                                <tbody key={`both-page-${currentPages.both}`} className="divide-y divide-gray-200 dark:divide-dark-border">
+                                <tbody
+                                  key={`both-page-${currentPages.both}`}
+                                  className="divide-y divide-gray-200 dark:divide-dark-border"
+                                >
                                   {paginatedCustomers.map((customer, idx) => {
-                                    const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
-                                    const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
-                                    const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
-                                    const rowNumber = (currentPages.both - 1) * itemsPerPage + idx + 1;
+                                    const customerLoans = loans.filter(
+                                      (loan) => loan.customer_id === customer.id
+                                    );
+                                    const customerSubscriptions =
+                                      subscriptions.filter(
+                                        (sub) => sub.customer_id === customer.id
+                                      );
+                                    const loanValue = customerLoans.reduce(
+                                      (acc, loan) =>
+                                        acc +
+                                        loan.original_amount +
+                                        loan.interest_amount,
+                                      0
+                                    );
+                                    const rowNumber =
+                                      (currentPages.both - 1) * itemsPerPage +
+                                      idx +
+                                      1;
                                     return (
-                                      <motion.tr key={customer.id} className="bg-white hover:bg-indigo-50/50 transition dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50" onTap={() => setSelectedCustomer(customer)} onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
-                                        <td className="px-2 py-2 text-gray-400 text-sm dark:text-dark-muted dark:border-dark-border">{rowNumber}</td>
-                                        <td className="px-4 py-2 font-bold dark:border-dark-border"><Link to={`/customers/${customer.id}`} className="text-indigo-700 dark:text-indigo-400 hover:underline" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>{customer.name}</Link></td>
-                                        <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">{customer.phone}</td>
-                                        <td className="px-4 py-2 text-gray-700 dark:text-dark-text dark:border-dark-border">{customerLoans.length}</td>
-                                        <td className="px-4 py-2 text-green-600 dark:text-green-400 dark:border-dark-border">{formatCurrency(loanValue)}</td>
-                                        <td className="px-4 py-2 text-cyan-600 dark:text-cyan-400 dark:border-dark-border">{customerSubscriptions.length}</td>
+                                      <motion.tr
+                                        key={customer.id}
+                                        className="bg-white hover:bg-indigo-50/50 transition dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50"
+                                        onTap={() =>
+                                          setSelectedCustomer(customer)
+                                        }
+                                        onClick={() =>
+                                          setSelectedCustomer(customer)
+                                        }
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        transition={{
+                                          duration: 0.3,
+                                          delay: idx * 0.05,
+                                        }}
+                                      >
+                                        <td className="px-2 py-2 text-gray-400 text-sm dark:text-dark-muted dark:border-dark-border">
+                                          {rowNumber}
+                                        </td>
+                                        <td className="px-4 py-2 font-bold dark:border-dark-border">
+                                          <Link
+                                            to={`/customers/${customer.id}`}
+                                            className="text-indigo-700 dark:text-indigo-400 hover:underline"
+                                            onClick={(e) => e.stopPropagation()}
+                                            onTouchStart={(e) =>
+                                              e.stopPropagation()
+                                            }
+                                          >
+                                            {customer.name}
+                                          </Link>
+                                        </td>
+                                        <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">
+                                          {customer.phone}
+                                        </td>
+                                        <td className="px-4 py-2 text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                          {customerLoans.length}
+                                        </td>
+                                        <td className="px-4 py-2 text-green-600 dark:text-green-400 dark:border-dark-border">
+                                          {formatCurrency(loanValue)}
+                                        </td>
+                                        <td className="px-4 py-2 text-cyan-600 dark:text-cyan-400 dark:border-dark-border">
+                                          {customerSubscriptions.length}
+                                        </td>
                                         <td className="px-4 py-2 dark:border-dark-border">
                                           <div className="flex justify-center gap-2">
-                                            <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {}, subscription: customerSubscriptions[0] || {} } }); }} onPointerDownCapture={(e) => e.stopPropagation()} className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
-                                            <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} onPointerDownCapture={(e) => e.stopPropagation()} className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                                            <motion.button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setEditModal({
+                                                  type: "customer_loan",
+                                                  data: {
+                                                    customer,
+                                                    loan:
+                                                      customerLoans[0] || {},
+                                                    subscription:
+                                                      customerSubscriptions[0] ||
+                                                      {},
+                                                  },
+                                                });
+                                              }}
+                                              onPointerDownCapture={(e) =>
+                                                e.stopPropagation()
+                                              }
+                                              className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500"
+                                              whileHover={{ scale: 1.05 }}
+                                              whileTap={{ scale: 0.95 }}
+                                            >
+                                              Edit
+                                            </motion.button>
+                                            <motion.button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteCustomer(customer);
+                                              }}
+                                              onPointerDownCapture={(e) =>
+                                                e.stopPropagation()
+                                              }
+                                              className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors"
+                                              whileHover={{ scale: 1.2 }}
+                                              whileTap={{ scale: 0.9 }}
+                                            >
+                                              <Trash2Icon className="w-5 h-5 text-red-500" />
+                                            </motion.button>
                                           </div>
                                         </td>
                                       </motion.tr>
@@ -535,18 +783,51 @@ const CustomerListPage = () => {
                             {/* Mobile Cards */}
                             <div className="sm:hidden space-y-3">
                               {paginatedCustomers.map((customer, idx) => {
-                                const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
-                                const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
-                                const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
-                                const rowNumber = (currentPages.both - 1) * itemsPerPage + idx + 1;
-                                const isValidPhone = customer.phone && /^\d{10,15}$/.test(customer.phone);
-                                const message = `Hi ${customer.name},\n\nLoans: ${customerLoans.length}\nLoan Value: ${formatCurrency(loanValue)}\nSubscriptions: ${customerSubscriptions.length}\n\nThank You, I J Reddy.`;
+                                const customerLoans = loans.filter(
+                                  (loan) => loan.customer_id === customer.id
+                                );
+                                const customerSubscriptions =
+                                  subscriptions.filter(
+                                    (sub) => sub.customer_id === customer.id
+                                  );
+                                const loanValue = customerLoans.reduce(
+                                  (acc, loan) =>
+                                    acc +
+                                    loan.original_amount +
+                                    loan.interest_amount,
+                                  0
+                                );
+                                const rowNumber =
+                                  (currentPages.both - 1) * itemsPerPage +
+                                  idx +
+                                  1;
+                                const isValidPhone =
+                                  customer.phone &&
+                                  /^\d{10,15}$/.test(customer.phone);
+                                const message = `Hi ${
+                                  customer.name
+                                },\n\nLoans: ${
+                                  customerLoans.length
+                                }\nLoan Value: ${formatCurrency(
+                                  loanValue
+                                )}\nSubscriptions: ${
+                                  customerSubscriptions.length
+                                }\n\nThank You, I J Reddy.`;
                                 return (
-                                  <div key={customer.id} className="relative overflow-hidden rounded-lg">
+                                  <div
+                                    key={customer.id}
+                                    className="relative overflow-hidden rounded-lg"
+                                  >
                                     {/* Swipe background indicators */}
                                     {draggingCardId === customer.id && (
                                       <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
-                                        <div className={`${isScopedCustomer ? "w-full" : "w-1/2"} bg-green-500 flex items-center justify-start pl-4`}>
+                                        <div
+                                          className={`${
+                                            isScopedCustomer
+                                              ? "w-full"
+                                              : "w-1/2"
+                                          } bg-green-500 flex items-center justify-start pl-4`}
+                                        >
                                           <WhatsAppIcon className="w-6 h-6 text-white" />
                                         </div>
                                         {!isScopedCustomer && (
@@ -558,60 +839,123 @@ const CustomerListPage = () => {
                                     )}
                                     <motion.div
                                       className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
-                                      onClick={() => setSelectedCustomer(customer)}
+                                      onClick={() =>
+                                        setSelectedCustomer(customer)
+                                      }
                                       initial={{ opacity: 0 }}
                                       animate={{ opacity: 1 }}
                                       exit={{ opacity: 0 }}
-                                      transition={{ duration: 0.3, delay: idx * 0.03 }}
+                                      transition={{
+                                        duration: 0.3,
+                                        delay: idx * 0.03,
+                                      }}
                                       drag="x"
                                       dragConstraints={{ left: 0, right: 0 }}
                                       dragElastic={0}
                                       dragMomentum={false}
                                       dragDirectionLock={true}
                                       style={{ touchAction: "pan-y" }}
-                                      onDragStart={() => setDraggingCardId(customer.id)}
+                                      onDragStart={() =>
+                                        setDraggingCardId(customer.id)
+                                      }
                                       onDragEnd={(_, info) => {
                                         setDraggingCardId(null);
                                         const threshold = 100;
-                                        if (!isScopedCustomer && info.offset.x < -threshold) {
+                                        if (
+                                          !isScopedCustomer &&
+                                          info.offset.x < -threshold
+                                        ) {
                                           handleDeleteCustomer(customer);
-                                        } else if (info.offset.x > threshold && isValidPhone) {
-                                          openWhatsApp(customer.phone, message, { cooldownMs: 1200 });
+                                        } else if (
+                                          info.offset.x > threshold &&
+                                          isValidPhone
+                                        ) {
+                                          openWhatsApp(
+                                            customer.phone,
+                                            message,
+                                            { cooldownMs: 1200 }
+                                          );
                                         }
                                       }}
                                     >
                                       <div className="flex items-center gap-1">
-                                        <span className="text-xs text-gray-400 dark:text-dark-muted">#{rowNumber}</span>
-                                        <Link to={`/customers/${customer.id}`} className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>{customer.name}</Link>
+                                        <span className="text-xs text-gray-400 dark:text-dark-muted">
+                                          #{rowNumber}
+                                        </span>
+                                        <Link
+                                          to={`/customers/${customer.id}`}
+                                          className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate"
+                                          onClick={(e) => e.stopPropagation()}
+                                          onTouchStart={(e) =>
+                                            e.stopPropagation()
+                                          }
+                                        >
+                                          {customer.name}
+                                        </Link>
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                        Phone: <span className="font-semibold text-gray-700 dark:text-dark-text">{customer.phone}</span>
+                                        Phone:{" "}
+                                        <span className="font-semibold text-gray-700 dark:text-dark-text">
+                                          {customer.phone}
+                                        </span>
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                        Loans: <span className="font-semibold text-gray-700 dark:text-dark-text">{customerLoans.length}</span>
+                                        Loans:{" "}
+                                        <span className="font-semibold text-gray-700 dark:text-dark-text">
+                                          {customerLoans.length}
+                                        </span>
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                        Loan Value: <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(loanValue)}</span>
+                                        Loan Value:{" "}
+                                        <span className="font-semibold text-green-600 dark:text-green-400">
+                                          {formatCurrency(loanValue)}
+                                        </span>
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                        Subscriptions: <span className="font-semibold text-cyan-600 dark:text-cyan-400">{customerSubscriptions.length}</span>
+                                        Subscriptions:{" "}
+                                        <span className="font-semibold text-cyan-600 dark:text-cyan-400">
+                                          {customerSubscriptions.length}
+                                        </span>
                                       </div>
                                       <div className="mt-3 flex items-center justify-evenly">
                                         <button
-                                          onClick={(e) => { e.stopPropagation(); isValidPhone && openWhatsApp(customer.phone, message, { cooldownMs: 1200 }); }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            isValidPhone &&
+                                              openWhatsApp(
+                                                customer.phone,
+                                                message,
+                                                { cooldownMs: 1200 }
+                                              );
+                                          }}
                                           className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
                                           disabled={!isValidPhone}
                                         >
                                           <WhatsAppIcon className="w-5 h-5" />
                                         </button>
                                         <button
-                                          onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {}, subscription: customerSubscriptions[0] || {} } }); }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditModal({
+                                              type: "customer_loan",
+                                              data: {
+                                                customer,
+                                                loan: customerLoans[0] || {},
+                                                subscription:
+                                                  customerSubscriptions[0] ||
+                                                  {},
+                                              },
+                                            });
+                                          }}
                                           className="px-3 py-1 rounded bg-blue-600 text-white text-sm dark:hover:bg-blue-500"
                                         >
                                           Edit
                                         </button>
                                         <button
-                                          onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteCustomer(customer);
+                                          }}
                                           className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
                                         >
                                           <Trash2Icon className="w-5 h-5" />
@@ -622,7 +966,10 @@ const CustomerListPage = () => {
                                 );
                               })}
                             </div>
-                            <PaginationControls section="both" totalItems={categorizedCustomers.withBoth.length} />
+                            <PaginationControls
+                              section="both"
+                              totalItems={categorizedCustomers.withBoth.length}
+                            />
                           </>
                         );
                       })()}
@@ -637,11 +984,18 @@ const CustomerListPage = () => {
           {categorizedCustomers.withOnlyLoans.length > 0 && (
             <GlassCard className="!p-0 bg-blue-50 border-blue-200 dark:bg-dark-card dark:border-dark-border overflow-hidden">
               <button
-                onClick={() => toggleSection('loans')}
+                onClick={() => toggleSection("loans")}
                 className="w-full flex justify-between items-center p-2 sm:p-4"
               >
-                <h3 className="text-xl font-bold text-blue-800 dark:text-indigo-400 flex items-center gap-1"><UsersIcon className="w-5 h-5 mr-1" />Customers with Only Loans</h3>
-                <ChevronDownIcon className={`w-6 h-6 text-blue-800 dark:text-indigo-400 transition-transform ${expandedSections.loans ? 'rotate-180' : ''}`} />
+                <h3 className="text-xl font-bold text-blue-800 dark:text-indigo-400 flex items-center gap-1">
+                  <UsersIcon className="w-5 h-5 mr-1" />
+                  Customers with Only Loans
+                </h3>
+                <ChevronDownIcon
+                  className={`w-6 h-6 text-blue-800 dark:text-indigo-400 transition-transform ${
+                    expandedSections.loans ? "rotate-180" : ""
+                  }`}
+                />
               </button>
               <AnimatePresence initial={true}>
                 {expandedSections.loans && (
@@ -651,14 +1005,21 @@ const CustomerListPage = () => {
                     animate="open"
                     exit="collapsed"
                     variants={collapseVariants}
-                    transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
+                    transition={{
+                      duration: 0.3,
+                      ease: [0.04, 0.62, 0.23, 0.98],
+                    }}
                   >
                     <div className="p-2 sm:p-4 pt-0">
                       {(() => {
-                        const totalPages = Math.ceil(categorizedCustomers.withOnlyLoans.length / itemsPerPage);
+                        const totalPages = Math.ceil(
+                          categorizedCustomers.withOnlyLoans.length /
+                            itemsPerPage
+                        );
                         const start = (currentPages.loans - 1) * itemsPerPage;
                         const end = start + itemsPerPage;
-                        const paginatedCustomers = categorizedCustomers.withOnlyLoans.slice(start, end);
+                        const paginatedCustomers =
+                          categorizedCustomers.withOnlyLoans.slice(start, end);
                         return (
                           <>
                             {/* Desktop Table */}
@@ -666,30 +1027,124 @@ const CustomerListPage = () => {
                               <table className="min-w-full divide-y divide-gray-200 dark:divide-dark-border">
                                 <thead className="dark:bg-slate-700">
                                   <tr>
-                                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border w-12">#</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Name</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Phone</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Loans</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Loan Value</th>
-                                    <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Actions</th>
+                                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border w-12">
+                                      #
+                                    </th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                      Name
+                                    </th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                      Phone
+                                    </th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                      Loans
+                                    </th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                      Loan Value
+                                    </th>
+                                    <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                      Actions
+                                    </th>
                                   </tr>
                                 </thead>
-                                <tbody key={`loans-page-${currentPages.loans}`} className="divide-y divide-gray-200 dark:divide-dark-border">
+                                <tbody
+                                  key={`loans-page-${currentPages.loans}`}
+                                  className="divide-y divide-gray-200 dark:divide-dark-border"
+                                >
                                   {paginatedCustomers.map((customer, idx) => {
-                                    const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
-                                    const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
-                                    const rowNumber = (currentPages.loans - 1) * itemsPerPage + idx + 1;
+                                    const customerLoans = loans.filter(
+                                      (loan) => loan.customer_id === customer.id
+                                    );
+                                    const loanValue = customerLoans.reduce(
+                                      (acc, loan) =>
+                                        acc +
+                                        loan.original_amount +
+                                        loan.interest_amount,
+                                      0
+                                    );
+                                    const rowNumber =
+                                      (currentPages.loans - 1) * itemsPerPage +
+                                      idx +
+                                      1;
                                     return (
-                                      <motion.tr key={customer.id} className="bg-white hover:bg-blue-50/50 transition dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50" onTap={() => setSelectedCustomer(customer)} onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
-                                        <td className="px-2 py-2 text-gray-400 text-sm dark:text-dark-muted dark:border-dark-border">{rowNumber}</td>
-                                        <td className="px-4 py-2 font-bold dark:border-dark-border"><Link to={`/customers/${customer.id}`} className="text-indigo-700 dark:text-indigo-400 hover:underline" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>{customer.name}</Link></td>
-                                        <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">{customer.phone}</td>
-                                        <td className="px-4 py-2 text-gray-700 dark:text-dark-text dark:border-dark-border">{customerLoans.length}</td>
-                                        <td className="px-4 py-2 text-green-600 dark:text-green-400 dark:border-dark-border">{formatCurrency(loanValue)}</td>
+                                      <motion.tr
+                                        key={customer.id}
+                                        className="bg-white hover:bg-blue-50/50 transition dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50"
+                                        onTap={() =>
+                                          setSelectedCustomer(customer)
+                                        }
+                                        onClick={() =>
+                                          setSelectedCustomer(customer)
+                                        }
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        transition={{
+                                          duration: 0.3,
+                                          delay: idx * 0.05,
+                                        }}
+                                      >
+                                        <td className="px-2 py-2 text-gray-400 text-sm dark:text-dark-muted dark:border-dark-border">
+                                          {rowNumber}
+                                        </td>
+                                        <td className="px-4 py-2 font-bold dark:border-dark-border">
+                                          <Link
+                                            to={`/customers/${customer.id}`}
+                                            className="text-indigo-700 dark:text-indigo-400 hover:underline"
+                                            onClick={(e) => e.stopPropagation()}
+                                            onTouchStart={(e) =>
+                                              e.stopPropagation()
+                                            }
+                                          >
+                                            {customer.name}
+                                          </Link>
+                                        </td>
+                                        <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">
+                                          {customer.phone}
+                                        </td>
+                                        <td className="px-4 py-2 text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                          {customerLoans.length}
+                                        </td>
+                                        <td className="px-4 py-2 text-green-600 dark:text-green-400 dark:border-dark-border">
+                                          {formatCurrency(loanValue)}
+                                        </td>
                                         <td className="px-4 py-2 dark:border-dark-border">
                                           <div className="flex justify-center gap-2">
-                                            <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {} } }); }} onPointerDownCapture={(e) => e.stopPropagation()} className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
-                                            <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} onPointerDownCapture={(e) => e.stopPropagation()} className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                                            <motion.button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setEditModal({
+                                                  type: "customer_loan",
+                                                  data: {
+                                                    customer,
+                                                    loan:
+                                                      customerLoans[0] || {},
+                                                  },
+                                                });
+                                              }}
+                                              onPointerDownCapture={(e) =>
+                                                e.stopPropagation()
+                                              }
+                                              className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500"
+                                              whileHover={{ scale: 1.05 }}
+                                              whileTap={{ scale: 0.95 }}
+                                            >
+                                              Edit
+                                            </motion.button>
+                                            <motion.button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteCustomer(customer);
+                                              }}
+                                              onPointerDownCapture={(e) =>
+                                                e.stopPropagation()
+                                              }
+                                              className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors"
+                                              whileHover={{ scale: 1.2 }}
+                                              whileTap={{ scale: 0.9 }}
+                                            >
+                                              <Trash2Icon className="w-5 h-5 text-red-500" />
+                                            </motion.button>
                                           </div>
                                         </td>
                                       </motion.tr>
@@ -701,17 +1156,45 @@ const CustomerListPage = () => {
                             {/* Mobile Cards */}
                             <div className="sm:hidden space-y-3">
                               {paginatedCustomers.map((customer, idx) => {
-                                const customerLoans = loans.filter(loan => loan.customer_id === customer.id);
-                                const loanValue = customerLoans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
-                                const rowNumber = (currentPages.loans - 1) * itemsPerPage + idx + 1;
-                                const isValidPhone = customer.phone && /^\d{10,15}$/.test(customer.phone);
-                                const message = `Hi ${customer.name},\n\nLoans: ${customerLoans.length}\nLoan Value: ${formatCurrency(loanValue)}\n\nThank You, I J Reddy.`;
+                                const customerLoans = loans.filter(
+                                  (loan) => loan.customer_id === customer.id
+                                );
+                                const loanValue = customerLoans.reduce(
+                                  (acc, loan) =>
+                                    acc +
+                                    loan.original_amount +
+                                    loan.interest_amount,
+                                  0
+                                );
+                                const rowNumber =
+                                  (currentPages.loans - 1) * itemsPerPage +
+                                  idx +
+                                  1;
+                                const isValidPhone =
+                                  customer.phone &&
+                                  /^\d{10,15}$/.test(customer.phone);
+                                const message = `Hi ${
+                                  customer.name
+                                },\n\nLoans: ${
+                                  customerLoans.length
+                                }\nLoan Value: ${formatCurrency(
+                                  loanValue
+                                )}\n\nThank You, I J Reddy.`;
                                 return (
-                                  <div key={customer.id} className="relative overflow-hidden rounded-lg">
+                                  <div
+                                    key={customer.id}
+                                    className="relative overflow-hidden rounded-lg"
+                                  >
                                     {/* Swipe background indicators */}
                                     {draggingCardId === customer.id && (
                                       <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
-                                        <div className={`${isScopedCustomer ? "w-full" : "w-1/2"} bg-green-500 flex items-center justify-start pl-4`}>
+                                        <div
+                                          className={`${
+                                            isScopedCustomer
+                                              ? "w-full"
+                                              : "w-1/2"
+                                          } bg-green-500 flex items-center justify-start pl-4`}
+                                        >
                                           <WhatsAppIcon className="w-6 h-6 text-white" />
                                         </div>
                                         {!isScopedCustomer && (
@@ -723,57 +1206,114 @@ const CustomerListPage = () => {
                                     )}
                                     <motion.div
                                       className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
-                                      onClick={() => setSelectedCustomer(customer)}
+                                      onClick={() =>
+                                        setSelectedCustomer(customer)
+                                      }
                                       initial={{ opacity: 0 }}
                                       animate={{ opacity: 1 }}
                                       exit={{ opacity: 0 }}
-                                      transition={{ duration: 0.3, delay: idx * 0.03 }}
+                                      transition={{
+                                        duration: 0.3,
+                                        delay: idx * 0.03,
+                                      }}
                                       drag="x"
                                       dragConstraints={{ left: 0, right: 0 }}
                                       dragElastic={0}
                                       dragMomentum={false}
                                       dragDirectionLock={true}
                                       style={{ touchAction: "pan-y" }}
-                                      onDragStart={() => setDraggingCardId(customer.id)}
+                                      onDragStart={() =>
+                                        setDraggingCardId(customer.id)
+                                      }
                                       onDragEnd={(_, info) => {
                                         setDraggingCardId(null);
                                         const threshold = 100;
-                                        if (!isScopedCustomer && info.offset.x < -threshold) {
+                                        if (
+                                          !isScopedCustomer &&
+                                          info.offset.x < -threshold
+                                        ) {
                                           handleDeleteCustomer(customer);
-                                        } else if (info.offset.x > threshold && isValidPhone) {
-                                          openWhatsApp(customer.phone, message, { cooldownMs: 1200 });
+                                        } else if (
+                                          info.offset.x > threshold &&
+                                          isValidPhone
+                                        ) {
+                                          openWhatsApp(
+                                            customer.phone,
+                                            message,
+                                            { cooldownMs: 1200 }
+                                          );
                                         }
                                       }}
                                     >
                                       <div className="flex items-center gap-1">
-                                        <span className="text-xs text-gray-400 dark:text-dark-muted">#{rowNumber}</span>
-                                        <Link to={`/customers/${customer.id}`} className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>{customer.name}</Link>
+                                        <span className="text-xs text-gray-400 dark:text-dark-muted">
+                                          #{rowNumber}
+                                        </span>
+                                        <Link
+                                          to={`/customers/${customer.id}`}
+                                          className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate"
+                                          onClick={(e) => e.stopPropagation()}
+                                          onTouchStart={(e) =>
+                                            e.stopPropagation()
+                                          }
+                                        >
+                                          {customer.name}
+                                        </Link>
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                        Phone: <span className="font-semibold text-gray-700 dark:text-dark-text">{customer.phone}</span>
+                                        Phone:{" "}
+                                        <span className="font-semibold text-gray-700 dark:text-dark-text">
+                                          {customer.phone}
+                                        </span>
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                        Loans: <span className="font-semibold text-gray-700 dark:text-dark-text">{customerLoans.length}</span>
+                                        Loans:{" "}
+                                        <span className="font-semibold text-gray-700 dark:text-dark-text">
+                                          {customerLoans.length}
+                                        </span>
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                        Loan Value: <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(loanValue)}</span>
+                                        Loan Value:{" "}
+                                        <span className="font-semibold text-green-600 dark:text-green-400">
+                                          {formatCurrency(loanValue)}
+                                        </span>
                                       </div>
                                       <div className="mt-3 flex items-center justify-evenly">
                                         <button
-                                          onClick={(e) => { e.stopPropagation(); isValidPhone && openWhatsApp(customer.phone, message, { cooldownMs: 1200 }); }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            isValidPhone &&
+                                              openWhatsApp(
+                                                customer.phone,
+                                                message,
+                                                { cooldownMs: 1200 }
+                                              );
+                                          }}
                                           className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
                                           disabled={!isValidPhone}
                                         >
                                           <WhatsAppIcon className="w-5 h-5" />
                                         </button>
                                         <button
-                                          onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, loan: customerLoans[0] || {} } }); }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditModal({
+                                              type: "customer_loan",
+                                              data: {
+                                                customer,
+                                                loan: customerLoans[0] || {},
+                                              },
+                                            });
+                                          }}
                                           className="px-3 py-1 rounded bg-blue-600 text-white text-sm dark:hover:bg-blue-500"
                                         >
                                           Edit
                                         </button>
                                         <button
-                                          onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteCustomer(customer);
+                                          }}
                                           className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
                                         >
                                           <Trash2Icon className="w-5 h-5" />
@@ -784,7 +1324,12 @@ const CustomerListPage = () => {
                                 );
                               })}
                             </div>
-                            <PaginationControls section="loans" totalItems={categorizedCustomers.withOnlyLoans.length} />
+                            <PaginationControls
+                              section="loans"
+                              totalItems={
+                                categorizedCustomers.withOnlyLoans.length
+                              }
+                            />
                           </>
                         );
                       })()}
@@ -799,11 +1344,18 @@ const CustomerListPage = () => {
           {categorizedCustomers.withOnlySubscriptions.length > 0 && (
             <GlassCard className="!p-0 bg-cyan-50 border-cyan-200 dark:bg-dark-card dark:border-dark-border overflow-hidden">
               <button
-                onClick={() => toggleSection('subs')}
+                onClick={() => toggleSection("subs")}
                 className="w-full flex justify-between items-center p-2 sm:p-4"
               >
-                <h3 className="text-xl font-bold text-cyan-800 dark:text-cyan-400 flex items-center gap-1"><UsersIcon className="w-5 h-5 mr-1" />Customers with Only Subscriptions</h3>
-                <ChevronDownIcon className={`w-6 h-6 text-cyan-800 dark:text-cyan-400 transition-transform ${expandedSections.subs ? 'rotate-180' : ''}`} />
+                <h3 className="text-xl font-bold text-cyan-800 dark:text-cyan-400 flex items-center gap-1">
+                  <UsersIcon className="w-5 h-5 mr-1" />
+                  Customers with Only Subscriptions
+                </h3>
+                <ChevronDownIcon
+                  className={`w-6 h-6 text-cyan-800 dark:text-cyan-400 transition-transform ${
+                    expandedSections.subs ? "rotate-180" : ""
+                  }`}
+                />
               </button>
               <AnimatePresence initial={true}>
                 {expandedSections.subs && (
@@ -813,14 +1365,24 @@ const CustomerListPage = () => {
                     animate="open"
                     exit="collapsed"
                     variants={collapseVariants}
-                    transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
+                    transition={{
+                      duration: 0.3,
+                      ease: [0.04, 0.62, 0.23, 0.98],
+                    }}
                   >
                     <div className="p-2 sm:p-4 pt-0">
                       {(() => {
-                        const totalPages = Math.ceil(categorizedCustomers.withOnlySubscriptions.length / itemsPerPage);
+                        const totalPages = Math.ceil(
+                          categorizedCustomers.withOnlySubscriptions.length /
+                            itemsPerPage
+                        );
                         const start = (currentPages.subs - 1) * itemsPerPage;
                         const end = start + itemsPerPage;
-                        const paginatedCustomers = categorizedCustomers.withOnlySubscriptions.slice(start, end);
+                        const paginatedCustomers =
+                          categorizedCustomers.withOnlySubscriptions.slice(
+                            start,
+                            end
+                          );
                         return (
                           <>
                             {/* Desktop Table */}
@@ -828,30 +1390,124 @@ const CustomerListPage = () => {
                               <table className="min-w-full divide-y divide-gray-200 dark:divide-dark-border">
                                 <thead className="dark:bg-slate-700">
                                   <tr>
-                                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border w-12">#</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Name</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Phone</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Subscriptions</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Total Value</th>
-                                    <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Actions</th>
+                                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border w-12">
+                                      #
+                                    </th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                      Name
+                                    </th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                      Phone
+                                    </th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                      Subscriptions
+                                    </th>
+                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                      Total Value
+                                    </th>
+                                    <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                      Actions
+                                    </th>
                                   </tr>
                                 </thead>
-                                <tbody key={`subs-page-${currentPages.subs}`} className="divide-y divide-gray-200 dark:divide-dark-border">
+                                <tbody
+                                  key={`subs-page-${currentPages.subs}`}
+                                  className="divide-y divide-gray-200 dark:divide-dark-border"
+                                >
                                   {paginatedCustomers.map((customer, idx) => {
-                                    const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
-                                    const subValue = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
-                                    const rowNumber = (currentPages.subs - 1) * itemsPerPage + idx + 1;
+                                    const customerSubscriptions =
+                                      subscriptions.filter(
+                                        (sub) => sub.customer_id === customer.id
+                                      );
+                                    const subValue =
+                                      customerSubscriptions.reduce(
+                                        (acc, sub) => acc + sub.amount,
+                                        0
+                                      );
+                                    const rowNumber =
+                                      (currentPages.subs - 1) * itemsPerPage +
+                                      idx +
+                                      1;
                                     return (
-                                      <motion.tr key={customer.id} className="bg-white hover:bg-cyan-50/50 transition dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50" onTap={() => setSelectedCustomer(customer)} onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
-                                        <td className="px-2 py-2 text-gray-400 text-sm dark:text-dark-muted dark:border-dark-border">{rowNumber}</td>
-                                        <td className="px-4 py-2 font-bold dark:border-dark-border"><Link to={`/customers/${customer.id}`} className="text-indigo-700 dark:text-indigo-400 hover:underline" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>{customer.name}</Link></td>
-                                        <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">{customer.phone}</td>
-                                        <td className="px-4 py-2 text-cyan-600 dark:text-cyan-400 dark:border-dark-border">{customerSubscriptions.length}</td>
-                                        <td className="px-4 py-2 text-cyan-600 dark:text-cyan-400 dark:border-dark-border">{formatCurrency(subValue)}</td>
+                                      <motion.tr
+                                        key={customer.id}
+                                        className="bg-white hover:bg-cyan-50/50 transition dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50"
+                                        onTap={() =>
+                                          setSelectedCustomer(customer)
+                                        }
+                                        onClick={() =>
+                                          setSelectedCustomer(customer)
+                                        }
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                        transition={{
+                                          duration: 0.3,
+                                          delay: idx * 0.05,
+                                        }}
+                                      >
+                                        <td className="px-2 py-2 text-gray-400 text-sm dark:text-dark-muted dark:border-dark-border">
+                                          {rowNumber}
+                                        </td>
+                                        <td className="px-4 py-2 font-bold dark:border-dark-border">
+                                          <Link
+                                            to={`/customers/${customer.id}`}
+                                            className="text-indigo-700 dark:text-indigo-400 hover:underline"
+                                            onClick={(e) => e.stopPropagation()}
+                                            onTouchStart={(e) =>
+                                              e.stopPropagation()
+                                            }
+                                          >
+                                            {customer.name}
+                                          </Link>
+                                        </td>
+                                        <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">
+                                          {customer.phone}
+                                        </td>
+                                        <td className="px-4 py-2 text-cyan-600 dark:text-cyan-400 dark:border-dark-border">
+                                          {customerSubscriptions.length}
+                                        </td>
+                                        <td className="px-4 py-2 text-cyan-600 dark:text-cyan-400 dark:border-dark-border">
+                                          {formatCurrency(subValue)}
+                                        </td>
                                         <td className="px-4 py-2 dark:border-dark-border">
                                           <div className="flex justify-center gap-2">
-                                            <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, subscription: customerSubscriptions[0] || {} } }); }} onPointerDownCapture={(e) => e.stopPropagation()} className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
-                                            <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} onPointerDownCapture={(e) => e.stopPropagation()} className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
+                                            <motion.button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setEditModal({
+                                                  type: "customer_loan",
+                                                  data: {
+                                                    customer,
+                                                    subscription:
+                                                      customerSubscriptions[0] ||
+                                                      {},
+                                                  },
+                                                });
+                                              }}
+                                              onPointerDownCapture={(e) =>
+                                                e.stopPropagation()
+                                              }
+                                              className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500"
+                                              whileHover={{ scale: 1.05 }}
+                                              whileTap={{ scale: 0.95 }}
+                                            >
+                                              Edit
+                                            </motion.button>
+                                            <motion.button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteCustomer(customer);
+                                              }}
+                                              onPointerDownCapture={(e) =>
+                                                e.stopPropagation()
+                                              }
+                                              className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors"
+                                              whileHover={{ scale: 1.2 }}
+                                              whileTap={{ scale: 0.9 }}
+                                            >
+                                              <Trash2Icon className="w-5 h-5 text-red-500" />
+                                            </motion.button>
                                           </div>
                                         </td>
                                       </motion.tr>
@@ -863,17 +1519,43 @@ const CustomerListPage = () => {
                             {/* Mobile Cards */}
                             <div className="sm:hidden space-y-3">
                               {paginatedCustomers.map((customer, idx) => {
-                                const customerSubscriptions = subscriptions.filter(sub => sub.customer_id === customer.id);
-                                const subValue = customerSubscriptions.reduce((acc, sub) => acc + sub.amount, 0);
-                                const rowNumber = (currentPages.subs - 1) * itemsPerPage + idx + 1;
-                                const isValidPhone = customer.phone && /^\d{10,15}$/.test(customer.phone);
-                                const message = `Hi ${customer.name},\n\nSubscriptions: ${customerSubscriptions.length}\nTotal Value: ${formatCurrency(subValue)}\n\nThank You, I J Reddy.`;
+                                const customerSubscriptions =
+                                  subscriptions.filter(
+                                    (sub) => sub.customer_id === customer.id
+                                  );
+                                const subValue = customerSubscriptions.reduce(
+                                  (acc, sub) => acc + sub.amount,
+                                  0
+                                );
+                                const rowNumber =
+                                  (currentPages.subs - 1) * itemsPerPage +
+                                  idx +
+                                  1;
+                                const isValidPhone =
+                                  customer.phone &&
+                                  /^\d{10,15}$/.test(customer.phone);
+                                const message = `Hi ${
+                                  customer.name
+                                },\n\nSubscriptions: ${
+                                  customerSubscriptions.length
+                                }\nTotal Value: ${formatCurrency(
+                                  subValue
+                                )}\n\nThank You, I J Reddy.`;
                                 return (
-                                  <div key={customer.id} className="relative overflow-hidden rounded-lg">
+                                  <div
+                                    key={customer.id}
+                                    className="relative overflow-hidden rounded-lg"
+                                  >
                                     {/* Swipe background indicators */}
                                     {draggingCardId === customer.id && (
                                       <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
-                                        <div className={`${isScopedCustomer ? "w-full" : "w-1/2"} bg-green-500 flex items-center justify-start pl-4`}>
+                                        <div
+                                          className={`${
+                                            isScopedCustomer
+                                              ? "w-full"
+                                              : "w-1/2"
+                                          } bg-green-500 flex items-center justify-start pl-4`}
+                                        >
                                           <WhatsAppIcon className="w-6 h-6 text-white" />
                                         </div>
                                         {!isScopedCustomer && (
@@ -885,57 +1567,116 @@ const CustomerListPage = () => {
                                     )}
                                     <motion.div
                                       className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
-                                      onClick={() => setSelectedCustomer(customer)}
+                                      onClick={() =>
+                                        setSelectedCustomer(customer)
+                                      }
                                       initial={{ opacity: 0 }}
                                       animate={{ opacity: 1 }}
                                       exit={{ opacity: 0 }}
-                                      transition={{ duration: 0.3, delay: idx * 0.03 }}
+                                      transition={{
+                                        duration: 0.3,
+                                        delay: idx * 0.03,
+                                      }}
                                       drag="x"
                                       dragConstraints={{ left: 0, right: 0 }}
                                       dragElastic={0}
                                       dragMomentum={false}
                                       dragDirectionLock={true}
                                       style={{ touchAction: "pan-y" }}
-                                      onDragStart={() => setDraggingCardId(customer.id)}
+                                      onDragStart={() =>
+                                        setDraggingCardId(customer.id)
+                                      }
                                       onDragEnd={(_, info) => {
                                         setDraggingCardId(null);
                                         const threshold = 100;
-                                        if (!isScopedCustomer && info.offset.x < -threshold) {
+                                        if (
+                                          !isScopedCustomer &&
+                                          info.offset.x < -threshold
+                                        ) {
                                           handleDeleteCustomer(customer);
-                                        } else if (info.offset.x > threshold && isValidPhone) {
-                                          openWhatsApp(customer.phone, message, { cooldownMs: 1200 });
+                                        } else if (
+                                          info.offset.x > threshold &&
+                                          isValidPhone
+                                        ) {
+                                          openWhatsApp(
+                                            customer.phone,
+                                            message,
+                                            { cooldownMs: 1200 }
+                                          );
                                         }
                                       }}
                                     >
                                       <div className="flex items-center gap-1">
-                                        <span className="text-xs text-gray-400 dark:text-dark-muted">#{rowNumber}</span>
-                                        <Link to={`/customers/${customer.id}`} className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>{customer.name}</Link>
+                                        <span className="text-xs text-gray-400 dark:text-dark-muted">
+                                          #{rowNumber}
+                                        </span>
+                                        <Link
+                                          to={`/customers/${customer.id}`}
+                                          className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate"
+                                          onClick={(e) => e.stopPropagation()}
+                                          onTouchStart={(e) =>
+                                            e.stopPropagation()
+                                          }
+                                        >
+                                          {customer.name}
+                                        </Link>
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                        Phone: <span className="font-semibold text-gray-700 dark:text-dark-text">{customer.phone}</span>
+                                        Phone:{" "}
+                                        <span className="font-semibold text-gray-700 dark:text-dark-text">
+                                          {customer.phone}
+                                        </span>
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                        Subscriptions: <span className="font-semibold text-cyan-600 dark:text-cyan-400">{customerSubscriptions.length}</span>
+                                        Subscriptions:{" "}
+                                        <span className="font-semibold text-cyan-600 dark:text-cyan-400">
+                                          {customerSubscriptions.length}
+                                        </span>
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                        Total Value: <span className="font-semibold text-cyan-600 dark:text-cyan-400">{formatCurrency(subValue)}</span>
+                                        Total Value:{" "}
+                                        <span className="font-semibold text-cyan-600 dark:text-cyan-400">
+                                          {formatCurrency(subValue)}
+                                        </span>
                                       </div>
                                       <div className="mt-3 flex items-center justify-evenly">
                                         <button
-                                          onClick={(e) => { e.stopPropagation(); isValidPhone && openWhatsApp(customer.phone, message, { cooldownMs: 1200 }); }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            isValidPhone &&
+                                              openWhatsApp(
+                                                customer.phone,
+                                                message,
+                                                { cooldownMs: 1200 }
+                                              );
+                                          }}
                                           className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
                                           disabled={!isValidPhone}
                                         >
                                           <WhatsAppIcon className="w-5 h-5" />
                                         </button>
                                         <button
-                                          onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer, subscription: customerSubscriptions[0] || {} } }); }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditModal({
+                                              type: "customer_loan",
+                                              data: {
+                                                customer,
+                                                subscription:
+                                                  customerSubscriptions[0] ||
+                                                  {},
+                                              },
+                                            });
+                                          }}
                                           className="px-3 py-1 rounded bg-blue-600 text-white text-sm dark:hover:bg-blue-500"
                                         >
                                           Edit
                                         </button>
                                         <button
-                                          onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteCustomer(customer);
+                                          }}
                                           className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
                                         >
                                           <Trash2Icon className="w-5 h-5" />
@@ -946,7 +1687,13 @@ const CustomerListPage = () => {
                                 );
                               })}
                             </div>
-                            <PaginationControls section="subs" totalItems={categorizedCustomers.withOnlySubscriptions.length} />
+                            <PaginationControls
+                              section="subs"
+                              totalItems={
+                                categorizedCustomers.withOnlySubscriptions
+                                  .length
+                              }
+                            />
                           </>
                         );
                       })()}
@@ -958,154 +1705,314 @@ const CustomerListPage = () => {
           )}
 
           {/* Section: Customers with No Loans or Subscriptions */}
-          {categorizedCustomers.withNeither && categorizedCustomers.withNeither.length > 0 && (
-            <GlassCard className="!p-0 bg-gray-50 border-gray-200 dark:bg-dark-card dark:border-dark-border overflow-hidden">
-              <button
-                onClick={() => toggleSection('neither')}
-                className="w-full flex justify-between items-center p-2 sm:p-4"
-              >
-                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-400 flex items-center gap-1"><UsersIcon className="w-5 h-5 mr-1" />Customers with No Records</h3>
-                <ChevronDownIcon className={`w-6 h-6 text-gray-800 dark:text-gray-400 transition-transform ${expandedSections.neither ? 'rotate-180' : ''}`} />
-              </button>
-              <AnimatePresence initial={true}>
-                {expandedSections.neither && (
-                  <motion.div
-                    key="content"
-                    initial="collapsed"
-                    animate="open"
-                    exit="collapsed"
-                    variants={collapseVariants}
-                    transition={{ duration: 0.3, ease: [0.04, 0.62, 0.23, 0.98] }}
-                  >
-                    <div className="p-2 sm:p-4 pt-0">
-                      {(() => {
-                        const totalPages = Math.ceil(categorizedCustomers.withNeither.length / itemsPerPage);
-                        const start = (currentPages.neither - 1) * itemsPerPage;
-                        const end = start + itemsPerPage;
-                        const paginatedCustomers = categorizedCustomers.withNeither.slice(start, end);
-                        return (
-                          <>
-
-                            {/* Desktop Table */}
-                            <div className="hidden sm:block">
-                              <table className="min-w-full divide-y divide-gray-200 dark:divide-dark-border">
-                                <thead className="dark:bg-slate-700">
-                                  <tr>
-                                    <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border w-12">#</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Name</th>
-                                    <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Phone</th>
-                                    <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">Actions</th>
-                                  </tr>
-                                </thead>
-                                <tbody key={`neither-page-${currentPages.neither}`} className="divide-y divide-gray-200 dark:divide-dark-border">
-                                  {paginatedCustomers.map((customer, idx) => {
-                                    const rowNumber = (currentPages.neither - 1) * itemsPerPage + idx + 1;
-                                    return (
-                                      <motion.tr key={customer.id} className="bg-white hover:bg-gray-50/50 transition dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50" onTap={() => setSelectedCustomer(customer)} onClick={() => setSelectedCustomer(customer)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3, delay: idx * 0.05 }}>
-                                        <td className="px-2 py-2 text-gray-400 text-sm dark:text-dark-muted dark:border-dark-border">{rowNumber}</td>
-                                        <td className="px-4 py-2 font-bold dark:border-dark-border"><Link to={`/customers/${customer.id}`} className="text-indigo-700 dark:text-indigo-400 hover:underline" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>{customer.name}</Link></td>
-                                        <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">{customer.phone}</td>
-                                        <td className="px-4 py-2 dark:border-dark-border">
-                                          <div className="flex justify-center gap-2">
-                                            <motion.button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer } }); }} onPointerDownCapture={(e) => e.stopPropagation()} className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500" whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>Edit</motion.button>
-                                            <motion.button onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }} onPointerDownCapture={(e) => e.stopPropagation()} className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors" whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}><Trash2Icon className="w-5 h-5 text-red-500" /></motion.button>
-                                          </div>
-                                        </td>
-                                      </motion.tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </div>
-                            {/* Mobile Cards */}
-                            <div className="sm:hidden space-y-3">
-                              {paginatedCustomers.map((customer, idx) => {
-                                const rowNumber = (currentPages.neither - 1) * itemsPerPage + idx + 1;
-                                const isValidPhone = customer.phone && /^\d{10,15}$/.test(customer.phone);
-                                const message = `Hi ${customer.name},\n\nThank You, I J Reddy.`;
-                                return (
-                                  <div key={customer.id} className="relative overflow-hidden rounded-lg">
-                                    {/* Swipe background indicators */}
-                                    {draggingCardId === customer.id && (
-                                      <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
-                                        <div className={`${isScopedCustomer ? "w-full" : "w-1/2"} bg-green-500 flex items-center justify-start pl-4`}>
-                                          <WhatsAppIcon className="w-6 h-6 text-white" />
-                                        </div>
-                                        {!isScopedCustomer && (
-                                          <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
-                                            <Trash2Icon className="w-6 h-6 text-white" />
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
-                                    <motion.div
-                                      className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
-                                      onClick={() => setSelectedCustomer(customer)}
-                                      initial={{ opacity: 0 }}
-                                      animate={{ opacity: 1 }}
-                                      exit={{ opacity: 0 }}
-                                      transition={{ duration: 0.3, delay: idx * 0.03 }}
-                                      drag="x"
-                                      dragConstraints={{ left: 0, right: 0 }}
-                                      dragElastic={0}
-                                      dragMomentum={false}
-                                      dragDirectionLock={true}
-                                      style={{ touchAction: "pan-y" }}
-                                      onDragStart={() => setDraggingCardId(customer.id)}
-                                      onDragEnd={(_, info) => {
-                                        setDraggingCardId(null);
-                                        const threshold = 100;
-                                        if (!isScopedCustomer && info.offset.x < -threshold) {
-                                          handleDeleteCustomer(customer);
-                                        } else if (info.offset.x > threshold && isValidPhone) {
-                                          openWhatsApp(customer.phone, message, { cooldownMs: 1200 });
-                                        }
-                                      }}
+          {categorizedCustomers.withNeither &&
+            categorizedCustomers.withNeither.length > 0 && (
+              <GlassCard className="!p-0 bg-gray-50 border-gray-200 dark:bg-dark-card dark:border-dark-border overflow-hidden">
+                <button
+                  onClick={() => toggleSection("neither")}
+                  className="w-full flex justify-between items-center p-2 sm:p-4"
+                >
+                  <h3 className="text-xl font-bold text-gray-800 dark:text-gray-400 flex items-center gap-1">
+                    <UsersIcon className="w-5 h-5 mr-1" />
+                    Customers with No Records
+                  </h3>
+                  <ChevronDownIcon
+                    className={`w-6 h-6 text-gray-800 dark:text-gray-400 transition-transform ${
+                      expandedSections.neither ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                <AnimatePresence initial={true}>
+                  {expandedSections.neither && (
+                    <motion.div
+                      key="content"
+                      initial="collapsed"
+                      animate="open"
+                      exit="collapsed"
+                      variants={collapseVariants}
+                      transition={{
+                        duration: 0.3,
+                        ease: [0.04, 0.62, 0.23, 0.98],
+                      }}
+                    >
+                      <div className="p-2 sm:p-4 pt-0">
+                        {(() => {
+                          const totalPages = Math.ceil(
+                            categorizedCustomers.withNeither.length /
+                              itemsPerPage
+                          );
+                          const start =
+                            (currentPages.neither - 1) * itemsPerPage;
+                          const end = start + itemsPerPage;
+                          const paginatedCustomers =
+                            categorizedCustomers.withNeither.slice(start, end);
+                          return (
+                            <>
+                              {/* Desktop Table */}
+                              <div className="hidden sm:block">
+                                <table className="min-w-full divide-y divide-gray-200 dark:divide-dark-border">
+                                  <thead className="dark:bg-slate-700">
+                                    <tr>
+                                      <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border w-12">
+                                        #
+                                      </th>
+                                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                        Name
+                                      </th>
+                                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                        Phone
+                                      </th>
+                                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                        Actions
+                                      </th>
+                                    </tr>
+                                  </thead>
+                                  <tbody
+                                    key={`neither-page-${currentPages.neither}`}
+                                    className="divide-y divide-gray-200 dark:divide-dark-border"
+                                  >
+                                    {paginatedCustomers.map((customer, idx) => {
+                                      const rowNumber =
+                                        (currentPages.neither - 1) *
+                                          itemsPerPage +
+                                        idx +
+                                        1;
+                                      return (
+                                        <motion.tr
+                                          key={customer.id}
+                                          className="bg-white hover:bg-gray-50/50 transition dark:bg-dark-card dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50"
+                                          onTap={() =>
+                                            setSelectedCustomer(customer)
+                                          }
+                                          onClick={() =>
+                                            setSelectedCustomer(customer)
+                                          }
+                                          initial={{ opacity: 0, y: 10 }}
+                                          animate={{ opacity: 1, y: 0 }}
+                                          exit={{ opacity: 0, y: -10 }}
+                                          transition={{
+                                            duration: 0.3,
+                                            delay: idx * 0.05,
+                                          }}
+                                        >
+                                          <td className="px-2 py-2 text-gray-400 text-sm dark:text-dark-muted dark:border-dark-border">
+                                            {rowNumber}
+                                          </td>
+                                          <td className="px-4 py-2 font-bold dark:border-dark-border">
+                                            <Link
+                                              to={`/customers/${customer.id}`}
+                                              className="text-indigo-700 dark:text-indigo-400 hover:underline"
+                                              onClick={(e) =>
+                                                e.stopPropagation()
+                                              }
+                                              onTouchStart={(e) =>
+                                                e.stopPropagation()
+                                              }
+                                            >
+                                              {customer.name}
+                                            </Link>
+                                          </td>
+                                          <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">
+                                            {customer.phone}
+                                          </td>
+                                          <td className="px-4 py-2 dark:border-dark-border">
+                                            <div className="flex justify-center gap-2">
+                                              <motion.button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setEditModal({
+                                                    type: "customer_loan",
+                                                    data: { customer },
+                                                  });
+                                                }}
+                                                onPointerDownCapture={(e) =>
+                                                  e.stopPropagation()
+                                                }
+                                                className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500"
+                                                whileHover={{ scale: 1.05 }}
+                                                whileTap={{ scale: 0.95 }}
+                                              >
+                                                Edit
+                                              </motion.button>
+                                              <motion.button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleDeleteCustomer(
+                                                    customer
+                                                  );
+                                                }}
+                                                onPointerDownCapture={(e) =>
+                                                  e.stopPropagation()
+                                                }
+                                                className="p-1 rounded-full hover:bg-red-500/10 dark:hover:bg-red-900/30 transition-colors"
+                                                whileHover={{ scale: 1.2 }}
+                                                whileTap={{ scale: 0.9 }}
+                                              >
+                                                <Trash2Icon className="w-5 h-5 text-red-500" />
+                                              </motion.button>
+                                            </div>
+                                          </td>
+                                        </motion.tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                              {/* Mobile Cards */}
+                              <div className="sm:hidden space-y-3">
+                                {paginatedCustomers.map((customer, idx) => {
+                                  const rowNumber =
+                                    (currentPages.neither - 1) * itemsPerPage +
+                                    idx +
+                                    1;
+                                  const isValidPhone =
+                                    customer.phone &&
+                                    /^\d{10,15}$/.test(customer.phone);
+                                  const message = `Hi ${customer.name},\n\nThank You, I J Reddy.`;
+                                  return (
+                                    <div
+                                      key={customer.id}
+                                      className="relative overflow-hidden rounded-lg"
                                     >
-                                      <div className="flex items-center gap-1">
-                                        <span className="text-xs text-gray-400 dark:text-dark-muted">#{rowNumber}</span>
-                                        <Link to={`/customers/${customer.id}`} className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate" onClick={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>{customer.name}</Link>
-                                      </div>
-                                      <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                                        Phone: <span className="font-semibold text-gray-700 dark:text-dark-text">{customer.phone}</span>
-                                      </div>
-                                      <div className="mt-3 flex items-center justify-evenly">
-                                        <button
-                                          onClick={(e) => { e.stopPropagation(); isValidPhone && openWhatsApp(customer.phone, message, { cooldownMs: 1200 }); }}
-                                          className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-                                          disabled={!isValidPhone}
-                                        >
-                                          <WhatsAppIcon className="w-5 h-5" />
-                                        </button>
-                                        <button
-                                          onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'customer_loan', data: { customer } }); }}
-                                          className="px-3 py-1 rounded bg-blue-600 text-white text-sm dark:hover:bg-blue-500"
-                                        >
-                                          Edit
-                                        </button>
-                                        <button
-                                          onClick={(e) => { e.stopPropagation(); handleDeleteCustomer(customer); }}
-                                          className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-                                        >
-                                          <Trash2Icon className="w-5 h-5" />
-                                        </button>
-                                      </div>
-                                    </motion.div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            <PaginationControls section="neither" totalItems={categorizedCustomers.withNeither.length} />
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </GlassCard>
-          )}
-
+                                      {/* Swipe background indicators */}
+                                      {draggingCardId === customer.id && (
+                                        <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
+                                          <div
+                                            className={`${
+                                              isScopedCustomer
+                                                ? "w-full"
+                                                : "w-1/2"
+                                            } bg-green-500 flex items-center justify-start pl-4`}
+                                          >
+                                            <WhatsAppIcon className="w-6 h-6 text-white" />
+                                          </div>
+                                          {!isScopedCustomer && (
+                                            <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
+                                              <Trash2Icon className="w-6 h-6 text-white" />
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                      <motion.div
+                                        className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
+                                        onClick={() =>
+                                          setSelectedCustomer(customer)
+                                        }
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{
+                                          duration: 0.3,
+                                          delay: idx * 0.03,
+                                        }}
+                                        drag="x"
+                                        dragConstraints={{ left: 0, right: 0 }}
+                                        dragElastic={0}
+                                        dragMomentum={false}
+                                        dragDirectionLock={true}
+                                        style={{ touchAction: "pan-y" }}
+                                        onDragStart={() =>
+                                          setDraggingCardId(customer.id)
+                                        }
+                                        onDragEnd={(_, info) => {
+                                          setDraggingCardId(null);
+                                          const threshold = 100;
+                                          if (
+                                            !isScopedCustomer &&
+                                            info.offset.x < -threshold
+                                          ) {
+                                            handleDeleteCustomer(customer);
+                                          } else if (
+                                            info.offset.x > threshold &&
+                                            isValidPhone
+                                          ) {
+                                            openWhatsApp(
+                                              customer.phone,
+                                              message,
+                                              { cooldownMs: 1200 }
+                                            );
+                                          }
+                                        }}
+                                      >
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-xs text-gray-400 dark:text-dark-muted">
+                                            #{rowNumber}
+                                          </span>
+                                          <Link
+                                            to={`/customers/${customer.id}`}
+                                            className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate"
+                                            onClick={(e) => e.stopPropagation()}
+                                            onTouchStart={(e) =>
+                                              e.stopPropagation()
+                                            }
+                                          >
+                                            {customer.name}
+                                          </Link>
+                                        </div>
+                                        <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                                          Phone:{" "}
+                                          <span className="font-semibold text-gray-700 dark:text-dark-text">
+                                            {customer.phone}
+                                          </span>
+                                        </div>
+                                        <div className="mt-3 flex items-center justify-evenly">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              isValidPhone &&
+                                                openWhatsApp(
+                                                  customer.phone,
+                                                  message,
+                                                  { cooldownMs: 1200 }
+                                                );
+                                            }}
+                                            className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                                            disabled={!isValidPhone}
+                                          >
+                                            <WhatsAppIcon className="w-5 h-5" />
+                                          </button>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setEditModal({
+                                                type: "customer_loan",
+                                                data: { customer },
+                                              });
+                                            }}
+                                            className="px-3 py-1 rounded bg-blue-600 text-white text-sm dark:hover:bg-blue-500"
+                                          >
+                                            Edit
+                                          </button>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDeleteCustomer(customer);
+                                            }}
+                                            className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                                          >
+                                            <Trash2Icon className="w-5 h-5" />
+                                          </button>
+                                        </div>
+                                      </motion.div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              <PaginationControls
+                                section="neither"
+                                totalItems={
+                                  categorizedCustomers.withNeither.length
+                                }
+                              />
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </GlassCard>
+            )}
         </div>
       )}
 
@@ -1113,18 +2020,26 @@ const CustomerListPage = () => {
         {selectedCustomer && (
           <CustomerDetailModal
             customer={selectedCustomer}
-            loans={loans.filter(l => l.customer_id === selectedCustomer.id)}
-            subscriptions={subscriptions.filter(s => s.customer_id === selectedCustomer.id)}
+            loans={loans.filter((l) => l.customer_id === selectedCustomer.id)}
+            subscriptions={subscriptions.filter(
+              (s) => s.customer_id === selectedCustomer.id
+            )}
             installments={installments}
-            dataEntries={dataEntries.filter(d => d.customer_id === selectedCustomer.id)}
+            dataEntries={dataEntries.filter(
+              (d) => d.customer_id === selectedCustomer.id
+            )}
             onClose={() => setSelectedCustomer(null)}
             deleteLoan={deleteLoan}
             deleteDataEntry={deleteDataEntry}
             deleteSubscription={deleteSubscription}
             deleteInstallment={deleteInstallment}
-            onEditLoan={(loan) => setEditModal({ type: 'loan', data: loan })}
-            onEditSubscription={(sub) => setEditModal({ type: 'subscription', data: sub })}
-            onEditInstallment={(installment) => setEditModal({ type: 'installment', data: installment })}
+            onEditLoan={(loan) => setEditModal({ type: "loan", data: loan })}
+            onEditSubscription={(sub) =>
+              setEditModal({ type: "subscription", data: sub })
+            }
+            onEditInstallment={(installment) =>
+              setEditModal({ type: "installment", data: installment })
+            }
           />
         )}
       </AnimatePresence>
@@ -1135,24 +2050,30 @@ const CustomerListPage = () => {
             data={editModal.data}
             onSave={async (updated) => {
               try {
-                if (editModal.type === 'customer') {
-                  await updateCustomer(updated.id, { name: updated.name, phone: updated.phone });
-                } else if (editModal.type === 'loan') {
+                if (editModal.type === "customer") {
+                  await updateCustomer(updated.id, {
+                    name: updated.name,
+                    phone: updated.phone,
+                  });
+                } else if (editModal.type === "loan") {
                   await updateLoan(updated.id, {
                     original_amount: updated.original_amount,
                     interest_amount: updated.interest_amount,
                     payment_date: updated.payment_date,
                     total_instalments: updated.total_instalments,
                   });
-                } else if (editModal.type === 'subscription') {
+                } else if (editModal.type === "subscription") {
                   await updateSubscription(updated.id, {
                     amount: updated.amount,
                     year: updated.year,
                     date: updated.date,
                     receipt: updated.receipt,
                   });
-                } else if (editModal.type === 'customer_loan') {
-                  await updateCustomer(updated.customer.id, { name: updated.customer.name, phone: updated.customer.phone });
+                } else if (editModal.type === "customer_loan") {
+                  await updateCustomer(updated.customer.id, {
+                    name: updated.customer.name,
+                    phone: updated.customer.phone,
+                  });
                   if (updated.loan && updated.loan.id) {
                     await updateLoan(updated.loan.id, {
                       original_amount: updated.loan.original_amount,
@@ -1169,7 +2090,7 @@ const CustomerListPage = () => {
                       receipt: updated.subscription.receipt,
                     });
                   }
-                } else if (editModal.type === 'installment') {
+                } else if (editModal.type === "installment") {
                   await updateInstallment(updated.id, {
                     amount: updated.amount,
                     late_fee: updated.late_fee ?? 0,
@@ -1179,53 +2100,85 @@ const CustomerListPage = () => {
                 }
                 setEditModal(null);
               } catch (err: any) {
-                alert(err.message || 'Failed to update record');
+                alert(err.message || "Failed to update record");
               }
             }}
             onClose={() => setEditModal(null)}
           />
         )}
       </AnimatePresence>
-      {typeof document !== 'undefined' && ReactDOM.createPortal(
-        <AnimatePresence>
-          {deleteCustomerTarget && (
-            <motion.div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-              variants={{
-                hidden: { opacity: 0 },
-                visible: { opacity: 1 },
-              }}
-              initial="hidden"
-              animate="visible"
-              exit="hidden"
-              onClick={cancelDeleteCustomer}
-            >
+      {typeof document !== "undefined" &&
+        ReactDOM.createPortal(
+          <AnimatePresence>
+            {deleteCustomerTarget && (
               <motion.div
-                className="bg-white rounded-lg shadow-lg p-5 w-[90%] max-w-sm dark:bg-dark-card dark:border dark:border-dark-border"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
                 variants={{
-                  hidden: { opacity: 0, y: 50, scale: 0.9 },
-                  visible: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 100 } },
-                  exit: { opacity: 0, y: 50, scale: 0.9 },
+                  hidden: { opacity: 0 },
+                  visible: { opacity: 1 },
                 }}
-                onClick={(e) => e.stopPropagation()}
+                initial="hidden"
+                animate="visible"
+                exit="hidden"
+                onClick={cancelDeleteCustomer}
               >
-                <h3 className="text-base font-bold mb-3 dark:text-dark-text">Delete {deleteCustomerTarget.name} customer permanently?</h3>
-                <div className="text-sm text-gray-600 mb-3 space-y-1 dark:text-dark-muted">
-                  <p><span className="font-medium">Loans: {deleteCounts?.loans ?? 0}</span></p>
-                  <p><span className="font-medium">Installments: {deleteCounts?.installments ?? 0}</span></p>
-                  <p><span className="font-medium">Subscriptions: {deleteCounts?.subscriptions ?? 0}</span></p>
-                </div>
-                <p className="text-xs text-red-600 mb-4 dark:text-red-400">This is permanent delete, cannot be undone.</p>
-                <div className="flex justify-end gap-2">
-                  <button onClick={cancelDeleteCustomer} className="px-3 py-1.5 rounded bg-gray-200 hover:bg-gray-300 text-sm dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text">Cancel</button>
-                  <button onClick={confirmDeleteCustomer} className="px-3 py-1.5 rounded bg-red-600 text-white hover:bg-red-700 text-sm">Delete</button>
-                </div>
+                <motion.div
+                  className="bg-white rounded-lg shadow-lg p-5 w-[90%] max-w-sm dark:bg-dark-card dark:border dark:border-dark-border"
+                  variants={{
+                    hidden: { opacity: 0, y: 50, scale: 0.9 },
+                    visible: {
+                      opacity: 1,
+                      y: 0,
+                      scale: 1,
+                      transition: { type: "spring", stiffness: 100 },
+                    },
+                    exit: { opacity: 0, y: 50, scale: 0.9 },
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <h3 className="text-base font-bold mb-3 dark:text-dark-text">
+                    Delete {deleteCustomerTarget.name} customer permanently?
+                  </h3>
+                  <div className="text-sm text-gray-600 mb-3 space-y-1 dark:text-dark-muted">
+                    <p>
+                      <span className="font-medium">
+                        Loans: {deleteCounts?.loans ?? 0}
+                      </span>
+                    </p>
+                    <p>
+                      <span className="font-medium">
+                        Installments: {deleteCounts?.installments ?? 0}
+                      </span>
+                    </p>
+                    <p>
+                      <span className="font-medium">
+                        Subscriptions: {deleteCounts?.subscriptions ?? 0}
+                      </span>
+                    </p>
+                  </div>
+                  <p className="text-xs text-red-600 mb-4 dark:text-red-400">
+                    This is permanent delete, cannot be undone.
+                  </p>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={cancelDeleteCustomer}
+                      className="px-3 py-1.5 rounded bg-gray-200 hover:bg-gray-300 text-sm dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={confirmDeleteCustomer}
+                      className="px-3 py-1.5 rounded bg-red-600 text-white hover:bg-red-700 text-sm"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </motion.div>
               </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
     </PageWrapper>
   );
 };

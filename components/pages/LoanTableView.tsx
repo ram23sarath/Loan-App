@@ -12,7 +12,6 @@ import { getLoanStatus } from "../../utils/loanStatus";
 import EditModal from "../modals/EditModal";
 import { useDebounce } from "../../utils/useDebounce";
 
-// ... (All animation variants remain unchanged) ...
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {

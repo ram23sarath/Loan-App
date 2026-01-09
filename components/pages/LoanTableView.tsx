@@ -231,24 +231,6 @@ const LoanTableView: React.FC = () => {
     setCurrentPage(1);
   }, [debouncedFilter, statusFilter, sortField, sortDirection]);
 
-  if (loans.length === 0) {
-    const emptyMessage =
-      isScopedCustomer && scopedCustomerId
-        ? (() => {
-            const customer = customerMap.get(scopedCustomerId);
-            return `No Loan Entries for ${customer?.name || "you"}`;
-          })()
-        : "No loans recorded yet.";
-
-    return (
-      <GlassCard>
-        <p className="text-center text-gray-500 dark:text-dark-muted">
-          {emptyMessage}
-        </p>
-      </GlassCard>
-    );
-  }
-
   const [expandedRow, setExpandedRow] = React.useState<string | null>(null);
   const [draggingCardId, setDraggingCardId] = React.useState<string | null>(
     null
@@ -333,6 +315,24 @@ const LoanTableView: React.FC = () => {
       }
     };
   }, [editTarget]);
+
+  if (loans.length === 0) {
+    const emptyMessage =
+      isScopedCustomer && scopedCustomerId
+        ? (() => {
+            const customer = customerMap.get(scopedCustomerId);
+            return `No Loan Entries for ${customer?.name || "you"}`;
+          })()
+        : "No loans recorded yet.";
+
+    return (
+      <GlassCard>
+        <p className="text-center text-gray-500 dark:text-dark-muted">
+          {emptyMessage}
+        </p>
+      </GlassCard>
+    );
+  }
 
   return (
     <GlassCard className="overflow-x-auto" disable3D>
@@ -563,7 +563,7 @@ const LoanTableView: React.FC = () => {
                   {isExpanded && (
                     <tr className="bg-gray-50/20 dark:bg-slate-800/20">
                       <td
-                        colSpan={12}
+                        colSpan={isScopedCustomer ? 12 : 13}
                         className="p-0 border-b dark:border-dark-border"
                       >
                         <motion.div
@@ -634,7 +634,7 @@ const LoanTableView: React.FC = () => {
                                           </span>
                                         )}
                                         <span className="ml-2 text-gray-500 text-xs dark:text-dark-muted">
-                                          Receipt: {inst.receipt_number}
+                                          Receipt: {inst.receipt_number || "-"}
                                         </span>
                                       </div>
                                       <div className="flex items-center gap-2">
@@ -1327,20 +1327,84 @@ const LoanTableView: React.FC = () => {
             data={editLoanTarget}
             onClose={() => setEditLoanTarget(null)}
             onSave={async (updated) => {
+              const errors: string[] = [];
+
+              const parseRequiredNumber = (value: any, label: string) => {
+                const trimmed =
+                  value === undefined || value === null
+                    ? ""
+                    : String(value).trim();
+                if (trimmed === "") {
+                  errors.push(`${label} is required.`);
+                  return null;
+                }
+                const parsed = Number(trimmed);
+                if (!Number.isFinite(parsed)) {
+                  errors.push(`Please enter a valid number for ${label}.`);
+                  return null;
+                }
+                return parsed;
+              };
+
+              const loanAmount = parseRequiredNumber(
+                updated.original_amount,
+                "Loan amount"
+              );
+              const interestAmount = parseRequiredNumber(
+                updated.interest_amount,
+                "Interest amount"
+              );
+
+              let totalInstalments: number | null = null;
+              const totalInstalmentsRaw = updated.total_instalments;
+              const totalTrimmed =
+                totalInstalmentsRaw === undefined ||
+                totalInstalmentsRaw === null
+                  ? ""
+                  : String(totalInstalmentsRaw).trim();
+              if (totalTrimmed !== "") {
+                const parsedTotal = Number(totalTrimmed);
+                if (
+                  !Number.isFinite(parsedTotal) ||
+                  !Number.isInteger(parsedTotal) ||
+                  parsedTotal < 0
+                ) {
+                  errors.push(
+                    "Please enter a non-negative integer for total installments."
+                  );
+                } else {
+                  totalInstalments = parsedTotal;
+                }
+              }
+
+              const checkNumber = updated.check_number
+                ? String(updated.check_number).trim()
+                : "";
+              const paymentDate = updated.payment_date
+                ? String(updated.payment_date).trim()
+                : "";
+
+              if (
+                errors.length > 0 ||
+                loanAmount === null ||
+                interestAmount === null
+              ) {
+                alert(errors.join("\n") || "Please check the form inputs.");
+                return;
+              }
+
               try {
-                // build updates object - ensure numeric fields are numbers
                 const updates: any = {
-                  original_amount: Number(updated.original_amount),
-                  interest_amount: Number(updated.interest_amount),
-                  check_number: updated.check_number || null,
-                  total_instalments: Number(updated.total_instalments) || null,
-                  payment_date: updated.payment_date || null,
+                  original_amount: loanAmount,
+                  interest_amount: interestAmount,
+                  check_number: checkNumber || null,
+                  total_instalments: totalInstalments,
+                  payment_date: paymentDate || null,
                 };
                 await updateLoan(editLoanTarget.id, updates);
+                setEditLoanTarget(null);
               } catch (err: any) {
                 alert(err.message || String(err));
-              } finally {
-                setEditLoanTarget(null);
               }
             }}
           />
@@ -1370,13 +1434,17 @@ const LoanTableView: React.FC = () => {
                   onSubmit={async (e) => {
                     e.preventDefault();
                     if (editTarget) {
-                      await updateInstallment(editTarget.id, {
-                        date: editForm.date,
-                        amount: Number(editForm.amount),
-                        late_fee: Number(editForm.late_fee) || 0,
-                        receipt_number: editForm.receipt_number,
-                      });
-                      setEditTarget(null);
+                      try {
+                        await updateInstallment(editTarget.id, {
+                          date: editForm.date,
+                          amount: Number(editForm.amount),
+                          late_fee: Number(editForm.late_fee) || 0,
+                          receipt_number: editForm.receipt_number,
+                        });
+                        setEditTarget(null);
+                      } catch (err: any) {
+                        alert(err?.message || String(err));
+                      }
                     }
                   }}
                   className="space-y-3"

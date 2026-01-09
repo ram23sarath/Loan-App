@@ -1144,6 +1144,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         try {
             const { error } = await supabase.from('subscriptions').delete().eq('id', subscriptionId);
             if (error) throw error;
+            setSubscriptions((prev) => prev.filter((sub) => sub.id !== subscriptionId));
             await fetchData();
         } catch (error) {
             throw new Error(parseSupabaseError(error, `deleting subscription ${subscriptionId}`));

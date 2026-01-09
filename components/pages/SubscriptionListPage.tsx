@@ -1,14 +1,10 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import ReactDOM from 'react-dom';
+import ReactDOM from "react-dom";
 import SubscriptionTableView from "./SubscriptionTableView";
 import { useData } from "../../context/DataContext";
 import PageWrapper from "../ui/PageWrapper";
-import {
-  HistoryIcon,
-  Trash2Icon,
-  SpinnerIcon,
-} from "../../constants";
+import { HistoryIcon, Trash2Icon, SpinnerIcon } from "../../constants";
 import type { SubscriptionWithCustomer } from "../../types";
 import { formatDate } from "../../utils/dateFormatter";
 
@@ -28,7 +24,8 @@ const itemVariants = {
 };
 
 const SubscriptionListPage = () => {
-  const { subscriptions, deleteSubscription, isRefreshing, isScopedCustomer } = useData();
+  const { subscriptions, deleteSubscription, isRefreshing, isScopedCustomer } =
+    useData();
 
   // always use table view for subscriptions
   const [pendingDelete, setPendingDelete] =
@@ -55,14 +52,14 @@ const SubscriptionListPage = () => {
   // Close delete confirmation modal with Escape key
   React.useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
+      if (e.key !== "Escape") return;
       if (pendingDelete) {
         setPendingDelete(null);
       }
     };
     if (pendingDelete) {
-      document.addEventListener('keydown', handleEscape);
-      return () => document.removeEventListener('keydown', handleEscape);
+      document.addEventListener("keydown", handleEscape);
+      return () => document.removeEventListener("keydown", handleEscape);
     }
     return;
   }, [pendingDelete]);

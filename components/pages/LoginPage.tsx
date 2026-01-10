@@ -171,7 +171,7 @@ const LoginPage = () => {
 
       {(!isMobile || !showLoginOnMobile) && (
         <motion.div
-          className="w-full flex flex-col items-center md:items-start md:justify-center md:w-1/2 pr-8 mb-6 md:mb-0"
+          className="w-full flex flex-col items-center md:items-start md:justify-center md:w-1/2 md:pr-8 mb-6 md:mb-0"
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}

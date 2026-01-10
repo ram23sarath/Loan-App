@@ -1,12 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useForm, SubmitHandler } from 'react-hook-form';
-import { useNavigate, Navigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { useData } from '../../context/DataContext';
-import GlassCard from '../ui/GlassCard';
-import Toast from '../ui/Toast';
-import FireTruckAnimation from '../ui/FireTruckAnimation';
-import { EyeIcon, EyeOffIcon } from '../../constants';
+import React, { useState, useRef, useEffect } from "react";
+import { useForm, SubmitHandler } from "react-hook-form";
+import { useNavigate, Navigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { useData } from "../../context/DataContext";
+import GlassCard from "../ui/GlassCard";
+import Toast from "../ui/Toast";
+import FireTruckAnimation from "../ui/FireTruckAnimation";
+import { EyeIcon, EyeOffIcon } from "../../constants";
 
 type FormInputs = {
   email: string; // accepts email or phone
@@ -16,9 +16,13 @@ type FormInputs = {
 const LoginPage = () => {
   const { session, signInWithPassword } = useData();
   const navigate = useNavigate();
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormInputs>();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<FormInputs>();
   const [showAnimation, setShowAnimation] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const [toastMessage, setToastMessage] = useState("");
   const [showToast, setShowToast] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [isWiggling, setIsWiggling] = useState(false);
@@ -42,17 +46,17 @@ const LoginPage = () => {
       opacity: 0,
       y: mobile ? 180 : 16,
       scale: mobile ? 0.94 : 1,
-      filter: 'blur(6px)',
-      pointerEvents: 'none',
+      filter: "blur(6px)",
+      pointerEvents: "none",
     }),
     visible: {
       opacity: 1,
       y: 0,
       scale: 1,
-      filter: 'blur(0px)',
-      pointerEvents: 'auto',
+      filter: "blur(0px)",
+      pointerEvents: "auto",
       transition: {
-        type: 'spring',
+        type: "spring",
         stiffness: 220,
         damping: 26,
         mass: 0.9,
@@ -68,8 +72,8 @@ const LoginPage = () => {
       setIsMobile(window.innerWidth < 768);
     };
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   const handleScrollToLogin = () => {
@@ -77,25 +81,25 @@ const LoginPage = () => {
     // wait for the card to render on mobile then scroll
     setTimeout(() => {
       if (cardRef.current) {
-        cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        cardRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     }, 60);
   };
 
   const normalizeLoginIdentifier = (value: string) => {
     const v = value.trim();
-    
+
     // If the input looks like a phone (digits only, length between 6 and 15), normalize to email
-    const digits = v.replace(/\D/g, '');
+    const digits = v.replace(/\D/g, "");
     if (/^\d{6,15}$/.test(digits)) {
       return `${digits}@gmail.com`;
     }
-    
+
     // If input is not an email (no @ symbol), append @gmail.com
-    if (!v.includes('@')) {
+    if (!v.includes("@")) {
       return `${v}@gmail.com`;
     }
-    
+
     // Return as-is if it already contains @
     return v;
   };
@@ -125,7 +129,7 @@ const LoginPage = () => {
       x: [0, -10, 10, -10, 10, 0],
       transition: {
         duration: 0.6,
-        ease: 'easeInOut',
+        ease: "easeInOut",
       },
     },
     normal: {
@@ -167,7 +171,12 @@ const LoginPage = () => {
 
   return (
     <div className="flex flex-col md:flex-row items-center justify-center md:justify-between min-h-screen px-4 py-8 sm:px-0 md:pr-16 md:pl-16">
-      <Toast message={toastMessage} show={showToast} onClose={() => setShowToast(false)} type="error" />
+      <Toast
+        message={toastMessage}
+        show={showToast}
+        onClose={() => setShowToast(false)}
+        type="error"
+      />
 
       {(!isMobile || !showLoginOnMobile) && (
         <motion.div
@@ -183,21 +192,21 @@ const LoginPage = () => {
             animate="visible"
           >
             {heroWords.map((word, index) => (
-              <motion.span 
-                key={index} 
-                variants={wordVariants} 
+              <motion.span
+                key={index}
+                variants={wordVariants}
                 className="inline-block px-1 py-0.5"
               >
-                <span 
+                <span
                   className={`${
-                    word.accent 
-                      ? 'premium-shimmer-text premium-pulse-glow font-black' 
-                      : 'premium-gradient-text'
+                    word.accent
+                      ? "premium-shimmer-text premium-pulse-glow font-black"
+                      : "premium-gradient-text"
                   } drop-shadow-[0_8px_32px_rgba(99,102,241,0.35)]`}
-                  style={{ 
-                    textShadow: word.accent 
-                      ? '0 4px 30px rgba(192, 132, 252, 0.4), 0 8px 40px rgba(129, 140, 248, 0.25)' 
-                      : 'none' 
+                  style={{
+                    textShadow: word.accent
+                      ? "0 4px 30px rgba(192, 132, 252, 0.4), 0 8px 40px rgba(129, 140, 248, 0.25)"
+                      : "none",
                   }}
                 >
                   {word.text}
@@ -212,23 +221,23 @@ const LoginPage = () => {
             transition={{ duration: 0.8, delay: 0.6, ease: "easeOut" }}
           >
             {/* Decorative divider */}
-            <motion.div 
+            <motion.div
               className="h-1 w-24 mx-auto md:mx-0 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
               initial={{ scaleX: 0 }}
               animate={{ scaleX: 1 }}
               transition={{ duration: 0.8, delay: 0.8, ease: "easeOut" }}
-              style={{ transformOrigin: 'left' }}
+              style={{ transformOrigin: "left" }}
             />
-            
+
             <motion.p
               className="text-sm uppercase tracking-[0.25em] text-gray-500 dark:text-gray-400 font-semibold premium-breathe"
-              initial={{ opacity: 0, letterSpacing: '0.1em' }}
-              animate={{ opacity: 1, letterSpacing: '0.25em' }}
+              initial={{ opacity: 0, letterSpacing: "0.1em" }}
+              animate={{ opacity: 1, letterSpacing: "0.25em" }}
               transition={{ duration: 1, delay: 0.9 }}
             >
               Developed & Maintained By
             </motion.p>
-            
+
             <motion.div
               className="relative"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -237,15 +246,19 @@ const LoginPage = () => {
             >
               <motion.p
                 className="text-2xl sm:text-3xl lg:text-4xl font-black premium-glow-text leading-tight"
-                animate={{ 
+                animate={{
                   y: [0, -6, 0],
                   filter: [
-                    'drop-shadow(0 0 20px rgba(102, 126, 234, 0.5))',
-                    'drop-shadow(0 0 35px rgba(192, 132, 252, 0.6))',
-                    'drop-shadow(0 0 20px rgba(102, 126, 234, 0.5))'
-                  ]
+                    "drop-shadow(0 0 20px rgba(102, 126, 234, 0.5))",
+                    "drop-shadow(0 0 35px rgba(192, 132, 252, 0.6))",
+                    "drop-shadow(0 0 20px rgba(102, 126, 234, 0.5))",
+                  ],
                 }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                transition={{
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
               >
                 I J Reddy
               </motion.p>
@@ -271,11 +284,21 @@ const LoginPage = () => {
             transition={{ duration: 0.6, delay: 1.4 }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            style={{ backgroundSize: '200% 100%' }}
+            style={{ backgroundSize: "200% 100%" }}
           >
             <span className="mr-2">Get Started</span>
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 7l5 5m0 0l-5 5m5-5H6"
+              />
             </svg>
           </motion.button>
         </motion.div>
@@ -290,28 +313,53 @@ const LoginPage = () => {
           initial="hidden"
           animate="visible"
         >
-          <GlassCard className="w-full" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
-            <h2 className="text-3xl font-bold text-center mb-6 text-gray-800 dark:text-dark-text">Loan Management Login</h2>
+          <GlassCard
+            className="w-full"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <h2 className="text-3xl font-bold text-center mb-6 text-gray-800 dark:text-dark-text">
+              Loan Management Login
+            </h2>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium mb-2 text-gray-700 dark:text-dark-text">Phone Number</label>
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium mb-2 text-gray-700 dark:text-dark-text"
+                >
+                  Phone Number
+                </label>
                 <input
                   id="email"
                   type="text"
-                  {...register('email', { required: 'Email, username, or phone is required' })}
+                  {...register("email", {
+                    required: "Email, username, or phone is required",
+                  })}
                   className="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted"
                   placeholder="Enter Phone Number"
                   disabled={isSubmitting || showAnimation}
                 />
-                {errors.email && <p className="text-red-600 dark:text-red-400 text-sm mt-1">{errors.email.message}</p>}
+                {errors.email && (
+                  <p className="text-red-600 dark:text-red-400 text-sm mt-1">
+                    {errors.email.message}
+                  </p>
+                )}
               </div>
               <div>
-                <label htmlFor="password" className="block text-sm font-medium mb-2 text-gray-700 dark:text-dark-text">Password</label>
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium mb-2 text-gray-700 dark:text-dark-text"
+                >
+                  Password
+                </label>
                 <div className="relative">
                   <input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    {...register('password', { required: 'Password is required' })}
+                    {...register("password", {
+                      required: "Password is required",
+                    })}
                     className="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-4 pr-12 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted"
                     placeholder="••••••••"
                     disabled={isSubmitting || showAnimation}
@@ -321,7 +369,9 @@ const LoginPage = () => {
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={isSubmitting || showAnimation}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:text-dark-muted dark:hover:text-dark-text"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
                   >
                     {showPassword ? (
                       <EyeOffIcon className="w-5 h-5" />
@@ -330,11 +380,15 @@ const LoginPage = () => {
                     )}
                   </button>
                 </div>
-                {errors.password && <p className="text-red-600 dark:text-red-400 text-sm mt-1">{errors.password.message}</p>}
+                {errors.password && (
+                  <p className="text-red-600 dark:text-red-400 text-sm mt-1">
+                    {errors.password.message}
+                  </p>
+                )}
               </div>
               <motion.button
                 ref={buttonRef}
-                animate={isWiggling ? 'wiggle' : 'normal'}
+                animate={isWiggling ? "wiggle" : "normal"}
                 variants={wiggleVariants}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -342,7 +396,7 @@ const LoginPage = () => {
                 disabled={isSubmitting || showAnimation}
                 className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 dark:disabled:bg-indigo-800 transition-colors duration-300 text-white font-bold py-3 px-4 rounded-lg"
               >
-                {isSubmitting ? 'Logging in...' : 'Login'}
+                {isSubmitting ? "Logging in..." : "Login"}
               </motion.button>
             </form>
           </GlassCard>

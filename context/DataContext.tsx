@@ -419,9 +419,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         let query = supabase
           .from("loan_seniority")
           .select("*, customers(name, phone)")
+          .order("loan_request_date", { ascending: true, nullsFirst: false })
           .order("created_at", { ascending: true });
         // All users (including scoped) see the full seniority list
-        // Sorted by created_at ensures same-day requests are ordered by time (morning before evening)
+        // Primary sort uses loan_request_date so requested dates dictate the order,
+        // with created_at providing a tie-breaker for same-day entries.
 
         const { data, error } = await query;
         if (error) {
@@ -1052,10 +1054,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             }
 
             // All users (including scoped) see the full seniority list
-            // Sorted by created_at ensures same-day requests are ordered by time (morning before evening)
+            // Primary sort uses loan_request_date so requested dates dictate the order,
+            // with created_at providing a tie-breaker for same-day entries.
             let query = supabase
               .from("loan_seniority")
               .select("*, customers(name, phone)")
+              .order("loan_request_date", {
+                ascending: true,
+                nullsFirst: false,
+              })
               .order("created_at", { ascending: true });
             const { data, error } = await query;
             if (error) throw error;
@@ -1327,10 +1334,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             if (isMounted) setSeniorityList(cachedSeniority);
           }
 
+          // Keep ordering consistent with the initialization fetch.
           let query = supabase
             .from("loan_seniority")
             .select("*, customers(name, phone)")
-            .order("created_at", { ascending: false });
+            .order("loan_request_date", { ascending: true, nullsFirst: false })
+            .order("created_at", { ascending: true });
           if (currentIsScoped) {
             query = query.eq("user_id", session.user.id as string);
           }

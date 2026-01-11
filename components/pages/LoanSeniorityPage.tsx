@@ -191,12 +191,28 @@ const LoanSeniorityPage = () => {
   const searchSectionDelay = 0.3;
   const searchResultsDelay = searchSectionDelay + 0.1;
   const listSectionDelay = isScopedCustomer ? 0.35 : 0.5;
+  const itemsPerPage = 20;
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     fetchSeniorityList().catch((err) =>
       console.error("Failed to load seniority list", err)
     );
   }, [fetchSeniorityList]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [seniorityList]);
+
+  const totalPages = useMemo(() => {
+    return Math.max(1, Math.ceil((seniorityList?.length || 0) / itemsPerPage));
+  }, [seniorityList, itemsPerPage]);
+
+  const paginatedSeniorityList = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return (seniorityList || []).slice(start, end);
+  }, [seniorityList, currentPage, itemsPerPage]);
 
   const filtered = useMemo(() => {
     const term = debouncedSearchTerm.trim().toLowerCase();
@@ -685,7 +701,7 @@ const LoanSeniorityPage = () => {
                   transition={{ delay: listSectionDelay + 0.1 }}
                 >
                   <AnimatePresence mode="popLayout">
-                    {seniorityList.map((entry: any, idx: number) => (
+                    {paginatedSeniorityList.map((entry: any, idx: number) => (
                       <motion.tr
                         key={entry.id}
                         className="even:bg-gray-50 dark:even:bg-gray-800/50 cursor-pointer"
@@ -699,7 +715,7 @@ const LoanSeniorityPage = () => {
                         layoutId={`row-${entry.id}`}
                       >
                         <td className="px-4 py-3 text-gray-800 dark:text-dark-text">
-                          {idx + 1}
+                          {(currentPage - 1) * itemsPerPage + idx + 1}
                         </td>
                         <td className="px-4 py-3 font-semibold text-indigo-700 dark:text-indigo-400">
                           {entry.customers?.name || "Unknown"}
@@ -778,7 +794,7 @@ const LoanSeniorityPage = () => {
               custom={listSectionDelay + 0.05}
             >
               <AnimatePresence mode="popLayout">
-                {seniorityList.map((entry: any, idx: number) => (
+                {paginatedSeniorityList.map((entry: any, idx: number) => (
                   <motion.div
                     key={entry.id}
                     className="bg-white dark:bg-dark-bg border border-gray-100 dark:border-dark-border rounded p-3"
@@ -795,7 +811,7 @@ const LoanSeniorityPage = () => {
                     <div className="flex items-start justify-between">
                       <div className="min-w-0">
                         <div className="text-xs text-gray-400 dark:text-dark-muted">
-                          #{idx + 1}
+                          #{(currentPage - 1) * itemsPerPage + idx + 1}
                         </div>
                         <div className="font-semibold text-indigo-700 dark:text-indigo-400 truncate">
                           {entry.customers?.name || "Unknown"}
@@ -880,6 +896,123 @@ const LoanSeniorityPage = () => {
                 ))}
               </AnimatePresence>
             </motion.div>
+
+            {totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-dark-border">
+                <div className="text-sm text-gray-600 dark:text-dark-muted">
+                  Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+                  {Math.min(currentPage * itemsPerPage, seniorityList.length)}{" "}
+                  of {seniorityList.length} entries
+                </div>
+                <motion.div className="flex gap-2 flex-wrap justify-center">
+                  <motion.button
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 rounded border border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
+                    aria-label="Go to first page"
+                    variants={buttonVariants}
+                    initial="idle"
+                    whileHover="hover"
+                    whileTap="tap"
+                  >
+                    First
+                  </motion.button>
+                  <motion.button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 rounded border border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
+                    aria-label="Go to previous page"
+                    variants={buttonVariants}
+                    initial="idle"
+                    whileHover="hover"
+                    whileTap="tap"
+                  >
+                    Previous
+                  </motion.button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (page) => {
+                      if (
+                        page === 1 ||
+                        page === totalPages ||
+                        Math.abs(page - currentPage) <= 1
+                      ) {
+                        return (
+                          <motion.button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            className={`px-3 py-1 rounded border ${
+                              currentPage === page
+                                ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
+                                : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
+                            }`}
+                            aria-label={`Go to page ${page}`}
+                            aria-current={
+                              currentPage === page ? "page" : undefined
+                            }
+                            variants={buttonVariants}
+                            initial="idle"
+                            whileHover="hover"
+                            whileTap="tap"
+                          >
+                            {page}
+                          </motion.button>
+                        );
+                      }
+                      if (page === 2 && currentPage > 3) {
+                        return (
+                          <span
+                            key="start-ellipsis"
+                            className="px-2 text-gray-500 dark:text-dark-muted"
+                          >
+                            ...
+                          </span>
+                        );
+                      }
+                      if (
+                        page === totalPages - 1 &&
+                        currentPage < totalPages - 2
+                      ) {
+                        return (
+                          <span
+                            key="end-ellipsis"
+                            className="px-2 text-gray-500 dark:text-dark-muted"
+                          >
+                            ...
+                          </span>
+                        );
+                      }
+                      return null;
+                    }
+                  )}
+                  <motion.button
+                    onClick={() =>
+                      setCurrentPage(Math.min(totalPages, currentPage + 1))
+                    }
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 rounded border border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
+                    aria-label="Go to next page"
+                    variants={buttonVariants}
+                    initial="idle"
+                    whileHover="hover"
+                    whileTap="tap"
+                  >
+                    Next
+                  </motion.button>
+                  <motion.button
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 rounded border border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-slate-700"
+                    aria-label="Go to last page"
+                    variants={buttonVariants}
+                    initial="idle"
+                    whileHover="hover"
+                    whileTap="tap"
+                  >
+                    Last
+                  </motion.button>
+                </motion.div>
+              </div>
+            )}
           </>
         )}
       </GlassCard>

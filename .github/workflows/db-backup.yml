@@ -3,17 +3,19 @@ name: Database Backup
 on:
   schedule:
     # Daily at 09:00 PM IST (15:30 UTC)
-    - cron: '30 15 * * *'
+    - cron: "30 15 * * *"
   workflow_dispatch:
     inputs:
       reason:
-        description: 'Why run a manual backup?'
+        description: "Why run a manual backup?"
         required: false
         type: string
 
 jobs:
   backup:
     runs-on: ubuntu-latest
+    env:
+      GDRIVE_FOLDER_ID: 1_6w4x5S9OuSh8inDikd7X3py2202csMj
     steps:
       - name: Install pg_dump (v17)
         run: |
@@ -22,8 +24,6 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y postgresql-client-17
           sudo update-alternatives --install /usr/bin/pg_dump pg_dump /usr/lib/postgresql/17/bin/pg_dump 100
-
-
 
       - name: Dump database
         env:
@@ -34,7 +34,17 @@ jobs:
           mkdir -p dumps
           TS=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
           FILE="dumps/backup-${TS}.dump"
-          pg_dump "$DATABASE_URL" -Fc -f "$FILE"
+          # Explicitly include auth schema so users and identities are captured
+          pg_dump "$DATABASE_URL" -Fc \
+            --schema=auth \
+            --schema=public \
+            --schema=storage \
+            --schema=graphql_public \
+            --schema=extensions \
+            -f "$FILE"
+          # Fail fast if auth tables are missing in the archive
+          pg_restore --list "$FILE" | grep -E -q 'TABLE DATA[[:space:]]+auth[[:space:]]+users' || { echo "auth.users not present in dump" >&2; exit 1; }
+          pg_restore --list "$FILE" | grep -E -q 'TABLE DATA[[:space:]]+auth[[:space:]]+identities' || { echo "auth.identities not present in dump" >&2; exit 1; }
           gzip "$FILE"
           echo "Created backup: ${FILE}.gz"
 
@@ -61,18 +71,18 @@ jobs:
         run: |
           # Create the config directory
           mkdir -p ~/.config/rclone
-          
+
           # Decode the Base64 secret to the config file
           # This ensures exact byte-for-byte restoration of your local config
           echo "${{ secrets.RCLONE_CONF_BASE64 }}" | base64 -d > ~/.config/rclone/rclone.conf
-          
+
           # Verify config exists
           ls -l ~/.config/rclone/rclone.conf
 
       - name: Upload Backup to Google Drive
         env:
           # Force the specific folder ID, overriding config file if needed
-          RCLONE_CONFIG_GDRIVE_ROOT_FOLDER_ID: 1_6w4x5S9OuSh8inDikd7X3py2202csMj
+          RCLONE_CONFIG_GDRIVE_ROOT_FOLDER_ID: ${{ env.GDRIVE_FOLDER_ID }}
         run: |
           set -euo pipefail
           # copy the latest .backup to Drive (configured root_folder_id)
@@ -88,18 +98,18 @@ jobs:
 
       - name: Cleanup old backups (keep last 3)
         env:
-           RCLONE_CONFIG_GDRIVE_ROOT_FOLDER_ID: 1_6w4x5S9OuSh8inDikd7X3py2202csMj
+          RCLONE_CONFIG_GDRIVE_ROOT_FOLDER_ID: ${{ env.GDRIVE_FOLDER_ID }}
         run: |
           set -euo pipefail
           echo "Listing all backup files in configured folder..."
-          
+
           # List all .backup files in the root_folder_id path
           FILES=$(rclone lsf gdrive: --files-only | grep '\.backup$' | sort -r)
-          
+
           # Count total files
           TOTAL=$(echo "$FILES" | grep -c '.' || echo "0")
           echo "Found $TOTAL backup file(s)"
-          
+
           # Keep only last 3, delete the rest
           KEEP=3
           if [ "$TOTAL" -gt "$KEEP" ]; then

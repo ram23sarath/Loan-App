@@ -3,28 +3,35 @@
 This document explains how the repository's `Database Backup` workflow works, what secrets and cloud setup it needs, how to verify produced `.backup` files, and how to restore them to a Supabase project.
 
 **Files**
+
 - Workflow: `.github/workflows/db-backup.yml`
 - This doc: `docs/backup-setup.md`
 
 ## What the workflow does
+
 - Runs nightly (or on-demand) in GitHub Actions.
 - Uses `pg_dump -Fc` to create a custom-format Postgres dump, compresses it (`.dump.gz`).
 - Decompresses to produce a `.backup` file (valid when the original is a custom-format archive).
 - Uploads the `.backup` to Google Drive using `rclone` and a service-account JSON.
 
 ## Prerequisites
+
 - Supabase project with a Postgres DB.
-  - Use the **Session (pooler)** connection string for non-IPv6 issues.
+  - **For general use**, the **Session (pooler)** connection string is a fine alternative (e.g., to avoid IPv6 issues).
+  - **For this backup workflow**, use the direct (non-pooler) connection string for `SUPABASE_DB_URL` (see below).
   - If server is Postgres 17.x, ensure pg client v17 is used by the workflow (already handled in the workflow).
 - Google Cloud service account with Drive access to the target Drive/folder.
 - GitHub repo admin access to add Actions secrets.
 
 ## Required GitHub Secrets
-- `SUPABASE_DB_URL` — Session-mode Postgres connection string for the source DB. Example:
+
+- `SUPABASE_DB_URL` — Postgres connection string for the source DB with access to **auth** schema. **Must use the direct (non-pooler) connection string** from Supabase Database settings so `pg_dump` can directly access `auth.users`/`auth.identities`. (Pooler connections do not reliably expose the auth schema to backup tools.) Use the direct connection in the format below:
 
 ```
-postgresql://postgres:<PASSWORD>@aws-0-<region>.pooler.supabase.com:5432/postgres?sslmode=require
+postgresql://postgres:<PASSWORD>@db.<project>.supabase.co:5432/postgres?sslmode=require
 ```
+
+The workflow explicitly dumps `auth`, `public`, `storage`, `graphql_public`, and `extensions` schemas and fails if `auth.users` or `auth.identities` are missing in the archive. If you see failures, double-check the DB URL and role permissions.
 
 - `GDRIVE_SERVICE_ACCOUNT_JSON` — full JSON contents of the Google service account key. (Do NOT commit this to source control.)
 
@@ -38,6 +45,7 @@ gh secret set GDRIVE_SERVICE_ACCOUNT_JSON --body "$(cat service-account.json)" -
 ```
 
 ## Create and configure Google Service Account (high level)
+
 1. In Google Cloud Console, enable the **Google Drive API** for your project.
 2. Create a Service Account (IAM & Admin → Service Accounts).
 3. Create and download a JSON key for the service account.
@@ -45,14 +53,16 @@ gh secret set GDRIVE_SERVICE_ACCOUNT_JSON --body "$(cat service-account.json)" -
    - For Shared Drive, add the service account as a member of the Shared Drive.
 
 ## Run the workflow manually (verify)
+
 - In GitHub: Actions → Database Backup → Run workflow (choose branch and click Run).
 - Watch logs for steps:
   - `pg_dump` (produces `dumps/backup-<timestamp>.dump.gz`)
   - `Convert .dump.gz -> .backup` (produces `.backup`)
   - `Install rclone` and `Upload .backup to Google Drive`
-- After success, check Google Drive → `Backups/LoanApp` for the uploaded file.
+- After success, check Google Drive → `Backups/<YourProjectName>` for the uploaded file (adjust path based on your workflow configuration).
 
 ## Verify `.backup` is valid custom-format archive
+
 (Use Docker if you don't have `pg_restore` locally.)
 
 ```bash
@@ -65,6 +75,7 @@ docker run --rm -v "$PWD":/backups -w /backups postgres:17 \
 - If it errors, the file may be plain SQL text; see conversion section below.
 
 ## Restore to a Supabase project (recommended: staging)
+
 Use the Session-mode pooler URI for the target Supabase project. Prefer testing on a non-production project first.
 
 Docker method (no local client install):
@@ -91,10 +102,12 @@ pg_restore --verbose --clean --if-exists --no-owner --dbname "$TARGET_DB_URL" du
 Windows (native install): install PostgreSQL 17 tools and run similar `pg_restore` commands in PowerShell.
 
 Important flags:
+
 - `--clean --if-exists`: drops existing objects before recreating.
 - `--no-owner`: skip restoring ownership (useful on managed hosts like Supabase).
 
 ## Convert a plain SQL dump to custom-format `.backup`
+
 If your `backup.dump` is actually plain SQL (not custom format), convert using a temporary Postgres instance and re-dump:
 
 ```bash
@@ -117,6 +130,7 @@ docker rm -f tmp-pg
 Then validate with `pg_restore --list backup.backup`.
 
 ## Common errors & fixes
+
 - "Network is unreachable" / IPv6-only host:
   - Use the Session-mode pooler URI (Supabase Dashboard → Connection string → Mode = Session) which has IPv4.
 - `pg_dump`/`pg_restore` version mismatch:
@@ -127,16 +141,20 @@ Then validate with `pg_restore --list backup.backup`.
   - Some extensions/roles require manual handling; restore core objects first and handle extensions separately.
 
 ## Optional improvements
+
 - Rotate and delete old Drive files using `rclone delete` or `rclone lsjson` + date filtering.
 - Upload to other storage backends (S3, Supabase Storage) if preferred.
 - Add automated restore-to-staging job (needs target DB secret).
 
 ## Security notes
+
 - Never commit secrets (DB URIs, service account JSON) to the repo.
 - Use repo or org-level encrypted Actions secrets and rotate keys periodically.
 
 ---
+
 If you want, I can:
+
 - Add a `scripts/restore.sh` and `scripts/restore.ps1` helper in the repo.
 - Add an automatic verification step to the workflow that fails when the produced `.backup` is not a custom-format archive and then tries the Docker conversion flow.
 

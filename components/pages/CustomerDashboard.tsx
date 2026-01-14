@@ -57,7 +57,8 @@ const CustomerDashboard = () => {
     return maxProgress;
   }, [customerLoans, installmentsByLoanId]);
 
-  const meetsRepaymentThreshold = repaymentProgress >= 0.8;
+  // Allow requests if: no existing loans (first-time) OR 80%+ repayment progress
+  const meetsRepaymentThreshold = customerLoans.length === 0 || repaymentProgress >= 0.8;
   const canRequest = Boolean(isScopedCustomer && customer && !hasPendingSeniorityRequest && meetsRepaymentThreshold);
   const progressPercent = Math.round(repaymentProgress * 100);
   const requestDisabledReason = !customer
@@ -169,9 +170,11 @@ const CustomerDashboard = () => {
               <p className="mt-2 text-sm text-gray-700 dark:text-dark-muted">
                 {hasPendingSeniorityRequest
                   ? 'Your request is already in the loan seniority list.'
-                  : meetsRepaymentThreshold
-                    ? `Eligibility met: ${progressPercent}% of loan repayment completed.`
-                    : `Eligibility blocked until 80% repayment is completed. Current progress: ${progressPercent}%.`}
+                  : customerLoans.length === 0
+                    ? 'No existing loans. You are eligible to request your first loan.'
+                    : meetsRepaymentThreshold
+                      ? `Eligibility met: ${progressPercent}% of loan repayment completed.`
+                      : `Eligibility blocked until 80% repayment is completed. Current progress: ${progressPercent}%.`}
               </p>
             )}
           </GlassCard>

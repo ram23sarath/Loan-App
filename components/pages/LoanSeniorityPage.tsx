@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState, useCallback } from "react";
+import React, { useMemo, useEffect, useState, useCallback, useRef } from "react";
 import ReactDOM from "react-dom";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import PageWrapper from "../ui/PageWrapper";
@@ -185,13 +185,15 @@ const LoanSeniorityPage = () => {
     removeFromSeniority,
     isScopedCustomer,
   } = useData();
-  const [searchTerm, setSearchTerm] = useState("");
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const [addSearchTerm, setAddSearchTerm] = useState("");
+  const debouncedAddSearchTerm = useDebounce(addSearchTerm, 300);
+  const [listSearchTerm, setListSearchTerm] = useState("");
+  const debouncedListSearchTerm = useDebounce(listSearchTerm, 300);
   const headerDelay = 0;
   const searchSectionDelay = 0.3;
-  const searchResultsDelay = searchSectionDelay + 0.1;
   const listSectionDelay = isScopedCustomer ? 0.35 : 0.5;
   const itemsPerPage = 20;
+  const addSearchLimit = 20;
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
@@ -202,42 +204,53 @@ const LoanSeniorityPage = () => {
 
   useEffect(() => {
     setCurrentPage(1);
+  }, [seniorityList, debouncedListSearchTerm]);
+
+  const filteredSeniorityList = useMemo(() => {
+    const term = debouncedListSearchTerm.trim().toLowerCase();
+    if (!term) return seniorityList || [];
+    return (seniorityList || []).filter(
+      (entry: any) =>
+        entry.customers?.name?.toLowerCase().includes(term) ||
+        String(entry.customers?.phone || "").toLowerCase().includes(term) ||
+        entry.station_name?.toLowerCase().includes(term) ||
+        entry.loan_type?.toLowerCase().includes(term)
+    );
+  }, [debouncedListSearchTerm, seniorityList]);
+
+  const existingSeniorityCustomerIds = useMemo(() => {
+    return new Set((seniorityList || []).map((entry: any) => entry.customer_id));
   }, [seniorityList]);
 
+  const matchedCustomers = useMemo(() => {
+    const term = debouncedAddSearchTerm.trim().toLowerCase();
+    if (!term) return [];
+    return (customers || [])
+      .filter((customer: Customer) => {
+        const name = customer.name?.toLowerCase() || "";
+        const phone = String(customer.phone || "").toLowerCase();
+        return name.includes(term) || phone.includes(term);
+      })
+      .filter((customer: Customer) => !existingSeniorityCustomerIds.has(customer.id))
+      .sort((a: Customer, b: Customer) => (a.name || "").localeCompare(b.name || ""))
+      .slice(0, addSearchLimit);  }, [customers, debouncedAddSearchTerm, existingSeniorityCustomerIds]);
+
   const totalPages = useMemo(() => {
-    return Math.max(1, Math.ceil((seniorityList?.length || 0) / itemsPerPage));
-  }, [seniorityList, itemsPerPage]);
+    return Math.max(1, Math.ceil((filteredSeniorityList?.length || 0) / itemsPerPage));
+  }, [filteredSeniorityList, itemsPerPage]);
 
   const paginatedSeniorityList = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     const end = start + itemsPerPage;
-    return (seniorityList || []).slice(start, end);
-  }, [seniorityList, currentPage, itemsPerPage]);
-
-  const filtered = useMemo(() => {
-    const term = debouncedSearchTerm.trim().toLowerCase();
-    const existingIds = new Set<string>(
-      (seniorityList || []).map((e: any) => e.customer_id)
-    );
-    const withoutLoansOrSubs = customers.filter((c) => {
-      if (existingIds.has(c.id)) return false;
-      const hasLoan = loans.some((l) => l.customer_id === c.id);
-      const hasSub = subscriptions.some((s) => s.customer_id === c.id);
-      return !hasLoan && !hasSub;
-    });
-    if (!term) return withoutLoansOrSubs.slice(0, 10);
-    return customers
-      .filter((c) => !existingIds.has(c.id))
-      .filter(
-        (c) =>
-          c.name.toLowerCase().includes(term) ||
-          String(c.phone).toLowerCase().includes(term)
-      );
-  }, [customers, loans, subscriptions, debouncedSearchTerm, seniorityList]);
+    return (filteredSeniorityList || []).slice(start, end);
+  }, [filteredSeniorityList, currentPage, itemsPerPage]);
 
   const addCustomerToList = async (customer: Customer) => {
     setModalCustomer({ id: customer.id, name: customer.name });
     setModalEditingId(null);
+    setStationName("");
+    setLoanType("General");
+    setLoanRequestDate("");
     // Set date to today for scoped users
     if (isScopedCustomer) {
       const today = new Date().toISOString().split("T")[0];
@@ -265,6 +278,7 @@ const LoanSeniorityPage = () => {
     id: string;
     name: string;
   } | null>(null);
+  const listSearchInputRef = useRef<HTMLInputElement | null>(null);
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
@@ -380,9 +394,9 @@ const LoanSeniorityPage = () => {
             <div className="relative flex-1">
               <motion.input
                 className="w-full bg-white dark:bg-dark-bg border border-gray-300 dark:border-dark-border rounded-lg py-2 px-3 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 dark:text-dark-text placeholder:text-gray-400 dark:placeholder:text-dark-muted"
-                placeholder="Search customers by name or phone..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search customers to add by name or phone..."
+                value={addSearchTerm}
+                onChange={(e) => setAddSearchTerm(e.target.value)}
                 whileFocus={{
                   scale: 1.01,
                   boxShadow: "0 0 0 3px rgba(99, 102, 241, 0.1)",
@@ -390,10 +404,10 @@ const LoanSeniorityPage = () => {
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
               />
               <AnimatePresence>
-                {searchTerm && (
+                {addSearchTerm && (
                   <motion.button
                     type="button"
-                    onClick={() => setSearchTerm("")}
+                    onClick={() => setAddSearchTerm("")}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-dark-muted hover:text-gray-600 dark:hover:text-dark-text p-1"
                     aria-label="Clear search"
                     initial={{ opacity: 0, scale: 0, rotate: -90 }}
@@ -418,86 +432,57 @@ const LoanSeniorityPage = () => {
                   </motion.button>
                 )}
               </AnimatePresence>
-            </div>
-          </motion.div>
-
-          <motion.div
-            className="mt-4"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              delay: searchSectionDelay + 0.05,
-              type: "spring",
-              stiffness: 220,
-              damping: 22,
-            }}
-          >
-            <h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-dark-text">
-              Search results
-            </h3>
-            <motion.div
-              className="max-h-64 overflow-hidden"
-              variants={searchResultVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              transition={{ delay: searchResultsDelay }}
-            >
-              <motion.div
-                className="space-y-2"
-                variants={listContainerVariants}
-                initial="hidden"
-                animate="visible"
-              >
-                <AnimatePresence mode="popLayout">
-                  {filtered.length === 0 ? (
-                    <motion.div
-                      key="empty"
-                      className="text-sm text-gray-500 dark:text-dark-muted"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                    >
-                      No customers found.
-                    </motion.div>
-                  ) : (
-                    filtered.map((c, idx) => (
-                      <motion.div
-                        key={c.id}
-                        className="flex items-center justify-between bg-white dark:bg-dark-bg border border-gray-100 dark:border-dark-border rounded p-2"
-                        variants={listItemVariants}
-                        layout
-                        layoutId={c.id}
-                        whileHover={{
-                          x: 4,
-                          backgroundColor: "rgba(99, 102, 241, 0.05)",
-                          transition: { duration: 0.2 },
+              <AnimatePresence>
+                {debouncedAddSearchTerm && matchedCustomers.length > 0 && (
+                  <motion.div
+                    className="absolute left-0 mt-2 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-lg max-h-72 overflow-y-auto z-20 min-w-max"
+                    variants={searchResultVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                  >
+                    <div className="px-4 py-2 text-xs text-gray-500 dark:text-dark-muted border-b border-gray-100 dark:border-dark-border">
+                      Showing {matchedCustomers.length} result{matchedCustomers.length === 1 ? "" : "s"}
+                      {matchedCustomers.length === addSearchLimit ? " (limited)" : ""}
+                    </div>
+                    {matchedCustomers.map((customer: Customer) => (
+                      <motion.button
+                        key={customer.id}
+                        type="button"
+                        onClick={() => {
+                          addCustomerToList(customer);
+                          setAddSearchTerm("");
                         }}
+                        className="w-full flex items-center justify-between text-left px-3 py-1.5 hover:bg-indigo-50 dark:hover:bg-slate-800 transition-colors text-gray-800 dark:text-dark-text"
+                        variants={listItemVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
                       >
-                        <div className="min-w-0 mr-2">
-                          <div className="font-semibold text-indigo-700 dark:text-indigo-400 truncate">
-                            {c.name}
-                          </div>
-                          <div className="text-sm text-gray-500 dark:text-dark-muted">
-                            {c.phone}
-                          </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-medium">{customer.name}</span>
+                          <span className="text-xs text-gray-500 dark:text-dark-muted">
+                            {customer.phone || ""}
+                          </span>
                         </div>
-                        <motion.button
-                          onClick={() => addCustomerToList(c)}
-                          className="px-3 py-1 rounded bg-indigo-600 text-white text-sm hover:bg-indigo-700 shrink-0"
-                          variants={buttonVariants}
-                          initial="idle"
-                          whileHover="hover"
-                          whileTap="tap"
-                        >
-                          Add
-                        </motion.button>
-                      </motion.div>
-                    ))
-                  )}
-                </AnimatePresence>
-              </motion.div>
-            </motion.div>
+                        <span className="text-xs font-semibold text-white bg-indigo-600 px-2 py-1 rounded whitespace-nowrap ml-2">Add</span>
+                      </motion.button>
+                    ))}
+                  </motion.div>
+                )}
+                {debouncedAddSearchTerm && matchedCustomers.length === 0 && (
+                  <motion.div
+                    className="absolute left-0 right-0 mt-2 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-lg p-3 text-sm text-gray-500 dark:text-dark-muted z-20"
+                    variants={searchResultVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                  >
+                    No customers match your search.
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </motion.div>
         </GlassCard>
       )}
@@ -641,6 +626,48 @@ const LoanSeniorityPage = () => {
         >
           Loan Seniority List
         </motion.h3>
+        <div className="mb-4 relative">
+          <input
+            ref={listSearchInputRef}
+            className="w-full md:w-96 bg-white dark:bg-dark-bg border border-gray-300 dark:border-dark-border rounded-lg py-2 px-3 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 dark:text-dark-text placeholder:text-gray-400 dark:placeholder:text-dark-muted"
+            placeholder="Filter list by name, phone, station, or loan type..."
+            value={listSearchTerm}
+            onChange={(e) => setListSearchTerm(e.target.value)}
+          />
+          <AnimatePresence>
+            {listSearchTerm && (
+              <motion.button
+                type="button"
+                onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                  e.preventDefault();
+                  setListSearchTerm("");
+                  listSearchInputRef.current?.focus();
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-dark-muted hover:text-gray-600 dark:hover:text-dark-text p-1"
+                aria-label="Clear search"
+                initial={{ opacity: 0, scale: 0, rotate: -90 }}
+                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                exit={{ opacity: 0, scale: 0, rotate: 90 }}
+                whileHover={{ scale: 1.2 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </div>
         {!seniorityList || seniorityList.length === 0 ? (
           <motion.div
             className="text-sm text-gray-500 dark:text-dark-muted"

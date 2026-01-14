@@ -39,6 +39,8 @@ export type Subscription = {
   receipt: string;
   late_fee?: number | null;
   created_at: string;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
 };
 
 // For react-hook-form SubscriptionInputs
@@ -145,6 +147,8 @@ export type Database = {
           receipt: string
           late_fee?: number | null
           created_at: string
+          deleted_at?: string | null
+          deleted_by?: string | null
         }
         Insert: {
           customer_id: string
@@ -158,6 +162,8 @@ export type Database = {
           date?: string
           receipt?: string
           late_fee?: number | null
+          deleted_at?: string | null
+          deleted_by?: string | null
         }
         Relationships: [
           {

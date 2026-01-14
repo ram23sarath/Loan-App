@@ -1023,26 +1023,6 @@ const SummaryPage = () => {
                 </span>
               </div>
 
-              {/* Quick summary: Loan Balance (keep clearly inside Income column) */}
-              <div className="w-full mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 flex flex-col items-start">
-                  <div className="text-xs text-gray-600 dark:text-blue-300">
-                    Loan Balance
-                  </div>
-                  <div className="text-lg font-bold text-blue-800 dark:text-blue-200 mt-1">
-                    <AnimatedNumber value={loanBalance} />
-                  </div>
-                </div>
-                <div className="p-3 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-100 dark:border-cyan-800 flex flex-col items-start">
-                  <div className="text-xs text-gray-600 dark:text-cyan-300">
-                    Subscription Balance
-                  </div>
-                  <div className="text-lg font-bold text-cyan-800 dark:text-cyan-200 mt-1">
-                    <AnimatedNumber value={subscriptionBalance} />
-                  </div>
-                </div>
-              </div>
-
               {/* Income breakdown as list items */}
               <div className="w-full mt-4">
                 <div className="space-y-3">

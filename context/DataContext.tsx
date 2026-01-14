@@ -1093,7 +1093,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                   supabase
                     .from("data_entries")
                     .select("*")
-                    .eq("customer_id", currentScopedId),
+                    .eq("customer_id", currentScopedId)
+                    .is("deleted_at", null),
                 ]);
 
               if (!isMounted) return;
@@ -1186,6 +1187,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                   supabase
                     .from("data_entries")
                     .select("*")
+                    .is("deleted_at", null)
                     .order("date", { ascending: false }),
                 "data_entries"
               );
@@ -1373,7 +1375,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
               supabase
                 .from("data_entries")
                 .select("*")
-                .eq("customer_id", currentScopedId),
+                .eq("customer_id", currentScopedId)
+                .is("deleted_at", null),
             ]);
 
           if (!isMounted) return;
@@ -1470,6 +1473,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
               supabase
                 .from("data_entries")
                 .select("*")
+                .is("deleted_at", null)
                 .order("date", { ascending: false }),
             "data_entries"
           );

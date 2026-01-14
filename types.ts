@@ -29,6 +29,8 @@ export type Loan = {
   total_instalments: number;
   check_number?: string | null;
   created_at: string;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
 };
 
 export type Subscription = {
@@ -112,6 +114,8 @@ export type Database = {
           total_instalments: number
           check_number?: string | null
           created_at: string
+          deleted_at?: string | null
+          deleted_by?: string | null
         }
         Insert: {
           customer_id: string
@@ -127,6 +131,8 @@ export type Database = {
           payment_date?: string
           total_instalments?: number
           check_number?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
         }
         Relationships: [
           {

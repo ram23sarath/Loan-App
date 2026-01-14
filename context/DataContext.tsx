@@ -120,6 +120,11 @@ interface DataContextType {
   removeFromSeniority: (id: string) => Promise<void>;
   restoreSeniorityEntry: (id: string) => Promise<void>;
   permanentDeleteSeniority: (id: string) => Promise<void>;
+  // Data entries soft delete
+  deletedDataEntries: DataEntry[];
+  fetchDeletedDataEntries: () => Promise<void>;
+  restoreDataEntry: (id: string) => Promise<void>;
+  permanentDeleteDataEntry: (id: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -212,6 +217,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [installments, setInstallments] = useState<Installment[]>([]);
   const [seniorityList, setSeniorityList] = useState<any[]>([]);
   const [deletedSeniorityList, setDeletedSeniorityList] = useState<any[]>([]);
+  const [deletedDataEntries, setDeletedDataEntries] = useState<DataEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [dataEntries, setDataEntries] = useState<DataEntry[]>([]);
@@ -307,12 +313,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             setInstallments([]);
           }
 
-          // Data entries for this customer
+          // Data entries for this customer (excluding soft-deleted)
           const { data: dataEntriesData, error: dataEntriesError } =
             await supabase
               .from("data_entries")
               .select("*")
-              .eq("customer_id", effectiveScopedId);
+              .eq("customer_id", effectiveScopedId)
+              .is("deleted_at", null);
           if (dataEntriesError) throw dataEntriesError;
           setDataEntries((dataEntriesData as DataEntry[]) || []);
         } else {
@@ -358,12 +365,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           );
           setInstallments(installmentsData);
 
-          // Fetch data entries
+          // Fetch data entries (excluding soft-deleted)
           const dataEntriesData = await fetchAllRecords<DataEntry>(
             () =>
               supabase
                 .from("data_entries")
                 .select("*")
+                .is("deleted_at", null)
                 .order("date", { ascending: false }),
             "data_entries"
           );
@@ -467,6 +475,31 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     } catch (err: any) {
       console.error("Failed to fetch deleted seniority list", err);
       setDeletedSeniorityList([]);
+    }
+  }, [session, isScopedCustomer]);
+
+  // Fetch deleted data entries (admin only - RLS enforced)
+  const fetchDeletedDataEntries = useCallback(async () => {
+    try {
+      if (!session || !session.user || !session.user.id || isScopedCustomer) {
+        setDeletedDataEntries([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("data_entries")
+        .select("*, customers(name, phone)")
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: false });
+
+      if (error) {
+        console.error("Supabase error fetching deleted data_entries:", error);
+        throw error;
+      }
+      setDeletedDataEntries((data as any[]) || []);
+    } catch (err: any) {
+      console.error("Failed to fetch deleted data entries", err);
+      setDeletedDataEntries([]);
     }
   }, [session, isScopedCustomer]);
 
@@ -902,16 +935,77 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         "Read-only access: scoped customers cannot delete data entries"
       );
     try {
+      // Soft delete: set deleted_at timestamp instead of hard delete
+      const { error } = await supabase
+        .from("data_entries")
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: session?.user?.email || session?.user?.id || "Unknown",
+        } as any)
+        .eq("id", id);
+      if (error) throw error;
+      await fetchData();
+      await fetchDeletedDataEntries();
+    } catch (error) {
+      throw new Error(parseSupabaseError(error, "deleting data entry"));
+    }
+  };
+
+  const restoreDataEntry = async (id: string): Promise<void> => {
+    if (isScopedCustomer)
+      throw new Error(
+        "Read-only access: scoped customers cannot restore data entries"
+      );
+    try {
+      // Restore soft-deleted entry by clearing deleted_at
+      const { error } = await supabase
+        .from("data_entries")
+        .update({
+          deleted_at: null,
+          deleted_by: null,
+        } as any)
+        .eq("id", id);
+      if (error) throw error;
+      await fetchData();
+      await fetchDeletedDataEntries();
+    } catch (err: any) {
+      throw new Error(parseSupabaseError(err, `restoring data entry ${id}`));
+    }
+  };
+
+  const permanentDeleteDataEntry = async (id: string): Promise<void> => {
+    if (isScopedCustomer)
+      throw new Error(
+        "Read-only access: scoped customers cannot permanently delete data entries"
+      );
+    try {
+      // Defensive check: verify the entry is soft-deleted before permanent deletion
+      const { data: entry, error: fetchError } = await supabase
+        .from("data_entries")
+        .select("id, deleted_at")
+        .eq("id", id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      if (!entry || (entry as any).deleted_at === null) {
+        throw new Error(
+          "Cannot permanently delete: entry must be soft-deleted first (moved to trash)"
+        );
+      }
+
+      // Hard delete - permanently remove the entry
       const { error } = await supabase
         .from("data_entries")
         .delete()
         .eq("id", id);
       if (error) throw error;
-      await fetchData();
-    } catch (error) {
-      throw new Error(parseSupabaseError(error, "deleting data entry"));
+      await fetchDeletedDataEntries();
+    } catch (err: any) {
+      throw new Error(parseSupabaseError(err, `permanently deleting data entry ${id}`));
     }
   };
+
 
   // Ref to track the last processed session token to prevent redundant updates
   const lastSessionTokenRef = React.useRef<string | null>(null);
@@ -1847,6 +1941,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         removeFromSeniority,
         restoreSeniorityEntry,
         permanentDeleteSeniority,
+        deletedDataEntries,
+        fetchDeletedDataEntries,
+        restoreDataEntry,
+        permanentDeleteDataEntry,
       }}
     >
       {children}

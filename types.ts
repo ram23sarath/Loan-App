@@ -7,6 +7,8 @@ export type DataEntry = {
   type: "credit" | "debit" | "expense"; // Type of transaction
   notes?: string;
   subtype?: string | null;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
 };
 
 // Base row types matching the database tables
@@ -215,6 +217,8 @@ export type Database = {
           type: "credit" | "debit" | "expense";
           notes?: string;
           subtype?: string | null;
+          deleted_at?: string | null;
+          deleted_by?: string | null;
         };
         Insert: {
           customer_id: string;
@@ -233,6 +237,8 @@ export type Database = {
           type?: "credit" | "debit" | "expense";
           notes?: string;
           subtype?: string | null;
+          deleted_at?: string | null;
+          deleted_by?: string | null;
         };
         Relationships: [
           {

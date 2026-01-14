@@ -7,6 +7,7 @@ import GlassCard from "../ui/GlassCard";
 import { Trash2Icon } from "../../constants";
 import { useData } from "../../context/DataContext";
 import { formatDate } from "../../utils/dateFormatter";
+import { formatNumberIndian } from "../../utils/numberFormatter";
 
 const TrashPage = () => {
     const {
@@ -18,56 +19,108 @@ const TrashPage = () => {
         fetchSeniorityList,
         restoreSeniorityEntry,
         permanentDeleteSeniority,
+        // Data entries
+        deletedDataEntries,
+        fetchDeletedDataEntries,
+        restoreDataEntry,
+        permanentDeleteDataEntry,
     } = useData();
 
     useEffect(() => {
         fetchDeletedSeniorityList().catch(console.error);
         fetchSeniorityList().catch(console.error);
-    }, [fetchDeletedSeniorityList, fetchSeniorityList]);
+        fetchDeletedDataEntries().catch(console.error);
+    }, [fetchDeletedSeniorityList, fetchSeniorityList, fetchDeletedDataEntries]);
 
-    const [restoreTarget, setRestoreTarget] = useState<{ id: string; name: string } | null>(null);
-    const [permanentDeleteTarget, setPermanentDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+    // Seniority state
+    const [restoreTarget, setRestoreTarget] = useState<{ id: string; name: string; type: 'seniority' | 'expenditure' } | null>(null);
+    const [permanentDeleteTarget, setPermanentDeleteTarget] = useState<{ id: string; name: string; type: 'seniority' | 'expenditure' } | null>(null);
     const [restoreError, setRestoreError] = useState<string | null>(null);
 
     useEscapeKey(!!restoreError, () => setRestoreError(null));
+    useEscapeKey(!!restoreTarget, () => setRestoreTarget(null));
+    useEscapeKey(!!permanentDeleteTarget, () => setPermanentDeleteTarget(null));
 
     const confirmRestore = async () => {
         if (!restoreTarget) return;
 
-        // Check if customer is already in active list
-        const entryToRestore = deletedSeniorityList?.find((e: any) => e.id === restoreTarget.id);
-        if (entryToRestore) {
-            const isAlreadyActive = seniorityList?.some((e: any) => e.customer_id === entryToRestore.customer_id);
-            if (isAlreadyActive) {
-                setRestoreError("Cannot restore: This customer is already in the active seniority list.");
-                setRestoreTarget(null);
-                return;
+        if (restoreTarget.type === 'seniority') {
+            // Check if customer is already in active list
+            const entryToRestore = deletedSeniorityList?.find((e: any) => e.id === restoreTarget.id);
+            if (entryToRestore) {
+                const isAlreadyActive = seniorityList?.some((e: any) => e.customer_id === entryToRestore.customer_id);
+                if (isAlreadyActive) {
+                    setRestoreError("Cannot restore: This customer is already in the active seniority list.");
+                    setRestoreTarget(null);
+                    return;
+                }
             }
-        }
 
-        try {
-            await restoreSeniorityEntry(restoreTarget.id);
-            setRestoreTarget(null);
-        } catch (err: any) {
-            alert(err.message || "Failed to restore");
+            try {
+                await restoreSeniorityEntry(restoreTarget.id);
+                setRestoreTarget(null);
+            } catch (err: any) {
+                alert(err.message || "Failed to restore");
+            }
+        } else if (restoreTarget.type === 'expenditure') {
+            try {
+                await restoreDataEntry(restoreTarget.id);
+                setRestoreTarget(null);
+            } catch (err: any) {
+                alert(err.message || "Failed to restore data entry");
+            }
         }
     };
 
     const confirmDelete = async () => {
         if (!permanentDeleteTarget) return;
-        try {
-            await permanentDeleteSeniority(permanentDeleteTarget.id);
-            setPermanentDeleteTarget(null);
-        } catch (err: any) {
-            alert(err.message || "Failed to delete");
+
+        if (permanentDeleteTarget.type === 'seniority') {
+            try {
+                await permanentDeleteSeniority(permanentDeleteTarget.id);
+                setPermanentDeleteTarget(null);
+            } catch (err: any) {
+                alert(err.message || "Failed to delete");
+            }
+        } else if (permanentDeleteTarget.type === 'expenditure') {
+            try {
+                await permanentDeleteDataEntry(permanentDeleteTarget.id);
+                setPermanentDeleteTarget(null);
+            } catch (err: any) {
+                alert(err.message || "Failed to delete data entry");
+            }
         }
     };
 
+    // Helper function to format deleted info
+    const formatDeletedInfo = (item: any) => {
+        if (!item.deleted_at) return "N/A";
+        const date = new Date(item.deleted_at);
+        let adminName = "Unknown";
+        if (item.deleted_by) {
+            // Try to find by user_id in customers (if it was a customer action)
+            const customer = customers.find((c: any) => c.user_id === item.deleted_by);
+            if (customer) {
+                adminName = customer.name;
+            } else if (session?.user?.id === item.deleted_by && session?.user?.user_metadata?.name) {
+                // If it was the current user, use their metadata name
+                adminName = session.user.user_metadata.name;
+            } else if (item.deleted_by.includes('@')) {
+                // It's an email
+                adminName = item.deleted_by;
+            } else {
+                // It's an ID but not found in customers
+                adminName = "Admin";
+            }
+        }
+        return `Deleted at - ${date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} by ${adminName}`;
+    };
+
     const sections = [
-        { title: "Loans", items: [] },
-        { title: "Subscriptions", items: [] },
-        { title: "Loan Seniority", items: deletedSeniorityList || [] },
-        { title: "Expenditures", items: [] },
+        { title: "Loans", items: [], type: 'loan' as const },
+        { title: "Subscriptions", items: [], type: 'subscription' as const },
+        { title: "Loan Seniority", items: deletedSeniorityList || [], type: 'seniority' as const },
+        { title: "Expenditures", items: deletedDataEntries || [], type: 'expenditure' as const },
     ];
 
     const modalBackdropVariants: Variants = {
@@ -95,6 +148,94 @@ const TrashPage = () => {
             transition: { type: "spring", stiffness: 400, damping: 20 },
         },
         tap: { scale: 0.95 },
+    };
+
+    // Render item content based on type
+    const renderItemContent = (item: any, type: string) => {
+        if (type === 'seniority') {
+            return (
+                <>
+                    <div className="font-medium text-gray-800 dark:text-dark-text flex items-center gap-2">
+                        {item.customers?.name || "Unknown"}
+                        {item.customers?.phone && (
+                            <span className="text-xs font-normal text-gray-500 dark:text-dark-muted">
+                                ({item.customers.phone})
+                            </span>
+                        )}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-dark-muted flex flex-wrap gap-x-2 mt-0.5">
+                        <span>{item.station_name || "No station"}</span>
+                        {item.loan_type && (
+                            <>
+                                <span>•</span>
+                                <span>{item.loan_type}</span>
+                            </>
+                        )}
+                        <span>•</span>
+                        <span className="text-red-500/80 dark:text-red-400/80">
+                            {formatDeletedInfo(item)}
+                        </span>
+                    </div>
+                </>
+            );
+        } else if (type === 'expenditure') {
+            // Get customer name from the joined data or lookup
+            const customerName = item.customers?.name ||
+                (customers.find((c: any) => c.id === item.customer_id)?.name) ||
+                "Unknown";
+            const customerPhone = item.customers?.phone ||
+                (customers.find((c: any) => c.id === item.customer_id)?.phone);
+
+            return (
+                <>
+                    <div className="font-medium text-gray-800 dark:text-dark-text flex items-center gap-2">
+                        {customerName}
+                        {customerPhone && (
+                            <span className="text-xs font-normal text-gray-500 dark:text-dark-muted">
+                                ({customerPhone})
+                            </span>
+                        )}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-dark-muted flex flex-wrap gap-x-2 mt-0.5">
+                        <span className={`font-medium ${item.type === 'credit' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                            {item.type === 'credit' ? '+' : '-'}₹{formatNumberIndian(item.amount)}
+                        </span>
+                        <span>•</span>
+                        <span className="capitalize">{item.type}</span>
+                        {item.subtype && (
+                            <>
+                                <span>•</span>
+                                <span>{item.subtype}</span>
+                            </>
+                        )}
+                        {item.date && (
+                            <>
+                                <span>•</span>
+                                <span>{formatDate(item.date)}</span>
+                            </>
+                        )}
+                        <span>•</span>
+                        <span className="text-red-500/80 dark:text-red-400/80">
+                            {formatDeletedInfo(item)}
+                        </span>
+                    </div>
+                </>
+            );
+        }
+        return null;
+    };
+
+    // Get item name for modal display
+    const getItemName = (item: any, type: string) => {
+        if (type === 'seniority') {
+            return item.customers?.name || 'Item';
+        } else if (type === 'expenditure') {
+            const customerName = item.customers?.name ||
+                (customers.find((c: any) => c.id === item.customer_id)?.name) ||
+                "Entry";
+            return `${customerName}'s ${item.type} entry`;
+        }
+        return 'Item';
     };
 
     return (
@@ -157,52 +298,15 @@ const TrashPage = () => {
                                                 className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-800/30 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                                             >
                                                 <div>
-                                                    <div className="font-medium text-gray-800 dark:text-dark-text flex items-center gap-2">
-                                                        {item.customers?.name || "Unknown"}
-                                                        {item.customers?.phone && (
-                                                            <span className="text-xs font-normal text-gray-500 dark:text-dark-muted">
-                                                                ({item.customers.phone})
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="text-xs text-gray-500 dark:text-dark-muted flex flex-wrap gap-x-2 mt-0.5">
-                                                        <span>{item.station_name || "No station"}</span>
-                                                        {item.loan_type && (
-                                                            <>
-                                                                <span>•</span>
-                                                                <span>{item.loan_type}</span>
-                                                            </>
-                                                        )}
-                                                        <span>•</span>
-                                                        <span className="text-red-500/80 dark:text-red-400/80">
-                                                            {item.deleted_at ? (() => {
-                                                                const date = new Date(item.deleted_at);
-                                                                let adminName = "Unknown";
-                                                                if (item.deleted_by) {
-                                                                    // Try to find by user_id in customers (if it was a customer action)
-                                                                    const customer = customers.find((c: any) => c.user_id === item.deleted_by);
-                                                                    if (customer) {
-                                                                        adminName = customer.name;
-                                                                    } else if (session?.user?.id === item.deleted_by && session?.user?.user_metadata?.name) {
-                                                                        // If it was the current user, use their metadata name
-                                                                        adminName = session.user.user_metadata.name;
-                                                                    } else if (item.deleted_by.includes('@')) {
-                                                                        // It's an email, try to remove domain. Though we prefer names.
-                                                                        adminName = item.deleted_by;
-                                                                    } else {
-                                                                        // It's an ID but not found in customers. 
-                                                                        // Ideally we would look up a separate "users" table or similar, but for now fallback to ID or 'Admin'
-                                                                        adminName = "Admin";
-                                                                    }
-                                                                }
-                                                                return `Deleted at - ${date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} by ${adminName}`;
-                                                            })() : "N/A"}
-                                                        </span>
-                                                    </div>
+                                                    {renderItemContent(item, section.type)}
                                                 </div>
                                                 <div className="flex gap-2 self-end sm:self-center">
                                                     <motion.button
-                                                        onClick={() => setRestoreTarget({ id: item.id, name: item.customers?.name || 'Item' })}
+                                                        onClick={() => setRestoreTarget({
+                                                            id: item.id,
+                                                            name: getItemName(item, section.type),
+                                                            type: section.type as 'seniority' | 'expenditure'
+                                                        })}
                                                         className="px-3 py-1 text-xs bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 hover:border-green-200 transition-colors"
                                                         variants={buttonVariants}
                                                         initial="idle"
@@ -212,7 +316,11 @@ const TrashPage = () => {
                                                         Restore
                                                     </motion.button>
                                                     <motion.button
-                                                        onClick={() => setPermanentDeleteTarget({ id: item.id, name: item.customers?.name || 'Item' })}
+                                                        onClick={() => setPermanentDeleteTarget({
+                                                            id: item.id,
+                                                            name: getItemName(item, section.type),
+                                                            type: section.type as 'seniority' | 'expenditure'
+                                                        })}
                                                         className="px-3 py-1 text-xs bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 transition-colors"
                                                         variants={buttonVariants}
                                                         initial="idle"

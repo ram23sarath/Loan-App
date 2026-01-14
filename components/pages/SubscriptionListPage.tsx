@@ -102,14 +102,14 @@ const SubscriptionListPage = () => {
               >
                 <Trash2Icon className="w-10 h-10 text-red-500 mb-2" />
                 <h3 className="text-lg font-bold mb-2 text-center text-gray-800 dark:text-dark-text">
-                  Delete Subscription?
+                  Move to Trash?
                 </h3>
                 <p className="text-gray-700 text-center mb-4 dark:text-dark-muted">
-                  Are you sure you want to delete the subscription for{" "}
+                  Are you sure you want to move the subscription for{" "}
                   <span className="font-semibold">
                     {pendingDelete.customers?.name}
                   </span>{" "}
-                  from {formatDate(pendingDelete.date)}?
+                  from {formatDate(pendingDelete.date)} to trash?
                 </p>
                 <div className="flex gap-4 w-full justify-center">
                   <button

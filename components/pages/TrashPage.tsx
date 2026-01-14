@@ -24,17 +24,23 @@ const TrashPage = () => {
         fetchDeletedDataEntries,
         restoreDataEntry,
         permanentDeleteDataEntry,
+        // Subscriptions
+        deletedSubscriptions,
+        fetchDeletedSubscriptions,
+        restoreSubscription,
+        permanentDeleteSubscription,
     } = useData();
 
     useEffect(() => {
         fetchDeletedSeniorityList().catch(console.error);
         fetchSeniorityList().catch(console.error);
         fetchDeletedDataEntries().catch(console.error);
-    }, [fetchDeletedSeniorityList, fetchSeniorityList, fetchDeletedDataEntries]);
+        fetchDeletedSubscriptions().catch(console.error);
+    }, [fetchDeletedSeniorityList, fetchSeniorityList, fetchDeletedDataEntries, fetchDeletedSubscriptions]);
 
     // Seniority state
-    const [restoreTarget, setRestoreTarget] = useState<{ id: string; name: string; type: 'seniority' | 'expenditure' } | null>(null);
-    const [permanentDeleteTarget, setPermanentDeleteTarget] = useState<{ id: string; name: string; type: 'seniority' | 'expenditure' } | null>(null);
+    const [restoreTarget, setRestoreTarget] = useState<{ id: string; name: string; type: 'seniority' | 'expenditure' | 'subscription' } | null>(null);
+    const [permanentDeleteTarget, setPermanentDeleteTarget] = useState<{ id: string; name: string; type: 'seniority' | 'expenditure' | 'subscription' } | null>(null);
     const [restoreError, setRestoreError] = useState<string | null>(null);
 
     useEscapeKey(!!restoreError, () => setRestoreError(null));
@@ -69,6 +75,13 @@ const TrashPage = () => {
             } catch (err: any) {
                 alert(err.message || "Failed to restore data entry");
             }
+        } else if (restoreTarget.type === 'subscription') {
+            try {
+                await restoreSubscription(restoreTarget.id);
+                setRestoreTarget(null);
+            } catch (err: any) {
+                alert(err.message || "Failed to restore subscription");
+            }
         }
     };
 
@@ -88,6 +101,13 @@ const TrashPage = () => {
                 setPermanentDeleteTarget(null);
             } catch (err: any) {
                 alert(err.message || "Failed to delete data entry");
+            }
+        } else if (permanentDeleteTarget.type === 'subscription') {
+            try {
+                await permanentDeleteSubscription(permanentDeleteTarget.id);
+                setPermanentDeleteTarget(null);
+            } catch (err: any) {
+                alert(err.message || "Failed to delete subscription");
             }
         }
     };
@@ -118,7 +138,7 @@ const TrashPage = () => {
 
     const sections = [
         { title: "Loans", items: [], type: 'loan' as const },
-        { title: "Subscriptions", items: [], type: 'subscription' as const },
+        { title: "Subscriptions", items: deletedSubscriptions || [], type: 'subscription' as const },
         { title: "Loan Seniority", items: deletedSeniorityList || [], type: 'seniority' as const },
         { title: "Expenditures", items: deletedDataEntries || [], type: 'expenditure' as const },
     ];
@@ -221,6 +241,42 @@ const TrashPage = () => {
                     </div>
                 </>
             );
+        } else if (type === 'subscription') {
+            const customerName = item.customers?.name ||
+                (customers.find((c: any) => c.id === item.customer_id)?.name) ||
+                "Unknown";
+            const customerPhone = item.customers?.phone ||
+                (customers.find((c: any) => c.id === item.customer_id)?.phone);
+
+            return (
+                <>
+                    <div className="font-medium text-gray-800 dark:text-dark-text flex items-center gap-2">
+                        {customerName}
+                        {customerPhone && (
+                            <span className="text-xs font-normal text-gray-500 dark:text-dark-muted">
+                                ({customerPhone})
+                            </span>
+                        )}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-dark-muted flex flex-wrap gap-x-2 mt-0.5">
+                        <span className="font-medium text-indigo-600 dark:text-indigo-400">
+                            ₹{formatNumberIndian(item.amount)}
+                        </span>
+                        <span>•</span>
+                        <span>Receipt: {item.receipt}</span>
+                        {item.date && (
+                            <>
+                                <span>•</span>
+                                <span>{formatDate(item.date)}</span>
+                            </>
+                        )}
+                        <span>•</span>
+                        <span className="text-red-500/80 dark:text-red-400/80">
+                            {formatDeletedInfo(item)}
+                        </span>
+                    </div>
+                </>
+            );
         }
         return null;
     };
@@ -234,6 +290,11 @@ const TrashPage = () => {
                 (customers.find((c: any) => c.id === item.customer_id)?.name) ||
                 "Entry";
             return `${customerName}'s ${item.type} entry`;
+        } else if (type === 'subscription') {
+            const customerName = item.customers?.name ||
+                (customers.find((c: any) => c.id === item.customer_id)?.name) ||
+                "Subscription";
+            return `${customerName}'s subscription`;
         }
         return 'Item';
     };
@@ -305,7 +366,7 @@ const TrashPage = () => {
                                                         onClick={() => setRestoreTarget({
                                                             id: item.id,
                                                             name: getItemName(item, section.type),
-                                                            type: section.type as 'seniority' | 'expenditure'
+                                                            type: section.type as 'seniority' | 'expenditure' | 'subscription'
                                                         })}
                                                         className="px-3 py-1 text-xs bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded hover:bg-green-50 dark:hover:bg-green-900/30 hover:text-green-600 dark:hover:text-green-400 hover:border-green-200 transition-colors"
                                                         variants={buttonVariants}
@@ -319,7 +380,7 @@ const TrashPage = () => {
                                                         onClick={() => setPermanentDeleteTarget({
                                                             id: item.id,
                                                             name: getItemName(item, section.type),
-                                                            type: section.type as 'seniority' | 'expenditure'
+                                                            type: section.type as 'seniority' | 'expenditure' | 'subscription'
                                                         })}
                                                         className="px-3 py-1 text-xs bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 transition-colors"
                                                         variants={buttonVariants}

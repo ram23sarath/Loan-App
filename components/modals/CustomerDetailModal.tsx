@@ -36,16 +36,16 @@ const backdropVariants: Variants = {
 
 const modalVariants: Variants = {
   hidden: { opacity: 0, y: 50, scale: 0.95 },
-  visible: { 
-    opacity: 1, 
-    y: 0, 
-    scale: 1, 
-    transition: { 
-      duration: 0.4, 
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.4,
       ease: 'easeOut',
       staggerChildren: 0.05,
       delayChildren: 0.1,
-    } 
+    }
   },
   exit: { opacity: 0, y: 50, scale: 0.95, transition: { duration: 0.25, ease: 'easeIn' } },
 };
@@ -172,7 +172,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     const sorted = [...subscriptions];
     sorted.sort((a, b) => {
       let compareValue = 0;
-      
+
       if (subscriptionSortBy === 'date') {
         compareValue = new Date(a.date).getTime() - new Date(b.date).getTime();
       } else if (subscriptionSortBy === 'receipt') {
@@ -182,7 +182,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
       } else if (subscriptionSortBy === 'amount') {
         compareValue = a.amount - b.amount;
       }
-      
+
       return subscriptionSortOrder === 'desc' ? -compareValue : compareValue;
     });
     return sorted;
@@ -247,14 +247,14 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
       const paymentPercentage = (amountPaid / totalRepayable) * 100;
       return paymentPercentage < 80;
     });
-    
+
     if (!ongoing) return null;
-    
+
     const loanInstallments = installmentsByLoanId.get(ongoing.id) || [];
     const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
     const totalRepayable = ongoing.original_amount + ongoing.interest_amount;
     const paymentPercentage = Math.round((amountPaid / totalRepayable) * 100);
-    
+
     return {
       paymentPercentage,
       amountPaid,
@@ -474,7 +474,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border" disable3D>
             <h3 className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-base sm:text-2xl font-semibold dark:text-dark-text">
               <div className="flex items-center gap-2 sm:gap-3">
-                <LandmarkIcon className="w-5 h-5 sm:w-6 sm:h-6" /> 
+                <LandmarkIcon className="w-5 h-5 sm:w-6 sm:h-6" />
                 <span>Loans</span>
               </div>
               {loans.length > 0 && (
@@ -799,7 +799,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border" disable3D>
             <h3 className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-base sm:text-2xl font-semibold dark:text-dark-text">
               <div className="flex items-center gap-2 sm:gap-3">
-                <HistoryIcon className="w-5 h-5 sm:w-6 sm:h-6" /> 
+                <HistoryIcon className="w-5 h-5 sm:w-6 sm:h-6" />
                 <span>Subscriptions</span>
               </div>
               {subscriptions.length > 0 && (
@@ -1202,9 +1202,9 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border relative z-[100000]"
                   onClick={e => e.stopPropagation()}
                 >
-                  <h3 className="text-lg font-bold mb-3 dark:text-dark-text">Delete Loan?</h3>
+                  <h3 className="text-lg font-bold mb-3 dark:text-dark-text">Move Loan to Trash?</h3>
                   <p className="mb-4 text-sm text-gray-600 dark:text-dark-muted">
-                    Are you sure you want to delete the loan from <span className="font-semibold dark:text-dark-text">{formatDate(deleteLoanTarget.payment_date)}</span>? This will also delete all its installments.
+                    Are you sure you want to move the loan from <span className="font-semibold dark:text-dark-text">{formatDate(deleteLoanTarget.payment_date)}</span> to trash? You can restore it later from the Trash page.
                   </p>
                   <div className="flex justify-end gap-2">
                     <button
@@ -1217,7 +1217,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                       onClick={confirmDeleteLoan}
                       className="px-3 py-2 rounded bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
                     >
-                      Delete Loan
+                      Move to Trash
                     </button>
                   </div>
                 </motion.div>

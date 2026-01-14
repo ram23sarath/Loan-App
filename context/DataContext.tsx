@@ -130,6 +130,11 @@ interface DataContextType {
   fetchDeletedSubscriptions: () => Promise<void>;
   restoreSubscription: (id: string) => Promise<void>;
   permanentDeleteSubscription: (id: string) => Promise<void>;
+  // Loans soft delete
+  deletedLoans: LoanWithCustomer[];
+  fetchDeletedLoans: () => Promise<void>;
+  restoreLoan: (id: string) => Promise<void>;
+  permanentDeleteLoan: (id: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -224,6 +229,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [deletedSeniorityList, setDeletedSeniorityList] = useState<any[]>([]);
   const [deletedDataEntries, setDeletedDataEntries] = useState<DataEntry[]>([]);
   const [deletedSubscriptions, setDeletedSubscriptions] = useState<SubscriptionWithCustomer[]>([]);
+  const [deletedLoans, setDeletedLoans] = useState<LoanWithCustomer[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [dataEntries, setDataEntries] = useState<DataEntry[]>([]);
@@ -283,11 +289,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           if (custErr) throw custErr;
           setCustomers((customerData as unknown as Customer[]) || []);
 
-          // Loans for this customer
+          // Loans for this customer (excluding soft-deleted)
           const { data: loansData, error: loansError } = await supabase
             .from("loans")
             .select("*, customers(name, phone)")
-            .eq("customer_id", effectiveScopedId);
+            .eq("customer_id", effectiveScopedId)
+            .is("deleted_at", null);
           if (loansError) throw loansError;
           const loansArr = (loansData as unknown as LoanWithCustomer[]) || [];
           setLoans(loansArr);
@@ -341,11 +348,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           );
           setCustomers(customersData);
 
+          // Fetch loans (excluding soft-deleted)
           const loansData = await fetchAllRecords<LoanWithCustomer>(
             () =>
               supabase
                 .from("loans")
                 .select("*, customers(name, phone)")
+                .is("deleted_at", null)
                 .order("created_at", { ascending: false }),
             "loans"
           );
@@ -533,6 +542,31 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     } catch (err: any) {
       console.error("Failed to fetch deleted subscriptions", err);
       setDeletedSubscriptions([]);
+    }
+  }, [session, isScopedCustomer]);
+
+  // Fetch deleted loans (admin only - RLS enforced)
+  const fetchDeletedLoans = useCallback(async () => {
+    try {
+      if (!session || !session.user || !session.user.id || isScopedCustomer) {
+        setDeletedLoans([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("loans")
+        .select("*, customers(name, phone)")
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: false });
+
+      if (error) {
+        console.error("Supabase error fetching deleted loans:", error);
+        throw error;
+      }
+      setDeletedLoans((data as LoanWithCustomer[]) || []);
+    } catch (err: any) {
+      console.error("Failed to fetch deleted loans", err);
+      setDeletedLoans([]);
     }
   }, [session, isScopedCustomer]);
 
@@ -1117,7 +1151,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                   supabase
                     .from("loans")
                     .select("*, customers(name, phone)")
-                    .eq("customer_id", currentScopedId),
+                    .eq("customer_id", currentScopedId)
+                    .is("deleted_at", null),
                   supabase
                     .from("subscriptions")
                     .select("*, customers(name, phone)")
@@ -1192,6 +1227,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                   supabase
                     .from("loans")
                     .select("*, customers(name, phone)")
+                    .is("deleted_at", null)
                     .order("created_at", { ascending: false }),
                 "loans"
               );
@@ -1399,7 +1435,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
               supabase
                 .from("loans")
                 .select("*, customers(name, phone)")
-                .eq("customer_id", currentScopedId),
+                .eq("customer_id", currentScopedId)
+                .is("deleted_at", null),
               supabase
                 .from("subscriptions")
                 .select("*, customers(name, phone)")
@@ -1478,6 +1515,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
               supabase
                 .from("loans")
                 .select("*, customers(name, phone)")
+                .is("deleted_at", null)
                 .order("created_at", { ascending: false }),
             "loans"
           );
@@ -1887,11 +1925,72 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     if (isScopedCustomer)
       throw new Error("Read-only access: scoped customers cannot delete loans");
     try {
-      const { error } = await supabase.from("loans").delete().eq("id", loanId);
+      // Soft delete: set deleted_at timestamp instead of hard delete
+      const { error } = await supabase
+        .from("loans")
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: session?.user?.email || session?.user?.id || "Unknown",
+        } as any)
+        .eq("id", loanId);
       if (error) throw error;
       await fetchData();
+      await fetchDeletedLoans();
     } catch (error) {
       throw new Error(parseSupabaseError(error, `deleting loan ${loanId}`));
+    }
+  };
+
+  const restoreLoan = async (id: string): Promise<void> => {
+    if (isScopedCustomer)
+      throw new Error("Read-only access: scoped customers cannot restore loans");
+    try {
+      // Restore soft-deleted entry by clearing deleted_at
+      const { error } = await supabase
+        .from("loans")
+        .update({
+          deleted_at: null,
+          deleted_by: null,
+        } as any)
+        .eq("id", id);
+      if (error) throw error;
+      await fetchData();
+      await fetchDeletedLoans();
+    } catch (err: any) {
+      throw new Error(parseSupabaseError(err, `restoring loan ${id}`));
+    }
+  };
+
+  const permanentDeleteLoan = async (id: string): Promise<void> => {
+    if (isScopedCustomer)
+      throw new Error(
+        "Read-only access: scoped customers cannot permanently delete loans"
+      );
+    try {
+      // Defensive check: verify the loan is soft-deleted before permanent deletion
+      const { data: entry, error: fetchError } = await supabase
+        .from("loans")
+        .select("id, deleted_at")
+        .eq("id", id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      if (!entry || (entry as any).deleted_at === null) {
+        throw new Error(
+          "Cannot permanently delete: loan must be soft-deleted first (moved to trash)"
+        );
+      }
+
+      // Hard delete - permanently remove the loan (installments will cascade delete)
+      const { error } = await supabase
+        .from("loans")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+      await fetchDeletedLoans();
+    } catch (err: any) {
+      throw new Error(parseSupabaseError(err, `permanently deleting loan ${id}`));
     }
   };
 
@@ -2043,6 +2142,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         fetchDeletedSubscriptions,
         restoreSubscription,
         permanentDeleteSubscription,
+        deletedLoans,
+        fetchDeletedLoans,
+        restoreLoan,
+        permanentDeleteLoan,
       }}
     >
       {children}

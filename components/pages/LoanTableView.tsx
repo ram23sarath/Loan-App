@@ -320,9 +320,9 @@ const LoanTableView: React.FC = () => {
     const emptyMessage =
       isScopedCustomer && scopedCustomerId
         ? (() => {
-            const customer = customerMap.get(scopedCustomerId);
-            return `No Loan Entries for ${customer?.name || "you"}`;
-          })()
+          const customer = customerMap.get(scopedCustomerId);
+          return `No Loan Entries for ${customer?.name || "you"}`;
+        })()
         : "No loans recorded yet.";
 
     return (
@@ -521,9 +521,8 @@ const LoanTableView: React.FC = () => {
                     {loan.payment_date ? formatDate(loan.payment_date) : "-"}
                   </td>
                   <td
-                    className={`px-4 py-2 border-b font-semibold dark:border-dark-border ${
-                      isPaidOff ? "text-green-600" : "text-orange-600"
-                    }`}
+                    className={`px-4 py-2 border-b font-semibold dark:border-dark-border ${isPaidOff ? "text-green-600" : "text-orange-600"
+                      }`}
                   >
                     {loanStatus.status}
                   </td>
@@ -594,23 +593,20 @@ const LoanTableView: React.FC = () => {
                                     if (inst.late_fee && inst.late_fee > 0) {
                                       message += ` (including a ₹${inst.late_fee} late fee)`;
                                     }
-                                    message += ` (Installment #${
-                                      inst.installment_number
-                                    }) was received on ${formatDate(
-                                      inst.date,
-                                      "whatsapp"
-                                    )}. Thank you.`;
+                                    message += ` (Installment #${inst.installment_number
+                                      }) was received on ${formatDate(
+                                        inst.date,
+                                        "whatsapp"
+                                      )}. Thank you.`;
                                     // Append signature
                                     message += " Thank You, I J Reddy.";
                                     // build wa.me URL and ensure proper encoding
                                     try {
-                                      whatsappUrl = `https://wa.me/${
-                                        customer.phone
-                                      }?text=${encodeURIComponent(message)}`;
+                                      whatsappUrl = `https://wa.me/${customer.phone
+                                        }?text=${encodeURIComponent(message)}`;
                                     } catch (err) {
-                                      whatsappUrl = `https://api.whatsapp.com/send?phone=${
-                                        customer.phone
-                                      }&text=${encodeURIComponent(message)}`;
+                                      whatsappUrl = `https://api.whatsapp.com/send?phone=${customer.phone
+                                        }&text=${encodeURIComponent(message)}`;
                                     }
                                   }
                                   return (
@@ -757,15 +753,12 @@ const LoanTableView: React.FC = () => {
             /^\d{10,15}$/.test(customer.phone)
           ) {
             isValidPhone = true;
-            loanMessage = `Hi ${
-              customer.name
-            }, this is regarding your loan.\n\nTotal Repayable: ${formatCurrencyIN(
-              totalRepayable
-            )}\nTotal Installments: ${
-              loan.total_instalments
-            }\nPaid: ${formatCurrencyIN(paid)}\nInstallments Paid: ${
-              loanInstallments.length
-            }\nBalance: ${formatCurrencyIN(balance)}\n\nThank You, I J Reddy.`;
+            loanMessage = `Hi ${customer.name
+              }, this is regarding your loan.\n\nTotal Repayable: ${formatCurrencyIN(
+                totalRepayable
+              )}\nTotal Installments: ${loan.total_instalments
+              }\nPaid: ${formatCurrencyIN(paid)}\nInstallments Paid: ${loanInstallments.length
+              }\nBalance: ${formatCurrencyIN(balance)}\n\nThank You, I J Reddy.`;
           }
 
           return (
@@ -774,9 +767,8 @@ const LoanTableView: React.FC = () => {
               {draggingCardId === loan.id && (
                 <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
                   <div
-                    className={`${
-                      isScopedCustomer ? "w-full" : "w-1/2"
-                    } bg-green-500 flex items-center justify-start pl-4`}
+                    className={`${isScopedCustomer ? "w-full" : "w-1/2"
+                      } bg-green-500 flex items-center justify-start pl-4`}
                   >
                     <WhatsAppIcon className="w-6 h-6 text-white" />
                   </div>
@@ -847,11 +839,10 @@ const LoanTableView: React.FC = () => {
                 <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
                   Status:{" "}
                   <span
-                    className={`font-semibold ${
-                      loanStatus.isPaidOff
+                    className={`font-semibold ${loanStatus.isPaidOff
                         ? "text-green-600"
                         : "text-orange-600"
-                    }`}
+                      }`}
                   >
                     {loanStatus.status}
                   </span>
@@ -964,12 +955,11 @@ const LoanTableView: React.FC = () => {
                             if (inst.late_fee && inst.late_fee > 0) {
                               message += ` (including a ₹${inst.late_fee} late fee)`;
                             }
-                            message += ` (Installment #${
-                              inst.installment_number
-                            }) was received on ${formatDate(
-                              inst.date,
-                              "whatsapp"
-                            )}. Thank you.`;
+                            message += ` (Installment #${inst.installment_number
+                              }) was received on ${formatDate(
+                                inst.date,
+                                "whatsapp"
+                              )}. Thank you.`;
                             message += " Thank You, I J Reddy.";
                           }
                           return (
@@ -1104,11 +1094,10 @@ const LoanTableView: React.FC = () => {
                       setCurrentPage(page);
                       setPagePickerOpen(null);
                     }}
-                    className={`px-3 py-1 rounded border ${
-                      currentPage === page
+                    className={`px-3 py-1 rounded border ${currentPage === page
                         ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
                         : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
-                    }`}
+                      }`}
                   >
                     {page}
                   </button>
@@ -1189,11 +1178,10 @@ const LoanTableView: React.FC = () => {
                                 setCurrentPage(p);
                                 setPagePickerOpen(null);
                               }}
-                              className={`px-2 py-1 text-sm rounded ${
-                                currentPage === p
+                              className={`px-2 py-1 text-sm rounded ${currentPage === p
                                   ? "bg-indigo-600 text-white"
                                   : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
-                              }`}
+                                }`}
                             >
                               {p}
                             </button>
@@ -1279,11 +1267,10 @@ const LoanTableView: React.FC = () => {
                                 setCurrentPage(p);
                                 setPagePickerOpen(null);
                               }}
-                              className={`px-2 py-1 text-sm rounded ${
-                                currentPage === p
+                              className={`px-2 py-1 text-sm rounded ${currentPage === p
                                   ? "bg-indigo-600 text-white"
                                   : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
-                              }`}
+                                }`}
                             >
                               {p}
                             </button>
@@ -1359,7 +1346,7 @@ const LoanTableView: React.FC = () => {
               const totalInstalmentsRaw = updated.total_instalments;
               const totalTrimmed =
                 totalInstalmentsRaw === undefined ||
-                totalInstalmentsRaw === null
+                  totalInstalmentsRaw === null
                   ? ""
                   : String(totalInstalmentsRaw).trim();
               if (totalTrimmed !== "") {
@@ -1555,14 +1542,14 @@ const LoanTableView: React.FC = () => {
               >
                 <Trash2Icon className="w-10 h-10 text-red-500 mb-2" />
                 <h3 className="text-lg font-bold mb-2 text-center text-gray-800 dark:text-dark-text">
-                  Delete Loan?
+                  Move Loan to Trash?
                 </h3>
                 <p className="text-gray-700 text-center mb-4 dark:text-dark-muted">
-                  Are you sure you want to delete the entire loan for{" "}
+                  Are you sure you want to move the loan for{" "}
                   <span className="font-semibold">
                     {deleteLoanTarget.customer ?? "this customer"}
                   </span>
-                  ?
+                  {" "}to trash? You can restore it later from the Trash page.
                 </p>
                 <div className="flex gap-4 w-full justify-center">
                   <button
@@ -1583,7 +1570,7 @@ const LoanTableView: React.FC = () => {
                     }}
                     className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold"
                   >
-                    Delete
+                    Move to Trash
                   </button>
                 </div>
               </motion.div>

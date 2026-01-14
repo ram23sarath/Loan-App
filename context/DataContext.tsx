@@ -95,10 +95,12 @@ interface DataContextType {
   deleteSubscription: (subscriptionId: string) => Promise<void>;
   deleteInstallment: (installmentId: string) => Promise<void>;
   seniorityList: Array<any>;
+  deletedSeniorityList: Array<any>;
   fetchSeniorityList: (
     overrideSession?: Session | null,
     overrideIsScoped?: boolean
   ) => Promise<void>;
+  fetchDeletedSeniorityList: () => Promise<void>;
   addToSeniority: (
     customerId: string,
     details?: {
@@ -116,6 +118,8 @@ interface DataContextType {
     }
   ) => Promise<void>;
   removeFromSeniority: (id: string) => Promise<void>;
+  restoreSeniorityEntry: (id: string) => Promise<void>;
+  permanentDeleteSeniority: (id: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -207,6 +211,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   >([]);
   const [installments, setInstallments] = useState<Installment[]>([]);
   const [seniorityList, setSeniorityList] = useState<any[]>([]);
+  const [deletedSeniorityList, setDeletedSeniorityList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [dataEntries, setDataEntries] = useState<DataEntry[]>([]);
@@ -419,11 +424,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         let query = supabase
           .from("loan_seniority")
           .select("*, customers(name, phone)")
+          .is("deleted_at", null)
           .order("loan_request_date", { ascending: true, nullsFirst: false })
           .order("created_at", { ascending: true });
         // All users (including scoped) see the full seniority list
         // Primary sort uses loan_request_date so requested dates dictate the order,
         // with created_at providing a tie-breaker for same-day entries.
+        // Filter by deleted_at IS NULL to exclude soft-deleted entries
 
         const { data, error } = await query;
         if (error) {
@@ -437,6 +444,31 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     },
     [session, isScopedCustomer]
   );
+
+  // Fetch deleted seniority entries (admin only - RLS enforced)
+  const fetchDeletedSeniorityList = useCallback(async () => {
+    try {
+      if (!session || !session.user || !session.user.id || isScopedCustomer) {
+        setDeletedSeniorityList([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("loan_seniority")
+        .select("*, customers(name, phone)")
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: false });
+
+      if (error) {
+        console.error("Supabase error fetching deleted loan_seniority:", error);
+        throw error;
+      }
+      setDeletedSeniorityList((data as any[]) || []);
+    } catch (err: any) {
+      console.error("Failed to fetch deleted seniority list", err);
+      setDeletedSeniorityList([]);
+    }
+  }, [session, isScopedCustomer]);
 
   // ... [addToSeniority, removeFromSeniority, updateSeniority functions remain unchanged] ...
   const addToSeniority = async (
@@ -510,14 +542,74 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         "Read-only access: scoped customers cannot modify seniority list"
       );
     try {
+      // Soft delete: set deleted_at timestamp instead of hard delete
+      const { error } = await supabase
+        .from("loan_seniority")
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: session?.user?.id || null,
+        } as any)
+        .eq("id", id);
+      if (error) throw error;
+      await fetchSeniorityList();
+      await fetchDeletedSeniorityList();
+    } catch (err: any) {
+      throw new Error(parseSupabaseError(err, `removing seniority item ${id}`));
+    }
+  };
+
+  const restoreSeniorityEntry = async (id: string) => {
+    if (isScopedCustomer)
+      throw new Error(
+        "Read-only access: scoped customers cannot restore seniority entries"
+      );
+    try {
+      // Restore soft-deleted entry by clearing deleted_at
+      const { error } = await supabase
+        .from("loan_seniority")
+        .update({
+          deleted_at: null,
+          deleted_by: null,
+        } as any)
+        .eq("id", id);
+      if (error) throw error;
+      await fetchSeniorityList();
+      await fetchDeletedSeniorityList();
+    } catch (err: any) {
+      throw new Error(parseSupabaseError(err, `restoring seniority item ${id}`));
+    }
+  };
+
+  const permanentDeleteSeniority = async (id: string) => {
+    if (isScopedCustomer)
+      throw new Error(
+        "Read-only access: scoped customers cannot permanently delete seniority entries"
+      );
+    try {
+      // Defensive check: verify the entry is soft-deleted before permanent deletion
+      const { data: entry, error: fetchError } = await supabase
+        .from("loan_seniority")
+        .select("id, deleted_at")
+        .eq("id", id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      if (!entry || (entry as any).deleted_at === null) {
+        throw new Error(
+          "Cannot permanently delete: entry must be soft-deleted first (moved to trash)"
+        );
+      }
+
+      // Hard delete - permanently remove the entry
       const { error } = await supabase
         .from("loan_seniority")
         .delete()
         .eq("id", id);
       if (error) throw error;
-      await fetchSeniorityList();
+      await fetchDeletedSeniorityList();
     } catch (err: any) {
-      throw new Error(parseSupabaseError(err, `removing seniority item ${id}`));
+      throw new Error(parseSupabaseError(err, `permanently deleting seniority item ${id}`));
     }
   };
 
@@ -1748,10 +1840,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         deleteInstallment,
         adjustSubscriptionForMisc,
         seniorityList,
+        deletedSeniorityList,
         fetchSeniorityList,
+        fetchDeletedSeniorityList,
         addToSeniority,
         updateSeniority,
         removeFromSeniority,
+        restoreSeniorityEntry,
+        permanentDeleteSeniority,
       }}
     >
       {children}

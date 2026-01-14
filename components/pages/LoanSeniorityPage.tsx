@@ -9,6 +9,7 @@ import type { Customer } from "../../types";
 import { Trash2Icon, PencilIcon } from "../../constants";
 import { formatDate } from "../../utils/dateFormatter";
 import { useDebounce } from "../../utils/useDebounce";
+import { useEscapeKey } from "../hooks/useEscapeKey";
 
 // Animation variants
 const listContainerVariants: Variants = {
@@ -179,10 +180,14 @@ const LoanSeniorityPage = () => {
     loans,
     subscriptions,
     seniorityList,
+    deletedSeniorityList,
     fetchSeniorityList,
+    fetchDeletedSeniorityList,
     addToSeniority,
     updateSeniority,
     removeFromSeniority,
+    restoreSeniorityEntry,
+    permanentDeleteSeniority,
     isScopedCustomer,
     installmentsByLoanId,
   } = useData();
@@ -196,6 +201,17 @@ const LoanSeniorityPage = () => {
   const itemsPerPage = 20;
   const addSearchLimit = 20;
   const [currentPage, setCurrentPage] = useState(1);
+  const [deletedPage, setDeletedPage] = useState(1);
+  const [showTrash, setShowTrash] = useState(false);
+  const [restoreTarget, setRestoreTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [permanentDeleteTarget, setPermanentDeleteTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [deletedListError, setDeletedListError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSeniorityList().catch((err) =>
@@ -203,19 +219,45 @@ const LoanSeniorityPage = () => {
     );
   }, [fetchSeniorityList]);
 
+  // Fetch deleted entries when trash view is opened (admin only)
+  useEffect(() => {
+    if (showTrash && !isScopedCustomer) {
+      setDeletedListError(null);
+      fetchDeletedSeniorityList().catch((err) => {
+        const errorMessage =
+          (err as Error).message || "Failed to load deleted seniority list";
+        console.error("Failed to load deleted seniority list", err);
+        setDeletedListError(errorMessage);
+        alert(errorMessage);
+      });
+    }
+  }, [showTrash, isScopedCustomer, fetchDeletedSeniorityList]);
+
   useEffect(() => {
     setCurrentPage(1);
   }, [seniorityList, debouncedListSearchTerm]);
+  const totalDeletedPages = useMemo(() => {
+    return Math.max(1, Math.ceil((deletedSeniorityList?.length || 0) / itemsPerPage));
+  }, [deletedSeniorityList, itemsPerPage]);
+
+  const paginatedDeletedSeniorityList = useMemo(() => {
+    const start = (deletedPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    return (deletedSeniorityList || []).slice(start, end);
+  }, [deletedSeniorityList, deletedPage, itemsPerPage]);
+
+  useEffect(() => {
+    setDeletedPage((p) => Math.min(p, totalDeletedPages));
+  }, [totalDeletedPages]);
 
   const filteredSeniorityList = useMemo(() => {
-    const term = debouncedListSearchTerm.trim().toLowerCase();
+    const term = debouncedListSearchTerm?.toLowerCase() || "";
     if (!term) return seniorityList || [];
-    return (seniorityList || []).filter(
-      (entry: any) =>
-        entry.customers?.name?.toLowerCase().includes(term) ||
-        String(entry.customers?.phone || "").toLowerCase().includes(term) ||
-        entry.station_name?.toLowerCase().includes(term) ||
-        entry.loan_type?.toLowerCase().includes(term)
+    return (seniorityList || []).filter((entry: any) =>
+      entry.customers?.name?.toLowerCase().includes(term) ||
+      String(entry.customers?.phone || "").toLowerCase().includes(term) ||
+      entry.station_name?.toLowerCase().includes(term) ||
+      entry.loan_type?.toLowerCase().includes(term)
     );
   }, [debouncedListSearchTerm, seniorityList]);
 
@@ -345,6 +387,19 @@ const LoanSeniorityPage = () => {
     }
   };
 
+  const confirmRestore = async () => {
+    if (!restoreTarget) return;
+    try {
+      await restoreSeniorityEntry(restoreTarget.id);
+      setRestoreTarget(null);
+    } catch (err) {
+      alert(
+        (err as Error).message ||
+          "Failed to restore customer to seniority list"
+      );
+    }
+  };
+
   const closeModal = useCallback(() => {
     setModalCustomer(null);
     setStationName("");
@@ -352,29 +407,23 @@ const LoanSeniorityPage = () => {
     setLoanRequestDate("");
   }, []);
 
-  useEffect(() => {
-    if (!modalCustomer) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        closeModal();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [modalCustomer, closeModal]);
+  useEscapeKey(!!modalCustomer, closeModal);
+  useEscapeKey(!!deleteTarget, () => setDeleteTarget(null));
+  useEscapeKey(!!restoreTarget, () => setRestoreTarget(null));
+  useEscapeKey(!!permanentDeleteTarget, () => setPermanentDeleteTarget(null));
 
-  useEffect(() => {
-    if (!deleteTarget) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setDeleteTarget(null);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [deleteTarget]);
+  const confirmPermanentDelete = async () => {
+    if (!permanentDeleteTarget) return;
+    try {
+      await permanentDeleteSeniority(permanentDeleteTarget.id);
+      setPermanentDeleteTarget(null);
+    } catch (err) {
+      alert(
+        (err as Error).message ||
+          "Failed to permanently delete seniority entry"
+      );
+    }
+  };
 
   const saveModalEntry = async () => {
     if (!modalCustomer) return;
@@ -429,6 +478,24 @@ const LoanSeniorityPage = () => {
             Loan Seniority
           </motion.span>
         </h2>
+        {!isScopedCustomer && (
+          <motion.button
+            onClick={() => setShowTrash(!showTrash)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              showTrash
+                ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-300 dark:border-red-700"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"
+            }`}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: headerDelay + 0.3 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Trash2Icon className="w-4 h-4" />
+            {showTrash ? "Hide Trash" : "View Trash"}
+          </motion.button>
+        )}
       </motion.div>
       {!isScopedCustomer && (
         <GlassCard className="mb-6 !p-4" hoverScale={false}>
@@ -1115,6 +1182,296 @@ const LoanSeniorityPage = () => {
         )}
       </GlassCard>
 
+      {/* Trash View - Admin Only */}
+      <AnimatePresence>
+        {showTrash && !isScopedCustomer && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+            animate={{ opacity: 1, height: "auto", marginTop: 24 }}
+            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          >
+            <GlassCard className="!p-4 border-red-200 dark:border-red-800/50" hoverScale={false}>
+              <div className="flex items-center gap-2 mb-4">
+                <Trash2Icon className="w-5 h-5 text-red-500" />
+                <h3 className="text-xl font-bold text-red-700 dark:text-red-400">
+                  Deleted Entries
+                </h3>
+                <span className="text-sm text-gray-500 dark:text-dark-muted ml-2">
+                  ({deletedSeniorityList?.length || 0} items)
+                </span>
+              </div>
+              
+              {!deletedSeniorityList || deletedSeniorityList.length === 0 ? (
+                <motion.div
+                  className="text-sm text-gray-500 dark:text-dark-muted py-4 text-center"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  No deleted entries found. Removed items will appear here.
+                </motion.div>
+              ) : (
+                <>
+                  {/* Desktop table for trash */}
+                  <motion.div
+                    className="hidden md:block overflow-x-auto"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                  >
+                    <table className="min-w-full border-collapse">
+                      <thead>
+                        <tr className="bg-red-50 dark:bg-red-900/20">
+                          <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
+                            Customer
+                          </th>
+                          <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
+                            Phone
+                          </th>
+                          <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
+                            Station
+                          </th>
+                          <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
+                            Loan Type
+                          </th>
+                          <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
+                            Deleted
+                          </th>
+                          <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <motion.tbody
+                        initial="hidden"
+                        animate="visible"
+                        variants={tableBodyVariants}
+                      >
+                        <AnimatePresence mode="popLayout">
+                          {paginatedDeletedSeniorityList.map((entry: any, idx: number) => (
+                            <motion.tr
+                              key={entry.id}
+                              className="even:bg-red-50/50 dark:even:bg-red-900/10"
+                              custom={idx}
+                              variants={tableRowVariants}
+                              initial="hidden"
+                              animate="visible"
+                              exit="exit"
+                              layout
+                            >
+                              <td className="px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">
+                                {entry.customers?.name || "Unknown"}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-600 dark:text-dark-muted">
+                                {entry.customers?.phone || ""}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-700 dark:text-dark-text">
+                                {entry.station_name || "-"}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-700 dark:text-dark-text">
+                                {entry.loan_type || "-"}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-500 dark:text-dark-muted">
+                                {entry.deleted_at
+                                  ? formatDate(entry.deleted_at)
+                                  : "-"}
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex gap-2">
+                                  <motion.button
+                                    onClick={() =>
+                                      setRestoreTarget({
+                                        id: entry.id,
+                                        name: entry.customers?.name || "Unknown",
+                                      })
+                                    }
+                                    className="px-3 py-1 rounded bg-green-600 text-white text-sm hover:bg-green-700"
+                                    variants={buttonVariants}
+                                    initial="idle"
+                                    whileHover="hover"
+                                    whileTap="tap"
+                                  >
+                                    Restore
+                                  </motion.button>
+                                  <motion.button
+                                    onClick={() =>
+                                      setPermanentDeleteTarget({
+                                        id: entry.id,
+                                        name: entry.customers?.name || "Unknown",
+                                      })
+                                    }
+                                    className="p-1 rounded-full hover:bg-red-500/10 transition-colors"
+                                    title="Permanently delete"
+                                    variants={deleteButtonVariants}
+                                    initial="idle"
+                                    whileHover="hover"
+                                    whileTap="tap"
+                                  >
+                                    <Trash2Icon className="w-4 h-4 text-red-500" />
+                                  </motion.button>
+                                </div>
+                              </td>
+                            </motion.tr>
+                          ))}
+                        </AnimatePresence>
+                      </motion.tbody>
+                    </table>
+                  </motion.div>
+
+                  {/* Mobile cards for trash */}
+                  <motion.div
+                    className="md:hidden space-y-3"
+                    variants={listContainerVariants}
+                    initial="hidden"
+                    animate="visible"
+                  >
+                    <AnimatePresence mode="popLayout">
+                      {paginatedDeletedSeniorityList.map((entry: any) => (
+                        <motion.div
+                          key={entry.id}
+                          className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/30 rounded p-3"
+                          variants={listItemVariants}
+                          layout
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="min-w-0">
+                              <div className="font-semibold text-gray-700 dark:text-gray-300 truncate">
+                                {entry.customers?.name || "Unknown"}
+                              </div>
+                              <div className="text-sm text-gray-500 dark:text-dark-muted">
+                                {entry.customers?.phone || ""}
+                              </div>
+                              <div className="mt-2 text-sm text-gray-600 dark:text-dark-muted space-y-1">
+                                {entry.station_name && (
+                                  <div>
+                                    Station:{" "}
+                                    <span className="font-medium text-gray-800 dark:text-dark-text">
+                                      {entry.station_name}
+                                    </span>
+                                  </div>
+                                )}
+                                {entry.loan_type && (
+                                  <div>
+                                    Loan Type:{" "}
+                                    <span className="font-medium text-gray-800 dark:text-dark-text">
+                                      {entry.loan_type}
+                                    </span>
+                                  </div>
+                                )}
+                                {entry.deleted_at && (
+                                  <div className="text-red-600 dark:text-red-400">
+                                    Deleted:{" "}
+                                    <span className="font-medium">
+                                      {formatDate(entry.deleted_at)}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-2 ml-3">
+                              <motion.button
+                                onClick={() =>
+                                  setRestoreTarget({
+                                    id: entry.id,
+                                    name: entry.customers?.name || "Unknown",
+                                  })
+                                }
+                                className="px-3 py-1 rounded bg-green-600 text-white text-sm"
+                                variants={buttonVariants}
+                                initial="idle"
+                                whileHover="hover"
+                                whileTap="tap"
+                              >
+                                Restore
+                              </motion.button>
+                              <motion.button
+                                onClick={() =>
+                                  setPermanentDeleteTarget({
+                                    id: entry.id,
+                                    name: entry.customers?.name || "Unknown",
+                                  })
+                                }
+                                className="px-3 py-1 rounded bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm flex items-center justify-center gap-1"
+                                variants={buttonVariants}
+                                initial="idle"
+                                whileHover="hover"
+                                whileTap="tap"
+                              >
+                                <Trash2Icon className="w-3 h-3" />
+                                Delete
+                              </motion.button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </motion.div>
+
+                  {/* Pagination Controls for Trash */}
+                  {totalDeletedPages > 1 && (
+                    <motion.div
+                      className="flex items-center justify-center gap-2 mt-6 flex-wrap"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.3 }}
+                    >
+                      <motion.button
+                        onClick={() => setDeletedPage(Math.max(1, deletedPage - 1))}
+                        disabled={deletedPage === 1}
+                        className="px-3 py-2 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-200 dark:hover:bg-red-900/50"
+                        variants={buttonVariants}
+                        initial="idle"
+                        whileHover={deletedPage > 1 ? "hover" : "idle"}
+                        whileTap={deletedPage > 1 ? "tap" : "idle"}
+                      >
+                        ← Prev
+                      </motion.button>
+
+                      <div className="flex gap-1 flex-wrap justify-center">
+                        {Array.from({ length: totalDeletedPages }, (_, i) => i + 1).map(
+                          (page) => (
+                            <motion.button
+                              key={page}
+                              onClick={() => setDeletedPage(page)}
+                              className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                                deletedPage === page
+                                  ? "bg-red-600 text-white dark:bg-red-700"
+                                  : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50"
+                              }`}
+                              variants={buttonVariants}
+                              initial="idle"
+                              whileHover="hover"
+                              whileTap="tap"
+                            >
+                              {page}
+                            </motion.button>
+                          )
+                        )}
+                      </div>
+
+                      <motion.button
+                        onClick={() => setDeletedPage(Math.min(totalDeletedPages, deletedPage + 1))}
+                        disabled={deletedPage === totalDeletedPages}
+                        className="px-3 py-2 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-200 dark:hover:bg-red-900/50"
+                        variants={buttonVariants}
+                        initial="idle"
+                        whileHover={deletedPage < totalDeletedPages ? "hover" : "idle"}
+                        whileTap={deletedPage < totalDeletedPages ? "tap" : "idle"}
+                      >
+                        Next →
+                      </motion.button>
+
+                      <span className="text-sm text-gray-600 dark:text-dark-muted ml-2">
+                        Page {deletedPage} of {totalDeletedPages}
+                      </span>
+                    </motion.div>
+                  )}
+                </>
+              )}
+            </GlassCard>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Delete Confirmation Modal - WRAPPED IN PORTAL */}
       {ReactDOM.createPortal(
         <AnimatePresence>
@@ -1149,7 +1506,7 @@ const LoanSeniorityPage = () => {
                   <span className="font-semibold text-gray-800 dark:text-dark-text">
                     {deleteTarget.name}
                   </span>{" "}
-                  from the seniority list?
+                  from the seniority list? You can restore this entry later from the Trash.
                 </motion.p>
                 <motion.div
                   className="flex justify-end gap-2"
@@ -1176,6 +1533,154 @@ const LoanSeniorityPage = () => {
                     whileTap="tap"
                   >
                     Remove
+                  </motion.button>
+                </motion.div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
+      {/* Restore Confirmation Modal - WRAPPED IN PORTAL */}
+      {ReactDOM.createPortal(
+        <AnimatePresence>
+          {restoreTarget && (
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+              variants={modalBackdropVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              onClick={() => setRestoreTarget(null)}
+            >
+              <motion.div
+                className="bg-white dark:bg-dark-card rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md"
+                variants={modalContentVariants}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <motion.h3
+                  className="text-lg font-bold mb-3 text-gray-800 dark:text-dark-text"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  Restore Seniority Entry?
+                </motion.h3>
+                <motion.p
+                  className="mb-4 text-sm text-gray-600 dark:text-dark-muted"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  Are you sure you want to restore{" "}
+                  <span className="font-semibold text-gray-800 dark:text-dark-text">
+                    {restoreTarget.name}
+                  </span>{" "}
+                  to the seniority list?
+                </motion.p>
+                <motion.div
+                  className="flex justify-end gap-2"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                >
+                  <motion.button
+                    onClick={() => setRestoreTarget(null)}
+                    className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-dark-text"
+                    variants={buttonVariants}
+                    initial="idle"
+                    whileHover="hover"
+                    whileTap="tap"
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    onClick={confirmRestore}
+                    className="px-3 py-2 rounded bg-green-600 text-white hover:bg-green-700"
+                    variants={buttonVariants}
+                    initial="idle"
+                    whileHover="hover"
+                    whileTap="tap"
+                  >
+                    Restore
+                  </motion.button>
+                </motion.div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
+      {/* Permanent Delete Confirmation Modal - WRAPPED IN PORTAL */}
+      {ReactDOM.createPortal(
+        <AnimatePresence>
+          {permanentDeleteTarget && (
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+              variants={modalBackdropVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              onClick={() => setPermanentDeleteTarget(null)}
+            >
+              <motion.div
+                className="bg-white dark:bg-dark-card rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md"
+                variants={modalContentVariants}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <motion.h3
+                  className="text-lg font-bold mb-3 text-red-700 dark:text-red-400"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  ⚠️ Permanently Delete Entry?
+                </motion.h3>
+                <motion.p
+                  className="mb-4 text-sm text-gray-600 dark:text-dark-muted"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  Are you sure you want to <strong className="text-red-600 dark:text-red-400">permanently delete</strong>{" "}
+                  <span className="font-semibold text-gray-800 dark:text-dark-text">
+                    {permanentDeleteTarget.name}
+                  </span>{" "}
+                  from the seniority records?
+                </motion.p>
+                <motion.p
+                  className="mb-4 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.15 }}
+                >
+                  This action cannot be undone. The entry will be permanently removed from the database.
+                </motion.p>
+                <motion.div
+                  className="flex justify-end gap-2"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <motion.button
+                    onClick={() => setPermanentDeleteTarget(null)}
+                    className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-dark-text"
+                    variants={buttonVariants}
+                    initial="idle"
+                    whileHover="hover"
+                    whileTap="tap"
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    onClick={confirmPermanentDelete}
+                    className="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                    variants={buttonVariants}
+                    initial="idle"
+                    whileHover="hover"
+                    whileTap="tap"
+                  >
+                    Delete Forever
                   </motion.button>
                 </motion.div>
               </motion.div>

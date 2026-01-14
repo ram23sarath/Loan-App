@@ -9,8 +9,6 @@ export type DataEntry = {
   subtype?: string | null;
 };
 
-export type NewDataEntry = Omit<DataEntry, 'id'>;
-
 // Base row types matching the database tables
 export type Customer = {
   id: string;
@@ -320,6 +318,8 @@ export type Database = {
 
 // Omit types for Supabase inserts
 export type NewCustomer = Database['public']['Tables']['customers']['Insert'];
+export type NewDataEntry = Database['public']['Tables']['data_entries']['Insert'];
 export type NewLoan = Database['public']['Tables']['loans']['Insert'];
 export type NewSubscription = Database['public']['Tables']['subscriptions']['Insert'];
 export type NewInstallment = Database['public']['Tables']['installments']['Insert'];
+export type NewLoanSeniority = Database['public']['Tables']['loan_seniority']['Insert'];

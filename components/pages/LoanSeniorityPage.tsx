@@ -184,6 +184,7 @@ const LoanSeniorityPage = () => {
     updateSeniority,
     removeFromSeniority,
     isScopedCustomer,
+    installmentsByLoanId,
   } = useData();
   const [addSearchTerm, setAddSearchTerm] = useState("");
   const debouncedAddSearchTerm = useDebounce(addSearchTerm, 300);
@@ -222,18 +223,69 @@ const LoanSeniorityPage = () => {
     return new Set((seniorityList || []).map((entry: any) => entry.customer_id));
   }, [seniorityList]);
 
+  // Helper function to calculate repayment progress for a customer
+  const getCustomerRepaymentProgress = (customerId: string): number => {
+    const customerLoans = (loans || []).filter((loan) => loan.customer_id === customerId);
+    if (!customerLoans.length) return 0; // First-time loan eligible
+
+    let maxProgress = 0;
+    customerLoans.forEach((loan) => {
+      const loanInstallments = installmentsByLoanId?.get(loan.id) || [];
+      const paidAmount = loanInstallments.reduce((sum, inst) => sum + (inst.amount || 0), 0);
+      const totalRepayable = (loan.original_amount || 0) + (loan.interest_amount || 0);
+      if (totalRepayable > 0) {
+        const progress = Math.min(paidAmount / totalRepayable, 1);
+        if (progress > maxProgress) {
+          maxProgress = progress;
+        }
+      }
+    });
+
+    return maxProgress;
+  };
+
+  // Helper function to check if customer meets repayment threshold
+  const meetsRepaymentThreshold = (customerId: string, progress: number): boolean => {
+    const customerLoans = (loans || []).filter((loan) => loan.customer_id === customerId);
+    // Allow if first-time (no loans) OR 80%+ repayment
+    return customerLoans.length === 0 || progress >= 0.8;
+  };
+
   const matchedCustomers = useMemo(() => {
     const term = debouncedAddSearchTerm.trim().toLowerCase();
     if (!term) return [];
-    return (customers || [])
+    
+    // Get all matching customers by name/phone
+    const matching = (customers || [])
       .filter((customer: Customer) => {
         const name = customer.name?.toLowerCase() || "";
         const phone = String(customer.phone || "").toLowerCase();
         return name.includes(term) || phone.includes(term);
       })
-      .filter((customer: Customer) => !existingSeniorityCustomerIds.has(customer.id))
       .sort((a: Customer, b: Customer) => (a.name || "").localeCompare(b.name || ""))
-      .slice(0, addSearchLimit);  }, [customers, debouncedAddSearchTerm, existingSeniorityCustomerIds]);
+      .slice(0, addSearchLimit);
+
+    // Map to include eligibility info
+    return matching.map((customer: Customer) => {
+      const isInSeniority = existingSeniorityCustomerIds.has(customer.id);
+      const progress = getCustomerRepaymentProgress(customer.id);
+      const progressPercent = Math.round(progress * 100);
+      const meetsThreshold = meetsRepaymentThreshold(customer.id, progress);
+      
+      let isBlocked = false;
+      let blockReason = '';
+      
+      if (isInSeniority) {
+        isBlocked = true;
+        blockReason = 'Already in seniority list';
+      } else if (!meetsThreshold) {
+        isBlocked = true;
+        blockReason = `Requires 80% repayment (current ${progressPercent}%)`;
+      }
+      
+      return { customer, isBlocked, blockReason };
+    });
+  }, [customers, debouncedAddSearchTerm, existingSeniorityCustomerIds, loans, installmentsByLoanId]);
 
   const totalPages = useMemo(() => {
     return Math.max(1, Math.ceil((filteredSeniorityList?.length || 0) / itemsPerPage));
@@ -445,15 +497,23 @@ const LoanSeniorityPage = () => {
                       Showing {matchedCustomers.length} result{matchedCustomers.length === 1 ? "" : "s"}
                       {matchedCustomers.length === addSearchLimit ? " (limited)" : ""}
                     </div>
-                    {matchedCustomers.map((customer: Customer) => (
+                    {matchedCustomers.map(({ customer, isBlocked, blockReason }) => (
                       <motion.button
                         key={customer.id}
                         type="button"
                         onClick={() => {
-                          addCustomerToList(customer);
-                          setAddSearchTerm("");
+                          if (!isBlocked) {
+                            addCustomerToList(customer);
+                            setAddSearchTerm("");
+                          }
                         }}
-                        className="w-full flex items-center justify-between text-left px-3 py-1.5 hover:bg-indigo-50 dark:hover:bg-slate-800 transition-colors text-gray-800 dark:text-dark-text"
+                        disabled={isBlocked}
+                        className={`w-full flex items-center justify-between text-left px-3 py-1.5 transition-colors ${
+                          isBlocked
+                            ? "opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800/50"
+                            : "hover:bg-indigo-50 dark:hover:bg-slate-800"
+                        } text-gray-800 dark:text-dark-text`}
+                        title={isBlocked ? blockReason : undefined}
                         variants={listItemVariants}
                         initial="hidden"
                         animate="visible"
@@ -464,8 +524,19 @@ const LoanSeniorityPage = () => {
                           <span className="text-xs text-gray-500 dark:text-dark-muted">
                             {customer.phone || ""}
                           </span>
+                          {isBlocked && (
+                            <span className="text-xs text-orange-600 dark:text-orange-400 font-medium mt-0.5">
+                              {blockReason}
+                            </span>
+                          )}
                         </div>
-                        <span className="text-xs font-semibold text-white bg-indigo-600 px-2 py-1 rounded whitespace-nowrap ml-2">Add</span>
+                        <span className={`text-xs font-semibold px-2 py-1 rounded whitespace-nowrap ml-2 ${
+                          isBlocked
+                            ? "bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400"
+                            : "text-white bg-indigo-600"
+                        }`}>
+                          {isBlocked ? "Blocked" : "Add"}
+                        </span>
                       </motion.button>
                     ))}
                   </motion.div>

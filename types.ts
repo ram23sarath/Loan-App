@@ -178,6 +178,8 @@ export type Database = {
           loan_type?: string | null;
           loan_request_date?: string | null;
           created_at: string;
+          deleted_at?: string | null;
+          deleted_by?: string | null;
         };
         Insert: {
           user_id: string;
@@ -192,6 +194,8 @@ export type Database = {
           station_name?: string | null;
           loan_type?: string | null;
           loan_request_date?: string | null;
+          deleted_at?: string | null;
+          deleted_by?: string | null;
         };
         Relationships: [
           {

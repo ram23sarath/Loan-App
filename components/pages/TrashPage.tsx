@@ -462,72 +462,153 @@ const TrashPage = () => {
                 ))}
             </div>
 
-            {/* Restore Modal */}
-            {restoreTarget && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4" onClick={() => setRestoreTarget(null)}>
-                    <div className="bg-white dark:bg-dark-card rounded-lg shadow-lg p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
-                        <h3 className="text-lg font-bold mb-2 dark:text-dark-text">Restore Item?</h3>
-                        <p className="text-sm text-gray-600 dark:text-dark-muted mb-4">
-                            Are you sure you want to restore <span className="font-semibold text-gray-800 dark:text-dark-text">{restoreTarget.name}</span>?
-                        </p>
-                        <div className="flex justify-end gap-2">
-                            <motion.button
-                                onClick={() => setRestoreTarget(null)}
-                                className="px-3 py-2 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-dark-text text-sm"
-                                variants={buttonVariants}
-                                initial="idle"
-                                whileHover="hover"
-                                whileTap="tap"
+            {/* Restore Modal - WRAPPED IN PORTAL */}
+            {ReactDOM.createPortal(
+                <AnimatePresence>
+                    {restoreTarget && (
+                        <motion.div
+                            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+                            variants={modalBackdropVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                            onClick={() => setRestoreTarget(null)}
+                        >
+                            <motion.div
+                                className="bg-white dark:bg-dark-card rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md"
+                                variants={modalContentVariants}
+                                onClick={(e) => e.stopPropagation()}
                             >
-                                Cancel
-                            </motion.button>
-                            <motion.button
-                                onClick={confirmRestore}
-                                className="px-3 py-2 rounded bg-green-600 text-white text-sm hover:bg-green-700"
-                                variants={buttonVariants}
-                                initial="idle"
-                                whileHover="hover"
-                                whileTap="tap"
-                            >
-                                Restore
-                            </motion.button>
-                        </div>
-                    </div>
-                </div>
+                                <motion.h3
+                                    className="text-lg font-bold mb-3 text-gray-800 dark:text-dark-text"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                >
+                                    Restore Item?
+                                </motion.h3>
+                                <motion.p
+                                    className="mb-4 text-sm text-gray-600 dark:text-dark-muted"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 0.1 }}
+                                >
+                                    Are you sure you want to restore{" "}
+                                    <span className="font-semibold text-gray-800 dark:text-dark-text">
+                                        {restoreTarget.name}
+                                    </span>
+                                    ?
+                                </motion.p>
+                                <motion.div
+                                    className="flex justify-end gap-2"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.15 }}
+                                >
+                                    <motion.button
+                                        onClick={() => setRestoreTarget(null)}
+                                        className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-dark-text"
+                                        variants={buttonVariants}
+                                        initial="idle"
+                                        whileHover="hover"
+                                        whileTap="tap"
+                                    >
+                                        Cancel
+                                    </motion.button>
+                                    <motion.button
+                                        onClick={confirmRestore}
+                                        className="px-3 py-2 rounded bg-green-600 text-white hover:bg-green-700"
+                                        variants={buttonVariants}
+                                        initial="idle"
+                                        whileHover="hover"
+                                        whileTap="tap"
+                                    >
+                                        Restore
+                                    </motion.button>
+                                </motion.div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>,
+                document.body
             )}
 
-            {/* Delete Modal */}
-            {permanentDeleteTarget && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4" onClick={() => setPermanentDeleteTarget(null)}>
-                    <div className="bg-white dark:bg-dark-card rounded-lg shadow-lg p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
-                        <h3 className="text-lg font-bold mb-2 dark:text-dark-text">Permanently Delete?</h3>
-                        <p className="text-sm text-gray-600 dark:text-dark-muted mb-4">
-                            This action cannot be undone. Permanently delete <span className="font-semibold text-gray-800 dark:text-dark-text">{permanentDeleteTarget.name}</span>?
-                        </p>
-                        <div className="flex justify-end gap-2">
-                            <motion.button
-                                onClick={() => setPermanentDeleteTarget(null)}
-                                className="px-3 py-2 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-dark-text text-sm"
-                                variants={buttonVariants}
-                                initial="idle"
-                                whileHover="hover"
-                                whileTap="tap"
+            {/* Delete Modal - WRAPPED IN PORTAL */}
+            {ReactDOM.createPortal(
+                <AnimatePresence>
+                    {permanentDeleteTarget && (
+                        <motion.div
+                            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+                            variants={modalBackdropVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                            onClick={() => setPermanentDeleteTarget(null)}
+                        >
+                            <motion.div
+                                className="bg-white dark:bg-dark-card rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md"
+                                variants={modalContentVariants}
+                                onClick={(e) => e.stopPropagation()}
                             >
-                                Cancel
-                            </motion.button>
-                            <motion.button
-                                onClick={confirmDelete}
-                                className="px-3 py-2 rounded bg-red-600 text-white text-sm hover:bg-red-700"
-                                variants={buttonVariants}
-                                initial="idle"
-                                whileHover="hover"
-                                whileTap="tap"
-                            >
-                                Delete Forever
-                            </motion.button>
-                        </div>
-                    </div>
-                </div>
+                                <motion.h3
+                                    className="text-lg font-bold mb-3 text-red-700 dark:text-red-400"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                >
+                                    ⚠️ Permanently Delete?
+                                </motion.h3>
+                                <motion.p
+                                    className="mb-4 text-sm text-gray-600 dark:text-dark-muted"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 0.1 }}
+                                >
+                                    Are you sure you want to{" "}
+                                    <strong className="text-red-600 dark:text-red-400">permanently delete</strong>{" "}
+                                    <span className="font-semibold text-gray-800 dark:text-dark-text">
+                                        {permanentDeleteTarget.name}
+                                    </span>
+                                    ?
+                                </motion.p>
+                                <motion.p
+                                    className="mb-4 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 0.15 }}
+                                >
+                                    This action cannot be undone. The entry will be permanently removed from the database.
+                                </motion.p>
+                                <motion.div
+                                    className="flex justify-end gap-2"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.2 }}
+                                >
+                                    <motion.button
+                                        onClick={() => setPermanentDeleteTarget(null)}
+                                        className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-dark-text"
+                                        variants={buttonVariants}
+                                        initial="idle"
+                                        whileHover="hover"
+                                        whileTap="tap"
+                                    >
+                                        Cancel
+                                    </motion.button>
+                                    <motion.button
+                                        onClick={confirmDelete}
+                                        className="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                                        variants={buttonVariants}
+                                        initial="idle"
+                                        whileHover="hover"
+                                        whileTap="tap"
+                                    >
+                                        Delete Forever
+                                    </motion.button>
+                                </motion.div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>,
+                document.body
             )}
 
             {/* Error Modal */}

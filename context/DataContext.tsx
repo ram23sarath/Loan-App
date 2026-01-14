@@ -515,9 +515,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           await supabase.from("system_notifications").insert({
             type: "seniority_request",
             status: "processing", // Using 'processing' makes it blue/info
-            message: `${name} requested For Loan Seniority: ${
-              details?.loan_type || "General"
-            }`,
+            message: `${name} requested For Loan Seniority: ${details?.loan_type || "General"
+              }`,
             metadata: { customer_id: customerId, ...details },
           });
         } catch (notifyErr) {
@@ -547,7 +546,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .from("loan_seniority")
         .update({
           deleted_at: new Date().toISOString(),
-          deleted_by: session?.user?.id || null,
+          deleted_by: session?.user?.email || session?.user?.id || "Unknown",
         } as any)
         .eq("id", id);
       if (error) throw error;
@@ -815,7 +814,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (typeof window === "undefined") return;
       try {
         window.sessionStorage.clear();
-      } catch (err) {}
+      } catch (err) { }
       try {
         const keysToRemove: string[] = [];
         for (let i = 0; i < window.localStorage.length; i++) {
@@ -834,9 +833,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         for (const k of keysToRemove) {
           try {
             window.localStorage.removeItem(k);
-          } catch (e) {}
+          } catch (e) { }
         }
-      } catch (err) {}
+      } catch (err) { }
       // ... [rest of cache clearing logic] ...
     } catch (err) {
       console.error("Error clearing client cache", err);
@@ -1529,7 +1528,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     })
                   );
                 }
-              } catch (e) {}
+              } catch (e) { }
             } else {
               const successData = await resp.json().catch(() => ({}));
               console.log(
@@ -1549,7 +1548,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     })
                   );
                 }
-              } catch (e) {}
+              } catch (e) { }
             }
           } catch (err) {
             console.warn("⚠️  Error during background user creation:", err);
@@ -1674,7 +1673,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         setDataEntries((prev) =>
           prev.filter((d) => d.customer_id !== customerId)
         );
-      } catch (e) {}
+      } catch (e) { }
 
       if (customerUserId) {
         try {

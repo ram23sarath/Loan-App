@@ -212,6 +212,9 @@ const LoanSeniorityPage = () => {
     name: string;
   } | null>(null);
   const [deletedListError, setDeletedListError] = useState<string | null>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+
+  useEscapeKey(!!restoreError, () => setRestoreError(null));
 
   useEffect(() => {
     fetchSeniorityList().catch((err) =>
@@ -296,7 +299,7 @@ const LoanSeniorityPage = () => {
   const matchedCustomers = useMemo(() => {
     const term = debouncedAddSearchTerm.trim().toLowerCase();
     if (!term) return [];
-    
+
     // Get all matching customers by name/phone
     const matching = (customers || [])
       .filter((customer: Customer) => {
@@ -313,10 +316,10 @@ const LoanSeniorityPage = () => {
       const progress = getCustomerRepaymentProgress(customer.id);
       const progressPercent = Math.round(progress * 100);
       const meetsThreshold = meetsRepaymentThreshold(customer.id, progress);
-      
+
       let isBlocked = false;
       let blockReason = '';
-      
+
       if (isInSeniority) {
         isBlocked = true;
         blockReason = 'Already in seniority list';
@@ -324,7 +327,7 @@ const LoanSeniorityPage = () => {
         isBlocked = true;
         blockReason = `Requires 80% repayment (current ${progressPercent}%)`;
       }
-      
+
       return { customer, isBlocked, blockReason };
     });
   }, [customers, debouncedAddSearchTerm, existingSeniorityCustomerIds, loans, installmentsByLoanId]);
@@ -358,7 +361,7 @@ const LoanSeniorityPage = () => {
     } catch (err) {
       alert(
         (err as Error).message ||
-          "Failed to remove customer from seniority list"
+        "Failed to remove customer from seniority list"
       );
     }
   };
@@ -382,20 +385,32 @@ const LoanSeniorityPage = () => {
     } catch (err) {
       alert(
         (err as Error).message ||
-          "Failed to remove customer from seniority list"
+        "Failed to remove customer from seniority list"
       );
     }
   };
 
   const confirmRestore = async () => {
     if (!restoreTarget) return;
+
+    // Check if customer is already in active list
+    const entryToRestore = deletedSeniorityList?.find((e: any) => e.id === restoreTarget.id);
+    if (entryToRestore) {
+      const isAlreadyActive = seniorityList?.some((e: any) => e.customer_id === entryToRestore.customer_id);
+      if (isAlreadyActive) {
+        setRestoreError("Cannot restore: This customer is already in the active seniority list.");
+        setRestoreTarget(null);
+        return;
+      }
+    }
+
     try {
       await restoreSeniorityEntry(restoreTarget.id);
       setRestoreTarget(null);
     } catch (err) {
       alert(
         (err as Error).message ||
-          "Failed to restore customer to seniority list"
+        "Failed to restore customer to seniority list"
       );
     }
   };
@@ -420,7 +435,7 @@ const LoanSeniorityPage = () => {
     } catch (err) {
       alert(
         (err as Error).message ||
-          "Failed to permanently delete seniority entry"
+        "Failed to permanently delete seniority entry"
       );
     }
   };
@@ -481,11 +496,10 @@ const LoanSeniorityPage = () => {
         {!isScopedCustomer && (
           <motion.button
             onClick={() => setShowTrash(!showTrash)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              showTrash
-                ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-300 dark:border-red-700"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${showTrash
+              ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 border border-red-300 dark:border-red-700"
+              : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700"
+              }`}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: headerDelay + 0.3 }}
@@ -575,11 +589,10 @@ const LoanSeniorityPage = () => {
                           }
                         }}
                         disabled={isBlocked}
-                        className={`w-full flex items-center justify-between text-left px-3 py-1.5 transition-colors ${
-                          isBlocked
-                            ? "opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800/50"
-                            : "hover:bg-indigo-50 dark:hover:bg-slate-800"
-                        } text-gray-800 dark:text-dark-text`}
+                        className={`w-full flex items-center justify-between text-left px-3 py-1.5 transition-colors ${isBlocked
+                          ? "opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800/50"
+                          : "hover:bg-indigo-50 dark:hover:bg-slate-800"
+                          } text-gray-800 dark:text-dark-text`}
                         title={isBlocked ? blockReason : undefined}
                         variants={listItemVariants}
                         initial="hidden"
@@ -597,11 +610,10 @@ const LoanSeniorityPage = () => {
                             </span>
                           )}
                         </div>
-                        <span className={`text-xs font-semibold px-2 py-1 rounded whitespace-nowrap ml-2 ${
-                          isBlocked
-                            ? "bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400"
-                            : "text-white bg-indigo-600"
-                        }`}>
+                        <span className={`text-xs font-semibold px-2 py-1 rounded whitespace-nowrap ml-2 ${isBlocked
+                          ? "bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400"
+                          : "text-white bg-indigo-600"
+                          }`}>
                           {isBlocked ? "Blocked" : "Add"}
                         </span>
                       </motion.button>
@@ -630,7 +642,7 @@ const LoanSeniorityPage = () => {
         <AnimatePresence>
           {modalCustomer && (
             <motion.div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
               variants={modalBackdropVariants}
               initial="hidden"
               animate="visible"
@@ -1105,11 +1117,10 @@ const LoanSeniorityPage = () => {
                           <motion.button
                             key={page}
                             onClick={() => setCurrentPage(page)}
-                            className={`px-3 py-1 rounded border ${
-                              currentPage === page
-                                ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
-                                : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
-                            }`}
+                            className={`px-3 py-1 rounded border ${currentPage === page
+                              ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
+                              : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
+                              }`}
                             aria-label={`Go to page ${page}`}
                             aria-current={
                               currentPage === page ? "page" : undefined
@@ -1201,7 +1212,7 @@ const LoanSeniorityPage = () => {
                   ({deletedSeniorityList?.length || 0} items)
                 </span>
               </div>
-              
+
               {!deletedSeniorityList || deletedSeniorityList.length === 0 ? (
                 <motion.div
                   className="text-sm text-gray-500 dark:text-dark-muted py-4 text-center"
@@ -1432,11 +1443,10 @@ const LoanSeniorityPage = () => {
                             <motion.button
                               key={page}
                               onClick={() => setDeletedPage(page)}
-                              className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
-                                deletedPage === page
-                                  ? "bg-red-600 text-white dark:bg-red-700"
-                                  : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50"
-                              }`}
+                              className={`px-3 py-2 rounded text-sm font-medium transition-colors ${deletedPage === page
+                                ? "bg-red-600 text-white dark:bg-red-700"
+                                : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50"
+                                }`}
                               variants={buttonVariants}
                               initial="idle"
                               whileHover="hover"
@@ -1477,7 +1487,7 @@ const LoanSeniorityPage = () => {
         <AnimatePresence>
           {deleteTarget && (
             <motion.div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
               variants={modalBackdropVariants}
               initial="hidden"
               animate="visible"
@@ -1542,12 +1552,57 @@ const LoanSeniorityPage = () => {
         document.body
       )}
 
+      {/* Error Modal - WRAPPED IN PORTAL */}
+      {ReactDOM.createPortal(
+        <AnimatePresence>
+          {restoreError && (
+            <motion.div
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+              variants={modalBackdropVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              onClick={() => setRestoreError(null)}
+            >
+              <motion.div
+                className="bg-white dark:bg-dark-card rounded-lg shadow-lg p-6 w-full max-w-sm relative"
+                variants={modalContentVariants}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => setRestoreError(null)}
+                  className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  ✕
+                </button>
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
+                    <Trash2Icon className="w-6 h-6 text-red-600 dark:text-red-400" />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2 text-gray-900 dark:text-dark-text">Cannot Restore</h3>
+                  <p className="text-sm text-gray-600 dark:text-dark-muted mb-6">
+                    {restoreError}
+                  </p>
+                  <button
+                    onClick={() => setRestoreError(null)}
+                    className="w-full px-4 py-2 rounded bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-medium hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors"
+                  >
+                    Okay, got it
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
       {/* Restore Confirmation Modal - WRAPPED IN PORTAL */}
       {ReactDOM.createPortal(
         <AnimatePresence>
           {restoreTarget && (
             <motion.div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
               variants={modalBackdropVariants}
               initial="hidden"
               animate="visible"
@@ -1617,7 +1672,7 @@ const LoanSeniorityPage = () => {
         <AnimatePresence>
           {permanentDeleteTarget && (
             <motion.div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
               variants={modalBackdropVariants}
               initial="hidden"
               animate="visible"

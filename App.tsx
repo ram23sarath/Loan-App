@@ -48,6 +48,8 @@ const LoginPage = React.lazy(() => import("./components/pages/LoginPage"));
 const CustomerDashboard = React.lazy(
   () => import("./components/pages/CustomerDashboard")
 );
+const TrashPage = React.lazy(() => import("./components/pages/TrashPage"));
+
 
 // AdminOnlyRoute component to restrict admin-only pages
 const AdminOnlyRoute = ({ children }: { children: React.ReactNode }) => {
@@ -127,6 +129,8 @@ const AnimatedRoutes = () => {
             }
           />
           <Route path="/data" element={<DataPage />} />
+          <Route path="/trash" element={<TrashPage />} />
+
         </Routes>
       </AnimatePresence>
     </Suspense>

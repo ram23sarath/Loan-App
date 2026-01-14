@@ -345,7 +345,7 @@ const DataPage = () => {
         e.stopPropagation();
         if (typeof (e as any).stopImmediatePropagation === "function")
           (e as any).stopImmediatePropagation();
-      } catch (_) {}
+      } catch (_) { }
       setEditEntryId(null);
     };
     document.addEventListener("keydown", handleEscape, true);
@@ -361,7 +361,7 @@ const DataPage = () => {
         e.stopPropagation();
         if (typeof (e as any).stopImmediatePropagation === "function")
           (e as any).stopImmediatePropagation();
-      } catch (_) {}
+      } catch (_) { }
       setDeleteId(null);
     };
     document.addEventListener("keydown", handleEscape, true);
@@ -377,7 +377,7 @@ const DataPage = () => {
         e.stopPropagation();
         if (typeof (e as any).stopImmediatePropagation === "function")
           (e as any).stopImmediatePropagation();
-      } catch (_) {}
+      } catch (_) { }
       setShowCustomerModal(false);
     };
     document.addEventListener("keydown", handleEscape, true);
@@ -479,7 +479,7 @@ const DataPage = () => {
     if (deleteId) {
       try {
         await deleteDataEntry(deleteId);
-        setToastMsg("Entry deleted successfully.");
+        setToastMsg("Entry moved to trash.");
         setShowToast(true);
       } catch (err: any) {
         setToastMsg(err.message || "Failed to delete entry.");
@@ -594,11 +594,10 @@ const DataPage = () => {
         <motion.div
           layout
           transition={{ type: "spring", stiffness: 280, damping: 30 }}
-          className={`bg-white rounded-xl shadow-md flex flex-col gap-6 border border-gray-200/80 mx-auto dark:bg-dark-card dark:border-dark-border ${
-            showTable
+          className={`bg-white rounded-xl shadow-md flex flex-col gap-6 border border-gray-200/80 mx-auto dark:bg-dark-card dark:border-dark-border ${showTable
               ? "p-6 md:p-8 w-[90%] md:w-full md:max-w-full max-w-md"
               : "p-6 md:p-8 w-[90%] max-w-md md:max-w-2xl md:min-h-[calc(100vh-4rem)]"
-          }`}
+            }`}
         >
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
             <h2 className="text-xl md:text-2xl font-bold text-indigo-700 md:uppercase md:tracking-widest whitespace-normal break-words dark:text-indigo-400">
@@ -623,9 +622,8 @@ const DataPage = () => {
           </div>
 
           <div
-            className={`w-full min-h-[300px] md:min-h-[500px] relative flex-1 flex flex-col ${
-              showTable ? "px-2" : ""
-            }`}
+            className={`w-full min-h-[300px] md:min-h-[500px] relative flex-1 flex flex-col ${showTable ? "px-2" : ""
+              }`}
           >
             <AnimatePresence mode="wait">
               {showTable ? (
@@ -651,7 +649,7 @@ const DataPage = () => {
                     >
                       {selectedCustomerId
                         ? customerMap.get(selectedCustomerId) ||
-                          "Select Customer"
+                        "Select Customer"
                         : "-- All Customers --"}
                     </button>
                   </div>
@@ -703,11 +701,10 @@ const DataPage = () => {
                                   <button
                                     key={group.customerId}
                                     type="button"
-                                    className={`w-full text-left px-3 py-2 rounded-lg border transition-colors duration-150 ${
-                                      selectedCustomerId === group.customerId
+                                    className={`w-full text-left px-3 py-2 rounded-lg border transition-colors duration-150 ${selectedCustomerId === group.customerId
                                         ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-500/60 dark:bg-indigo-900/20 dark:text-indigo-200"
                                         : "border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50 dark:border-dark-border dark:hover:border-indigo-800 dark:hover:bg-slate-700/50 dark:text-dark-text"
-                                    }`}
+                                      }`}
                                     onClick={() => {
                                       setSelectedCustomerId(group.customerId);
                                       setCurrentPage(1);
@@ -817,8 +814,8 @@ const DataPage = () => {
                           </thead>
                           <tbody className="bg-white dark:bg-dark-card">
                             {!selectedCustomerId ||
-                            customerEntryGroups.length === 0 ||
-                            selectedGroupEntries.length === 0 ? (
+                              customerEntryGroups.length === 0 ||
+                              selectedGroupEntries.length === 0 ? (
                               <tr>
                                 <td
                                   colSpan={8}
@@ -827,14 +824,13 @@ const DataPage = () => {
                                   {!selectedCustomerId
                                     ? "Select a customer to view their entries"
                                     : isScopedCustomer && scopedCustomerId
-                                    ? (() => {
+                                      ? (() => {
                                         const customerName =
                                           customerMap.get(scopedCustomerId);
-                                        return `No Entries for ${
-                                          customerName || "you"
-                                        } yet!`;
+                                        return `No Entries for ${customerName || "you"
+                                          } yet!`;
                                       })()
-                                    : "No entries for this customer."}
+                                      : "No entries for this customer."}
                                 </td>
                               </tr>
                             ) : (
@@ -868,11 +864,10 @@ const DataPage = () => {
                                       {entry.subtype || "-"}
                                     </td>
                                     <td
-                                      className={`px-4 py-3 font-bold text-left ${
-                                        entry.type === "credit"
+                                      className={`px-4 py-3 font-bold text-left ${entry.type === "credit"
                                           ? "text-green-700 dark:text-green-400"
                                           : "text-red-700 dark:text-red-400"
-                                      }`}
+                                        }`}
                                     >
                                       ₹{formatNumberIndian(entry.amount)}
                                     </td>
@@ -886,9 +881,8 @@ const DataPage = () => {
                                       className="px-4 py-3 text-gray-600 text-left dark:text-dark-muted"
                                     >
                                       <div
-                                        className={`cursor-pointer break-words whitespace-pre-wrap ${
-                                          !isExpanded ? "line-clamp-2" : ""
-                                        }`}
+                                        className={`cursor-pointer break-words whitespace-pre-wrap ${!isExpanded ? "line-clamp-2" : ""
+                                          }`}
                                         onClick={() =>
                                           handleNoteClick(entry.id)
                                         }
@@ -933,20 +927,19 @@ const DataPage = () => {
                         {/* Mobile Cards */}
                         <div className="md:hidden bg-white dark:bg-dark-card">
                           {!selectedCustomerId ||
-                          customerEntryGroups.length === 0 ||
-                          selectedGroupEntries.length === 0 ? (
+                            customerEntryGroups.length === 0 ||
+                            selectedGroupEntries.length === 0 ? (
                             <div className="text-center text-gray-500 py-16 text-base dark:text-dark-muted">
                               {!selectedCustomerId
                                 ? "Select a customer to view their entries"
                                 : isScopedCustomer && scopedCustomerId
-                                ? (() => {
+                                  ? (() => {
                                     const customerName =
                                       customerMap.get(scopedCustomerId);
-                                    return `No Entries for ${
-                                      customerName || "you"
-                                    } yet!`;
+                                    return `No Entries for ${customerName || "you"
+                                      } yet!`;
                                   })()
-                                : "No entries for this customer."}
+                                  : "No entries for this customer."}
                             </div>
                           ) : (
                             paginatedEntries.map((entry, idx) => {
@@ -970,11 +963,10 @@ const DataPage = () => {
                                     </div>
                                     <div className={`text-right flex-shrink-0`}>
                                       <div
-                                        className={`font-bold text-base sm:text-lg ${
-                                          entry.type === "credit"
+                                        className={`font-bold text-base sm:text-lg ${entry.type === "credit"
                                             ? "text-green-700 dark:text-green-400"
                                             : "text-red-700 dark:text-red-400"
-                                        }`}
+                                          }`}
                                       >
                                         ₹{formatNumberIndian(entry.amount)}
                                       </div>
@@ -1111,11 +1103,10 @@ const DataPage = () => {
                                   <button
                                     key={page}
                                     onClick={() => setCurrentPage(page)}
-                                    className={`px-3 py-1 rounded border ${
-                                      currentPage === page
+                                    className={`px-3 py-1 rounded border ${currentPage === page
                                         ? "bg-indigo-600 text-white border-indigo-600"
                                         : "border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700"
-                                    }`}
+                                      }`}
                                   >
                                     {page}
                                   </button>
@@ -1210,7 +1201,7 @@ const DataPage = () => {
                         >
                           {form.customerId
                             ? customerMap.get(form.customerId) ||
-                              "Select Customer"
+                            "Select Customer"
                             : "Select Customer"}
                           <svg
                             className="w-4 h-4 ml-2 text-gray-500 dark:text-dark-muted"
@@ -1255,11 +1246,10 @@ const DataPage = () => {
                                 filteredCustomers.map((c) => (
                                   <div
                                     key={c.id}
-                                    className={`p-2 cursor-pointer hover:bg-indigo-100 text-sm dark:hover:bg-slate-700 dark:text-dark-text ${
-                                      form.customerId === c.id
+                                    className={`p-2 cursor-pointer hover:bg-indigo-100 text-sm dark:hover:bg-slate-700 dark:text-dark-text ${form.customerId === c.id
                                         ? "bg-indigo-50 font-semibold dark:bg-indigo-900/30"
                                         : ""
-                                    }`}
+                                      }`}
                                     onClick={() => {
                                       setForm({ ...form, customerId: c.id });
                                       setShowCustomerDropdown(false);
@@ -1479,11 +1469,10 @@ const DataPage = () => {
                           setCurrentPage(1);
                           setShowCustomerModal(false);
                         }}
-                        className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${
-                          selectedCustomerId === null
+                        className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${selectedCustomerId === null
                             ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-500/60 dark:bg-indigo-900/20 dark:text-indigo-200"
                             : "border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50 dark:border-dark-border dark:hover:border-indigo-800 dark:hover:bg-slate-700/50 dark:text-dark-text"
-                        }`}
+                          }`}
                       >
                         <div className="font-semibold">All Customers</div>
                         <div className="text-xs text-gray-500 dark:text-dark-muted">
@@ -1496,10 +1485,10 @@ const DataPage = () => {
                         .filter((group) =>
                           debouncedMobileCustomerSearch.trim()
                             ? group.name
-                                .toLowerCase()
-                                .includes(
-                                  debouncedMobileCustomerSearch.toLowerCase()
-                                )
+                              .toLowerCase()
+                              .includes(
+                                debouncedMobileCustomerSearch.toLowerCase()
+                              )
                             : true
                         )
                         .map((group) => {
@@ -1518,11 +1507,10 @@ const DataPage = () => {
                                 setCurrentPage(1);
                                 setShowCustomerModal(false);
                               }}
-                              className={`w-full text-left px-3 py-3 rounded-lg border transition-colors ${
-                                selectedCustomerId === group.customerId
+                              className={`w-full text-left px-3 py-3 rounded-lg border transition-colors ${selectedCustomerId === group.customerId
                                   ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-500/60 dark:bg-indigo-900/20 dark:text-indigo-200"
                                   : "border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50 dark:border-dark-border dark:hover:border-indigo-800 dark:hover:bg-slate-700/50 dark:text-dark-text"
-                              }`}
+                                }`}
                             >
                               <div className="flex items-center justify-between gap-2 mb-1">
                                 <div className="font-semibold truncate">

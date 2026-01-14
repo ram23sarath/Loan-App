@@ -1,4 +1,5 @@
 import React, { useState, forwardRef, useImperativeHandle, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { useTheme } from '../context/ThemeContext';
 import { MoonIcon, SunIcon } from '../constants';
@@ -115,6 +116,7 @@ const getButtonCenter = (button: HTMLElement) => {
 };
 
 const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
+  const navigate = useNavigate();
   const { session, signOut, isScopedCustomer, customers, customerMap, scopedCustomerId, updateCustomer } = useData();
   const { theme, toggleTheme } = useTheme();
   const [showMenu, setShowMenu] = useState(false);
@@ -686,7 +688,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                             const canDelete = !isScopedCustomer && !note.isLocal;
                             const isSwipedCard = swipedNotificationId === note.id;
                             const isBeingDeleted = deletingNotificationId === note.id || isClearing;
-                            
+
                             return (
                               <motion.div
                                 key={note.id}
@@ -760,7 +762,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                                     </motion.div>
                                   )}
                                 </AnimatePresence>
-                                
+
                                 <span className="text-lg flex-shrink-0 mt-0.5 relative z-10">
                                   {note.status === 'success' ? '✅' : note.status === 'processing' ? '⏳' : note.status === 'warning' ? '⚠️' : '❌'}
                                 </span>
@@ -998,6 +1000,24 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                         </div>
                       </div>
                     </button>
+                    <motion.button
+                      onClick={() => {
+                        setShowToolsModal(false);
+                        navigate('/trash');
+                      }}
+                      className="w-full px-4 py-4 md:py-3 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-700 font-medium rounded-lg transition-colors flex items-center gap-3 dark:bg-rose-900/30 dark:hover:bg-rose-900/50 dark:text-rose-400"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 24, delay: 0.25 }}
+                      whileHover={{ scale: 1.02, x: 4 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <span className="text-xl">🗑️</span>
+                      <div className="text-left">
+                        <div className="font-semibold text-sm md:text-base">Trash</div>
+                        <div className="text-xs text-rose-500 dark:text-rose-400/70">View and restore deleted items</div>
+                      </div>
+                    </motion.button>
                   </div>
                 </>
               )}

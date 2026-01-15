@@ -387,71 +387,71 @@ const LoanTableView: React.FC = () => {
       <table className="min-w-full border-collapse hidden md:table">
         <thead>
           <tr className="bg-gray-100/70 dark:bg-slate-700">
-            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 dark:border-dark-border dark:text-dark-text">
+            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 dark:border-dark-border dark:text-dark-text whitespace-nowrap">
               #
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
               onClick={() => handleSort("customer")}
             >
               Customer
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
               onClick={() => handleSort("total_repayable")}
             >
               Total Repayable
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
               onClick={() => handleSort("loan_amount")}
             >
               Loan Amount
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
               onClick={() => handleSort("interest")}
             >
               Interest
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
               onClick={() => handleSort("paid")}
             >
               Paid
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
               onClick={() => handleSort("balance")}
             >
               Balance
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
               onClick={() => handleSort("check_number")}
             >
               Check Number
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
               onClick={() => handleSort("installments")}
             >
               Installment #
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
               onClick={() => handleSort("total_installments")}
             >
               Total Installments
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
               onClick={() => handleSort("payment_date")}
             >
               Payment Date
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
+              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
               onClick={() => handleSort("status")}
             >
               Status
@@ -482,7 +482,7 @@ const LoanTableView: React.FC = () => {
                   transition={{ duration: 0.3, delay: idx * 0.03 }}
                   className="even:bg-gray-50/50 hover:bg-indigo-50/50 transition-colors dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50"
                 >
-                  <td className="px-4 py-2 border-b font-medium text-sm text-gray-700 dark:border-dark-border dark:text-dark-muted">
+                  <td className="px-4 py-2 border-b font-medium text-sm text-gray-700 dark:border-dark-border dark:text-dark-muted whitespace-nowrap">
                     {(currentPage - 1) * itemsPerPage + idx + 1}
                   </td>
                   <td className="px-4 py-2 border-b dark:border-dark-border">
@@ -496,35 +496,35 @@ const LoanTableView: React.FC = () => {
                       {loan.customers?.name ?? "Unknown"}
                     </button>
                   </td>
-                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
+                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
                     {formatCurrencyIN(totalRepayable)}
                   </td>
-                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
+                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
                     {formatCurrencyIN(loan.original_amount)}
                   </td>
-                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
+                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
                     {formatCurrencyIN(loan.interest_amount)}
                   </td>
-                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
+                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
                     {formatCurrencyIN(paid)}
                   </td>
-                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
+                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
                     {formatCurrencyIN(balance)}
                   </td>
-                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
+                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
                     {loan.check_number || "-"}
                   </td>
-                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
+                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
                     {loanInstallments.length}
                   </td>
-                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
+                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
                     {loan.total_instalments || "-"}
                   </td>
-                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
+                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
                     {loan.payment_date ? formatDate(loan.payment_date) : "-"}
                   </td>
                   <td
-                    className={`px-4 py-2 border-b font-semibold dark:border-dark-border ${isPaidOff ? "text-green-600" : "text-orange-600"
+                    className={`px-4 py-2 border-b font-semibold dark:border-dark-border whitespace-nowrap ${isPaidOff ? "text-green-600" : "text-orange-600"
                       }`}
                   >
                     {loanStatus.status}

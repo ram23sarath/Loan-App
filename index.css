@@ -54,7 +54,6 @@ html {
 /* Smooth transition for main content when sidebar expands/collapses */
 .sidebar-transition {
   transition: padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: padding-left;
 }
 
 /* Smooth centering for content cards affected by container width changes */

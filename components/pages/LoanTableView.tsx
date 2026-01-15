@@ -540,7 +540,7 @@ const LoanTableView: React.FC = () => {
                           className="px-2 py-1 rounded bg-green-600 text-white text-sm hover:bg-green-700"
                           title="Record installment"
                         >
-                          + Pay
+                          + Installments
                         </button>
                         <button
                           onClick={() => setEditLoanTarget(loan)}
@@ -917,7 +917,7 @@ const LoanTableView: React.FC = () => {
                       className="px-3 py-1 rounded bg-green-600 text-white text-sm hover:bg-green-700"
                       title="Record installment"
                     >
-                      + Pay
+                      + Installments
                     </button>
                   )}
                   {!isScopedCustomer && (

@@ -10,6 +10,7 @@ import { formatDate } from "../../utils/dateFormatter";
 import type { LoanWithCustomer, Installment } from "../../types";
 import { getLoanStatus } from "../../utils/loanStatus";
 import EditModal from "../modals/EditModal";
+import RecordInstallmentModal from "../modals/RecordInstallmentModal";
 import { useDebounce } from "../../utils/useDebounce";
 
 const containerVariants = {
@@ -245,6 +246,8 @@ const LoanTableView: React.FC = () => {
   } | null>(null);
   const [editTarget, setEditTarget] = React.useState<Installment | null>(null);
   const [editLoanTarget, setEditLoanTarget] =
+    React.useState<LoanWithCustomer | null>(null);
+  const [recordInstallmentTarget, setRecordInstallmentTarget] =
     React.useState<LoanWithCustomer | null>(null);
   const [editForm, setEditForm] = React.useState({
     date: "",
@@ -529,6 +532,16 @@ const LoanTableView: React.FC = () => {
                   {!isScopedCustomer && (
                     <td className="px-4 py-2 border-b dark:border-dark-border">
                       <div className="flex gap-2">
+                        <button
+                          onClick={() => setRecordInstallmentTarget(loan)}
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
+                          onPointerDown={(e) => (e as any).stopPropagation()}
+                          className="px-2 py-1 rounded bg-green-600 text-white text-sm hover:bg-green-700"
+                          title="Record installment"
+                        >
+                          + Pay
+                        </button>
                         <button
                           onClick={() => setEditLoanTarget(loan)}
                           onMouseDown={(e) => e.stopPropagation()}
@@ -840,8 +853,8 @@ const LoanTableView: React.FC = () => {
                   Status:{" "}
                   <span
                     className={`font-semibold ${loanStatus.isPaidOff
-                        ? "text-green-600"
-                        : "text-orange-600"
+                      ? "text-green-600"
+                      : "text-orange-600"
                       }`}
                   >
                     {loanStatus.status}
@@ -895,6 +908,18 @@ const LoanTableView: React.FC = () => {
                   >
                     <WhatsAppIcon className="w-5 h-5" />
                   </button>
+                  {!isScopedCustomer && (
+                    <button
+                      onClick={() => setRecordInstallmentTarget(loan)}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => (e as any).stopPropagation()}
+                      className="px-3 py-1 rounded bg-green-600 text-white text-sm hover:bg-green-700"
+                      title="Record installment"
+                    >
+                      + Pay
+                    </button>
+                  )}
                   {!isScopedCustomer && (
                     <button
                       onClick={() => setEditLoanTarget(loan)}
@@ -1095,8 +1120,8 @@ const LoanTableView: React.FC = () => {
                       setPagePickerOpen(null);
                     }}
                     className={`px-3 py-1 rounded border ${currentPage === page
-                        ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
-                        : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
+                      ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
+                      : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
                       }`}
                   >
                     {page}
@@ -1179,8 +1204,8 @@ const LoanTableView: React.FC = () => {
                                 setPagePickerOpen(null);
                               }}
                               className={`px-2 py-1 text-sm rounded ${currentPage === p
-                                  ? "bg-indigo-600 text-white"
-                                  : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
+                                ? "bg-indigo-600 text-white"
+                                : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
                                 }`}
                             >
                               {p}
@@ -1268,8 +1293,8 @@ const LoanTableView: React.FC = () => {
                                 setPagePickerOpen(null);
                               }}
                               className={`px-2 py-1 text-sm rounded ${currentPage === p
-                                  ? "bg-indigo-600 text-white"
-                                  : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
+                                ? "bg-indigo-600 text-white"
+                                : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
                                 }`}
                             >
                               {p}
@@ -1630,6 +1655,18 @@ const LoanTableView: React.FC = () => {
           )}
         </AnimatePresence>,
         document.body
+      )}
+
+      {/* Record Installment Modal */}
+      {recordInstallmentTarget && (
+        <RecordInstallmentModal
+          loan={recordInstallmentTarget}
+          onClose={() => setRecordInstallmentTarget(null)}
+          onSuccess={() => {
+            // Modal will close itself after success
+            // The installments will be refreshed automatically via DataContext
+          }}
+        />
       )}
     </GlassCard>
   );

@@ -655,7 +655,7 @@ const CustomerListPage = () => {
                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
                                       Subscriptions
                                     </th>
-                                    <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                    <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border whitespace-nowrap">
                                       Actions
                                     </th>
                                   </tr>
@@ -729,7 +729,7 @@ const CustomerListPage = () => {
                                           {customerSubscriptions.length}
                                         </td>
                                         <td className="px-4 py-2 dark:border-dark-border">
-                                          <div className="flex justify-center gap-2">
+                                          <div className="flex justify-center gap-2 items-center whitespace-nowrap">
                                             <motion.button
                                               onClick={(e) => {
                                                 e.stopPropagation();
@@ -748,7 +748,7 @@ const CustomerListPage = () => {
                                               onPointerDownCapture={(e) =>
                                                 e.stopPropagation()
                                               }
-                                              className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500"
+                                              className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500 whitespace-nowrap"
                                               whileHover={{ scale: 1.05 }}
                                               whileTap={{ scale: 0.95 }}
                                             >
@@ -1033,7 +1033,7 @@ const CustomerListPage = () => {
                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
                                       Loan Value
                                     </th>
-                                    <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                    <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border whitespace-nowrap">
                                       Actions
                                     </th>
                                   </tr>
@@ -1100,7 +1100,7 @@ const CustomerListPage = () => {
                                           {formatCurrency(loanValue)}
                                         </td>
                                         <td className="px-4 py-2 dark:border-dark-border">
-                                          <div className="flex justify-center gap-2">
+                                          <div className="flex justify-center gap-2 items-center whitespace-nowrap">
                                             <motion.button
                                               onClick={(e) => {
                                                 e.stopPropagation();
@@ -1116,7 +1116,7 @@ const CustomerListPage = () => {
                                               onPointerDownCapture={(e) =>
                                                 e.stopPropagation()
                                               }
-                                              className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500"
+                                              className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500 whitespace-nowrap"
                                               whileHover={{ scale: 1.05 }}
                                               whileTap={{ scale: 0.95 }}
                                             >
@@ -1392,7 +1392,7 @@ const CustomerListPage = () => {
                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
                                       Total Value
                                     </th>
-                                    <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                    <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border whitespace-nowrap">
                                       Actions
                                     </th>
                                   </tr>
@@ -1458,7 +1458,7 @@ const CustomerListPage = () => {
                                           {formatCurrency(subValue)}
                                         </td>
                                         <td className="px-4 py-2 dark:border-dark-border">
-                                          <div className="flex justify-center gap-2">
+                                          <div className="flex justify-center gap-2 items-center whitespace-nowrap">
                                             <motion.button
                                               onClick={(e) => {
                                                 e.stopPropagation();
@@ -1475,7 +1475,7 @@ const CustomerListPage = () => {
                                               onPointerDownCapture={(e) =>
                                                 e.stopPropagation()
                                               }
-                                              className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500"
+                                              className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500 whitespace-nowrap"
                                               whileHover={{ scale: 1.05 }}
                                               whileTap={{ scale: 0.95 }}
                                             >
@@ -1745,7 +1745,7 @@ const CustomerListPage = () => {
                                       <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
                                         Phone
                                       </th>
-                                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
+                                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border whitespace-nowrap">
                                         Actions
                                       </th>
                                     </tr>
@@ -1799,7 +1799,7 @@ const CustomerListPage = () => {
                                             {customer.phone}
                                           </td>
                                           <td className="px-4 py-2 dark:border-dark-border">
-                                            <div className="flex justify-center gap-2">
+                                            <div className="flex justify-center gap-2 items-center whitespace-nowrap">
                                               <motion.button
                                                 onClick={(e) => {
                                                   e.stopPropagation();
@@ -1811,7 +1811,7 @@ const CustomerListPage = () => {
                                                 onPointerDownCapture={(e) =>
                                                   e.stopPropagation()
                                                 }
-                                                className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500"
+                                                className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-500 whitespace-nowrap"
                                                 whileHover={{ scale: 1.05 }}
                                                 whileTap={{ scale: 0.95 }}
                                               >

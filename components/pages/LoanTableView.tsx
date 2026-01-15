@@ -457,7 +457,7 @@ const LoanTableView: React.FC = () => {
               Status
             </th>
             {!isScopedCustomer && (
-              <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 dark:border-dark-border dark:text-dark-text">
+              <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 dark:border-dark-border dark:text-dark-text whitespace-nowrap">
                 Actions
               </th>
             )}
@@ -531,13 +531,13 @@ const LoanTableView: React.FC = () => {
                   </td>
                   {!isScopedCustomer && (
                     <td className="px-4 py-2 border-b dark:border-dark-border">
-                      <div className="flex gap-2">
+                      <div className="flex items-center gap-2 whitespace-nowrap">
                         <button
                           onClick={() => setRecordInstallmentTarget(loan)}
                           onMouseDown={(e) => e.stopPropagation()}
                           onTouchStart={(e) => e.stopPropagation()}
                           onPointerDown={(e) => (e as any).stopPropagation()}
-                          className="px-2 py-1 rounded bg-green-600 text-white text-sm hover:bg-green-700"
+                          className="px-2 py-1 rounded bg-green-600 text-white text-sm hover:bg-green-700 whitespace-nowrap"
                           title="Record installment"
                         >
                           + Installments
@@ -547,7 +547,7 @@ const LoanTableView: React.FC = () => {
                           onMouseDown={(e) => e.stopPropagation()}
                           onTouchStart={(e) => e.stopPropagation()}
                           onPointerDown={(e) => (e as any).stopPropagation()}
-                          className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
+                          className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 whitespace-nowrap"
                         >
                           Edit
                         </button>
@@ -561,7 +561,7 @@ const LoanTableView: React.FC = () => {
                           onMouseDown={(e) => e.stopPropagation()}
                           onTouchStart={(e) => e.stopPropagation()}
                           onPointerDown={(e) => (e as any).stopPropagation()}
-                          className="px-2 py-1 rounded bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                          className="px-2 py-1 rounded bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors flex items-center justify-center"
                           title="Delete loan"
                         >
                           <Trash2Icon className="w-5 h-5 text-red-500" />

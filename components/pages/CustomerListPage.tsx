@@ -74,11 +74,11 @@ const CustomerListPage = () => {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [editModal, setEditModal] = useState<{
     type:
-      | "customer"
-      | "loan"
-      | "subscription"
-      | "customer_loan"
-      | "installment";
+    | "customer"
+    | "loan"
+    | "subscription"
+    | "customer_loan"
+    | "installment";
     data: any;
   } | null>(null);
 
@@ -305,11 +305,10 @@ const CustomerListPage = () => {
                     setCurrentPage(section, page);
                     setPagePickerOpen(null);
                   }}
-                  className={`px-3 py-1 rounded border ${
-                    currentPage === page
-                      ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
-                      : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
-                  }`}
+                  className={`px-3 py-1 rounded border ${currentPage === page
+                    ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
+                    : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
+                    }`}
                 >
                   {page}
                 </button>
@@ -391,11 +390,10 @@ const CustomerListPage = () => {
                               setCurrentPage(section, p);
                               setPagePickerOpen(null);
                             }}
-                            className={`px-2 py-1 text-sm rounded ${
-                              currentPage === p
-                                ? "bg-indigo-600 text-white"
-                                : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
-                            }`}
+                            className={`px-2 py-1 text-sm rounded ${currentPage === p
+                              ? "bg-indigo-600 text-white"
+                              : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
+                              }`}
                           >
                             {p}
                           </button>
@@ -479,11 +477,10 @@ const CustomerListPage = () => {
                               setCurrentPage(section, p);
                               setPagePickerOpen(null);
                             }}
-                            className={`px-2 py-1 text-sm rounded ${
-                              currentPage === p
-                                ? "bg-indigo-600 text-white"
-                                : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
-                            }`}
+                            className={`px-2 py-1 text-sm rounded ${currentPage === p
+                              ? "bg-indigo-600 text-white"
+                              : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
+                              }`}
                           >
                             {p}
                           </button>
@@ -582,10 +579,10 @@ const CustomerListPage = () => {
       )}
 
       {categorizedCustomers.withBoth.length === 0 &&
-      categorizedCustomers.withOnlyLoans.length === 0 &&
-      categorizedCustomers.withOnlySubscriptions.length === 0 &&
-      categorizedCustomers.withNeither.length === 0 &&
-      !isRefreshing ? (
+        categorizedCustomers.withOnlyLoans.length === 0 &&
+        categorizedCustomers.withOnlySubscriptions.length === 0 &&
+        categorizedCustomers.withNeither.length === 0 &&
+        !isRefreshing ? (
         <GlassCard>
           <p className="text-center text-gray-500 dark:text-dark-muted">
             {searchTerm
@@ -607,9 +604,8 @@ const CustomerListPage = () => {
                   Customers with Loans & Subscriptions
                 </h3>
                 <ChevronDownIcon
-                  className={`w-6 h-6 text-indigo-800 dark:text-indigo-400 transition-transform ${
-                    expandedSections.both ? "rotate-180" : ""
-                  }`}
+                  className={`w-6 h-6 text-indigo-800 dark:text-indigo-400 transition-transform ${expandedSections.both ? "rotate-180" : ""
+                    }`}
                 />
               </button>
               <AnimatePresence initial={true}>
@@ -804,15 +800,12 @@ const CustomerListPage = () => {
                                 const isValidPhone =
                                   customer.phone &&
                                   /^\d{10,15}$/.test(customer.phone);
-                                const message = `Hi ${
-                                  customer.name
-                                },\n\nLoans: ${
-                                  customerLoans.length
-                                }\nLoan Value: ${formatCurrency(
-                                  loanValue
-                                )}\nSubscriptions: ${
-                                  customerSubscriptions.length
-                                }\n\nThank You, I J Reddy.`;
+                                const message = `Hi ${customer.name
+                                  },\n\nLoans: ${customerLoans.length
+                                  }\nLoan Value: ${formatCurrency(
+                                    loanValue
+                                  )}\nSubscriptions: ${customerSubscriptions.length
+                                  }\n\nThank You, I J Reddy.`;
                                 return (
                                   <div
                                     key={customer.id}
@@ -822,11 +815,10 @@ const CustomerListPage = () => {
                                     {draggingCardId === customer.id && (
                                       <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
                                         <div
-                                          className={`${
-                                            isScopedCustomer
-                                              ? "w-full"
-                                              : "w-1/2"
-                                          } bg-green-500 flex items-center justify-start pl-4`}
+                                          className={`${isScopedCustomer
+                                            ? "w-full"
+                                            : "w-1/2"
+                                            } bg-green-500 flex items-center justify-start pl-4`}
                                         >
                                           <WhatsAppIcon className="w-6 h-6 text-white" />
                                         </div>
@@ -992,9 +984,8 @@ const CustomerListPage = () => {
                   Customers with Only Loans
                 </h3>
                 <ChevronDownIcon
-                  className={`w-6 h-6 text-blue-800 dark:text-indigo-400 transition-transform ${
-                    expandedSections.loans ? "rotate-180" : ""
-                  }`}
+                  className={`w-6 h-6 text-blue-800 dark:text-indigo-400 transition-transform ${expandedSections.loans ? "rotate-180" : ""
+                    }`}
                 />
               </button>
               <AnimatePresence initial={true}>
@@ -1014,7 +1005,7 @@ const CustomerListPage = () => {
                       {(() => {
                         const totalPages = Math.ceil(
                           categorizedCustomers.withOnlyLoans.length /
-                            itemsPerPage
+                          itemsPerPage
                         );
                         const start = (currentPages.loans - 1) * itemsPerPage;
                         const end = start + itemsPerPage;
@@ -1173,13 +1164,11 @@ const CustomerListPage = () => {
                                 const isValidPhone =
                                   customer.phone &&
                                   /^\d{10,15}$/.test(customer.phone);
-                                const message = `Hi ${
-                                  customer.name
-                                },\n\nLoans: ${
-                                  customerLoans.length
-                                }\nLoan Value: ${formatCurrency(
-                                  loanValue
-                                )}\n\nThank You, I J Reddy.`;
+                                const message = `Hi ${customer.name
+                                  },\n\nLoans: ${customerLoans.length
+                                  }\nLoan Value: ${formatCurrency(
+                                    loanValue
+                                  )}\n\nThank You, I J Reddy.`;
                                 return (
                                   <div
                                     key={customer.id}
@@ -1189,11 +1178,10 @@ const CustomerListPage = () => {
                                     {draggingCardId === customer.id && (
                                       <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
                                         <div
-                                          className={`${
-                                            isScopedCustomer
-                                              ? "w-full"
-                                              : "w-1/2"
-                                          } bg-green-500 flex items-center justify-start pl-4`}
+                                          className={`${isScopedCustomer
+                                            ? "w-full"
+                                            : "w-1/2"
+                                            } bg-green-500 flex items-center justify-start pl-4`}
                                         >
                                           <WhatsAppIcon className="w-6 h-6 text-white" />
                                         </div>
@@ -1352,9 +1340,8 @@ const CustomerListPage = () => {
                   Customers with Only Subscriptions
                 </h3>
                 <ChevronDownIcon
-                  className={`w-6 h-6 text-cyan-800 dark:text-cyan-400 transition-transform ${
-                    expandedSections.subs ? "rotate-180" : ""
-                  }`}
+                  className={`w-6 h-6 text-cyan-800 dark:text-cyan-400 transition-transform ${expandedSections.subs ? "rotate-180" : ""
+                    }`}
                 />
               </button>
               <AnimatePresence initial={true}>
@@ -1374,7 +1361,7 @@ const CustomerListPage = () => {
                       {(() => {
                         const totalPages = Math.ceil(
                           categorizedCustomers.withOnlySubscriptions.length /
-                            itemsPerPage
+                          itemsPerPage
                         );
                         const start = (currentPages.subs - 1) * itemsPerPage;
                         const end = start + itemsPerPage;
@@ -1534,13 +1521,11 @@ const CustomerListPage = () => {
                                 const isValidPhone =
                                   customer.phone &&
                                   /^\d{10,15}$/.test(customer.phone);
-                                const message = `Hi ${
-                                  customer.name
-                                },\n\nSubscriptions: ${
-                                  customerSubscriptions.length
-                                }\nTotal Value: ${formatCurrency(
-                                  subValue
-                                )}\n\nThank You, I J Reddy.`;
+                                const message = `Hi ${customer.name
+                                  },\n\nSubscriptions: ${customerSubscriptions.length
+                                  }\nTotal Value: ${formatCurrency(
+                                    subValue
+                                  )}\n\nThank You, I J Reddy.`;
                                 return (
                                   <div
                                     key={customer.id}
@@ -1550,11 +1535,10 @@ const CustomerListPage = () => {
                                     {draggingCardId === customer.id && (
                                       <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
                                         <div
-                                          className={`${
-                                            isScopedCustomer
-                                              ? "w-full"
-                                              : "w-1/2"
-                                          } bg-green-500 flex items-center justify-start pl-4`}
+                                          className={`${isScopedCustomer
+                                            ? "w-full"
+                                            : "w-1/2"
+                                            } bg-green-500 flex items-center justify-start pl-4`}
                                         >
                                           <WhatsAppIcon className="w-6 h-6 text-white" />
                                         </div>
@@ -1717,9 +1701,8 @@ const CustomerListPage = () => {
                     Customers with No Records
                   </h3>
                   <ChevronDownIcon
-                    className={`w-6 h-6 text-gray-800 dark:text-gray-400 transition-transform ${
-                      expandedSections.neither ? "rotate-180" : ""
-                    }`}
+                    className={`w-6 h-6 text-gray-800 dark:text-gray-400 transition-transform ${expandedSections.neither ? "rotate-180" : ""
+                      }`}
                   />
                 </button>
                 <AnimatePresence initial={true}>
@@ -1739,7 +1722,7 @@ const CustomerListPage = () => {
                         {(() => {
                           const totalPages = Math.ceil(
                             categorizedCustomers.withNeither.length /
-                              itemsPerPage
+                            itemsPerPage
                           );
                           const start =
                             (currentPages.neither - 1) * itemsPerPage;
@@ -1774,7 +1757,7 @@ const CustomerListPage = () => {
                                     {paginatedCustomers.map((customer, idx) => {
                                       const rowNumber =
                                         (currentPages.neither - 1) *
-                                          itemsPerPage +
+                                        itemsPerPage +
                                         idx +
                                         1;
                                       return (
@@ -1878,11 +1861,10 @@ const CustomerListPage = () => {
                                       {draggingCardId === customer.id && (
                                         <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
                                           <div
-                                            className={`${
-                                              isScopedCustomer
-                                                ? "w-full"
-                                                : "w-1/2"
-                                            } bg-green-500 flex items-center justify-start pl-4`}
+                                            className={`${isScopedCustomer
+                                              ? "w-full"
+                                              : "w-1/2"
+                                              } bg-green-500 flex items-center justify-start pl-4`}
                                           >
                                             <WhatsAppIcon className="w-6 h-6 text-white" />
                                           </div>
@@ -2137,7 +2119,7 @@ const CustomerListPage = () => {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <h3 className="text-base font-bold mb-3 dark:text-dark-text">
-                    Delete {deleteCustomerTarget.name} customer permanently?
+                    Move {deleteCustomerTarget.name} to trash?
                   </h3>
                   <div className="text-sm text-gray-600 mb-3 space-y-1 dark:text-dark-muted">
                     <p>
@@ -2156,8 +2138,8 @@ const CustomerListPage = () => {
                       </span>
                     </p>
                   </div>
-                  <p className="text-xs text-red-600 mb-4 dark:text-red-400">
-                    This is permanent delete, cannot be undone.
+                  <p className="text-xs text-amber-600 mb-4 dark:text-amber-400">
+                    Customer and all related records will be moved to trash. You can restore them later.
                   </p>
                   <div className="flex justify-end gap-2">
                     <button
@@ -2168,9 +2150,9 @@ const CustomerListPage = () => {
                     </button>
                     <button
                       onClick={confirmDeleteCustomer}
-                      className="px-3 py-1.5 rounded bg-red-600 text-white hover:bg-red-700 text-sm"
+                      className="px-3 py-1.5 rounded bg-amber-600 text-white hover:bg-amber-700 text-sm"
                     >
-                      Delete
+                      Move to Trash
                     </button>
                   </div>
                 </motion.div>

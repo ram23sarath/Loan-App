@@ -135,6 +135,11 @@ interface DataContextType {
   fetchDeletedLoans: () => Promise<void>;
   restoreLoan: (id: string) => Promise<void>;
   permanentDeleteLoan: (id: string) => Promise<void>;
+  // Customers soft delete
+  deletedCustomers: Customer[];
+  fetchDeletedCustomers: () => Promise<void>;
+  restoreCustomer: (id: string) => Promise<void>;
+  permanentDeleteCustomer: (id: string) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -230,6 +235,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [deletedDataEntries, setDeletedDataEntries] = useState<DataEntry[]>([]);
   const [deletedSubscriptions, setDeletedSubscriptions] = useState<SubscriptionWithCustomer[]>([]);
   const [deletedLoans, setDeletedLoans] = useState<LoanWithCustomer[]>([]);
+  const [deletedCustomers, setDeletedCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [dataEntries, setDataEntries] = useState<DataEntry[]>([]);
@@ -280,11 +286,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
         // If the user is scoped to a customer, fetch only that customer's related data
         if (effectiveIsScoped && effectiveScopedId) {
-          // Customers: only the scoped customer
+          // Customers: only the scoped customer (excluding soft-deleted)
           const { data: customerData, error: custErr } = await supabase
             .from("customers")
             .select("*")
             .eq("id", effectiveScopedId)
+            .is("deleted_at", null)
             .limit(1);
           if (custErr) throw custErr;
           setCustomers((customerData as unknown as Customer[]) || []);
@@ -338,11 +345,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           setDataEntries((dataEntriesData as DataEntry[]) || []);
         } else {
           // Full fetch for admin/users with no scoped customer - uses pagination to get ALL records
+          // Fetch customers (excluding soft-deleted)
           const customersData = await fetchAllRecords<Customer>(
             () =>
               supabase
                 .from("customers")
                 .select("*")
+                .is("deleted_at", null)
                 .order("created_at", { ascending: false }),
             "customers"
           );
@@ -567,6 +576,31 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     } catch (err: any) {
       console.error("Failed to fetch deleted loans", err);
       setDeletedLoans([]);
+    }
+  }, [session, isScopedCustomer]);
+
+  // Fetch deleted customers (admin only - RLS enforced)
+  const fetchDeletedCustomers = useCallback(async () => {
+    try {
+      if (!session || !session.user || !session.user.id || isScopedCustomer) {
+        setDeletedCustomers([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("customers")
+        .select("*")
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: false });
+
+      if (error) {
+        console.error("Supabase error fetching deleted customers:", error);
+        throw error;
+      }
+      setDeletedCustomers((data as Customer[]) || []);
+    } catch (err: any) {
+      console.error("Failed to fetch deleted customers", err);
+      setDeletedCustomers([]);
     }
   }, [session, isScopedCustomer]);
 
@@ -1813,20 +1847,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         "Read-only access: scoped customers cannot delete customers"
       );
     try {
-      let customerUserId: string | null = null;
-      try {
-        const { data: custData, error: custFetchErr } = await supabase
-          .from("customers")
-          .select("user_id")
-          .eq("id", customerId)
-          .limit(1);
-        if (!custFetchErr && custData && custData.length > 0) {
-          customerUserId = (custData[0] as any).user_id || null;
-        }
-      } catch (e) {
-        console.warn("Failed to fetch customer user_id before delete", e);
-      }
+      const deletedAt = new Date().toISOString();
+      const deletedBy = session?.user?.email || session?.user?.id || "Unknown";
 
+      // Optimistic UI update - remove from local state immediately
       try {
         const optimisticLoanIds = loans
           .filter((l) => l.customer_id === customerId)
@@ -1842,79 +1866,70 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         setDataEntries((prev) =>
           prev.filter((d) => d.customer_id !== customerId)
         );
+        setSeniorityList((prev) =>
+          prev.filter((s) => s.customer_id !== customerId)
+        );
       } catch (e) { }
 
-      if (customerUserId) {
-        try {
-          const deleteUrl = `/.netlify/functions/delete-user-from-customer?_=${Date.now()}`;
-          const resp = await fetch(deleteUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Cache-Control": "no-cache",
-              Pragma: "no-cache",
-            },
-            body: JSON.stringify({
-              customer_id: customerId,
-              user_id: customerUserId,
-            }),
-          });
-          if (!resp.ok) {
-            const errData = await resp.json().catch(() => ({}));
-            console.warn(
-              "Warning: failed to delete linked auth user:",
-              errData.error || resp.statusText
-            );
-          } else {
-            console.log("✅ Linked auth user deleted for customer", customerId);
-          }
-        } catch (e) {
-          console.warn(
-            "Warning: error calling delete-user-from-customer function",
-            e
-          );
-        }
-      }
-
-      const { error: delDataErr } = await supabase
-        .from("data_entries")
-        .delete()
-        .eq("customer_id", customerId);
-      if (delDataErr) throw delDataErr;
-
-      const { data: loansForCustomer, error: loansFetchError } = await supabase
-        .from("loans")
-        .select("id")
-        .eq("customer_id", customerId);
-      if (loansFetchError) throw loansFetchError;
-      const loanIds = (loansForCustomer || []).map((l: any) => l.id);
-      if (loanIds.length > 0) {
-        const { error: delInstallErr } = await supabase
-          .from("installments")
-          .delete()
-          .in("loan_id", loanIds);
-        if (delInstallErr) throw delInstallErr;
-        const { error: delLoanErr } = await supabase
-          .from("loans")
-          .delete()
-          .in("id", loanIds);
-        if (delLoanErr) throw delLoanErr;
-      }
-
-      const { error: delSubErr } = await supabase
-        .from("subscriptions")
-        .delete()
-        .eq("customer_id", customerId);
-      if (delSubErr) throw delSubErr;
-
-      const { error: delCustErr } = await supabase
+      // Soft delete the customer
+      const { error: custErr } = await supabase
         .from("customers")
-        .delete()
+        .update({
+          deleted_at: deletedAt,
+          deleted_by: deletedBy,
+        } as any)
         .eq("id", customerId);
-      if (delCustErr) throw delCustErr;
+      if (custErr) throw custErr;
+
+      // Soft delete all related loans
+      const { error: loansErr } = await supabase
+        .from("loans")
+        .update({
+          deleted_at: deletedAt,
+          deleted_by: deletedBy,
+        } as any)
+        .eq("customer_id", customerId)
+        .is("deleted_at", null);
+      if (loansErr) throw loansErr;
+
+      // Soft delete all related subscriptions
+      const { error: subsErr } = await supabase
+        .from("subscriptions")
+        .update({
+          deleted_at: deletedAt,
+          deleted_by: deletedBy,
+        } as any)
+        .eq("customer_id", customerId)
+        .is("deleted_at", null);
+      if (subsErr) throw subsErr;
+
+      // Soft delete all related data entries
+      const { error: dataErr } = await supabase
+        .from("data_entries")
+        .update({
+          deleted_at: deletedAt,
+          deleted_by: deletedBy,
+        } as any)
+        .eq("customer_id", customerId)
+        .is("deleted_at", null);
+      if (dataErr) throw dataErr;
+
+      // Soft delete all related loan seniority entries
+      const { error: seniorityErr } = await supabase
+        .from("loan_seniority")
+        .update({
+          deleted_at: deletedAt,
+          deleted_by: deletedBy,
+        } as any)
+        .eq("customer_id", customerId)
+        .is("deleted_at", null);
+      if (seniorityErr) throw seniorityErr;
 
       await fetchData();
+      await fetchDeletedCustomers();
     } catch (error) {
+      // Revert optimistic update on error
+      await fetchData();
       throw new Error(
         parseSupabaseError(error, `deleting customer ${customerId}`)
       );
@@ -1991,6 +2006,200 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       await fetchDeletedLoans();
     } catch (err: any) {
       throw new Error(parseSupabaseError(err, `permanently deleting loan ${id}`));
+    }
+  };
+
+  // Restore a soft-deleted customer and all related records
+  const restoreCustomer = async (id: string): Promise<void> => {
+    if (isScopedCustomer)
+      throw new Error(
+        "Read-only access: scoped customers cannot restore customers"
+      );
+    try {
+      // Get the customer's deleted_at timestamp to restore matching related records
+      const { data: customer, error: fetchError } = await supabase
+        .from("customers")
+        .select("id, deleted_at")
+        .eq("id", id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      if (!customer || (customer as any).deleted_at === null) {
+        throw new Error("Customer is not in trash");
+      }
+
+      const deletedAt = (customer as any).deleted_at;
+
+      // Restore the customer
+      const { error: custErr } = await supabase
+        .from("customers")
+        .update({
+          deleted_at: null,
+          deleted_by: null,
+        } as any)
+        .eq("id", id);
+      if (custErr) throw custErr;
+
+      // Restore all related loans that were deleted at the same time
+      const { error: loansErr } = await supabase
+        .from("loans")
+        .update({
+          deleted_at: null,
+          deleted_by: null,
+        } as any)
+        .eq("customer_id", id)
+        .eq("deleted_at", deletedAt);
+      if (loansErr) throw loansErr;
+
+      // Restore all related subscriptions that were deleted at the same time
+      const { error: subsErr } = await supabase
+        .from("subscriptions")
+        .update({
+          deleted_at: null,
+          deleted_by: null,
+        } as any)
+        .eq("customer_id", id)
+        .eq("deleted_at", deletedAt);
+      if (subsErr) throw subsErr;
+
+      // Restore all related data entries that were deleted at the same time
+      const { error: dataErr } = await supabase
+        .from("data_entries")
+        .update({
+          deleted_at: null,
+          deleted_by: null,
+        } as any)
+        .eq("customer_id", id)
+        .eq("deleted_at", deletedAt);
+      if (dataErr) throw dataErr;
+
+      // Restore all related loan seniority entries that were deleted at the same time
+      const { error: seniorityErr } = await supabase
+        .from("loan_seniority")
+        .update({
+          deleted_at: null,
+          deleted_by: null,
+        } as any)
+        .eq("customer_id", id)
+        .eq("deleted_at", deletedAt);
+      if (seniorityErr) throw seniorityErr;
+
+      await fetchData();
+      await fetchDeletedCustomers();
+    } catch (err: any) {
+      throw new Error(parseSupabaseError(err, `restoring customer ${id}`));
+    }
+  };
+
+  // Permanently delete a soft-deleted customer and all related records
+  const permanentDeleteCustomer = async (id: string): Promise<void> => {
+    if (isScopedCustomer)
+      throw new Error(
+        "Read-only access: scoped customers cannot permanently delete customers"
+      );
+    try {
+      // Defensive check: verify the customer is soft-deleted before permanent deletion
+      const { data: customer, error: fetchError } = await supabase
+        .from("customers")
+        .select("id, user_id, deleted_at")
+        .eq("id", id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      if (!customer || (customer as any).deleted_at === null) {
+        throw new Error(
+          "Cannot permanently delete: customer must be soft-deleted first (moved to trash)"
+        );
+      }
+
+      const customerUserId = (customer as any).user_id || null;
+
+      // Hard delete all related data entries
+      const { error: delDataErr } = await supabase
+        .from("data_entries")
+        .delete()
+        .eq("customer_id", id);
+      if (delDataErr) throw delDataErr;
+
+      // Hard delete all related loan seniority entries
+      const { error: delSeniorityErr } = await supabase
+        .from("loan_seniority")
+        .delete()
+        .eq("customer_id", id);
+      if (delSeniorityErr) throw delSeniorityErr;
+
+      // Get all loans for this customer to delete their installments
+      const { data: loansForCustomer, error: loansFetchError } = await supabase
+        .from("loans")
+        .select("id")
+        .eq("customer_id", id);
+      if (loansFetchError) throw loansFetchError;
+      const loanIds = (loansForCustomer || []).map((l: any) => l.id);
+      if (loanIds.length > 0) {
+        const { error: delInstallErr } = await supabase
+          .from("installments")
+          .delete()
+          .in("loan_id", loanIds);
+        if (delInstallErr) throw delInstallErr;
+        const { error: delLoanErr } = await supabase
+          .from("loans")
+          .delete()
+          .in("id", loanIds);
+        if (delLoanErr) throw delLoanErr;
+      }
+
+      // Hard delete all related subscriptions
+      const { error: delSubErr } = await supabase
+        .from("subscriptions")
+        .delete()
+        .eq("customer_id", id);
+      if (delSubErr) throw delSubErr;
+
+      // Hard delete the customer
+      const { error: delCustErr } = await supabase
+        .from("customers")
+        .delete()
+        .eq("id", id);
+      if (delCustErr) throw delCustErr;
+
+      // Delete linked auth user if exists
+      if (customerUserId) {
+        try {
+          const deleteUrl = `/.netlify/functions/delete-user-from-customer?_=${Date.now()}`;
+          const resp = await fetch(deleteUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Cache-Control": "no-cache",
+              Pragma: "no-cache",
+            },
+            body: JSON.stringify({
+              customer_id: id,
+              user_id: customerUserId,
+            }),
+          });
+          if (!resp.ok) {
+            const errData = await resp.json().catch(() => ({}));
+            console.warn(
+              "Warning: failed to delete linked auth user:",
+              errData.error || resp.statusText
+            );
+          } else {
+            console.log("✅ Linked auth user deleted for customer", id);
+          }
+        } catch (e) {
+          console.warn(
+            "Warning: error calling delete-user-from-customer function",
+            e
+          );
+        }
+      }
+
+      await fetchDeletedCustomers();
+    } catch (err: any) {
+      throw new Error(parseSupabaseError(err, `permanently deleting customer ${id}`));
     }
   };
 
@@ -2146,6 +2355,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         fetchDeletedLoans,
         restoreLoan,
         permanentDeleteLoan,
+        deletedCustomers,
+        fetchDeletedCustomers,
+        restoreCustomer,
+        permanentDeleteCustomer,
       }}
     >
       {children}

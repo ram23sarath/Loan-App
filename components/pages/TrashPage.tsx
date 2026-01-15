@@ -34,6 +34,11 @@ const TrashPage = () => {
         fetchDeletedLoans,
         restoreLoan,
         permanentDeleteLoan,
+        // Customers
+        deletedCustomers,
+        fetchDeletedCustomers,
+        restoreCustomer,
+        permanentDeleteCustomer,
     } = useData();
 
     useEffect(() => {
@@ -42,11 +47,12 @@ const TrashPage = () => {
         fetchDeletedDataEntries().catch(console.error);
         fetchDeletedSubscriptions().catch(console.error);
         fetchDeletedLoans().catch(console.error);
-    }, [fetchDeletedSeniorityList, fetchSeniorityList, fetchDeletedDataEntries, fetchDeletedSubscriptions, fetchDeletedLoans]);
+        fetchDeletedCustomers().catch(console.error);
+    }, [fetchDeletedSeniorityList, fetchSeniorityList, fetchDeletedDataEntries, fetchDeletedSubscriptions, fetchDeletedLoans, fetchDeletedCustomers]);
 
     // Seniority state
-    const [restoreTarget, setRestoreTarget] = useState<{ id: string; name: string; type: 'seniority' | 'expenditure' | 'subscription' | 'loan' } | null>(null);
-    const [permanentDeleteTarget, setPermanentDeleteTarget] = useState<{ id: string; name: string; type: 'seniority' | 'expenditure' | 'subscription' | 'loan' } | null>(null);
+    const [restoreTarget, setRestoreTarget] = useState<{ id: string; name: string; type: 'seniority' | 'expenditure' | 'subscription' | 'loan' | 'customer' } | null>(null);
+    const [permanentDeleteTarget, setPermanentDeleteTarget] = useState<{ id: string; name: string; type: 'seniority' | 'expenditure' | 'subscription' | 'loan' | 'customer' } | null>(null);
     const [restoreError, setRestoreError] = useState<string | null>(null);
 
     useEscapeKey(!!restoreError, () => setRestoreError(null));
@@ -95,6 +101,13 @@ const TrashPage = () => {
             } catch (err: any) {
                 alert(err.message || "Failed to restore loan");
             }
+        } else if (restoreTarget.type === 'customer') {
+            try {
+                await restoreCustomer(restoreTarget.id);
+                setRestoreTarget(null);
+            } catch (err: any) {
+                alert(err.message || "Failed to restore customer");
+            }
         }
     };
 
@@ -129,6 +142,13 @@ const TrashPage = () => {
             } catch (err: any) {
                 alert(err.message || "Failed to delete loan");
             }
+        } else if (permanentDeleteTarget.type === 'customer') {
+            try {
+                await permanentDeleteCustomer(permanentDeleteTarget.id);
+                setPermanentDeleteTarget(null);
+            } catch (err: any) {
+                alert(err.message || "Failed to delete customer");
+            }
         }
     };
 
@@ -157,6 +177,7 @@ const TrashPage = () => {
     };
 
     const sections = [
+        { title: "Customers", items: deletedCustomers || [], type: 'customer' as const },
         { title: "Loans", items: deletedLoans || [], type: 'loan' as const },
         { title: "Subscriptions", items: deletedSubscriptions || [], type: 'subscription' as const },
         { title: "Loan Seniority", items: deletedSeniorityList || [], type: 'seniority' as const },
@@ -333,6 +354,26 @@ const TrashPage = () => {
                     </div>
                 </>
             );
+        } else if (type === 'customer') {
+            return (
+                <>
+                    <div className="font-medium text-gray-800 dark:text-dark-text flex items-center gap-2">
+                        {item.name || "Unknown"}
+                        {item.phone && (
+                            <span className="text-xs font-normal text-gray-500 dark:text-dark-muted">
+                                ({item.phone})
+                            </span>
+                        )}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-dark-muted flex flex-wrap gap-x-2 mt-0.5">
+                        <span className="text-amber-600 dark:text-amber-400">⚠ All related records will be restored/deleted</span>
+                        <span>•</span>
+                        <span className="text-red-500/80 dark:text-red-400/80">
+                            {formatDeletedInfo(item)}
+                        </span>
+                    </div>
+                </>
+            );
         }
         return null;
     };
@@ -356,6 +397,8 @@ const TrashPage = () => {
                 (customers.find((c: any) => c.id === item.customer_id)?.name) ||
                 "Loan";
             return `${customerName}'s loan`;
+        } else if (type === 'customer') {
+            return `${item.name || 'Customer'} and all related records`;
         }
         return 'Item';
     };

@@ -18,6 +18,8 @@ export type Customer = {
   name: string;
   phone: string;
   created_at: string;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
 };
 
 export type Loan = {
@@ -92,6 +94,8 @@ export type Database = {
           name: string
           phone: string
           created_at: string
+          deleted_at?: string | null
+          deleted_by?: string | null
         }
         Insert: {
           user_id: string
@@ -101,6 +105,8 @@ export type Database = {
         Update: {
           name?: string
           phone?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
         }
         Relationships: []
       }

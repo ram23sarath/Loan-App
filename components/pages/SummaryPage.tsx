@@ -475,22 +475,50 @@ const SummaryPage = () => {
         }));
       setBreakdownItems([...instLate, ...subLate]);
     } else if (type === "interest") {
-      // For interest, find installments that include interest portion for the FY
       const items: any[] = [];
       loans.forEach((loan) => {
-        const insts = (localInstallmentsByLoanId.get(loan.id) || []).filter(
-          (i) => within(i.date)
+        // Sort installments by date to track cumulative payments correctly
+        const allInsts = (localInstallmentsByLoanId.get(loan.id) || []).sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
         );
-        insts.forEach((inst) => {
-          // approximate: interest portion is amount beyond remaining principal
-          items.push({
-            id: inst.id,
-            date: inst.date,
-            amount: inst.amount || 0,
-            receipt: inst.receipt_number,
-            source: "Installment (interest portion)",
-            customer: loan.customers?.name || "",
-          });
+
+        let amountPaidSoFar = 0;
+        const originalPrincipal = loan.original_amount || 0;
+
+        allInsts.forEach((inst) => {
+          const prevTotal = amountPaidSoFar;
+          const currentInstAmount = inst.amount || 0;
+          const newTotal = prevTotal + currentInstAmount;
+
+          amountPaidSoFar = newTotal;
+
+          // Check if this specific installment is in the selected FY
+          if (within(inst.date)) {
+            let interestPortion = 0;
+
+            if (prevTotal >= originalPrincipal) {
+              // Principal was already fully paid before this installment
+              interestPortion = currentInstAmount;
+            } else if (newTotal > originalPrincipal) {
+              // This installment crosses the boundary (Principal -> Interest)
+              interestPortion = newTotal - originalPrincipal;
+            }
+
+            if (interestPortion > 0) {
+              items.push({
+                id: inst.id,
+                date: inst.date,
+                amount: interestPortion,
+                receipt: inst.receipt_number,
+                source: "Installment (Interest Portion)",
+                customer: loan.customers?.name || "",
+                notes:
+                  interestPortion < currentInstAmount
+                    ? `Part of ${formatCurrencyIN(currentInstAmount)} payment`
+                    : undefined,
+              });
+            }
+          }
         });
       });
       setBreakdownItems(items);
@@ -526,8 +554,8 @@ const SummaryPage = () => {
           // Representative date: latest installment date within FY if present, otherwise null
           const latestInFY = instsInFY.length
             ? instsInFY.reduce((a, b) =>
-                new Date(a.date) > new Date(b.date) ? a : b
-              ).date
+              new Date(a.date) > new Date(b.date) ? a : b
+            ).date
             : null;
 
           return {
@@ -637,10 +665,10 @@ const SummaryPage = () => {
   const breakdownPagination =
     isPaginatedBreakdown && breakdownItems.length > BREAKDOWN_PAGE_SIZE
       ? {
-          currentPage: breakdownPage,
-          totalPages: Math.ceil(breakdownItems.length / BREAKDOWN_PAGE_SIZE),
-          onPageChange: handleBreakdownPageChange,
-        }
+        currentPage: breakdownPage,
+        totalPages: Math.ceil(breakdownItems.length / BREAKDOWN_PAGE_SIZE),
+        onPageChange: handleBreakdownPageChange,
+      }
       : undefined;
 
   const collectedBreakdownCards = [
@@ -926,9 +954,8 @@ const SummaryPage = () => {
                     <FileDownIcon className="w-5 h-5" />
                     <span className="hidden sm:inline">Export</span>
                     <svg
-                      className={`w-4 h-4 transition-transform ${
-                        exportMenuOpen ? "rotate-180" : ""
-                      }`}
+                      className={`w-4 h-4 transition-transform ${exportMenuOpen ? "rotate-180" : ""
+                        }`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -1094,11 +1121,10 @@ const SummaryPage = () => {
                       Balance
                     </div>
                     <div
-                      className={`text-sm font-bold ${
-                        subscriptionBalance < 0
-                          ? "text-red-600 dark:text-red-400"
-                          : "text-cyan-800 dark:text-cyan-200"
-                      }`}
+                      className={`text-sm font-bold ${subscriptionBalance < 0
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-cyan-800 dark:text-cyan-200"
+                        }`}
                     >
                       <AnimatedNumber value={subscriptionBalance} />
                     </div>
@@ -1140,11 +1166,10 @@ const SummaryPage = () => {
                       Balance
                     </div>
                     <div
-                      className={`text-sm font-bold ${
-                        loanBalance < 0
-                          ? "text-red-600 dark:text-red-400"
-                          : "text-blue-800 dark:text-blue-200"
-                      }`}
+                      className={`text-sm font-bold ${loanBalance < 0
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-blue-800 dark:text-blue-200"
+                        }`}
                     >
                       <AnimatedNumber value={loanBalance} />
                     </div>
@@ -1231,9 +1256,8 @@ const SummaryPage = () => {
                     >
                       <span>{fyLabel(selectedFYStart)}</span>
                       <svg
-                        className={`w-4 h-4 ml-2 transition-transform ${
-                          fyDropdownOpen ? "rotate-180" : ""
-                        }`}
+                        className={`w-4 h-4 ml-2 transition-transform ${fyDropdownOpen ? "rotate-180" : ""
+                          }`}
                         fill="none"
                         stroke="currentColor"
                         strokeWidth="2"
@@ -1260,11 +1284,10 @@ const SummaryPage = () => {
                                 setFyDropdownOpen(false);
                                 setShowAllFYOptions(false);
                               }}
-                              className={`px-4 py-2 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-gray-800 dark:text-dark-text ${
-                                selectedFYStart === y
-                                  ? "bg-indigo-50 dark:bg-indigo-900/50 font-bold"
-                                  : ""
-                              }`}
+                              className={`px-4 py-2 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-gray-800 dark:text-dark-text ${selectedFYStart === y
+                                ? "bg-indigo-50 dark:bg-indigo-900/50 font-bold"
+                                : ""
+                                }`}
                             >
                               {fyLabel(y)}
                             </li>
@@ -1399,11 +1422,10 @@ const SummaryPage = () => {
                         Balance
                       </div>
                       <div
-                        className={`text-sm font-bold ${
-                          fyLoanBalance < 0
-                            ? "text-red-600 dark:text-red-400"
-                            : "text-blue-800 dark:text-blue-200"
-                        }`}
+                        className={`text-sm font-bold ${fyLoanBalance < 0
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-blue-800 dark:text-blue-200"
+                          }`}
                       >
                         <AnimatedNumber value={fyLoanBalance} />
                       </div>

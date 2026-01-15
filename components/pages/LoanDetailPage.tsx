@@ -45,7 +45,7 @@ const LoanDetailPage: React.FC = () => {
     );
   }
   return (
-    <GlassCard className="max-w-2xl mx-auto mt-8">
+    <GlassCard className="max-w-2xl mx-auto mt-8 smooth-center">
       <h2 className="text-2xl font-bold mb-4 dark:text-dark-text">
         Loan Details
       </h2>
@@ -55,9 +55,8 @@ const LoanDetailPage: React.FC = () => {
             Status
           </div>
           <div
-            className={`font-semibold ${
-              loanStatus.isPaidOff ? "text-green-600" : "text-orange-600"
-            }`}
+            className={`font-semibold ${loanStatus.isPaidOff ? "text-green-600" : "text-orange-600"
+              }`}
           >
             {loanStatus.status}
           </div>
@@ -219,11 +218,10 @@ const LoanDetailPage: React.FC = () => {
                               <button
                                 key={page}
                                 onClick={() => setCurrentPage(page)}
-                                className={`px-3 py-1 rounded border ${
-                                  currentPage === page
+                                className={`px-3 py-1 rounded border ${currentPage === page
                                     ? "bg-indigo-600 text-white border-indigo-600"
                                     : "border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700"
-                                }`}
+                                  }`}
                               >
                                 {page}
                               </button>

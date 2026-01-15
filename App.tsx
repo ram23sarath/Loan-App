@@ -235,7 +235,7 @@ const App = () => {
                     <div className="flex w-full h-screen overflow-hidden">
                       <Sidebar profileRef={profileRef} />
                       <main
-                        className="flex-1 h-full overflow-y-auto"
+                        className="flex-1 h-full overflow-y-auto sidebar-transition"
                         // Use the CSS variable set by Sidebar to offset content when sidebar is visible on desktop.
                         style={{
                           paddingLeft: "var(--sidebar-offset, 0px)",

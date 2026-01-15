@@ -51,6 +51,17 @@ html {
   background-color: #64748b;
 }
 
+/* Smooth transition for main content when sidebar expands/collapses */
+.sidebar-transition {
+  transition: padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: padding-left;
+}
+
+/* Smooth centering for content cards affected by container width changes */
+.smooth-center {
+  transition: margin 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* ===== SPHERE/CIRCULAR THEME TRANSITION ===== */
 
 /* View Transitions API - Modern browsers */
@@ -155,14 +166,12 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
 
 /* Premium shimmer text effect */
 .premium-shimmer-text {
-  background: linear-gradient(
-    90deg,
-    #818cf8 0%,
-    #c084fc 25%,
-    #f0abfc 50%,
-    #c084fc 75%,
-    #818cf8 100%
-  );
+  background: linear-gradient(90deg,
+      #818cf8 0%,
+      #c084fc 25%,
+      #f0abfc 50%,
+      #c084fc 75%,
+      #818cf8 100%);
   background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -174,6 +183,7 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
   0% {
     background-position: 100% 50%;
   }
+
   100% {
     background-position: -100% 50%;
   }
@@ -185,7 +195,7 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  text-shadow: 
+  text-shadow:
     0 0 20px rgba(102, 126, 234, 0.5),
     0 0 40px rgba(118, 75, 162, 0.3),
     0 0 60px rgba(240, 147, 251, 0.2);
@@ -194,14 +204,12 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
 
 /* Luxurious gold accent text */
 .premium-gold-text {
-  background: linear-gradient(
-    135deg,
-    #f6d365 0%,
-    #fda085 25%,
-    #f6d365 50%,
-    #ffecd2 75%,
-    #f6d365 100%
-  );
+  background: linear-gradient(135deg,
+      #f6d365 0%,
+      #fda085 25%,
+      #f6d365 50%,
+      #ffecd2 75%,
+      #f6d365 100%);
   background-size: 200% 200%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -211,9 +219,12 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
 }
 
 @keyframes goldShift {
-  0%, 100% {
+
+  0%,
+  100% {
     background-position: 0% 50%;
   }
+
   50% {
     background-position: 100% 50%;
   }
@@ -239,9 +250,12 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
 }
 
 @keyframes underlineShimmer {
-  0%, 100% {
+
+  0%,
+  100% {
     background-position: 0% 50%;
   }
+
   50% {
     background-position: 100% 50%;
   }
@@ -253,9 +267,12 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
 }
 
 @keyframes elegantFloat {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0px);
   }
+
   50% {
     transform: translateY(-8px);
   }
@@ -267,9 +284,12 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
 }
 
 @keyframes pulseGlow {
-  0%, 100% {
+
+  0%,
+  100% {
     filter: drop-shadow(0 0 8px rgba(129, 140, 248, 0.4));
   }
+
   50% {
     filter: drop-shadow(0 0 20px rgba(192, 132, 252, 0.6));
   }
@@ -281,9 +301,12 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
 }
 
 @keyframes breatheSpacing {
-  0%, 100% {
+
+  0%,
+  100% {
     letter-spacing: 0.02em;
   }
+
   50% {
     letter-spacing: 0.08em;
   }
@@ -300,6 +323,7 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
     transform: translateY(30px);
     filter: blur(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -308,11 +332,25 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
 }
 
 /* Staggered text reveal */
-.premium-stagger-1 { animation-delay: 0.1s; }
-.premium-stagger-2 { animation-delay: 0.2s; }
-.premium-stagger-3 { animation-delay: 0.3s; }
-.premium-stagger-4 { animation-delay: 0.4s; }
-.premium-stagger-5 { animation-delay: 0.5s; }
+.premium-stagger-1 {
+  animation-delay: 0.1s;
+}
+
+.premium-stagger-2 {
+  animation-delay: 0.2s;
+}
+
+.premium-stagger-3 {
+  animation-delay: 0.3s;
+}
+
+.premium-stagger-4 {
+  animation-delay: 0.4s;
+}
+
+.premium-stagger-5 {
+  animation-delay: 0.5s;
+}
 
 @keyframes modalIn {
   from {

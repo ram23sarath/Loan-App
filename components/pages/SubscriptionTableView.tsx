@@ -220,7 +220,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
               Late Fee
             </th>
             {!isScopedCustomer && (
-              <th className="px-4 py-2 border-b text-center dark:border-dark-border dark:text-dark-text">Actions</th>
+              <th className="px-4 py-2 border-b text-center dark:border-dark-border dark:text-dark-text whitespace-nowrap">Actions</th>
             )}
           </tr>
         </thead>
@@ -272,7 +272,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                 </td>
                 {!isScopedCustomer && (
                   <td className="px-4 py-2 border-b dark:border-dark-border">
-                    <div className="flex gap-2 items-center justify-center">
+                    <div className="flex gap-2 items-center justify-center whitespace-nowrap">
                       <button
                         onClick={() =>
                           isValidPhone &&
@@ -292,7 +292,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                           onMouseDown={(e) => e.stopPropagation()}
                           onTouchStart={(e) => e.stopPropagation()}
                           onPointerDown={(e) => (e as any).stopPropagation()}
-                          className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700"
+                          className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 whitespace-nowrap"
                         >
                           Edit
                         </button>
@@ -553,8 +553,8 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                                 setPagePickerOpen(null);
                               }}
                               className={`px-2 py-1 text-sm rounded ${currentPage === p
-                                  ? "bg-indigo-600 text-white"
-                                  : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
+                                ? "bg-indigo-600 text-white"
+                                : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
                                 }`}
                             >
                               {p}
@@ -616,8 +616,8 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                                 setPagePickerOpen(null);
                               }}
                               className={`px-2 py-1 text-sm rounded ${currentPage === p
-                                  ? "bg-indigo-600 text-white"
-                                  : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
+                                ? "bg-indigo-600 text-white"
+                                : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
                                 }`}
                             >
                               {p}

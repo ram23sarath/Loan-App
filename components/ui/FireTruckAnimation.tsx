@@ -18,56 +18,113 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
     return (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-white to-indigo-50/50 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/50 overflow-hidden">
             {/* Animated background gradient orbs */}
-            <motion.div 
+            <motion.div
                 className="absolute top-1/4 -left-32 w-96 h-96 bg-gradient-to-r from-indigo-400/20 to-purple-400/20 rounded-full blur-3xl pointer-events-none"
-                animate={{ 
+                animate={{
                     x: [0, 50, 0],
                     y: [0, 30, 0],
                     scale: [1, 1.1, 1]
                 }}
                 transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
             />
-            <motion.div 
+            <motion.div
                 className="absolute bottom-1/4 -right-32 w-96 h-96 bg-gradient-to-r from-pink-400/20 to-orange-400/20 rounded-full blur-3xl pointer-events-none"
-                animate={{ 
+                animate={{
                     x: [0, -50, 0],
                     y: [0, -30, 0],
                     scale: [1.1, 1, 1.1]
                 }}
                 transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
             />
-            
+
             {/* Subtle grid pattern overlay */}
             <div className="absolute inset-0 bg-[linear-gradient(rgba(99,102,241,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.03)_1px,transparent_1px)] bg-[size:60px_60px] pointer-events-none dark:bg-[linear-gradient(rgba(99,102,241,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.05)_1px,transparent_1px)]" />
 
             {/* Main content container */}
             <div className="relative z-10 flex flex-col items-center px-4">
-                {/* Officer Image with premium frame */}
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.8, y: 30 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                    className="relative mb-8"
-                >
-                    {/* Glowing ring behind image */}
+                {/* Three emblems container */}
+                <div className="relative mb-8 flex items-center justify-center gap-4 md:gap-8">
+                    {/* Left: AP Government Emblem */}
                     <motion.div
-                        className="absolute inset-0 -m-4 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-20 blur-xl"
-                        animate={{ 
-                            opacity: [0.2, 0.4, 0.2],
-                            scale: [1, 1.05, 1]
-                        }}
-                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                    />
-                    <div className="relative p-1 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
-                        <div className="bg-white dark:bg-slate-900 rounded-xl p-2">
-                            <img
-                                src="/police_officer.png"
-                                alt="Officer"
-                                className="w-40 md:w-52 h-auto object-contain rounded-lg"
-                            />
+                        initial={{ opacity: 0, scale: 0.8, x: -30 }}
+                        animate={{ opacity: 1, scale: 1, x: 0 }}
+                        transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+                        className="relative"
+                    >
+                        {/* Glowing ring behind image */}
+                        <motion.div
+                            className="absolute inset-0 -m-3 rounded-2xl bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 opacity-20 blur-xl"
+                            animate={{
+                                opacity: [0.2, 0.4, 0.2],
+                                scale: [1, 1.05, 1]
+                            }}
+                            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        />
+                        <div className="relative p-1 rounded-2xl bg-gradient-to-br from-green-500 via-emerald-500 to-teal-500">
+                            <div className="bg-white dark:bg-slate-900 rounded-xl p-2">
+                                <img
+                                    src="/ap_govt_emblem.png"
+                                    alt="AP Government Emblem"
+                                    className="w-[4.5rem] md:w-24 h-auto object-contain rounded-lg"
+                                />
+                            </div>
                         </div>
-                    </div>
-                </motion.div>
+                    </motion.div>
+
+                    {/* Center: Officer Image with premium frame */}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.8, y: 30 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                        className="relative"
+                    >
+                        {/* Glowing ring behind image */}
+                        <motion.div
+                            className="absolute inset-0 -m-4 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-20 blur-xl"
+                            animate={{
+                                opacity: [0.2, 0.4, 0.2],
+                                scale: [1, 1.05, 1]
+                            }}
+                            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        />
+                        <div className="relative p-1 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
+                            <div className="bg-white dark:bg-slate-900 rounded-xl p-2">
+                                <img
+                                    src="/police_officer.png"
+                                    alt="Officer"
+                                    className="w-[7.5rem] md:w-[9.75rem] h-auto object-contain rounded-lg"
+                                />
+                            </div>
+                        </div>
+                    </motion.div>
+
+                    {/* Right: AP Fire Truck */}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.8, x: 30 }}
+                        animate={{ opacity: 1, scale: 1, x: 0 }}
+                        transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+                        className="relative"
+                    >
+                        {/* Glowing ring behind image */}
+                        <motion.div
+                            className="absolute inset-0 -m-3 rounded-2xl bg-gradient-to-r from-red-500 via-orange-500 to-amber-500 opacity-20 blur-xl"
+                            animate={{
+                                opacity: [0.2, 0.4, 0.2],
+                                scale: [1, 1.05, 1]
+                            }}
+                            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        />
+                        <div className="relative p-1 rounded-2xl bg-gradient-to-br from-red-500 via-orange-500 to-amber-500">
+                            <div className="bg-white dark:bg-slate-900 rounded-xl p-2">
+                                <img
+                                    src="/ap_firetruck_truck.png"
+                                    alt="AP Fire Services"
+                                    className="w-[5.5rem] md:w-28 h-auto object-contain rounded-lg"
+                                />
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
 
                 {/* Premium welcome text */}
                 <motion.div
@@ -84,7 +141,7 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
                     >
                         Welcome to
                     </motion.p>
-                    <motion.h1 
+                    <motion.h1
                         className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tight mb-2"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -186,14 +243,14 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
                 >
                     Preparing your dashboard...
                 </motion.p>
-                
+
                 {/* Animated dots with gradient */}
                 <div className="flex gap-2">
                     {[0, 1, 2, 3, 4].map((i) => (
                         <motion.div
                             key={i}
-                            animate={{ 
-                                scale: [1, 1.4, 1], 
+                            animate={{
+                                scale: [1, 1.4, 1],
                                 opacity: [0.4, 1, 0.4]
                             }}
                             transition={{
@@ -204,11 +261,9 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
                             }}
                             className="w-2 h-2 rounded-full"
                             style={{
-                                background: `linear-gradient(135deg, ${
-                                    ['#818cf8', '#a78bfa', '#c084fc', '#e879f9', '#f472b6'][i]
-                                }, ${
-                                    ['#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899'][i]
-                                })`
+                                background: `linear-gradient(135deg, ${['#818cf8', '#a78bfa', '#c084fc', '#e879f9', '#f472b6'][i]
+                                    }, ${['#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899'][i]
+                                    })`
                             }}
                         />
                     ))}

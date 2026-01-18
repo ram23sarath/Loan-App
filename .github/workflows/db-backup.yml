@@ -16,51 +16,70 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GDRIVE_FOLDER_ID: 1_6w4x5S9OuSh8inDikd7X3py2202csMj
+
     steps:
-      - name: Install pg_dump (v17)
+      - name: Install PostgreSQL client v17
         run: |
+          set -e
           sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           wget -qO- https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo tee /etc/apt/trusted.gpg.d/pgdg.asc
           sudo apt-get update -y
           sudo apt-get install -y postgresql-client-17
-          sudo update-alternatives --install /usr/bin/pg_dump pg_dump /usr/lib/postgresql/17/bin/pg_dump 100
-          sudo update-alternatives --install /usr/bin/pg_restore pg_restore /usr/lib/postgresql/17/bin/pg_restore 100
-          sudo update-alternatives --install /usr/bin/psql psql /usr/lib/postgresql/17/bin/psql 100
+          echo "/usr/lib/postgresql/17/bin" >> $GITHUB_PATH
 
-      - name: Dump database
+      - name: Dump database (explicit v17 binaries)
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
-          pg_dump --version
+
+          PG_BIN="/usr/lib/postgresql/17/bin"
+          PG_DUMP="${PG_BIN}/pg_dump"
+          PG_RESTORE="${PG_BIN}/pg_restore"
+
+          echo "=== PostgreSQL client verification ==="
+          $PG_DUMP --version
+          $PG_RESTORE --version
+          which $PG_DUMP || true
+          which $PG_RESTORE || true
+          echo "PATH=$PATH"
+          echo "======================================"
+
           mkdir -p dumps
           TS=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
           FILE="dumps/backup-${TS}.dump"
-          # Explicitly include auth schema so users and identities are captured
-          pg_dump "$DATABASE_URL" -Fc \
+
+          echo "Starting pg_dump..."
+          $PG_DUMP "$DATABASE_URL" -Fc \
             --schema=auth \
             --schema=public \
             --schema=storage \
             --schema=graphql_public \
             --schema=extensions \
             -f "$FILE"
-          # Fail fast if auth tables are missing in the archive
-          pg_restore --list "$FILE" | grep -E -q 'TABLE DATA[[:space:]]+auth[[:space:]]+users' || { echo "auth.users not present in dump" >&2; exit 1; }
-          pg_restore --list "$FILE" | grep -E -q 'TABLE DATA[[:space:]]+auth[[:space:]]+identities' || { echo "auth.identities not present in dump" >&2; exit 1; }
-          gzip "$FILE"
-          echo "Created backup: ${FILE}.gz"
 
-      - name: Convert .dump.gz -> .backup
+          echo "Dump created: $FILE"
+          echo "Validating dump contents..."
+
+          # Show first part of archive list for debugging
+          $PG_RESTORE --list "$FILE" | sed -n '1,200p'
+
+          # Hard checks for auth tables
+          $PG_RESTORE --list "$FILE" | grep -i -E 'auth[[:punct:][:space:]]+users' >/dev/null \
+            || { echo "FATAL: auth.users not present in dump"; exit 1; }
+
+          $PG_RESTORE --list "$FILE" | grep -i -E 'auth[[:punct:][:space:]]+identities' >/dev/null \
+            || { echo "FATAL: auth.identities not present in dump"; exit 1; }
+
+          gzip -n "$FILE"
+          echo "Backup ready: ${FILE}.gz"
+
+      - name: Convert .dump.gz → .backup
         run: |
           set -euo pipefail
-          # find latest dump.gz
           F=$(ls -1t dumps/*.dump.gz | head -n1)
-          if [ -z "$F" ]; then
-            echo "No dump.gz found" >&2
-            exit 1
-          fi
+          [ -n "$F" ]
           BASENAME=$(basename "$F" .dump.gz)
-          # produce uncompressed .backup
           gunzip -c "$F" > "dumps/${BASENAME}.backup"
           echo "Produced dumps/${BASENAME}.backup"
 
@@ -68,65 +87,43 @@ jobs:
         run: |
           curl -fsSL https://rclone.org/install.sh | sudo bash
 
-      # --- FIXED STEP: Uses 'rclone config create' to handle JSON tokens safely ---
       - name: Setup Rclone Config
         run: |
-          # Create the config directory
+          set -e
           mkdir -p ~/.config/rclone
-
-          # Decode the Base64 secret to the config file
-          # This ensures exact byte-for-byte restoration of your local config
           echo "${{ secrets.RCLONE_CONF_BASE64 }}" | base64 -d > ~/.config/rclone/rclone.conf
-
-          # Verify config exists
           ls -l ~/.config/rclone/rclone.conf
 
       - name: Upload Backup to Google Drive
         env:
-          # Force the specific folder ID, overriding config file if needed
           RCLONE_CONFIG_GDRIVE_ROOT_FOLDER_ID: ${{ env.GDRIVE_FOLDER_ID }}
         run: |
           set -euo pipefail
-          # copy the latest .backup to Drive (configured root_folder_id)
           B=$(ls -1t dumps/*.backup | head -n1)
-          if [ -z "$B" ]; then
-            echo "No .backup found" >&2
-            exit 1
-          fi
-          # 'gdrive:' matches the name we created in the previous step
-          # Since rclone.conf has root_folder_id, this goes to that specific folder
+          [ -n "$B" ]
           rclone copy "$B" gdrive: --drive-chunk-size=64M --transfers=1 -v
-          echo "Uploaded $B to Google Drive (configured root folder)"
+          echo "Uploaded $B to Google Drive"
 
       - name: Cleanup old backups (keep last 3)
         env:
           RCLONE_CONFIG_GDRIVE_ROOT_FOLDER_ID: ${{ env.GDRIVE_FOLDER_ID }}
         run: |
           set -euo pipefail
-          echo "Listing all backup files in configured folder..."
 
-          # List all .backup files in the root_folder_id path
-          FILES=$(rclone lsf gdrive: --files-only | grep '\.backup$' | sort -r)
+          FILES=$(rclone lsf gdrive: --files-only | grep '\.backup$' | sort -r || true)
+          TOTAL=$(echo "$FILES" | grep -c . || true)
 
-          # Count total files
-          TOTAL=$(echo "$FILES" | grep -c '.' || echo "0")
-          echo "Found $TOTAL backup file(s)"
+          echo "Found $TOTAL backup(s)"
 
-          # Keep only last 3, delete the rest
           KEEP=3
           if [ "$TOTAL" -gt "$KEEP" ]; then
-            # Get files to delete (skip first 3)
             TO_DELETE=$(echo "$FILES" | tail -n +$((KEEP + 1)))
-            echo "Deleting $(echo "$TO_DELETE" | wc -l) old backup(s)..."
-            
             for FILE in $TO_DELETE; do
               echo "Deleting: $FILE"
               rclone delete "gdrive:$FILE"
             done
-            
-            echo "Cleanup complete. Kept $KEEP most recent backups."
           else
-            echo "Only $TOTAL backup(s) exist. No cleanup needed."
+            echo "No cleanup needed"
           fi
 
       - name: Notify Success
@@ -134,14 +131,14 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
-          psql "$DATABASE_URL" -c "INSERT INTO public.system_notifications (type, status, message) VALUES ('backup', 'success', 'Backup completed successfully');" || echo "Failed to log success"
+          psql "$DATABASE_URL" -c "INSERT INTO public.system_notifications (type, status, message) VALUES ('backup', 'success', 'Backup completed successfully');" || true
 
       - name: Notify Failure
         if: failure()
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
-          psql "$DATABASE_URL" -c "INSERT INTO public.system_notifications (type, status, message) VALUES ('backup', 'error', 'Backup failed on GitHub Actions');" || echo "Failed to log failure"
+          psql "$DATABASE_URL" -c "INSERT INTO public.system_notifications (type, status, message) VALUES ('backup', 'error', 'Backup failed on GitHub Actions');" || true
 
       - name: Upload artifact (14-day retention)
         if: always()

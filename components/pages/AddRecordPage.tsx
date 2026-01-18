@@ -119,7 +119,7 @@ const AddRecordPage = () => {
   const resetAll = useCallback(() => {
     loanForm.reset({ payment_date: getTodayDateString() });
     subscriptionForm.reset();
-    installmentForm.reset();
+    installmentForm.reset({ date: getTodayDateString() });
   }, [loanForm, subscriptionForm, installmentForm]);
 
   const successTimeoutRef = useRef<number | null>(null);
@@ -191,6 +191,7 @@ const AddRecordPage = () => {
             "installment_number",
             nextInstallmentNumber
           );
+          installmentForm.setValue("date", getTodayDateString());
         }
       } else {
         const monthlyAmount = Math.round(
@@ -199,6 +200,7 @@ const AddRecordPage = () => {
         );
         installmentForm.setValue("amount", monthlyAmount);
         installmentForm.setValue("installment_number", 1);
+        installmentForm.setValue("date", getTodayDateString());
       }
 
       setAction((prev) => (prev === null ? "installment" : prev));

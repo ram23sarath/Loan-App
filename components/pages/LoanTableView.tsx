@@ -244,6 +244,8 @@ const LoanTableView: React.FC = () => {
     id: string;
     customer?: string | null;
   } | null>(null);
+  const [deletingLoan, setDeletingLoan] = React.useState(false);
+  const [deletingInstallment, setDeletingInstallment] = React.useState(false);
   const [editTarget, setEditTarget] = React.useState<Installment | null>(null);
   const [editLoanTarget, setEditLoanTarget] =
     React.useState<LoanWithCustomer | null>(null);
@@ -1580,22 +1582,27 @@ const LoanTableView: React.FC = () => {
                   <button
                     onClick={() => setDeleteLoanTarget(null)}
                     className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
+                    disabled={deletingLoan}
                   >
                     Cancel
                   </button>
                   <button
                     onClick={async () => {
                       if (!deleteLoanTarget) return;
+                      setDeletingLoan(true);
                       try {
                         await deleteLoan(deleteLoanTarget.id);
+                        setDeleteLoanTarget(null);
                       } catch (err: any) {
                         alert(err?.message || String(err));
+                      } finally {
+                        setDeletingLoan(false);
                       }
-                      setDeleteLoanTarget(null);
                     }}
                     className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold"
+                    disabled={deletingLoan}
                   >
-                    Move to Trash
+                    {deletingLoan ? "Deleting..." : "Move to Trash"}
                   </button>
                 </div>
               </motion.div>
@@ -1636,18 +1643,27 @@ const LoanTableView: React.FC = () => {
                   <button
                     onClick={() => setDeleteTarget(null)}
                     className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
+                    disabled={deletingInstallment}
                   >
                     Cancel
                   </button>
                   <button
                     onClick={async () => {
                       if (!deleteTarget) return;
-                      await deleteInstallment(deleteTarget.id);
-                      setDeleteTarget(null);
+                      setDeletingInstallment(true);
+                      try {
+                        await deleteInstallment(deleteTarget.id);
+                        setDeleteTarget(null);
+                      } catch (err: any) {
+                        alert(err?.message || String(err));
+                      } finally {
+                        setDeletingInstallment(false);
+                      }
                     }}
                     className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold"
+                    disabled={deletingInstallment}
                   >
-                    Delete
+                    {deletingInstallment ? "Deleting..." : "Delete"}
                   </button>
                 </div>
               </motion.div>

@@ -13,6 +13,7 @@ const TrashPage = () => {
     const {
         session,
         customers,
+        loans,
         seniorityList,
         deletedSeniorityList,
         fetchDeletedSeniorityList,
@@ -34,6 +35,11 @@ const TrashPage = () => {
         fetchDeletedLoans,
         restoreLoan,
         permanentDeleteLoan,
+        // Installments
+        deletedInstallments,
+        fetchDeletedInstallments,
+        restoreInstallment,
+        permanentDeleteInstallment,
         // Customers
         deletedCustomers,
         fetchDeletedCustomers,
@@ -47,12 +53,13 @@ const TrashPage = () => {
         fetchDeletedDataEntries().catch(console.error);
         fetchDeletedSubscriptions().catch(console.error);
         fetchDeletedLoans().catch(console.error);
+        fetchDeletedInstallments().catch(console.error);
         fetchDeletedCustomers().catch(console.error);
-    }, [fetchDeletedSeniorityList, fetchSeniorityList, fetchDeletedDataEntries, fetchDeletedSubscriptions, fetchDeletedLoans, fetchDeletedCustomers]);
+    }, [fetchDeletedSeniorityList, fetchSeniorityList, fetchDeletedDataEntries, fetchDeletedSubscriptions, fetchDeletedLoans, fetchDeletedInstallments, fetchDeletedCustomers]);
 
     // Seniority state
-    const [restoreTarget, setRestoreTarget] = useState<{ id: string; name: string; type: 'seniority' | 'expenditure' | 'subscription' | 'loan' | 'customer' } | null>(null);
-    const [permanentDeleteTarget, setPermanentDeleteTarget] = useState<{ id: string; name: string; type: 'seniority' | 'expenditure' | 'subscription' | 'loan' | 'customer' } | null>(null);
+    const [restoreTarget, setRestoreTarget] = useState<{ id: string; name: string; type: 'seniority' | 'expenditure' | 'subscription' | 'loan' | 'installment' | 'customer'; loanId?: string } | null>(null);
+    const [permanentDeleteTarget, setPermanentDeleteTarget] = useState<{ id: string; name: string; type: 'seniority' | 'expenditure' | 'subscription' | 'loan' | 'installment' | 'customer' } | null>(null);
     const [restoreError, setRestoreError] = useState<string | null>(null);
 
     useEscapeKey(!!restoreError, () => setRestoreError(null));
@@ -108,6 +115,15 @@ const TrashPage = () => {
             } catch (err: any) {
                 alert(err.message || "Failed to restore customer");
             }
+        } else if (restoreTarget.type === 'installment') {
+            try {
+                await restoreInstallment(restoreTarget.id);
+                setRestoreTarget(null);
+            } catch (err: any) {
+                // Show error in modal instead of alert for better UX
+                setRestoreError(err.message || "Failed to restore installment");
+                setRestoreTarget(null);
+            }
         }
     };
 
@@ -149,6 +165,13 @@ const TrashPage = () => {
             } catch (err: any) {
                 alert(err.message || "Failed to delete customer");
             }
+        } else if (permanentDeleteTarget.type === 'installment') {
+            try {
+                await permanentDeleteInstallment(permanentDeleteTarget.id);
+                setPermanentDeleteTarget(null);
+            } catch (err: any) {
+                alert(err.message || "Failed to delete installment");
+            }
         }
     };
 
@@ -179,6 +202,7 @@ const TrashPage = () => {
     const sections = [
         { title: "Customers", items: deletedCustomers || [], type: 'customer' as const },
         { title: "Loans", items: deletedLoans || [], type: 'loan' as const },
+        { title: "Installments", items: deletedInstallments || [], type: 'installment' as const },
         { title: "Subscriptions", items: deletedSubscriptions || [], type: 'subscription' as const },
         { title: "Loan Seniority", items: deletedSeniorityList || [], type: 'seniority' as const },
         { title: "Expenditures", items: deletedDataEntries || [], type: 'expenditure' as const },
@@ -374,6 +398,50 @@ const TrashPage = () => {
                     </div>
                 </>
             );
+        } else if (type === 'installment') {
+            // Find parent loan to get customer info
+            const parentLoan = deletedLoans?.find((l: any) => l.id === item.loan_id) || 
+                              loans?.find((l: any) => l.id === item.loan_id);
+            const customerName = parentLoan?.customers?.name || "Unknown";
+            const loanExists = loans?.some((l: any) => l.id === item.loan_id);
+
+            return (
+                <>
+                    <div className="font-medium text-gray-800 dark:text-dark-text flex items-center gap-2">
+                        Installment #{item.installment_number}
+                        <span className="text-xs font-normal text-gray-500 dark:text-dark-muted">
+                            ({customerName})
+                        </span>
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-dark-muted flex flex-wrap gap-x-2 mt-0.5">
+                        <span className="font-medium text-green-600 dark:text-green-400">
+                            ₹{formatNumberIndian(item.amount)}
+                        </span>
+                        {item.date && (
+                            <>
+                                <span>•</span>
+                                <span>{formatDate(item.date)}</span>
+                            </>
+                        )}
+                        {item.receipt_number && (
+                            <>
+                                <span>•</span>
+                                <span>Receipt: {item.receipt_number}</span>
+                            </>
+                        )}
+                        {!loanExists && (
+                            <>
+                                <span>•</span>
+                                <span className="text-amber-600 dark:text-amber-400">⚠ Parent loan deleted</span>
+                            </>
+                        )}
+                        <span>•</span>
+                        <span className="text-red-500/80 dark:text-red-400/80">
+                            {formatDeletedInfo(item)}
+                        </span>
+                    </div>
+                </>
+            );
         }
         return null;
     };
@@ -399,6 +467,11 @@ const TrashPage = () => {
             return `${customerName}'s loan`;
         } else if (type === 'customer') {
             return `${item.name || 'Customer'} and all related records`;
+        } else if (type === 'installment') {
+            const parentLoan = deletedLoans?.find((l: any) => l.id === item.loan_id) ||
+                              loans?.find((l: any) => l.id === item.loan_id);
+            const customerName = parentLoan?.customers?.name || "Unknown";
+            return `Installment #${item.installment_number} (${customerName})`;
         }
         return 'Item';
     };

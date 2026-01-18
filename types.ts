@@ -64,6 +64,8 @@ export type Installment = {
   receipt_number: string;
   late_fee: number | null;
   created_at: string;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
 };
 
 // Types for application state that include joined data
@@ -278,6 +280,8 @@ export type Database = {
           receipt_number: string
           late_fee: number | null
           created_at: string
+          deleted_at?: string | null
+          deleted_by?: string | null
         }
         Insert: {
           loan_id: string
@@ -293,6 +297,8 @@ export type Database = {
           date?: string
           receipt_number?: string
           late_fee?: number | null
+          deleted_at?: string | null
+          deleted_by?: string | null
         }
         Relationships: [
           {

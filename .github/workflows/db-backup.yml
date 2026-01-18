@@ -24,6 +24,8 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y postgresql-client-17
           sudo update-alternatives --install /usr/bin/pg_dump pg_dump /usr/lib/postgresql/17/bin/pg_dump 100
+          sudo update-alternatives --install /usr/bin/pg_restore pg_restore /usr/lib/postgresql/17/bin/pg_restore 100
+          sudo update-alternatives --install /usr/bin/psql psql /usr/lib/postgresql/17/bin/psql 100
 
       - name: Dump database
         env:

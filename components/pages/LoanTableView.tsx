@@ -271,6 +271,11 @@ const LoanTableView: React.FC = () => {
   React.useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      // Close actions dropdown first
+      if (expandedRow?.startsWith("actions-")) {
+        setExpandedRow(null);
+        return;
+      }
       if (deleteTarget) {
         setDeleteTarget(null);
         return;
@@ -280,12 +285,27 @@ const LoanTableView: React.FC = () => {
         return;
       }
     };
-    if (deleteTarget || deleteLoanTarget) {
+    if (deleteTarget || deleteLoanTarget || expandedRow?.startsWith("actions-")) {
       document.addEventListener("keydown", handleEscape);
       return () => document.removeEventListener("keydown", handleEscape);
     }
     return;
-  }, [deleteTarget, deleteLoanTarget]);
+  }, [deleteTarget, deleteLoanTarget, expandedRow]);
+
+  // Close actions dropdown when clicking outside
+  React.useEffect(() => {
+    if (!expandedRow?.startsWith("actions-")) return;
+    
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.actions-dropdown-container')) {
+        setExpandedRow(null);
+      }
+    };
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [expandedRow]);
 
   React.useEffect(() => {
     if (!editTarget) {
@@ -459,7 +479,7 @@ const LoanTableView: React.FC = () => {
               Status
             </th>
             {!isScopedCustomer && (
-              <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 dark:border-dark-border dark:text-dark-text whitespace-nowrap">
+              <th className="px-2 py-2 border-b text-left text-sm font-semibold text-gray-600 dark:border-dark-border dark:text-dark-text whitespace-nowrap">
                 Actions
               </th>
             )}
@@ -532,42 +552,83 @@ const LoanTableView: React.FC = () => {
                     {loanStatus.status}
                   </td>
                   {!isScopedCustomer && (
-                    <td className="px-4 py-2 border-b dark:border-dark-border">
-                      <div className="flex items-center gap-2 whitespace-nowrap">
-                        <button
-                          onClick={() => setRecordInstallmentTarget(loan)}
-                          onMouseDown={(e) => e.stopPropagation()}
-                          onTouchStart={(e) => e.stopPropagation()}
-                          onPointerDown={(e) => (e as any).stopPropagation()}
-                          className="px-2 py-1 rounded bg-green-600 text-white text-sm hover:bg-green-700 whitespace-nowrap"
-                          title="Record installment"
+                    <td className="px-2 py-2 border-b dark:border-dark-border">
+                      <div className="relative inline-block actions-dropdown-container">
+                        <motion.button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedRow(expandedRow === `actions-${loan.id}` ? null : `actions-${loan.id}`);
+                          }}
+                          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors"
+                          title="Actions"
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.95 }}
                         >
-                          + Installments
-                        </button>
-                        <button
-                          onClick={() => setEditLoanTarget(loan)}
-                          onMouseDown={(e) => e.stopPropagation()}
-                          onTouchStart={(e) => e.stopPropagation()}
-                          onPointerDown={(e) => (e as any).stopPropagation()}
-                          className="px-2 py-1 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 whitespace-nowrap"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() =>
-                            setDeleteLoanTarget({
-                              id: loan.id,
-                              customer: loan.customers?.name ?? null,
-                            })
-                          }
-                          onMouseDown={(e) => e.stopPropagation()}
-                          onTouchStart={(e) => e.stopPropagation()}
-                          onPointerDown={(e) => (e as any).stopPropagation()}
-                          className="px-2 py-1 rounded bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors flex items-center justify-center"
-                          title="Delete loan"
-                        >
-                          <Trash2Icon className="w-5 h-5 text-red-500" />
-                        </button>
+                          <motion.svg 
+                            className="w-5 h-5 text-gray-600 dark:text-dark-text" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                            animate={{ rotate: expandedRow === `actions-${loan.id}` ? 90 : 0 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                          </motion.svg>
+                        </motion.button>
+                        <AnimatePresence>
+                          {expandedRow === `actions-${loan.id}` && (
+                            <motion.div 
+                              className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-dark-card rounded-lg shadow-lg border border-gray-200 dark:border-dark-border py-1 min-w-[140px] overflow-hidden"
+                              initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                              transition={{ duration: 0.15, ease: "easeOut" }}
+                            >
+                              <motion.button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setRecordInstallmentTarget(loan);
+                                  setExpandedRow(null);
+                                }}
+                                className="w-full px-3 py-2 text-left text-sm text-green-600 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center gap-2"
+                                whileHover={{ x: 4 }}
+                                transition={{ duration: 0.1 }}
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                                Installment
+                              </motion.button>
+                              <motion.button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditLoanTarget(loan);
+                                  setExpandedRow(null);
+                                }}
+                                className="w-full px-3 py-2 text-left text-sm text-blue-600 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center gap-2"
+                                whileHover={{ x: 4 }}
+                                transition={{ duration: 0.1 }}
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                Edit
+                              </motion.button>
+                              <motion.button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeleteLoanTarget({
+                                    id: loan.id,
+                                    customer: loan.customers?.name ?? null,
+                                  });
+                                  setExpandedRow(null);
+                                }}
+                                className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center gap-2"
+                                whileHover={{ x: 4 }}
+                                transition={{ duration: 0.1 }}
+                              >
+                                <Trash2Icon className="w-4 h-4" />
+                                Delete
+                              </motion.button>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     </td>
                   )}

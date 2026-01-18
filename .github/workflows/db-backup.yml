@@ -20,17 +20,27 @@ jobs:
           sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           wget -qO- https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo tee /etc/apt/trusted.gpg.d/pgdg.asc
           sudo apt-get update -y
+          # Remove any default postgresql-client packages to avoid conflicts
+          sudo apt-get remove -y postgresql-client-common postgresql-client-14 postgresql-client-15 || true
+          
           sudo apt-get install -y postgresql-client-17
           
-          # Force all tools to use v17 binaries
+          # Force all tools to use v17 binaries via alternatives and symlinks
           sudo update-alternatives --install /usr/bin/pg_dump pg_dump /usr/lib/postgresql/17/bin/pg_dump 100
           sudo update-alternatives --install /usr/bin/pg_restore pg_restore /usr/lib/postgresql/17/bin/pg_restore 100
           sudo update-alternatives --install /usr/bin/psql psql /usr/lib/postgresql/17/bin/psql 100
+          
+          # Bruteforce path override to ensure /usr/local/bin uses v17 if present
+          sudo ln -sf /usr/lib/postgresql/17/bin/pg_dump /usr/local/bin/pg_dump
+          sudo ln -sf /usr/lib/postgresql/17/bin/pg_restore /usr/local/bin/pg_restore
+          sudo ln -sf /usr/lib/postgresql/17/bin/psql /usr/local/bin/psql
 
-      - name: Verify Tool Versions
+      - name: Verify Tool Versions & Locations
         run: |
           echo "Verifying PostgreSQL tool versions..."
+          which -a pg_dump
           pg_dump --version
+          which -a pg_restore
           pg_restore --version
           psql --version
 
@@ -46,6 +56,12 @@ jobs:
           TS=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
           FILE="dumps/backup-${TS}.dump"
           pg_dump "$DATABASE_URL" -Fc -f "$FILE"
+          
+          # Debug: Verify the dump immediately with the correctly titled pg_restore
+          echo "Verifying dump integrity..."
+          pg_restore --list "$FILE" > /dev/null
+          echo "Dump verification successful."
+
           gzip "$FILE"
           echo "Created backup: ${FILE}.gz"
 

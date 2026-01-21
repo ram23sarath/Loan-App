@@ -13,6 +13,7 @@ import {
 } from "../../constants";
 import CustomerDetailModal from "../modals/CustomerDetailModal";
 import EditModal from "../modals/EditModal";
+import DeleteConfirmationModal from "../modals/DeleteConfirmationModal";
 import type { Customer } from "../../types";
 import { useDebounce } from "../../utils/useDebounce";
 import { openWhatsApp } from "../../utils/whatsapp";
@@ -169,21 +170,7 @@ const CustomerListPage = () => {
     setDeleteCounts(null);
   };
 
-  // Close delete customer modal with Escape key
-  React.useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      if (deleteCustomerTarget) {
-        setDeleteCustomerTarget(null);
-        setDeleteCounts(null);
-      }
-    };
-    if (deleteCustomerTarget) {
-      document.addEventListener("keydown", handleEscape);
-      return () => document.removeEventListener("keydown", handleEscape);
-    }
-    return;
-  }, [deleteCustomerTarget]);
+
 
   const categorizedCustomers = useMemo(() => {
     let processedCustomers = [...customers];
@@ -2089,78 +2076,27 @@ const CustomerListPage = () => {
           />
         )}
       </AnimatePresence>
-      {typeof document !== "undefined" &&
-        ReactDOM.createPortal(
-          <AnimatePresence>
-            {deleteCustomerTarget && (
-              <motion.div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-                variants={{
-                  hidden: { opacity: 0 },
-                  visible: { opacity: 1 },
-                }}
-                initial="hidden"
-                animate="visible"
-                exit="hidden"
-                onClick={cancelDeleteCustomer}
-              >
-                <motion.div
-                  className="bg-white rounded-lg shadow-lg p-5 w-[90%] max-w-sm dark:bg-dark-card dark:border dark:border-dark-border"
-                  variants={{
-                    hidden: { opacity: 0, y: 50, scale: 0.9 },
-                    visible: {
-                      opacity: 1,
-                      y: 0,
-                      scale: 1,
-                      transition: { type: "spring", stiffness: 100 },
-                    },
-                    exit: { opacity: 0, y: 50, scale: 0.9 },
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <h3 className="text-base font-bold mb-3 dark:text-dark-text">
-                    Move {deleteCustomerTarget.name} to trash?
-                  </h3>
-                  <div className="text-sm text-gray-600 mb-3 space-y-1 dark:text-dark-muted">
-                    <p>
-                      <span className="font-medium">
-                        Loans: {deleteCounts?.loans ?? 0}
-                      </span>
-                    </p>
-                    <p>
-                      <span className="font-medium">
-                        Installments: {deleteCounts?.installments ?? 0}
-                      </span>
-                    </p>
-                    <p>
-                      <span className="font-medium">
-                        Subscriptions: {deleteCounts?.subscriptions ?? 0}
-                      </span>
-                    </p>
-                  </div>
-                  <p className="text-xs text-amber-600 mb-4 dark:text-amber-400">
-                    Customer and all related records will be moved to trash. You can restore them later.
-                  </p>
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={cancelDeleteCustomer}
-                      className="px-3 py-1.5 rounded bg-gray-200 hover:bg-gray-300 text-sm dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={confirmDeleteCustomer}
-                      className="px-3 py-1.5 rounded bg-amber-600 text-white hover:bg-amber-700 text-sm"
-                    >
-                      Move to Trash
-                    </button>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>,
-          document.body
-        )}
+      <DeleteConfirmationModal
+        isOpen={!!deleteCustomerTarget}
+        onClose={cancelDeleteCustomer}
+        onConfirm={confirmDeleteCustomer}
+        title={`Move ${deleteCustomerTarget?.name ?? "Customer"} to trash?`}
+        message={
+          <>
+            <div className="text-sm text-gray-600 mb-3 space-y-1 dark:text-dark-muted">
+              <p><span className="font-medium">Loans: {deleteCounts?.loans ?? 0}</span></p>
+              <p><span className="font-medium">Installments: {deleteCounts?.installments ?? 0}</span></p>
+              <p><span className="font-medium">Subscriptions: {deleteCounts?.subscriptions ?? 0}</span></p>
+            </div>
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              Customer and all related records will be moved to trash. You can restore them later.
+            </p>
+          </>
+        }
+        isDeleting={false}
+        confirmText="Move to Trash"
+        variant="warning"
+      />
     </PageWrapper>
   );
 };

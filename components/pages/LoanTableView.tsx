@@ -11,7 +11,13 @@ import type { LoanWithCustomer, Installment } from "../../types";
 import { getLoanStatus } from "../../utils/loanStatus";
 import EditModal from "../modals/EditModal";
 import RecordInstallmentModal from "../modals/RecordInstallmentModal";
+import DeleteConfirmationModal from "../modals/DeleteConfirmationModal";
 import { useDebounce } from "../../utils/useDebounce";
+import { 
+  rowVariants, 
+  cardVariants, 
+  layoutTransition 
+} from "../../utils/useRowDeleteAnimation";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -246,6 +252,11 @@ const LoanTableView: React.FC = () => {
   } | null>(null);
   const [deletingLoan, setDeletingLoan] = React.useState(false);
   const [deletingInstallment, setDeletingInstallment] = React.useState(false);
+  
+  // Track IDs being deleted for background animation
+  const [animatingLoanId, setAnimatingLoanId] = React.useState<string | null>(null);
+  const [animatingInstallmentId, setAnimatingInstallmentId] = React.useState<string | null>(null);
+  
   const [editTarget, setEditTarget] = React.useState<Installment | null>(null);
   const [editLoanTarget, setEditLoanTarget] =
     React.useState<LoanWithCustomer | null>(null);
@@ -267,30 +278,22 @@ const LoanTableView: React.FC = () => {
     }
   }
 
-  // Close delete confirmation modals with Escape key
+  // Close actions dropdown with Escape key
   React.useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      // Close actions dropdown first
+      // Close actions dropdown
       if (expandedRow?.startsWith("actions-")) {
         setExpandedRow(null);
         return;
       }
-      if (deleteTarget) {
-        setDeleteTarget(null);
-        return;
-      }
-      if (deleteLoanTarget) {
-        setDeleteLoanTarget(null);
-        return;
-      }
     };
-    if (deleteTarget || deleteLoanTarget || expandedRow?.startsWith("actions-")) {
+    if (expandedRow?.startsWith("actions-")) {
       document.addEventListener("keydown", handleEscape);
       return () => document.removeEventListener("keydown", handleEscape);
     }
     return;
-  }, [deleteTarget, deleteLoanTarget, expandedRow]);
+  }, [expandedRow]);
 
   // Close actions dropdown when clicking outside
   React.useEffect(() => {
@@ -487,6 +490,7 @@ const LoanTableView: React.FC = () => {
         </thead>
         {/* THIS SECTION CONTROLS THE INITIAL ROW-BY-ROW FADE IN */}
         <tbody>
+          <AnimatePresence mode="popLayout">
           {paginatedLoans.map((loan: LoanWithCustomer, idx: number) => {
             // Use O(1) lookup - installments already sorted by date in the map
             const loanInstallments = getLoanInstallments(loan.id);
@@ -496,13 +500,18 @@ const LoanTableView: React.FC = () => {
             const balance = totalRepayable - paid;
             const isPaidOff = loanStatus.isPaidOff;
             const isExpanded = expandedRow === loan.id;
+            const isDeleting = animatingLoanId === loan.id;
             return (
               <React.Fragment key={loan.id}>
                 <motion.tr
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: idx * 0.03 }}
-                  className="even:bg-gray-50/50 hover:bg-indigo-50/50 transition-colors dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50"
+                  layout
+                  variants={rowVariants}
+                  initial="initial"
+                  animate={isDeleting ? 'deleting' : 'visible'}
+                  exit="exit"
+                  transition={layoutTransition}
+                  className={`even:bg-gray-50/50 hover:bg-indigo-50/50 transition-colors dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50 ${isDeleting ? 'pointer-events-none' : ''}`}
+                  style={{ overflow: 'hidden' }}
                 >
                   <td className="px-4 py-2 border-b font-medium text-sm text-gray-700 dark:border-dark-border dark:text-dark-muted whitespace-nowrap">
                     {(currentPage - 1) * itemsPerPage + idx + 1}
@@ -653,9 +662,11 @@ const LoanTableView: React.FC = () => {
                               Installments Paid
                             </h4>
                             {loanInstallments.length > 0 ? (
+                              <AnimatePresence mode="popLayout">
                               <ul className="space-y-2">
                                 {loanInstallments.map((inst) => {
                                   const customer = loan.customers;
+                                  const isInstDeleting = animatingInstallmentId === inst.id;
                                   let message = "";
                                   let whatsappUrl = "#";
                                   let isValidPhone = false;
@@ -686,9 +697,16 @@ const LoanTableView: React.FC = () => {
                                     }
                                   }
                                   return (
-                                    <li
+                                    <motion.li
                                       key={inst.id}
-                                      className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gray-50 rounded px-3 py-2 border border-gray-200 gap-2 dark:bg-slate-700 dark:border-dark-border"
+                                      layout
+                                      variants={rowVariants}
+                                      initial="initial"
+                                      animate={isInstDeleting ? 'deleting' : 'visible'}
+                                      exit="exit"
+                                      transition={layoutTransition}
+                                      className={`flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gray-50 rounded px-3 py-2 border border-gray-200 gap-2 dark:bg-slate-700 dark:border-dark-border ${isInstDeleting ? 'pointer-events-none' : ''}`}
+                                      style={{ overflow: 'hidden' }}
                                     >
                                       <div>
                                         <span className="font-medium dark:text-dark-text">
@@ -786,10 +804,11 @@ const LoanTableView: React.FC = () => {
                                           </>
                                         )}
                                       </div>
-                                    </li>
+                                    </motion.li>
                                   );
                                 })}
                               </ul>
+                              </AnimatePresence>
                             ) : (
                               <p className="text-center text-gray-500 py-4 dark:text-dark-muted">
                                 No installments have been paid for this loan
@@ -805,12 +824,14 @@ const LoanTableView: React.FC = () => {
               </React.Fragment>
             );
           })}
+          </AnimatePresence>
         </tbody>
       </table>
 
       {/* Mobile stacked cards */}
       {/* This `md:hidden` class is correct. It hides this view on desktop */}
       <div className="md:hidden mt-4 space-y-3">
+        <AnimatePresence mode="popLayout">
         {paginatedLoans.map((loan, idx) => {
           // Use O(1) lookup - installments already sorted by date in the map
           const loanInstallments = getLoanInstallments(loan.id);
@@ -819,6 +840,7 @@ const LoanTableView: React.FC = () => {
           const paid = loanStatus.paid;
           const balance = totalRepayable - paid;
           const customer = loan.customers;
+          const isDeleting = animatingLoanId === loan.id;
 
           // WhatsApp message construction for loan - matches displayed fields
           let loanMessage = "";
@@ -838,9 +860,19 @@ const LoanTableView: React.FC = () => {
           }
 
           return (
-            <div key={loan.id} className="relative">
+            <motion.div 
+              key={loan.id} 
+              layout
+              variants={cardVariants}
+              initial="initial"
+              animate={isDeleting ? 'deleting' : 'visible'}
+              exit="exit"
+              transition={layoutTransition}
+              className={`relative ${isDeleting ? 'pointer-events-none' : ''}`}
+              style={{ overflow: 'hidden' }}
+            >
               {/* Swipe background indicators - only visible when dragging this card */}
-              {draggingCardId === loan.id && (
+              {draggingCardId === loan.id && !isDeleting && (
                 <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
                   <div
                     className={`${isScopedCustomer ? "w-full" : "w-1/2"
@@ -858,11 +890,7 @@ const LoanTableView: React.FC = () => {
 
               <motion.div
                 className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3, delay: idx * 0.03 }}
-                drag="x"
+                drag={isDeleting ? false : "x"}
                 dragConstraints={{ left: 0, right: 0 }}
                 dragElastic={0.3}
                 dragMomentum={false}
@@ -1028,9 +1056,11 @@ const LoanTableView: React.FC = () => {
                       <h5 className="text-sm font-semibold mb-2 dark:text-dark-text">
                         Installments
                       </h5>
+                      <AnimatePresence mode="popLayout">
                       <ul className="space-y-2">
                         {loanInstallments.map((inst) => {
                           // Build WhatsApp message for mobile view
+                          const isInstDeleting = animatingInstallmentId === inst.id;
                           let message = "";
                           let isValidPhone = false;
                           if (
@@ -1051,9 +1081,16 @@ const LoanTableView: React.FC = () => {
                             message += " Thank You, I J Reddy.";
                           }
                           return (
-                            <li
+                            <motion.li
                               key={inst.id}
-                              className="flex items-center justify-between"
+                              layout
+                              variants={rowVariants}
+                              initial="initial"
+                              animate={isInstDeleting ? 'deleting' : 'visible'}
+                              exit="exit"
+                              transition={layoutTransition}
+                              className={`flex items-center justify-between ${isInstDeleting ? 'pointer-events-none' : ''}`}
+                              style={{ overflow: 'hidden' }}
                             >
                               <div className="text-sm">
                                 <div className="dark:text-dark-text">
@@ -1132,17 +1169,19 @@ const LoanTableView: React.FC = () => {
                                   </>
                                 )}
                               </div>
-                            </li>
+                            </motion.li>
                           );
                         })}
                       </ul>
+                      </AnimatePresence>
                     </div>
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
+            </motion.div>
           );
         })}
+        </AnimatePresence>
       </div>
 
       {/* Pagination Controls */}
@@ -1609,130 +1648,75 @@ const LoanTableView: React.FC = () => {
         document.body
       )}
 
-      {/* Delete Loan Confirmation Modal (portal) */}
-      {ReactDOM.createPortal(
-        <AnimatePresence>
-          {deleteLoanTarget && (
-            <motion.div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              key="delete-loan-backdrop"
-            >
-              <motion.div
-                className="bg-white rounded-xl shadow-lg p-6 md:p-8 w-[90%] max-w-md flex flex-col items-center dark:bg-dark-card dark:border dark:border-dark-border"
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                key="delete-loan-content"
-              >
-                <Trash2Icon className="w-10 h-10 text-red-500 mb-2" />
-                <h3 className="text-lg font-bold mb-2 text-center text-gray-800 dark:text-dark-text">
-                  Move Loan to Trash?
-                </h3>
-                <p className="text-gray-700 text-center mb-4 dark:text-dark-muted">
-                  Are you sure you want to move the loan for{" "}
-                  <span className="font-semibold">
-                    {deleteLoanTarget.customer ?? "this customer"}
-                  </span>
-                  {" "}to trash? You can restore it later from the Trash page.
-                </p>
-                <div className="flex gap-4 w-full justify-center">
-                  <button
-                    onClick={() => setDeleteLoanTarget(null)}
-                    className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
-                    disabled={deletingLoan}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={async () => {
-                      if (!deleteLoanTarget) return;
-                      setDeletingLoan(true);
-                      try {
-                        await deleteLoan(deleteLoanTarget.id);
-                        setDeleteLoanTarget(null);
-                      } catch (err: any) {
-                        alert(err?.message || String(err));
-                      } finally {
-                        setDeletingLoan(false);
-                      }
-                    }}
-                    className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold"
-                    disabled={deletingLoan}
-                  >
-                    {deletingLoan ? "Deleting..." : "Move to Trash"}
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
+      {/* Delete Loan Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={!!deleteLoanTarget}
+        onClose={() => setDeleteLoanTarget(null)}
+        onConfirm={async () => {
+          if (!deleteLoanTarget) return;
+          const deleteId = deleteLoanTarget.id;
+          
+          setDeletingLoan(true);
+          // Start the background animation immediately
+          setAnimatingLoanId(deleteId);
+          
+          try {
+            await deleteLoan(deleteId);
+            // Close modal after successful delete
+            setDeleteLoanTarget(null);
+          } catch (err: any) {
+            // On error, stop the animation and show error
+            setAnimatingLoanId(null);
+            alert(err?.message || String(err));
+          } finally {
+            setDeletingLoan(false);
+            setAnimatingLoanId(null);
+          }
+        }}
+        title="Move Loan to Trash?"
+        message={
+          <>
+            Are you sure you want to move the loan for{" "}
+            <span className="font-semibold">
+              {deleteLoanTarget?.customer ?? "this customer"}
+            </span>
+            {" "}to trash? You can restore it later from the Trash page.
+          </>
+        }
+        isDeleting={deletingLoan}
+        confirmText="Move to Trash"
+      />
 
-      {/* Delete Installment Confirmation Modal (portal) */}
-      {ReactDOM.createPortal(
-        <AnimatePresence>
-          {deleteTarget && (
-            <motion.div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              key="delete-inst-backdrop"
-            >
-              <motion.div
-                className="bg-white rounded-xl shadow-lg p-6 md:p-8 w-[90%] max-w-md flex flex-col items-center dark:bg-dark-card dark:border dark:border-dark-border"
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                key="delete-inst-content"
-              >
-                <Trash2Icon className="w-10 h-10 text-red-500 mb-2" />
-                <h3 className="text-lg font-bold mb-2 text-center text-gray-800 dark:text-dark-text">
-                  Delete Installment?
-                </h3>
-                <p className="text-gray-700 text-center mb-4 dark:text-dark-muted">
-                  Are you sure you want to delete installment #
-                  {deleteTarget.number}?
-                </p>
-                <div className="flex gap-4 w-full justify-center">
-                  <button
-                    onClick={() => setDeleteTarget(null)}
-                    className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
-                    disabled={deletingInstallment}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={async () => {
-                      if (!deleteTarget) return;
-                      setDeletingInstallment(true);
-                      try {
-                        await deleteInstallment(deleteTarget.id);
-                        setDeleteTarget(null);
-                      } catch (err: any) {
-                        alert(err?.message || String(err));
-                      } finally {
-                        setDeletingInstallment(false);
-                      }
-                    }}
-                    className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold"
-                    disabled={deletingInstallment}
-                  >
-                    {deletingInstallment ? "Deleting..." : "Delete"}
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
+      {/* Delete Installment Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          const deleteId = deleteTarget.id;
+          
+          setDeletingInstallment(true);
+          // Start the background animation immediately
+          setAnimatingInstallmentId(deleteId);
+          
+          try {
+            await deleteInstallment(deleteId);
+            // Close modal after successful delete
+            setDeleteTarget(null);
+          } catch (err: any) {
+            // On error, stop the animation and show error
+            setAnimatingInstallmentId(null);
+            alert(err?.message || String(err));
+          } finally {
+            setDeletingInstallment(false);
+            setAnimatingInstallmentId(null);
+          }
+        }}
+        title="Delete Installment?"
+        message={<>Are you sure you want to delete installment #{deleteTarget?.number}?</>}
+        isDeleting={deletingInstallment}
+        confirmText="Delete"
+      />
 
       {/* Record Installment Modal */}
       {recordInstallmentTarget && (

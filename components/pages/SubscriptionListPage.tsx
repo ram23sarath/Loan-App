@@ -1,33 +1,16 @@
 import React from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import ReactDOM from "react-dom";
 import SubscriptionTableView from "./SubscriptionTableView";
 import { useData } from "../../context/DataContext";
 import PageWrapper from "../ui/PageWrapper";
-import { HistoryIcon, Trash2Icon, SpinnerIcon } from "../../constants";
+import { HistoryIcon, SpinnerIcon } from "../../constants";
 import type { SubscriptionWithCustomer } from "../../types";
 import { formatDate } from "../../utils/dateFormatter";
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: { y: 0, opacity: 1 },
-};
+import DeleteConfirmationModal from "../modals/DeleteConfirmationModal";
 
 const SubscriptionListPage = () => {
   const { subscriptions, deleteSubscription, isRefreshing, isScopedCustomer } =
     useData();
 
-  // always use table view for subscriptions
   const [pendingDelete, setPendingDelete] =
     React.useState<SubscriptionWithCustomer | null>(null);
   const [deleting, setDeleting] = React.useState(false);
@@ -36,33 +19,30 @@ const SubscriptionListPage = () => {
     setPendingDelete(sub);
   };
 
+  // Track the ID being deleted for background animation
+  const [animatingDeleteId, setAnimatingDeleteId] = React.useState<string | null>(null);
+
   const confirmDelete = async () => {
     if (!pendingDelete) return;
+    const deleteId = pendingDelete.id;
+    
     setDeleting(true);
+    // Start the background animation immediately
+    setAnimatingDeleteId(deleteId);
+    
     try {
-      await deleteSubscription(pendingDelete.id);
+      await deleteSubscription(deleteId);
+      // Close modal after successful delete
       setPendingDelete(null);
     } catch (error: any) {
+      // On error, stop the animation and show error
+      setAnimatingDeleteId(null);
       alert(error.message);
     } finally {
       setDeleting(false);
+      setAnimatingDeleteId(null);
     }
   };
-
-  // Close delete confirmation modal with Escape key
-  React.useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      if (pendingDelete) {
-        setPendingDelete(null);
-      }
-    };
-    if (pendingDelete) {
-      document.addEventListener("keydown", handleEscape);
-      return () => document.removeEventListener("keydown", handleEscape);
-    }
-    return;
-  }, [pendingDelete]);
 
   return (
     <PageWrapper>
@@ -78,63 +58,29 @@ const SubscriptionListPage = () => {
 
       <SubscriptionTableView
         onDelete={handleDeleteSubscription}
-        deletingId={pendingDelete?.id ?? null}
+        deletingId={animatingDeleteId}
       />
 
-      {/* The Delete confirmation modal is portalled to document.body to avoid transformed ancestors affecting fixed positioning */}
-      {ReactDOM.createPortal(
-        <AnimatePresence>
-          {pendingDelete && (
-            <motion.div
-              key="pending-delete-backdrop"
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <motion.div
-                key="pending-delete-content"
-                className="bg-white rounded-xl shadow-lg p-6 md:p-8 w-[90%] max-w-md flex flex-col items-center dark:bg-dark-card dark:border dark:border-dark-border"
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              >
-                <Trash2Icon className="w-10 h-10 text-red-500 mb-2" />
-                <h3 className="text-lg font-bold mb-2 text-center text-gray-800 dark:text-dark-text">
-                  Move to Trash?
-                </h3>
-                <p className="text-gray-700 text-center mb-4 dark:text-dark-muted">
-                  Are you sure you want to move the subscription for{" "}
-                  <span className="font-semibold">
-                    {pendingDelete.customers?.name}
-                  </span>{" "}
-                  from {formatDate(pendingDelete.date)} to trash?
-                </p>
-                <div className="flex gap-4 w-full justify-center">
-                  <button
-                    onClick={() => setPendingDelete(null)}
-                    className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
-                    disabled={deleting}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={confirmDelete}
-                    className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold"
-                    disabled={deleting}
-                  >
-                    {deleting ? "Deleting..." : "Delete"}
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
+      <DeleteConfirmationModal
+        isOpen={!!pendingDelete}
+        onClose={() => setPendingDelete(null)}
+        onConfirm={confirmDelete}
+        title="Move to Trash?"
+        message={
+          <>
+            Are you sure you want to move the subscription for{" "}
+            <span className="font-semibold">
+              {pendingDelete?.customers?.name}
+            </span>{" "}
+            from {pendingDelete ? formatDate(pendingDelete.date) : ""} to trash?
+          </>
+        }
+        isDeleting={deleting}
+        confirmText="Delete"
+      />
     </PageWrapper>
   );
 };
 
 export default SubscriptionListPage;
+

@@ -11,6 +11,7 @@ import useFocusTrap from '../hooks/useFocusTrap';
 import { XIcon, FileDownIcon, LandmarkIcon, HistoryIcon, Trash2Icon } from '../../constants';
 import { formatDate } from '../../utils/dateFormatter';
 import { formatNumberIndian } from '../../utils/numberFormatter';
+import DeleteConfirmationModal from './DeleteConfirmationModal';
 
 interface CustomerDetailModalProps {
   customer: Customer;
@@ -275,21 +276,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
-      // If a delete confirmation is open, close it first
-      if (deleteDataEntryTarget) {
-        setDeleteDataEntryTarget(null);
-        return;
-      }
-      if (deleteInstTarget) {
-        setDeleteInstTarget(null);
-        return;
-      }
-      if (deleteSubTarget) {
-        setDeleteSubTarget(null);
-        return;
-      }
-      if (deleteLoanTarget) {
-        setDeleteLoanTarget(null);
+      // If a delete confirmation is open, let the modal handle it
+      if (deleteDataEntryTarget || deleteInstTarget || deleteSubTarget || deleteLoanTarget) {
         return;
       }
       // Otherwise close the whole modal
@@ -1179,197 +1167,78 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           )}
         </AnimatePresence>
 
-        {/* Delete Loan Confirmation Modal (render into its own portal to avoid stacking issues) */}
-        {ReactDOM.createPortal(
-          <AnimatePresence>
-            {deleteLoanTarget && (
-              <motion.div
-                key="cust-delete-loan-backdrop"
-                variants={backdropVariants}
-                initial="hidden"
-                animate="visible"
-                exit="hidden"
-                className="fixed inset-0 z-[99999] bg-black/40"
-                onClick={() => setDeleteLoanTarget(null)}
-              >
-                <motion.div
-                  key="cust-delete-loan-content"
-                  variants={modalVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  ref={deleteLoanRef}
-                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border relative z-[100000]"
-                  onClick={e => e.stopPropagation()}
-                >
-                  <h3 className="text-lg font-bold mb-3 dark:text-dark-text">Move Loan to Trash?</h3>
-                  <p className="mb-4 text-sm text-gray-600 dark:text-dark-muted">
-                    Are you sure you want to move the loan from <span className="font-semibold dark:text-dark-text">{formatDate(deleteLoanTarget.payment_date)}</span> to trash? You can restore it later from the Trash page.
-                  </p>
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => setDeleteLoanTarget(null)}
-                      className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={confirmDeleteLoan}
-                      className="px-3 py-2 rounded bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
-                    >
-                      Move to Trash
-                    </button>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>,
-          document.documentElement
-        )}
+        {/* Delete Loan Confirmation Modal */}
+        <DeleteConfirmationModal
+          isOpen={!!deleteLoanTarget}
+          onClose={() => setDeleteLoanTarget(null)}
+          onConfirm={confirmDeleteLoan}
+          title="Move Loan to Trash?"
+          message={
+            <>
+              Are you sure you want to move the loan from{" "}
+              <span className="font-semibold dark:text-dark-text">
+                {deleteLoanTarget ? formatDate(deleteLoanTarget.payment_date) : ""}
+              </span>{" "}
+              to trash? You can restore it later from the Trash page.
+            </>
+          }
+          isDeleting={false}
+          confirmText="Move to Trash"
+        />
 
-        {/* Delete Subscription Confirmation Modal (separate portal) */}
-        {ReactDOM.createPortal(
-          <AnimatePresence>
-            {deleteSubTarget && (
-              <motion.div
-                key="cust-delete-sub-backdrop"
-                variants={backdropVariants}
-                initial="hidden"
-                animate="visible"
-                exit="hidden"
-                className="fixed inset-0 z-[99999] bg-black/40"
-                onClick={() => setDeleteSubTarget(null)}
-              >
-                <motion.div
-                  key="cust-delete-sub-content"
-                  variants={modalVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  ref={deleteSubRef}
-                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border relative z-[100000]"
-                  onClick={e => e.stopPropagation()}
-                >
-                  <h3 className="text-lg font-bold mb-3 dark:text-dark-text">Delete Subscription?</h3>
-                  <p className="mb-4 text-sm text-gray-600 dark:text-dark-muted">
-                    Are you sure you want to delete the subscription from <span className="font-semibold dark:text-dark-text">{formatDate(deleteSubTarget.date)}</span>?
-                  </p>
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => setDeleteSubTarget(null)}
-                      className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={confirmDeleteSubscription}
-                      className="px-3 py-2 rounded bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>,
-          document.documentElement
-        )}
+        {/* Delete Subscription Confirmation Modal */}
+        <DeleteConfirmationModal
+          isOpen={!!deleteSubTarget}
+          onClose={() => setDeleteSubTarget(null)}
+          onConfirm={confirmDeleteSubscription}
+          title="Delete Subscription?"
+          message={
+            <>
+              Are you sure you want to delete the subscription from{" "}
+              <span className="font-semibold dark:text-dark-text">
+                {deleteSubTarget ? formatDate(deleteSubTarget.date) : ""}
+              </span>?
+            </>
+          }
+          isDeleting={false}
+          confirmText="Delete"
+        />
 
-        {/* Delete Installment Confirmation Modal (separate portal) */}
-        {ReactDOM.createPortal(
-          <AnimatePresence>
-            {deleteInstTarget && (
-              <motion.div
-                key="cust-delete-inst-backdrop"
-                variants={backdropVariants}
-                initial="hidden"
-                animate="visible"
-                exit="hidden"
-                className="fixed inset-0 z-[99999] bg-black/40"
-                onClick={() => setDeleteInstTarget(null)}
-              >
-                <motion.div
-                  key="cust-delete-inst-content"
-                  variants={modalVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  ref={deleteInstRef}
-                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border relative z-[100000]"
-                  onClick={e => e.stopPropagation()}
-                >
-                  <h3 className="text-lg font-bold mb-3 dark:text-dark-text">Delete Installment?</h3>
-                  <p className="mb-4 text-sm text-gray-600 dark:text-dark-muted">
-                    Are you sure you want to delete installment <span className="font-semibold dark:text-dark-text">#{deleteInstTarget.installment_number}</span>?
-                  </p>
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => setDeleteInstTarget(null)}
-                      className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={confirmDeleteInstallment}
-                      className="px-3 py-2 rounded bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>,
-          document.documentElement
-        )}
+        {/* Delete Installment Confirmation Modal */}
+        <DeleteConfirmationModal
+          isOpen={!!deleteInstTarget}
+          onClose={() => setDeleteInstTarget(null)}
+          onConfirm={confirmDeleteInstallment}
+          title="Delete Installment?"
+          message={
+            <>
+              Are you sure you want to delete installment{" "}
+              <span className="font-semibold dark:text-dark-text">
+                #{deleteInstTarget?.installment_number}
+              </span>?
+            </>
+          }
+          isDeleting={false}
+          confirmText="Delete"
+        />
 
-        {/* Delete Data Entry Confirmation Modal (separate portal) */}
-        {ReactDOM.createPortal(
-          <AnimatePresence>
-            {deleteDataEntryTarget && (
-              <motion.div
-                key="cust-delete-dataentry-backdrop"
-                variants={backdropVariants}
-                initial="hidden"
-                animate="visible"
-                exit="hidden"
-                className="fixed inset-0 z-[99999] bg-black/40"
-                onClick={() => setDeleteDataEntryTarget(null)}
-              >
-                <motion.div
-                  key="cust-delete-dataentry-content"
-                  variants={modalVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  ref={deleteDataEntryRef}
-                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md dark:bg-dark-card dark:border dark:border-dark-border relative z-[100000]"
-                  onClick={e => e.stopPropagation()}
-                >
-                  <h3 className="text-lg font-bold mb-3 dark:text-dark-text">Delete Data Entry?</h3>
-                  <p className="mb-4 text-sm text-gray-600 dark:text-dark-muted">
-                    Are you sure you want to delete the data entry from <span className="font-semibold dark:text-dark-text">{formatDate(deleteDataEntryTarget.date)}</span>?
-                  </p>
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => setDeleteDataEntryTarget(null)}
-                      className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={confirmDeleteDataEntry}
-                      className="px-3 py-2 rounded bg-red-600 dark:bg-red-700 text-white hover:bg-red-700 dark:hover:bg-red-800"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>,
-          document.documentElement
-        )}
+        {/* Delete Data Entry Confirmation Modal */}
+        <DeleteConfirmationModal
+          isOpen={!!deleteDataEntryTarget}
+          onClose={() => setDeleteDataEntryTarget(null)}
+          onConfirm={confirmDeleteDataEntry}
+          title="Delete Data Entry?"
+          message={
+            <>
+              Are you sure you want to delete the data entry from{" "}
+              <span className="font-semibold dark:text-dark-text">
+                {deleteDataEntryTarget ? formatDate(deleteDataEntryTarget.date) : ""}
+              </span>?
+            </>
+          }
+          isDeleting={false}
+          confirmText="Delete"
+        />
       </motion.div>
     </motion.div>,
     document.documentElement

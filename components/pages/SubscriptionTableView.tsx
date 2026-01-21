@@ -8,6 +8,12 @@ import { openWhatsApp } from "../../utils/whatsapp";
 import { formatCurrencyIN } from "../../utils/numberFormatter";
 import EditModal from "../modals/EditModal";
 import { useDebounce } from "../../utils/useDebounce";
+import { 
+  rowVariants, 
+  cardVariants, 
+  layoutTransition,
+  prefersReducedMotion 
+} from "../../utils/useRowDeleteAnimation";
 
 // Add props for delete
 interface SubscriptionTableViewProps {
@@ -225,9 +231,11 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
           </tr>
         </thead>
         <tbody>
+          <AnimatePresence mode="popLayout">
           {paginatedSubscriptions.map((sub, idx) => {
             const actualIndex = (currentPage - 1) * itemsPerPage + idx + 1;
             const customer = sub.customers;
+            const isDeleting = deletingId === sub.id;
             let message = "";
             let whatsappUrl = "#";
             let isValidPhone = false;
@@ -248,11 +256,14 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
             return (
               <motion.tr
                 key={sub.id}
-                className="even:bg-gray-50 dark:even:bg-slate-700/50"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3, delay: idx * 0.05 }}
+                layout
+                variants={rowVariants}
+                initial="initial"
+                animate={isDeleting ? 'deleting' : 'visible'}
+                exit="exit"
+                transition={layoutTransition}
+                className={`even:bg-gray-50 dark:even:bg-slate-700/50 ${isDeleting ? 'pointer-events-none' : ''}`}
+                style={{ overflow: 'hidden' }}
               >
                 <td className="px-4 py-2 border-b font-medium text-sm text-gray-700 dark:border-dark-border dark:text-dark-muted">{actualIndex}</td>
                 <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text">
@@ -314,14 +325,17 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
               </motion.tr>
             );
           })}
+          </AnimatePresence>
         </tbody>
       </table>
 
       {/* Mobile stacked cards */}
       <div className="md:hidden space-y-3">
+        <AnimatePresence mode="popLayout">
         {paginatedSubscriptions.map((sub, idx) => {
           const actualIndex = (currentPage - 1) * itemsPerPage + idx + 1;
           const customer = sub.customers;
+          const isDeleting = deletingId === sub.id;
           let message = "";
           let whatsappUrl = "#";
           let isValidPhone = false;
@@ -342,9 +356,19 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
           }
 
           return (
-            <div key={sub.id} className="relative">
+            <motion.div 
+              key={sub.id} 
+              layout
+              variants={cardVariants}
+              initial="initial"
+              animate={isDeleting ? 'deleting' : 'visible'}
+              exit="exit"
+              transition={layoutTransition}
+              className={`relative ${isDeleting ? 'pointer-events-none' : ''}`}
+              style={{ overflow: 'hidden' }}
+            >
               {/* Swipe background indicators - only visible when dragging this card */}
-              {draggingCardId === sub.id && (
+              {draggingCardId === sub.id && !isDeleting && (
                 <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
                   <div
                     className={`${isScopedCustomer ? "w-full" : "w-1/2"} bg-green-500 flex items-center justify-start pl-4`}
@@ -361,11 +385,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
 
               <motion.div
                 className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3, delay: idx * 0.05 }}
-                drag="x"
+                drag={isDeleting ? false : "x"}
                 dragConstraints={{ left: 0, right: 0 }}
                 dragElastic={0.3}
                 dragMomentum={false}
@@ -451,9 +471,10 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                   )}
                 </div>
               </motion.div>
-            </div>
+            </motion.div>
           );
         })}
+        </AnimatePresence>
       </div>
 
       {/* Pagination Controls */}

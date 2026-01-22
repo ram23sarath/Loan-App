@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type ToolsView = 'menu' | 'createUser' | 'changeUserPassword';
+type ToolsView = 'menu' | 'createUser' | 'changeUserPassword' | 'userStatus';
 
 interface ToolsModalProps {
     isOpen: boolean;
@@ -34,6 +34,34 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
     const [changePasswordEmail, setChangePasswordEmail] = useState('');
     const [changePasswordNew, setChangePasswordNew] = useState('');
 
+    // User Status state
+    interface UserStatusCustomer {
+        id: string;
+        name: string;
+        phone: string;
+        expectedEmail?: string;
+        existingAuthId?: string | null;
+        orphanedUserId?: string;
+    }
+    interface UserStatusData {
+        summary: {
+            totalCustomers: number;
+            totalAuthUsers: number;
+            healthy: number;
+            missingUserId: number;
+            orphanedUserId: number;
+        };
+        customersWithoutUserId: UserStatusCustomer[];
+        customersWithOrphanedUserId: UserStatusCustomer[];
+        timestamp: string;
+    }
+    const [userStatusData, setUserStatusData] = useState<UserStatusData | null>(null);
+    const [userStatusLoading, setUserStatusLoading] = useState(false);
+    const [userStatusError, setUserStatusError] = useState<string | null>(null);
+    const [fixingUserId, setFixingUserId] = useState<string | null>(null);
+    const [expandMissing, setExpandMissing] = useState(true);
+    const [expandOrphaned, setExpandOrphaned] = useState(true);
+
     // Reset state when modal closes
     React.useEffect(() => {
         if (!isOpen) {
@@ -46,6 +74,10 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
             setCreateUserIsAdmin(false);
             setChangePasswordEmail('');
             setChangePasswordNew('');
+            setUserStatusData(null);
+            setUserStatusError(null);
+            setExpandMissing(true);
+            setExpandOrphaned(true);
         }
     }, [isOpen]);
 
@@ -115,6 +147,52 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
             setToolsMessage({ type: 'error', text: err.message || 'An error occurred' });
         } finally {
             setToolsLoading(false);
+        }
+    };
+
+    // Fetch user status data
+    const fetchUserStatus = async () => {
+        setUserStatusLoading(true);
+        setUserStatusError(null);
+        try {
+            const response = await fetch('/.netlify/functions/compare-users');
+            const result = await response.json();
+            if (response.ok && result.success) {
+                setUserStatusData(result);
+            } else {
+                setUserStatusError(result.error || 'Failed to fetch user status');
+            }
+        } catch (err: any) {
+            setUserStatusError(err.message || 'An error occurred');
+        } finally {
+            setUserStatusLoading(false);
+        }
+    };
+
+    // Fix a single missing user
+    const handleFixMissingUser = async (customer: UserStatusCustomer) => {
+        setFixingUserId(customer.id);
+        try {
+            const response = await fetch('/.netlify/functions/create-user-from-customer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customer_id: customer.id,
+                    name: customer.name,
+                    phone: customer.phone,
+                }),
+            });
+            const result = await response.json();
+            if (response.ok && result.success) {
+                // Refresh the data
+                await fetchUserStatus();
+            } else {
+                setUserStatusError(`Failed to create user for ${customer.name}: ${result.error}`);
+            }
+        } catch (err: any) {
+            setUserStatusError(err.message || 'An error occurred');
+        } finally {
+            setFixingUserId(null);
         }
     };
 
@@ -196,6 +274,25 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                                     <div className="text-left">
                                         <div className="font-semibold text-sm md:text-base">Change Password for User</div>
                                         <div className="text-xs text-amber-500 dark:text-amber-400/70">Reset password for any user</div>
+                                    </div>
+                                </motion.button>
+                                <motion.button
+                                    onClick={() => {
+                                        setToolsView('userStatus');
+                                        setToolsMessage(null);
+                                        fetchUserStatus();
+                                    }}
+                                    className="w-full px-4 py-4 md:py-3 bg-cyan-50 hover:bg-cyan-100 active:bg-cyan-200 text-cyan-700 font-medium rounded-lg transition-colors flex items-center gap-3 dark:bg-cyan-900/30 dark:hover:bg-cyan-900/50 dark:text-cyan-400"
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ type: 'spring', stiffness: 300, damping: 24, delay: 0.18 }}
+                                    whileHover={{ scale: 1.02, x: 4 }}
+                                    whileTap={{ scale: 0.98 }}
+                                >
+                                    <span className="text-xl">📊</span>
+                                    <div className="text-left">
+                                        <div className="font-semibold text-sm md:text-base">User Account Status</div>
+                                        <div className="text-xs text-cyan-500 dark:text-cyan-400/70">Check customer account sync status</div>
                                     </div>
                                 </motion.button>
                                 <button
@@ -460,6 +557,234 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                                     {toolsLoading ? 'Changing...' : 'Change Password'}
                                 </motion.button>
                             </form>
+                        </>
+                    )}
+
+                    {/* User Status Dashboard */}
+                    {toolsView === 'userStatus' && (
+                        <>
+                            <motion.div
+                                className="flex items-center gap-3 mb-4"
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+                            >
+                                <motion.button
+                                    onClick={() => setToolsView('menu')}
+                                    className="text-gray-500 hover:text-gray-700 transition-colors p-1 -ml-1 dark:text-dark-muted dark:hover:text-dark-text"
+                                    whileHover={{ scale: 1.2, x: -3 }}
+                                    whileTap={{ scale: 0.9 }}
+                                >
+                                    <span className="text-xl">←</span>
+                                </motion.button>
+                                <h2 className="text-base md:text-lg font-bold text-gray-800 dark:text-dark-text flex-1">User Account Status</h2>
+                                <motion.button
+                                    onClick={fetchUserStatus}
+                                    disabled={userStatusLoading}
+                                    className="text-cyan-600 hover:text-cyan-700 transition-colors p-1 dark:text-cyan-400 dark:hover:text-cyan-300"
+                                    whileHover={{ scale: 1.1, rotate: 180 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    title="Refresh"
+                                >
+                                    <span className="text-xl">{userStatusLoading ? '⏳' : '🔄'}</span>
+                                </motion.button>
+                            </motion.div>
+
+                            {/* Error Message */}
+                            <AnimatePresence>
+                                {userStatusError && (
+                                    <motion.div
+                                        className="mb-4 p-3 rounded-lg text-sm bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -10 }}
+                                    >
+                                        {userStatusError}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            {/* Loading State */}
+                            {userStatusLoading && !userStatusData && (
+                                <motion.div
+                                    className="flex flex-col items-center justify-center py-12"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                >
+                                    <div className="animate-spin text-4xl mb-3">⏳</div>
+                                    <p className="text-gray-500 dark:text-dark-muted">Loading user status...</p>
+                                </motion.div>
+                            )}
+
+                            {/* Dashboard Content */}
+                            {userStatusData && (
+                                <motion.div
+                                    className="space-y-4"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                >
+                                    {/* Summary Cards */}
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <motion.div
+                                            className="bg-green-50 dark:bg-green-900/30 rounded-lg p-3 text-center"
+                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ delay: 0.1 }}
+                                        >
+                                            <div className="text-2xl font-bold text-green-700 dark:text-green-400">
+                                                {userStatusData.summary.healthy}
+                                            </div>
+                                            <div className="text-xs text-green-600 dark:text-green-500">✅ Healthy</div>
+                                        </motion.div>
+                                        <motion.div
+                                            className="bg-yellow-50 dark:bg-yellow-900/30 rounded-lg p-3 text-center"
+                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ delay: 0.15 }}
+                                        >
+                                            <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-400">
+                                                {userStatusData.summary.missingUserId}
+                                            </div>
+                                            <div className="text-xs text-yellow-600 dark:text-yellow-500">⚠️ Missing</div>
+                                        </motion.div>
+                                        <motion.div
+                                            className="bg-red-50 dark:bg-red-900/30 rounded-lg p-3 text-center"
+                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ delay: 0.2 }}
+                                        >
+                                            <div className="text-2xl font-bold text-red-700 dark:text-red-400">
+                                                {userStatusData.summary.orphanedUserId}
+                                            </div>
+                                            <div className="text-xs text-red-600 dark:text-red-500">❌ Orphaned</div>
+                                        </motion.div>
+                                    </div>
+
+                                    {/* Stats Row */}
+                                    <div className="text-xs text-gray-500 dark:text-dark-muted text-center">
+                                        {userStatusData.summary.totalCustomers} customers • {userStatusData.summary.totalAuthUsers} auth users
+                                    </div>
+
+                                    {/* Missing Users Section */}
+                                    {userStatusData.customersWithoutUserId.length > 0 && (
+                                        <motion.div
+                                            className="border border-yellow-200 dark:border-yellow-800 rounded-lg overflow-hidden"
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            transition={{ delay: 0.25 }}
+                                        >
+                                            <button
+                                                onClick={() => setExpandMissing(!expandMissing)}
+                                                className="w-full px-3 py-2 bg-yellow-50 dark:bg-yellow-900/30 flex items-center justify-between text-sm font-medium text-yellow-800 dark:text-yellow-400"
+                                            >
+                                                <span>⚠️ Missing Auth Account ({userStatusData.customersWithoutUserId.length})</span>
+                                                <span>{expandMissing ? '▼' : '▶'}</span>
+                                            </button>
+                                            <AnimatePresence>
+                                                {expandMissing && (
+                                                    <motion.div
+                                                        initial={{ height: 0, opacity: 0 }}
+                                                        animate={{ height: 'auto', opacity: 1 }}
+                                                        exit={{ height: 0, opacity: 0 }}
+                                                        className="overflow-hidden"
+                                                    >
+                                                        <div className="max-h-40 overflow-y-auto">
+                                                            {userStatusData.customersWithoutUserId.map((customer) => (
+                                                                <div
+                                                                    key={customer.id}
+                                                                    className="px-3 py-2 border-t border-yellow-100 dark:border-yellow-900 flex items-center justify-between text-sm"
+                                                                >
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <div className="font-medium text-gray-800 dark:text-dark-text truncate">{customer.name}</div>
+                                                                        <div className="text-xs text-gray-500 dark:text-dark-muted">{customer.phone}</div>
+                                                                    </div>
+                                                                    <motion.button
+                                                                        onClick={() => handleFixMissingUser(customer)}
+                                                                        disabled={fixingUserId === customer.id}
+                                                                        className="ml-2 px-2 py-1 bg-yellow-500 hover:bg-yellow-600 disabled:bg-yellow-300 text-white text-xs font-medium rounded"
+                                                                        whileHover={{ scale: 1.05 }}
+                                                                        whileTap={{ scale: 0.95 }}
+                                                                    >
+                                                                        {fixingUserId === customer.id ? '...' : 'Create'}
+                                                                    </motion.button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </motion.div>
+                                    )}
+
+                                    {/* Orphaned Users Section */}
+                                    {userStatusData.customersWithOrphanedUserId.length > 0 && (
+                                        <motion.div
+                                            className="border border-red-200 dark:border-red-800 rounded-lg overflow-hidden"
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            transition={{ delay: 0.3 }}
+                                        >
+                                            <button
+                                                onClick={() => setExpandOrphaned(!expandOrphaned)}
+                                                className="w-full px-3 py-2 bg-red-50 dark:bg-red-900/30 flex items-center justify-between text-sm font-medium text-red-800 dark:text-red-400"
+                                            >
+                                                <span>❌ Orphaned Account ({userStatusData.customersWithOrphanedUserId.length})</span>
+                                                <span>{expandOrphaned ? '▼' : '▶'}</span>
+                                            </button>
+                                            <AnimatePresence>
+                                                {expandOrphaned && (
+                                                    <motion.div
+                                                        initial={{ height: 0, opacity: 0 }}
+                                                        animate={{ height: 'auto', opacity: 1 }}
+                                                        exit={{ height: 0, opacity: 0 }}
+                                                        className="overflow-hidden"
+                                                    >
+                                                        <div className="max-h-40 overflow-y-auto">
+                                                            {userStatusData.customersWithOrphanedUserId.map((customer) => (
+                                                                <div
+                                                                    key={customer.id}
+                                                                    className="px-3 py-2 border-t border-red-100 dark:border-red-900 flex items-center justify-between text-sm"
+                                                                >
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <div className="font-medium text-gray-800 dark:text-dark-text truncate">{customer.name}</div>
+                                                                        <div className="text-xs text-gray-500 dark:text-dark-muted">{customer.phone}</div>
+                                                                    </div>
+                                                                    <motion.button
+                                                                        onClick={() => handleFixMissingUser(customer)}
+                                                                        disabled={fixingUserId === customer.id}
+                                                                        className="ml-2 px-2 py-1 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white text-xs font-medium rounded"
+                                                                        whileHover={{ scale: 1.05 }}
+                                                                        whileTap={{ scale: 0.95 }}
+                                                                    >
+                                                                        {fixingUserId === customer.id ? '...' : 'Recreate'}
+                                                                    </motion.button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </motion.div>
+                                    )}
+
+                                    {/* All Healthy Message */}
+                                    {userStatusData.summary.missingUserId === 0 && userStatusData.summary.orphanedUserId === 0 && (
+                                        <motion.div
+                                            className="text-center py-6"
+                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                        >
+                                            <div className="text-4xl mb-2">✨</div>
+                                            <div className="text-green-600 dark:text-green-400 font-medium">All customers have valid accounts!</div>
+                                        </motion.div>
+                                    )}
+
+                                    {/* Last Updated */}
+                                    <div className="text-xs text-gray-400 dark:text-dark-muted text-center pt-2">
+                                        Last checked: {new Date(userStatusData.timestamp).toLocaleTimeString()}
+                                    </div>
+                                </motion.div>
+                            )}
                         </>
                     )}
                 </motion.div>

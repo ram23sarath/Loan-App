@@ -75,7 +75,7 @@ export default async (req) => {
 
     // Loop through all users until we find a match or run out of pages
     while (hasMore && !user) {
-      console.log(`🔍 Searching page ${page} (size ${PAGE_SIZE}) for user with partial email "${targetEmail}"...`);
+      console.log(`📄 Fetching page ${page} (size ${PAGE_SIZE})...`);
 
       const { data, error: listError } = await supabase.auth.admin.listUsers({
         perPage: PAGE_SIZE,
@@ -83,7 +83,7 @@ export default async (req) => {
       });
 
       if (listError) {
-        console.error('Error listing users:', listError.message);
+        console.error('❌ Error listing users:', listError.message);
         return new Response(
           JSON.stringify({ error: `Failed to access users: ${listError.message}` }),
           { status: 400, headers: { 'Content-Type': 'application/json' } }
@@ -91,23 +91,33 @@ export default async (req) => {
       }
 
       const usersList = data?.users || [];
+      console.log(`   - Retrieved ${usersList.length} users in this page.`);
 
       // Strict matching on email
       user = usersList.find(u => u.email?.trim().toLowerCase() === targetEmail);
+
+      if (user) {
+        console.log(`✅ Direct match found on page ${page}: ${user.id}`);
+      }
 
       // If strict match failed, try phone matching fallback if the email looks like a phone number + @gmail.com
       if (!user && targetEmail.endsWith('@gmail.com')) {
         const potentialPhone = targetEmail.split('@')[0];
         // Check if it's all digits and valid length
         if (/^\d{10,15}$/.test(potentialPhone)) {
-          user = usersList.find(u => u.phone === potentialPhone);
-          if (user) console.log(`✅ Found user by phone fallback: ${user.id}`);
+          console.log(`   - Attempting phone fallback check for: "${potentialPhone}"`);
+          const phoneMatch = usersList.find(u => u.phone === potentialPhone);
+          if (phoneMatch) {
+            console.log(`✅ Found user by phone fallback on page ${page}: ${phoneMatch.id} (Email: ${phoneMatch.email})`);
+            user = phoneMatch;
+          }
         }
       }
 
       if (!user) {
         // If we got fewer users than requested, we've reached the end
         if (usersList.length < PAGE_SIZE) {
+          console.log(`   - End of list reached (Page ${page} had < ${PAGE_SIZE} items).`);
           hasMore = false;
         } else {
           page++;

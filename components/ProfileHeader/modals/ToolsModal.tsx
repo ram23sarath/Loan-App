@@ -141,7 +141,10 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                 setChangePasswordEmail('');
                 setChangePasswordNew('');
             } else {
-                setToolsMessage({ type: 'error', text: result.error || 'Failed to change password' });
+                const errorMsg = result.details 
+                    ? `${result.error}\n\n${result.details}`
+                    : result.error || 'Failed to change password';
+                setToolsMessage({ type: 'error', text: errorMsg });
             }
         } catch (err: any) {
             setToolsMessage({ type: 'error', text: err.message || 'An error occurred' });

@@ -68,13 +68,17 @@ export default async (req) => {
     let user;
     let page = 1;
     let hasMore = true;
+    const PAGE_SIZE = 50; // Use default page size to be safe
+
+    // Normalize target email for comparison
+    const targetEmail = email.trim().toLowerCase();
 
     // Loop through all users until we find a match or run out of pages
     while (hasMore && !user) {
-      console.log(`🔍 Searching page ${page} for user...`);
+      console.log(`🔍 Searching page ${page} (size ${PAGE_SIZE}) for user with partial email "${targetEmail}"...`);
 
       const { data, error: listError } = await supabase.auth.admin.listUsers({
-        perPage: 1000,
+        perPage: PAGE_SIZE,
         page: page,
       });
 
@@ -87,20 +91,37 @@ export default async (req) => {
       }
 
       const usersList = data?.users || [];
-      user = usersList.find(u => u.email?.toLowerCase() === email.toLowerCase());
 
-      // If we found the user, we can stop searching.
-      // Otherwise, check if there are more pages to fetch.
+      // Strict matching on email
+      user = usersList.find(u => u.email?.trim().toLowerCase() === targetEmail);
+
+      // If strict match failed, try phone matching fallback if the email looks like a phone number + @gmail.com
+      if (!user && targetEmail.endsWith('@gmail.com')) {
+        const potentialPhone = targetEmail.split('@')[0];
+        // Check if it's all digits and valid length
+        if (/^\d{10,15}$/.test(potentialPhone)) {
+          user = usersList.find(u => u.phone === potentialPhone);
+          if (user) console.log(`✅ Found user by phone fallback: ${user.id}`);
+        }
+      }
+
       if (!user) {
-        hasMore = usersList.length === 1000;
-        page++;
+        // If we got fewer users than requested, we've reached the end
+        if (usersList.length < PAGE_SIZE) {
+          hasMore = false;
+        } else {
+          page++;
+        }
       }
     }
 
     if (!user) {
-      console.warn(`User not found: ${email} (searched ${page} pages)`);
+      console.warn(`User not found: ${email} (scanned ${page} pages)`);
       return new Response(
-        JSON.stringify({ error: `User with email "${email}" not found in system` }),
+        JSON.stringify({
+          error: `User with email "${email}" not found in system.`,
+          details: `Scanned ${page} pages of users. Verified exact match and phone fallback. Please ask developer to check if user is orphaned.`
+        }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }
       );
     }

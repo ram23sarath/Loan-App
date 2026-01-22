@@ -64,22 +64,41 @@ export default async (req) => {
 
     console.log(`🔐 Attempting to reset password for: ${email}`);
 
-    // Find user by email
-    const { data: users, error: listError } = await supabase.auth.admin.listUsers();
+    // Search for user with matching email using pagination
+    let user;
+    let page = 1;
+    let hasMore = true;
 
-    if (listError) {
-      console.error('Error listing users:', listError.message);
-      return new Response(
-        JSON.stringify({ error: `Failed to access users: ${listError.message}` }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
+    // Loop through all users until we find a match or run out of pages
+    while (hasMore && !user) {
+      console.log(`🔍 Searching page ${page} for user...`);
+
+      const { data, error: listError } = await supabase.auth.admin.listUsers({
+        perPage: 1000,
+        page: page,
+      });
+
+      if (listError) {
+        console.error('Error listing users:', listError.message);
+        return new Response(
+          JSON.stringify({ error: `Failed to access users: ${listError.message}` }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const usersList = data?.users || [];
+      user = usersList.find(u => u.email?.toLowerCase() === email.toLowerCase());
+
+      // If we found the user, we can stop searching.
+      // Otherwise, check if there are more pages to fetch.
+      if (!user) {
+        hasMore = usersList.length === 1000;
+        page++;
+      }
     }
 
-    // Search for user with matching email
-    const user = users.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
-
     if (!user) {
-      console.warn(`User not found: ${email}`);
+      console.warn(`User not found: ${email} (searched ${page} pages)`);
       return new Response(
         JSON.stringify({ error: `User with email "${email}" not found in system` }),
         { status: 404, headers: { 'Content-Type': 'application/json' } }

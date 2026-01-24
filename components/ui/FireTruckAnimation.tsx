@@ -44,11 +44,16 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
             <div className="relative z-10 flex flex-col items-center px-4">
                 {/* Three emblems container */}
                 <div className="relative mb-8 flex items-center justify-center gap-4 md:gap-8">
-                    {/* Left: AP Government Emblem */}
+                    {/* Left: AP Government Emblem - Fly in from left dramatically */}
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.8, x: -30 }}
-                        animate={{ opacity: 1, scale: 1, x: 0 }}
-                        transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+                        initial={{ opacity: 0, scale: 0.5, x: -100, rotate: -15 }}
+                        animate={{ opacity: 1, scale: 1, x: 0, rotate: 0 }}
+                        transition={{ 
+                            type: "spring",
+                            stiffness: 260,
+                            damping: 20,
+                            delay: 0.1 
+                        }}
                         className="relative"
                     >
                         {/* Glowing ring behind image */}
@@ -71,11 +76,17 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
                         </div>
                     </motion.div>
 
-                    {/* Center: Officer Image with premium frame */}
+                    {/* Center: Officer Image - Pop up with impact */}
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.8, y: 30 }}
+                        initial={{ opacity: 0, scale: 0, y: 100 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                        transition={{ 
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 20,
+                            mass: 1.2,
+                            delay: 0.4
+                        }}
                         className="relative"
                     >
                         {/* Glowing ring behind image */}
@@ -98,11 +109,16 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
                         </div>
                     </motion.div>
 
-                    {/* Right: AP Fire Truck */}
+                    {/* Right: AP Fire Truck - Fly in from right dramatically */}
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.8, x: 30 }}
-                        animate={{ opacity: 1, scale: 1, x: 0 }}
-                        transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+                        initial={{ opacity: 0, scale: 0.5, x: 100, rotate: 15 }}
+                        animate={{ opacity: 1, scale: 1, x: 0, rotate: 0 }}
+                        transition={{ 
+                            type: "spring",
+                            stiffness: 260,
+                            damping: 20,
+                            delay: 0.2
+                        }}
                         className="relative"
                     >
                         {/* Glowing ring behind image */}

@@ -376,7 +376,7 @@ export const BRIDGE_INJECTION_SCRIPT = `
   };
   
   // Notify native that bridge is ready
-  window.sendToNative('NAVIGATION_READY');
+  // window.sendToNative('NAVIGATION_READY'); // Removed: Prevents premature loading screen dismissal
   
   console.log('[NativeBridge] Ready');
 })();

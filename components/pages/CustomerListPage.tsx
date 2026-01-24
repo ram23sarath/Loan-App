@@ -681,13 +681,10 @@ const CustomerListPage = () => {
                                         onClick={() =>
                                           setSelectedCustomer(customer)
                                         }
-                                        initial={{ opacity: 0, y: 10 }}
+                                        initial={false}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: -10 }}
-                                        transition={{
-                                          duration: 0.3,
-                                          delay: idx * 0.05,
-                                        }}
+                                        transition={{ duration: 0.1 }}
                                       >
                                         <td className="px-2 py-2 text-gray-400 text-sm dark:text-dark-muted dark:border-dark-border">
                                           {rowNumber}
@@ -822,13 +819,10 @@ const CustomerListPage = () => {
                                       onClick={() =>
                                         setSelectedCustomer(customer)
                                       }
-                                      initial={{ opacity: 0 }}
+                                      initial={false}
                                       animate={{ opacity: 1 }}
                                       exit={{ opacity: 0 }}
-                                      transition={{
-                                        duration: 0.3,
-                                        delay: idx * 0.03,
-                                      }}
+                                      transition={{ duration: 0.1 }}
                                       drag="x"
                                       dragConstraints={{ left: 0, right: 0 }}
                                       dragElastic={0}

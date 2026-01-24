@@ -1219,6 +1219,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             setSeniorityList(cachedData.seniorityList || []);
           }
 
+          // FIX: Progressive Loading - Unblock UI immediately
+          if (isMounted) {
+            setLoading(false);
+            setIsRefreshing(true);
+          }
+
           // Inline the fetch logic during initialization to avoid issues with fetchData callback
           try {
             if (currentIsScoped && currentScopedId) {

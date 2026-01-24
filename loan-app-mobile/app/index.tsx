@@ -447,12 +447,9 @@ export default function WebViewScreen() {
         injectedJavaScriptBeforeContentLoaded={BRIDGE_INJECTION_SCRIPT}
         
         // Improved loading reliability
-        startInLoadingState={true}
-        renderLoading={() => (
-          <View style={styles.loadingOverlay}>
-            <LoadingScreen message="Loading..." />
-          </View>
-        )}
+        // Improved loading reliability
+        startInLoadingState={false}
+        // renderLoading handled manually via isLoading overlay
         
         // User Agent (helps web detect native wrapper)
         applicationNameForUserAgent="LoanAppMobile/1.0"

@@ -1,13 +1,7 @@
 import React from 'react';
 import LoanTableView from './LoanTableView';
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import * as XLSX from 'xlsx';
-import { useData } from '../../context/DataContext';
-import GlassCard from '../ui/GlassCard';
 import PageWrapper from '../ui/PageWrapper';
-import { LandmarkIcon, Trash2Icon, FileDownIcon, WhatsAppIcon, SpinnerIcon } from '../../constants';
-import type { LoanWithCustomer, Installment } from '../../types';
-import { formatDate } from '../../utils/dateFormatter';
+import { LandmarkIcon } from '../../constants';
 
 const LoanListPage = () => {
     return (

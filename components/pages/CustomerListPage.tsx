@@ -15,7 +15,7 @@ import CustomerDetailModal from "../modals/CustomerDetailModal";
 import EditModal from "../modals/EditModal";
 import DeleteConfirmationModal from "../modals/DeleteConfirmationModal";
 import type { Customer } from "../../types";
-import { useDebounce } from "../../utils/useDebounce";
+import { useDeferredSearch } from "../../utils/useDebounce";
 import { openWhatsApp } from "../../utils/whatsapp";
 
 // --- Icon Component ---
@@ -67,7 +67,8 @@ const CustomerListPage = () => {
     subscriptions: number;
   } | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  // Use useDeferredSearch for better React 18 concurrent rendering
+  const debouncedSearchTerm = useDeferredSearch(searchTerm);
   const [sortOption, setSortOption] = useState("date-desc");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null

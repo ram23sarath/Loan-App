@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import { motion, Variants, AnimatePresence } from 'framer-motion';
-import * as XLSX from 'xlsx';
+// NOTE: xlsx is dynamically imported in handleIndividualExport to reduce bundle size (~500KB)
 import type { Customer, LoanWithCustomer, SubscriptionWithCustomer, Installment, DataEntry } from '../../types';
 import GlassCard from '../ui/GlassCard';
 import RecordLoanModal from './RecordLoanModal';
@@ -349,7 +349,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     }
   };
 
-  const handleIndividualExport = () => {
+  const handleIndividualExport = async () => {
+    const XLSX = await import('xlsx');
     const customerLoansData = loans.map(loan => {
       const loanInstallments = installmentsByLoanId.get(loan.id) || [];
       const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);

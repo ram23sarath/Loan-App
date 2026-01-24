@@ -240,17 +240,37 @@ export const BRIDGE_INJECTION_SCRIPT = `
     });
   });
   
-  // Track page navigation for debugging
+  // Track page navigation using History API interception (more efficient than polling)
+  // This intercepts pushState/replaceState and listens to popstate
   var lastUrl = window.location.href;
-  setInterval(function() {
-    if (window.location.href !== lastUrl) {
-      lastUrl = window.location.href;
+  
+  var notifyUrlChange = function() {
+    var newUrl = window.location.href;
+    if (newUrl !== lastUrl) {
+      lastUrl = newUrl;
       console.log('[NativeBridge] URL changed to:', lastUrl);
       if (window.sendToNative) {
         window.sendToNative('PAGE_LOADED', { route: window.location.pathname });
       }
     }
-  }, 500);
+  };
+  
+  // Intercept History API - pushState
+  var originalPushState = history.pushState;
+  history.pushState = function() {
+    originalPushState.apply(history, arguments);
+    notifyUrlChange();
+  };
+  
+  // Intercept History API - replaceState
+  var originalReplaceState = history.replaceState;
+  history.replaceState = function() {
+    originalReplaceState.apply(history, arguments);
+    notifyUrlChange();
+  };
+  
+  // Listen for browser back/forward navigation
+  window.addEventListener('popstate', notifyUrlChange);
   
   // Track loading state changes
   document.addEventListener('DOMContentLoaded', function() {
@@ -258,6 +278,8 @@ export const BRIDGE_INJECTION_SCRIPT = `
   });
   window.addEventListener('load', function() {
     console.log('[NativeBridge] Window loaded');
+    // Also notify on initial load
+    notifyUrlChange();
   });
   
   /**

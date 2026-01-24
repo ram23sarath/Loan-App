@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { motion, useSpring, useTransform } from "framer-motion";
-import * as XLSX from "xlsx";
+// NOTE: xlsx is dynamically imported in export functions to reduce initial bundle size (~500KB)
 
 import FYBreakdownModal from "../modals/FYBreakdownModal";
 import PageWrapper from "../ui/PageWrapper";
@@ -683,8 +683,9 @@ const SummaryPage = () => {
 
   const leftCards = collectedBreakdownCards;
 
-  // --- Export Functions ---
-  const handleExportSubscriptions = () => {
+  // --- Export Functions (xlsx loaded dynamically to reduce bundle size) ---
+  const handleExportSubscriptions = async () => {
+    const XLSX = await import("xlsx");
     const subsForExport = subscriptions.map((sub) => ({
       "Customer Name": sub.customers?.name ?? "Unknown",
       "Customer Phone": sub.customers?.phone ?? "N/A",
@@ -699,7 +700,8 @@ const SummaryPage = () => {
     setExportMenuOpen(false);
   };
 
-  const handleExportComprehensive = () => {
+  const handleExportComprehensive = async () => {
+    const XLSX = await import("xlsx");
     const customerSummaryData = contextCustomers.map((customer) => {
       const customerLoans = loans.filter((l) => l.customer_id === customer.id);
       const customerSubscriptions = subscriptions.filter(
@@ -817,7 +819,8 @@ const SummaryPage = () => {
     setExportMenuOpen(false);
   };
 
-  const handleExportLoans = () => {
+  const handleExportLoans = async () => {
+    const XLSX = await import("xlsx");
     const loansData = loans.map((loan) => {
       const loanInstallments = (
         localInstallmentsByLoanId.get(loan.id) || []
@@ -867,7 +870,8 @@ const SummaryPage = () => {
     setExportMenuOpen(false);
   };
 
-  const handleExportSeniority = () => {
+  const handleExportSeniority = async () => {
+    const XLSX = await import("xlsx");
     const seniorityData = seniorityList.map((item, index) => ({
       Position: index + 1,
       "Customer Name": item.customers?.name ?? "N/A",

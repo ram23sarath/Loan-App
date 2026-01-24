@@ -100,20 +100,32 @@ const AdminOnlyRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+/**
+ * Check if running inside native app wrapper
+ * The native app sets 'ReactNativeWebView' on the window object
+ */
+const isInNativeWrapper = (): boolean => {
+  return typeof window !== 'undefined' && 
+    (typeof (window as any).ReactNativeWebView !== 'undefined' ||
+     navigator.userAgent.includes('LoanAppMobile'));
+};
+
 // AnimatedRoutes component to handle page transitions
 const AnimatedRoutes = () => {
   const location = useLocation();
   const { isScopedCustomer } = useData();
+  
+  // Skip loading spinner when in native wrapper (native has its own loading screen)
+  const suspenseFallback = isInNativeWrapper() ? null : (
+    <LazyPageWrapper>
+      <div className="flex items-center justify-center h-full">
+        <LoadingSpinner />
+      </div>
+    </LazyPageWrapper>
+  );
+  
   return (
-    <Suspense
-      fallback={
-        <LazyPageWrapper>
-          <div className="flex items-center justify-center h-full">
-            <LoadingSpinner />
-          </div>
-        </LazyPageWrapper>
-      }
-    >
+    <Suspense fallback={suspenseFallback}>
       <AnimatePresence mode="wait">
         <Routes location={location}>
           <Route

@@ -24,10 +24,12 @@ export default function RootLayout() {
     configureNotificationHandler();
   }, []);
 
-  // Hide splash screen after a short delay (WebView will show loading state)
+  // Hide splash screen once the root layout has rendered
+  // The WebView's LoadingScreen component will handle showing loading state
   const onLayoutRootView = useCallback(async () => {
-    // Give a moment for the app to render
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Minimal delay to ensure layout is painted (prevents flash)
+    // This is much faster than the previous 500ms delay
+    await new Promise(resolve => setTimeout(resolve, 50));
     await SplashScreen.hideAsync();
   }, []);
 

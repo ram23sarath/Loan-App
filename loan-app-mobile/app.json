@@ -7,11 +7,12 @@
     "icon": "./assets/icon.png",
     "scheme": "loanapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#4F46E5"
+      "backgroundColor": "#4F46E5",
+      "fadeOutDuration": 200
     },
     "ios": {
       "supportsTablet": true,

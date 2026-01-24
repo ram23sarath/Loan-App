@@ -12,30 +12,18 @@ import { getLoanStatus } from "../../utils/loanStatus";
 import EditModal from "../modals/EditModal";
 import RecordInstallmentModal from "../modals/RecordInstallmentModal";
 import DeleteConfirmationModal from "../modals/DeleteConfirmationModal";
-import { useDebounce } from "../../utils/useDebounce";
+import { useDeferredSearch } from "../../utils/useDebounce";
 import { 
   rowVariants, 
   cardVariants, 
   layoutTransition 
 } from "../../utils/useRowDeleteAnimation";
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.05,
-    },
-  },
-};
-const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1,
-  },
-  exit: { y: -20, opacity: 0 },
-};
+// Performance Note: Removed unused staggerChildren animation variants
+// The table already uses pagination (25 items) which is sufficient for performance.
+// Layout animations are only enabled during delete operations to prevent
+// expensive recalculations on every render.
+
 const modalBackdropVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1 },
@@ -65,7 +53,9 @@ const LoanTableView: React.FC = () => {
     scopedCustomerId,
   } = useData();
   const [filter, setFilter] = React.useState("");
-  const debouncedFilter = useDebounce(filter, 300);
+  // Use useDeferredSearch for better React 18 concurrent rendering
+  // This integrates with React's scheduler instead of using setTimeout
+  const debouncedFilter = useDeferredSearch(filter);
   const [statusFilter, setStatusFilter] = React.useState("");
   // Default to sorting by status so "In Progress" loans appear first
   const [sortField, setSortField] = React.useState("status");
@@ -504,12 +494,12 @@ const LoanTableView: React.FC = () => {
             return (
               <React.Fragment key={loan.id}>
                 <motion.tr
-                  layout
+                  layout={!!animatingLoanId} // Only enable layout animations during delete to prevent expensive recalcs
                   variants={rowVariants}
-                  initial="initial"
+                  initial={false} // Skip initial animation for faster renders
                   animate={isDeleting ? 'deleting' : 'visible'}
                   exit="exit"
-                  transition={layoutTransition}
+                  transition={isDeleting ? layoutTransition : undefined}
                   className={`even:bg-gray-50/50 hover:bg-indigo-50/50 transition-colors dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50 ${isDeleting ? 'pointer-events-none' : ''}`}
                   style={{ overflow: 'hidden' }}
                 >
@@ -862,12 +852,12 @@ const LoanTableView: React.FC = () => {
           return (
             <motion.div 
               key={loan.id} 
-              layout
+              layout={!!animatingLoanId} // Only enable layout animations during delete
               variants={cardVariants}
-              initial="initial"
+              initial={false} // Skip initial animation for faster renders
               animate={isDeleting ? 'deleting' : 'visible'}
               exit="exit"
-              transition={layoutTransition}
+              transition={isDeleting ? layoutTransition : undefined}
               className={`relative ${isDeleting ? 'pointer-events-none' : ''}`}
               style={{ overflow: 'hidden' }}
             >

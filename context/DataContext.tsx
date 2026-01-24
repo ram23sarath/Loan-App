@@ -58,6 +58,7 @@ interface DataContextType {
   installments: Installment[];
   dataEntries: DataEntry[];
   loading: boolean;
+  isAuthChecking: boolean;
   isRefreshing: boolean;
   isScopedCustomer: boolean;
   scopedCustomerId: string | null;
@@ -243,6 +244,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [deletedInstallments, setDeletedInstallments] = useState<Installment[]>([]);
   const [deletedCustomers, setDeletedCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [dataEntries, setDataEntries] = useState<DataEntry[]>([]);
   const [isScopedCustomer, setIsScopedCustomer] = useState(false);
@@ -1158,6 +1160,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         if (isMounted) {
           console.error("[DataContext] Session initialization timed out after 30s - forcing loading=false");
           setLoading(false);
+          setIsAuthChecking(false);
           setIsRefreshing(false);
         }
       }, 30000);
@@ -1173,6 +1176,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         setSession(session);
         lastSessionTokenRef.current = session?.access_token || null;
         lastUserIdRef.current = session?.user?.id || null;
+
+        // Auth check complete - unblock ProtectedRoute immediately
+        // Data loading will continue in background
+        setIsAuthChecking(false);
 
         let currentIsScoped = false;
         let currentScopedId: string | null = null;
@@ -1435,6 +1442,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (_event === "SIGNED_OUT") {
         setSession(null);
         setLoading(false);
+        setIsAuthChecking(false);
         setIsRefreshing(false);
         lastSessionTokenRef.current = null;
         lastUserIdRef.current = null;
@@ -2448,6 +2456,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         installments,
         dataEntries,
         loading,
+        isAuthChecking,
         isRefreshing,
         isScopedCustomer,
         scopedCustomerId,

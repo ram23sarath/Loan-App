@@ -66,13 +66,29 @@ const LoginPage = () => {
     },
   };
 
-  // Detect if screen is mobile size
+  // Detect if screen is mobile size and preload animation images
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
     checkMobile();
     window.addEventListener("resize", checkMobile);
+
+    // Preload images specifically for the FireTruckAnimation
+    // This ensures they are cached and ready to display instantly
+    // when the user logs in, preventing pop-in/loading delays.
+    const imagesToPreload = [
+      "/ap_govt_emblem.png",
+      "/police_officer.png",
+      "/ap_firetruck_truck.png",
+      "/firetruck.png",
+    ];
+
+    imagesToPreload.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 

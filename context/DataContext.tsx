@@ -351,33 +351,33 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           if (dataEntriesError) throw dataEntriesError;
           setDataEntries((dataEntriesData as DataEntry[]) || []);
         } else {
-          // Full fetch for admin/users with no scoped customer - uses pagination to get ALL records
-          // Fetch customers (excluding soft-deleted)
-          const customersData = await fetchAllRecords<Customer>(
-            () =>
-              supabase
-                .from("customers")
-                .select("*")
-                .is("deleted_at", null)
-                .order("created_at", { ascending: false }),
-            "customers"
-          );
-          setCustomers(customersData);
-
-          // Fetch loans (excluding soft-deleted)
-          const loansData = await fetchAllRecords<LoanWithCustomer>(
-            () =>
-              supabase
-                .from("loans")
-                .select("*, customers(name, phone)")
-                .is("deleted_at", null)
-                .order("created_at", { ascending: false }),
-            "loans"
-          );
-          setLoans(loansData);
-
-          const subscriptionsData =
-            await fetchAllRecords<SubscriptionWithCustomer>(
+          // Full fetch for admin/users with no scoped customer - PARALLEL fetch for performance
+          const [
+            customersData,
+            loansData,
+            subscriptionsData,
+            installmentsData,
+            dataEntriesData,
+          ] = await Promise.all([
+            fetchAllRecords<Customer>(
+              () =>
+                supabase
+                  .from("customers")
+                  .select("*")
+                  .is("deleted_at", null)
+                  .order("created_at", { ascending: false }),
+              "customers"
+            ),
+            fetchAllRecords<LoanWithCustomer>(
+              () =>
+                supabase
+                  .from("loans")
+                  .select("*, customers(name, phone)")
+                  .is("deleted_at", null)
+                  .order("created_at", { ascending: false }),
+              "loans"
+            ),
+            fetchAllRecords<SubscriptionWithCustomer>(
               () =>
                 supabase
                   .from("subscriptions")
@@ -385,47 +385,45 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                   .is("deleted_at", null)
                   .order("created_at", { ascending: false }),
               "subscriptions"
-            );
+            ),
+            fetchAllRecords<Installment>(
+              () =>
+                supabase
+                  .from("installments")
+                  .select("*")
+                  .is("deleted_at", null)
+                  .order("created_at", { ascending: false }),
+              "installments"
+            ),
+            fetchAllRecords<DataEntry>(
+              () =>
+                supabase
+                  .from("data_entries")
+                  .select("*")
+                  .is("deleted_at", null)
+                  .order("date", { ascending: false }),
+              "data_entries"
+            ),
+          ]);
+
+          setCustomers(customersData);
+          setLoans(loansData);
           setSubscriptions(subscriptionsData);
-
-          const installmentsData = await fetchAllRecords<Installment>(
-            () =>
-              supabase
-                .from("installments")
-                .select("*")
-                .is("deleted_at", null)
-                .order("created_at", { ascending: false }),
-            "installments"
-          );
           setInstallments(installmentsData);
-
-          // Fetch data entries (excluding soft-deleted)
-          const dataEntriesData = await fetchAllRecords<DataEntry>(
-            () =>
-              supabase
-                .from("data_entries")
-                .select("*")
-                .is("deleted_at", null)
-                .order("date", { ascending: false }),
-            "data_entries"
-          );
           setDataEntries(dataEntriesData);
 
-          // Check for overdue installments and create notifications (admin only)
+          // Check for overdue installments and create notifications (admin only) - non-blocking
           if (!effectiveIsScoped) {
-            try {
-              await checkAndNotifyOverdueInstallments(
-                installmentsData,
-                loansData,
-                customersData
-              );
-            } catch (notificationErr) {
+            checkAndNotifyOverdueInstallments(
+              installmentsData,
+              loansData,
+              customersData
+            ).catch((notificationErr) => {
               console.error(
                 "Error checking overdue installments:",
                 notificationErr
               );
-              // Non-blocking: continue even if notification check fails
-            }
+            });
           }
         }
       } catch (error: any) {
@@ -1149,10 +1147,20 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   // FIX: Simplified initialization for Chrome/Edge compatibility
   useEffect(() => {
     let isMounted = true;
+    let loadingTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
     const initializeSession = async () => {
       if (!isMounted) return;
       setLoading(true);
+
+      // Failsafe timeout to prevent infinite loading (helps WebView issues)
+      loadingTimeoutId = setTimeout(() => {
+        if (isMounted) {
+          console.error("[DataContext] Session initialization timed out after 30s - forcing loading=false");
+          setLoading(false);
+          setIsRefreshing(false);
+        }
+      }, 30000);
 
       try {
         // Get the current session
@@ -1279,54 +1287,61 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 seniorityList: [], // Will be set below
               });
             } else {
-              // Admin/full data fetch - use pagination to get ALL records
-              const customersData = await fetchAllRecords<Customer>(
-                () =>
-                  supabase
-                    .from("customers")
-                    .select("*")
-                    .order("created_at", { ascending: false }),
-                "customers"
-              );
-
-              const loansData = await fetchAllRecords<LoanWithCustomer>(
-                () =>
-                  supabase
-                    .from("loans")
-                    .select("*, customers(name, phone)")
-                    .is("deleted_at", null)
-                    .order("created_at", { ascending: false }),
-                "loans"
-              );
-
-              const subscriptionsData =
-                await fetchAllRecords<SubscriptionWithCustomer>(
+              // Admin/full data fetch - PARALLEL fetch using Promise.all for performance
+              // This fetches all 5 tables simultaneously instead of sequentially
+              const [
+                customersData,
+                loansData,
+                subscriptionsData,
+                installmentsData,
+                dataEntriesData,
+              ] = await Promise.all([
+                fetchAllRecords<Customer>(
+                  () =>
+                    supabase
+                      .from("customers")
+                      .select("*")
+                      .is("deleted_at", null)
+                      .order("created_at", { ascending: false }),
+                  "customers"
+                ),
+                fetchAllRecords<LoanWithCustomer>(
+                  () =>
+                    supabase
+                      .from("loans")
+                      .select("*, customers(name, phone)")
+                      .is("deleted_at", null)
+                      .order("created_at", { ascending: false }),
+                  "loans"
+                ),
+                fetchAllRecords<SubscriptionWithCustomer>(
                   () =>
                     supabase
                       .from("subscriptions")
                       .select("*, customers(name, phone)")
+                      .is("deleted_at", null)
                       .order("created_at", { ascending: false }),
                   "subscriptions"
-                );
-
-              const installmentsData = await fetchAllRecords<Installment>(
-                () =>
-                  supabase
-                    .from("installments")
-                    .select("*")
-                    .order("created_at", { ascending: false }),
-                "installments"
-              );
-
-              const dataEntriesData = await fetchAllRecords<DataEntry>(
-                () =>
-                  supabase
-                    .from("data_entries")
-                    .select("*")
-                    .is("deleted_at", null)
-                    .order("date", { ascending: false }),
-                "data_entries"
-              );
+                ),
+                fetchAllRecords<Installment>(
+                  () =>
+                    supabase
+                      .from("installments")
+                      .select("*")
+                      .is("deleted_at", null)
+                      .order("created_at", { ascending: false }),
+                  "installments"
+                ),
+                fetchAllRecords<DataEntry>(
+                  () =>
+                    supabase
+                      .from("data_entries")
+                      .select("*")
+                      .is("deleted_at", null)
+                      .order("date", { ascending: false }),
+                  "data_entries"
+                ),
+              ]);
 
               if (!isMounted) return;
 
@@ -1336,20 +1351,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
               setInstallments(installmentsData);
               setDataEntries(dataEntriesData);
 
-              // Check for overdue installments (admin only)
+              // Check for overdue installments (admin only) - run in background, don't block
               if (!currentIsScoped) {
-                try {
-                  await checkAndNotifyOverdueInstallments(
-                    installmentsData,
-                    loansData,
-                    customersData
-                  );
-                } catch (notificationErr) {
+                checkAndNotifyOverdueInstallments(
+                  installmentsData,
+                  loansData,
+                  customersData
+                ).catch((notificationErr) => {
                   console.error(
                     "Error checking overdue installments during init:",
                     notificationErr
                   );
-                }
+                });
               }
 
               // Cache the fetched data
@@ -1405,6 +1418,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         if (isMounted) {
           setLoading(false);
           setIsRefreshing(false);
+          if (loadingTimeoutId) clearTimeout(loadingTimeoutId);
         }
       }
     };
@@ -1567,54 +1581,60 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             setDataEntries(cachedData.dataEntries || []);
           }
 
-          // Admin/full data fetch - use pagination to get ALL records
-          const customersData = await fetchAllRecords<Customer>(
-            () =>
-              supabase
-                .from("customers")
-                .select("*")
-                .order("created_at", { ascending: false }),
-            "customers"
-          );
-
-          const loansData = await fetchAllRecords<LoanWithCustomer>(
-            () =>
-              supabase
-                .from("loans")
-                .select("*, customers(name, phone)")
-                .is("deleted_at", null)
-                .order("created_at", { ascending: false }),
-            "loans"
-          );
-
-          const subscriptionsData =
-            await fetchAllRecords<SubscriptionWithCustomer>(
+          // Admin/full data fetch - PARALLEL fetch for performance
+          const [
+            customersData,
+            loansData,
+            subscriptionsData,
+            installmentsData,
+            dataEntriesData,
+          ] = await Promise.all([
+            fetchAllRecords<Customer>(
+              () =>
+                supabase
+                  .from("customers")
+                  .select("*")
+                  .is("deleted_at", null)
+                  .order("created_at", { ascending: false }),
+              "customers"
+            ),
+            fetchAllRecords<LoanWithCustomer>(
+              () =>
+                supabase
+                  .from("loans")
+                  .select("*, customers(name, phone)")
+                  .is("deleted_at", null)
+                  .order("created_at", { ascending: false }),
+              "loans"
+            ),
+            fetchAllRecords<SubscriptionWithCustomer>(
               () =>
                 supabase
                   .from("subscriptions")
                   .select("*, customers(name, phone)")
+                  .is("deleted_at", null)
                   .order("created_at", { ascending: false }),
               "subscriptions"
-            );
-
-          const installmentsData = await fetchAllRecords<Installment>(
-            () =>
-              supabase
-                .from("installments")
-                .select("*")
-                .order("created_at", { ascending: false }),
-            "installments"
-          );
-
-          const dataEntriesData = await fetchAllRecords<DataEntry>(
-            () =>
-              supabase
-                .from("data_entries")
-                .select("*")
-                .is("deleted_at", null)
-                .order("date", { ascending: false }),
-            "data_entries"
-          );
+            ),
+            fetchAllRecords<Installment>(
+              () =>
+                supabase
+                  .from("installments")
+                  .select("*")
+                  .is("deleted_at", null)
+                  .order("created_at", { ascending: false }),
+              "installments"
+            ),
+            fetchAllRecords<DataEntry>(
+              () =>
+                supabase
+                  .from("data_entries")
+                  .select("*")
+                  .is("deleted_at", null)
+                  .order("date", { ascending: false }),
+              "data_entries"
+            ),
+          ]);
 
           if (!isMounted) return;
 
@@ -1624,20 +1644,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           setInstallments(installmentsData);
           setDataEntries(dataEntriesData);
 
-          // Check for overdue installments (admin only)
+          // Check for overdue installments (admin only) - non-blocking
           if (!currentIsScoped) {
-            try {
-              await checkAndNotifyOverdueInstallments(
-                installmentsData,
-                loansData,
-                customersData
-              );
-            } catch (notificationErr) {
+            checkAndNotifyOverdueInstallments(
+              installmentsData,
+              loansData,
+              customersData
+            ).catch((notificationErr) => {
               console.error(
                 "Error checking overdue installments after login:",
                 notificationErr
               );
-            }
+            });
           }
 
           // Cache admin data

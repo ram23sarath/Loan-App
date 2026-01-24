@@ -51,6 +51,46 @@ const CustomerDashboard = React.lazy(
 const TrashPage = React.lazy(() => import("./components/pages/TrashPage"));
 
 
+// Wrapper to handle lazy loading timeouts
+const LazyPageWrapper: React.FC<{
+  children: React.ReactNode;
+  pageName?: string;
+}> = ({ children, pageName = "page" }) => {
+  const [timedOut, setTimedOut] = React.useState(false);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setTimedOut(true);
+    }, 10000); // 10s timeout for lazy loading
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (timedOut) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+        <div className="bg-red-50 dark:bg-red-900/20 p-6 rounded-lg border border-red-200 dark:border-red-800 max-w-md">
+          <p className="text-red-700 dark:text-red-400 mb-4 font-medium">
+            Loading {pageName} is taking longer than expected.
+          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+            This might be due to a slow network connection or a temporary server
+            issue.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-medium transition-colors"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+};
+
 // AdminOnlyRoute component to restrict admin-only pages
 const AdminOnlyRoute = ({ children }: { children: React.ReactNode }) => {
   const { isScopedCustomer } = useData();
@@ -67,9 +107,11 @@ const AnimatedRoutes = () => {
   return (
     <Suspense
       fallback={
-        <div className="flex items-center justify-center h-full">
-          <LoadingSpinner />
-        </div>
+        <LazyPageWrapper>
+          <div className="flex items-center justify-center h-full">
+            <LoadingSpinner />
+          </div>
+        </LazyPageWrapper>
       }
     >
       <AnimatePresence mode="wait">

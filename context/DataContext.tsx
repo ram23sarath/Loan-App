@@ -657,6 +657,21 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
     try {
       if (!session || !session.user) throw new Error("Not authenticated");
+
+      // Check if customer is already in the seniority list (active, not deleted)
+      const { data: existingEntry, error: checkError } = await supabase
+        .from("loan_seniority")
+        .select("id")
+        .eq("customer_id", customerId)
+        .is("deleted_at", null)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      if (existingEntry) {
+        throw new Error("This customer is already in the loan seniority list.");
+      }
+
       const payload: any = {
         user_id: session.user.id,
         customer_id: customerId,
@@ -693,6 +708,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
       await fetchSeniorityList();
     } catch (err: any) {
+      // Pass through the specific error message if it's our duplicate check
+      if (err.message === "This customer is already in the loan seniority list.") {
+        throw err;
+      }
       throw new Error(
         parseSupabaseError(
           err,
@@ -713,7 +732,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .from("loan_seniority")
         .update({
           deleted_at: new Date().toISOString(),
-          deleted_by: session?.user?.email || session?.user?.id || "Unknown",
+          deleted_by: session?.user?.id || session?.user?.email || null,
         } as any)
         .eq("id", id);
       if (error) throw error;
@@ -1074,7 +1093,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .from("data_entries")
         .update({
           deleted_at: new Date().toISOString(),
-          deleted_by: session?.user?.email || session?.user?.id || "Unknown",
+          deleted_by: session?.user?.id || session?.user?.email || null,
         } as any)
         .eq("id", id);
       if (error) throw error;
@@ -1931,7 +1950,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       );
     try {
       const deletedAt = new Date().toISOString();
-      const deletedBy = session?.user?.email || session?.user?.id || "Unknown";
+      const deletedBy = session?.user?.id || session?.user?.email || null;
 
       // Optimistic UI update - remove from local state immediately
       try {
@@ -2028,7 +2047,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .from("loans")
         .update({
           deleted_at: new Date().toISOString(),
-          deleted_by: session?.user?.email || session?.user?.id || "Unknown",
+          deleted_by: session?.user?.id || session?.user?.email || null,
         } as any)
         .eq("id", loanId);
       if (error) throw error;
@@ -2297,7 +2316,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .from("subscriptions")
         .update({
           deleted_at: new Date().toISOString(),
-          deleted_by: session?.user?.email || session?.user?.id || "Unknown",
+          deleted_by: session?.user?.id || session?.user?.email || null,
         } as any)
         .eq("id", subscriptionId);
       if (error) throw error;
@@ -2376,7 +2395,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .from("installments")
         .update({
           deleted_at: new Date().toISOString(),
-          deleted_by: session?.user?.email || session?.user?.id || "Unknown",
+          deleted_by: session?.user?.id || session?.user?.email || null,
         } as any)
         .eq("id", installmentId);
       if (error) throw error;

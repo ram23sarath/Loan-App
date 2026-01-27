@@ -10,6 +10,7 @@ import { Trash2Icon, PencilIcon } from "../../constants";
 import { formatDate } from "../../utils/dateFormatter";
 import { useDebounce } from "../../utils/useDebounce";
 import { useEscapeKey } from "../hooks/useEscapeKey";
+import AlertPopup from "../ui/AlertPopup";
 
 // Animation variants
 const listContainerVariants: Variants = {
@@ -214,6 +215,27 @@ const LoanSeniorityPage = () => {
   const [deletedListError, setDeletedListError] = useState<string | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
 
+  // Alert Popup State
+  const [alertConfig, setAlertConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "success" | "error" | "info";
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+  });
+
+  const showAlert = (title: string, message: string, type: "success" | "error" | "info" = "info") => {
+    setAlertConfig({ isOpen: true, title, message, type });
+  };
+
+  const closeAlert = () => {
+    setAlertConfig((prev) => ({ ...prev, isOpen: false }));
+  };
+
   useEscapeKey(!!restoreError, () => setRestoreError(null));
 
   useEffect(() => {
@@ -231,7 +253,7 @@ const LoanSeniorityPage = () => {
           (err as Error).message || "Failed to load deleted seniority list";
         console.error("Failed to load deleted seniority list", err);
         setDeletedListError(errorMessage);
-        alert(errorMessage);
+        showAlert("Error", errorMessage, "error");
       });
     }
   }, [showTrash, isScopedCustomer, fetchDeletedSeniorityList]);
@@ -359,9 +381,10 @@ const LoanSeniorityPage = () => {
     try {
       await removeFromSeniority(id);
     } catch (err) {
-      alert(
-        (err as Error).message ||
-        "Failed to remove customer from seniority list"
+      showAlert(
+        "Error",
+        (err as Error).message || "Failed to remove customer from seniority list",
+        "error"
       );
     }
   };
@@ -375,7 +398,27 @@ const LoanSeniorityPage = () => {
     id: string;
     name: string;
   } | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const listSearchInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Close search on Escape
+  useEscapeKey(!!addSearchTerm, () => setAddSearchTerm(""));
+
+  // Close search on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setAddSearchTerm("");
+      }
+    };
+
+    if (addSearchTerm) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [addSearchTerm]);
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
@@ -383,9 +426,10 @@ const LoanSeniorityPage = () => {
       await removeFromSeniority(deleteTarget.id);
       setDeleteTarget(null);
     } catch (err) {
-      alert(
-        (err as Error).message ||
-        "Failed to remove customer from seniority list"
+      showAlert(
+        "Error",
+        (err as Error).message || "Failed to remove customer from seniority list",
+        "error"
       );
     }
   };
@@ -408,9 +452,10 @@ const LoanSeniorityPage = () => {
       await restoreSeniorityEntry(restoreTarget.id);
       setRestoreTarget(null);
     } catch (err) {
-      alert(
-        (err as Error).message ||
-        "Failed to restore customer to seniority list"
+      showAlert(
+        "Error",
+        (err as Error).message || "Failed to restore customer to seniority list",
+        "error"
       );
     }
   };
@@ -433,9 +478,10 @@ const LoanSeniorityPage = () => {
       await permanentDeleteSeniority(permanentDeleteTarget.id);
       setPermanentDeleteTarget(null);
     } catch (err) {
-      alert(
-        (err as Error).message ||
-        "Failed to permanently delete seniority entry"
+      showAlert(
+        "Error",
+        (err as Error).message || "Failed to permanently delete seniority entry",
+        "error"
       );
     }
   };
@@ -455,12 +501,24 @@ const LoanSeniorityPage = () => {
       }
       closeModal();
     } catch (err: any) {
-      alert(err.message || "Failed to save seniority entry");
+      // Check for specific duplicate error from addToSeniority
+      if (err.message === "This customer is already in the loan seniority list.") {
+        showAlert("Duplicate Entry", err.message, "info");
+      } else {
+        showAlert("Error", err.message || "Failed to save seniority entry", "error");
+      }
     }
   };
 
   return (
     <PageWrapper>
+      <AlertPopup
+        isOpen={alertConfig.isOpen}
+        onClose={closeAlert}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+      />
       <motion.div
         className="flex items-center justify-between mb-4"
         initial={{ opacity: 0, x: -20 }}
@@ -524,7 +582,7 @@ const LoanSeniorityPage = () => {
               damping: 22,
             }}
           >
-            <div className="relative flex-1">
+            <div className="relative flex-1" ref={searchContainerRef}>
               <motion.input
                 className="w-full bg-white dark:bg-dark-bg border border-gray-300 dark:border-dark-border rounded-lg py-2 px-3 pr-10 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-800 dark:text-dark-text placeholder:text-gray-400 dark:placeholder:text-dark-muted"
                 placeholder="Search customers to add by name or phone..."

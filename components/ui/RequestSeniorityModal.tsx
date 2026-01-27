@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../../context/DataContext';
 import { useNavigate } from 'react-router-dom';
+import AlertPopup from './AlertPopup';
 
 type Props = {
   customerId: string;
@@ -22,6 +23,27 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
   const [loanRequestDate, setLoanRequestDate] = React.useState(defaultDate);
   const [isSaving, setIsSaving] = React.useState(false);
   const [isClosing, setIsClosing] = React.useState(false);
+
+  // Alert Popup State
+  const [alertConfig, setAlertConfig] = React.useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "success" | "error" | "info";
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "info",
+  });
+
+  const showAlert = (title: string, message: string, type: "success" | "error" | "info" = "info") => {
+    setAlertConfig({ isOpen: true, title, message, type });
+  };
+
+  const closeAlert = () => {
+    setAlertConfig((prev) => ({ ...prev, isOpen: false }));
+  };
 
   const EXIT_DURATION = 180; // ms - keep in sync with motion transition below
 
@@ -50,7 +72,7 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
 
   const handleSubmit = async () => {
     if (alreadyRequested) {
-      alert('You already have a pending request in the loan seniority list.');
+      showAlert('Request Pending', 'You already have a pending request in the loan seniority list.', 'info');
       return;
     }
 
@@ -65,7 +87,12 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
       // play close animation then navigate
       startClose(() => navigate('/loan-seniority'));
     } catch (err: any) {
-      alert(err?.message || 'Failed to create request');
+      // Check for specific duplicate error from addToSeniority
+      if (err.message === "This customer is already in the loan seniority list.") {
+        showAlert("Duplicate Entry", err.message, "info");
+      } else {
+        showAlert("Error", err?.message || 'Failed to create request', 'error');
+      }
       setIsSaving(false);
     }
   };
@@ -83,6 +110,13 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
 
   return (
     <AnimatePresence>
+      <AlertPopup
+        isOpen={alertConfig.isOpen}
+        onClose={closeAlert}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+      />
       {(open || isClosing) && (
         <motion.div
           key="request-seniority-backdrop"

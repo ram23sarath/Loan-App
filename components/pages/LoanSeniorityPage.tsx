@@ -1,9 +1,16 @@
-import React, { useMemo, useEffect, useState, useCallback, useRef } from "react";
+import React, {
+  useMemo,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
 import ReactDOM from "react-dom";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import PageWrapper from "../ui/PageWrapper";
 import GlassCard from "../ui/GlassCard";
 import { UsersIcon } from "../../constants";
+import { FIRE_STATIONS } from "../../constants/fireStations";
 import { useData } from "../../context/DataContext";
 import type { Customer } from "../../types";
 import { Trash2Icon } from "../../constants";
@@ -199,7 +206,6 @@ const LoanSeniorityPage = () => {
   const addSearchLimit = 20;
   const [currentPage, setCurrentPage] = useState(1);
 
-
   // Alert Popup State
   const [alertConfig, setAlertConfig] = useState<{
     isOpen: boolean;
@@ -213,7 +219,11 @@ const LoanSeniorityPage = () => {
     type: "info",
   });
 
-  const showAlert = (title: string, message: string, type: "success" | "error" | "info" = "info") => {
+  const showAlert = (
+    title: string,
+    message: string,
+    type: "success" | "error" | "info" = "info",
+  ) => {
     setAlertConfig({ isOpen: true, title, message, type });
   };
 
@@ -221,46 +231,52 @@ const LoanSeniorityPage = () => {
     setAlertConfig((prev) => ({ ...prev, isOpen: false }));
   };
 
-
-
   useEffect(() => {
     fetchSeniorityList().catch((err) =>
-      console.error("Failed to load seniority list", err)
+      console.error("Failed to load seniority list", err),
     );
   }, [fetchSeniorityList]);
-
-
 
   useEffect(() => {
     setCurrentPage(1);
   }, [seniorityList, debouncedListSearchTerm]);
 
-
   const filteredSeniorityList = useMemo(() => {
     const term = debouncedListSearchTerm?.toLowerCase() || "";
     if (!term) return seniorityList || [];
-    return (seniorityList || []).filter((entry: any) =>
-      entry.customers?.name?.toLowerCase().includes(term) ||
-      String(entry.customers?.phone || "").toLowerCase().includes(term) ||
-      entry.station_name?.toLowerCase().includes(term) ||
-      entry.loan_type?.toLowerCase().includes(term)
+    return (seniorityList || []).filter(
+      (entry: any) =>
+        entry.customers?.name?.toLowerCase().includes(term) ||
+        String(entry.customers?.phone || "")
+          .toLowerCase()
+          .includes(term) ||
+        entry.station_name?.toLowerCase().includes(term) ||
+        entry.loan_type?.toLowerCase().includes(term),
     );
   }, [debouncedListSearchTerm, seniorityList]);
 
   const existingSeniorityCustomerIds = useMemo(() => {
-    return new Set((seniorityList || []).map((entry: any) => entry.customer_id));
+    return new Set(
+      (seniorityList || []).map((entry: any) => entry.customer_id),
+    );
   }, [seniorityList]);
 
   // Helper function to calculate repayment progress for a customer
   const getCustomerRepaymentProgress = (customerId: string): number => {
-    const customerLoans = (loans || []).filter((loan) => loan.customer_id === customerId);
+    const customerLoans = (loans || []).filter(
+      (loan) => loan.customer_id === customerId,
+    );
     if (!customerLoans.length) return 0; // First-time loan eligible
 
     let maxProgress = 0;
     customerLoans.forEach((loan) => {
       const loanInstallments = installmentsByLoanId?.get(loan.id) || [];
-      const paidAmount = loanInstallments.reduce((sum, inst) => sum + (inst.amount || 0), 0);
-      const totalRepayable = (loan.original_amount || 0) + (loan.interest_amount || 0);
+      const paidAmount = loanInstallments.reduce(
+        (sum, inst) => sum + (inst.amount || 0),
+        0,
+      );
+      const totalRepayable =
+        (loan.original_amount || 0) + (loan.interest_amount || 0);
       if (totalRepayable > 0) {
         const progress = Math.min(paidAmount / totalRepayable, 1);
         if (progress > maxProgress) {
@@ -273,8 +289,13 @@ const LoanSeniorityPage = () => {
   };
 
   // Helper function to check if customer meets repayment threshold
-  const meetsRepaymentThreshold = (customerId: string, progress: number): boolean => {
-    const customerLoans = (loans || []).filter((loan) => loan.customer_id === customerId);
+  const meetsRepaymentThreshold = (
+    customerId: string,
+    progress: number,
+  ): boolean => {
+    const customerLoans = (loans || []).filter(
+      (loan) => loan.customer_id === customerId,
+    );
     // Allow if first-time (no loans) OR 80%+ repayment
     return customerLoans.length === 0 || progress >= 0.8;
   };
@@ -290,7 +311,9 @@ const LoanSeniorityPage = () => {
         const phone = String(customer.phone || "").toLowerCase();
         return name.includes(term) || phone.includes(term);
       })
-      .sort((a: Customer, b: Customer) => (a.name || "").localeCompare(b.name || ""))
+      .sort((a: Customer, b: Customer) =>
+        (a.name || "").localeCompare(b.name || ""),
+      )
       .slice(0, addSearchLimit);
 
     // Map to include eligibility info
@@ -301,11 +324,11 @@ const LoanSeniorityPage = () => {
       const meetsThreshold = meetsRepaymentThreshold(customer.id, progress);
 
       let isBlocked = false;
-      let blockReason = '';
+      let blockReason = "";
 
       if (isInSeniority) {
         isBlocked = true;
-        blockReason = 'Already in seniority list';
+        blockReason = "Already in seniority list";
       } else if (!meetsThreshold) {
         isBlocked = true;
         blockReason = `Requires 80% repayment (current ${progressPercent}%)`;
@@ -313,10 +336,19 @@ const LoanSeniorityPage = () => {
 
       return { customer, isBlocked, blockReason };
     });
-  }, [customers, debouncedAddSearchTerm, existingSeniorityCustomerIds, loans, installmentsByLoanId]);
+  }, [
+    customers,
+    debouncedAddSearchTerm,
+    existingSeniorityCustomerIds,
+    loans,
+    installmentsByLoanId,
+  ]);
 
   const totalPages = useMemo(() => {
-    return Math.max(1, Math.ceil((filteredSeniorityList?.length || 0) / itemsPerPage));
+    return Math.max(
+      1,
+      Math.ceil((filteredSeniorityList?.length || 0) / itemsPerPage),
+    );
   }, [filteredSeniorityList, itemsPerPage]);
 
   const paginatedSeniorityList = useMemo(() => {
@@ -344,14 +376,17 @@ const LoanSeniorityPage = () => {
     } catch (err) {
       showAlert(
         "Error",
-        (err as Error).message || "Failed to remove customer from seniority list",
-        "error"
+        (err as Error).message ||
+          "Failed to remove customer from seniority list",
+        "error",
       );
     }
   };
 
   const [modalCustomer, setModalCustomer] = useState<any | null>(null);
   const [stationName, setStationName] = useState("");
+  const [stationSearchTerm, setStationSearchTerm] = useState("");
+  const [isStationDropdownOpen, setIsStationDropdownOpen] = useState(false);
   const [loanType, setLoanType] = useState("General");
   const [loanRequestDate, setLoanRequestDate] = useState("");
   const [modalEditingId, setModalEditingId] = useState<string | null>(null);
@@ -362,6 +397,35 @@ const LoanSeniorityPage = () => {
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const listSearchInputRef = useRef<HTMLInputElement | null>(null);
+  const stationDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Filter fire stations based on search term
+  const filteredStations = useMemo(() => {
+    const term = stationSearchTerm.toLowerCase().trim();
+    if (!term) return FIRE_STATIONS;
+    return FIRE_STATIONS.filter((station) =>
+      station.toLowerCase().includes(term),
+    );
+  }, [stationSearchTerm]);
+
+  // Close station dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        stationDropdownRef.current &&
+        !stationDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsStationDropdownOpen(false);
+      }
+    };
+
+    if (isStationDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isStationDropdownOpen]);
 
   // Close search on Escape
   useEscapeKey(!!addSearchTerm, () => setAddSearchTerm(""));
@@ -369,7 +433,10 @@ const LoanSeniorityPage = () => {
   // Close search on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+      if (
+        searchContainerRef.current &&
+        !searchContainerRef.current.contains(event.target as Node)
+      ) {
         setAddSearchTerm("");
       }
     };
@@ -390,17 +457,18 @@ const LoanSeniorityPage = () => {
     } catch (err) {
       showAlert(
         "Error",
-        (err as Error).message || "Failed to remove customer from seniority list",
-        "error"
+        (err as Error).message ||
+          "Failed to remove customer from seniority list",
+        "error",
       );
     }
   };
 
-
-
   const closeModal = useCallback(() => {
     setModalCustomer(null);
     setStationName("");
+    setStationSearchTerm("");
+    setIsStationDropdownOpen(false);
     setLoanType("General");
     setLoanRequestDate("");
   }, []);
@@ -408,12 +476,15 @@ const LoanSeniorityPage = () => {
   useEscapeKey(!!modalCustomer, closeModal);
   useEscapeKey(!!deleteTarget, () => setDeleteTarget(null));
 
-
   // Close modal on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       // If modal is open (modalCustomer exists) and click is outside modalRef
-      if (modalCustomer && modalRef.current && !modalRef.current.contains(event.target as Node)) {
+      if (
+        modalCustomer &&
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node)
+      ) {
         closeModal();
       }
     };
@@ -425,8 +496,6 @@ const LoanSeniorityPage = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [modalCustomer, closeModal]);
-
-
 
   const saveModalEntry = async () => {
     if (!modalCustomer) return;
@@ -444,10 +513,16 @@ const LoanSeniorityPage = () => {
       closeModal();
     } catch (err: any) {
       // Check for specific duplicate error from addToSeniority
-      if (err.message === "This customer is already in the loan seniority list.") {
+      if (
+        err.message === "This customer is already in the loan seniority list."
+      ) {
         showAlert("Duplicate Entry", err.message, "info");
       } else {
-        showAlert("Error", err.message || "Failed to save seniority entry", "error");
+        showAlert(
+          "Error",
+          err.message || "Failed to save seniority entry",
+          "error",
+        );
       }
     }
   };
@@ -558,49 +633,58 @@ const LoanSeniorityPage = () => {
                     exit="exit"
                   >
                     <div className="px-4 py-2 text-xs text-gray-500 dark:text-dark-muted border-b border-gray-100 dark:border-dark-border">
-                      Showing {matchedCustomers.length} result{matchedCustomers.length === 1 ? "" : "s"}
-                      {matchedCustomers.length === addSearchLimit ? " (limited)" : ""}
+                      Showing {matchedCustomers.length} result
+                      {matchedCustomers.length === 1 ? "" : "s"}
+                      {matchedCustomers.length === addSearchLimit
+                        ? " (limited)"
+                        : ""}
                     </div>
-                    {matchedCustomers.map(({ customer, isBlocked, blockReason }) => (
-                      <motion.button
-                        key={customer.id}
-                        type="button"
-                        onClick={() => {
-                          if (!isBlocked) {
-                            addCustomerToList(customer);
-                            setAddSearchTerm("");
-                          }
-                        }}
-                        disabled={isBlocked}
-                        className={`w-full flex items-center justify-between text-left px-3 py-1.5 transition-colors ${isBlocked
-                          ? "opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800/50"
-                          : "hover:bg-indigo-50 dark:hover:bg-slate-800"
+                    {matchedCustomers.map(
+                      ({ customer, isBlocked, blockReason }) => (
+                        <motion.button
+                          key={customer.id}
+                          type="button"
+                          onClick={() => {
+                            if (!isBlocked) {
+                              addCustomerToList(customer);
+                              setAddSearchTerm("");
+                            }
+                          }}
+                          disabled={isBlocked}
+                          className={`w-full flex items-center justify-between text-left px-3 py-1.5 transition-colors ${
+                            isBlocked
+                              ? "opacity-50 cursor-not-allowed bg-gray-50 dark:bg-gray-800/50"
+                              : "hover:bg-indigo-50 dark:hover:bg-slate-800"
                           } text-gray-800 dark:text-dark-text`}
-                        title={isBlocked ? blockReason : undefined}
-                        variants={listItemVariants}
-                        initial="hidden"
-                        animate="visible"
-                        exit="exit"
-                      >
-                        <div className="flex flex-col min-w-0">
-                          <span className="font-medium">{customer.name}</span>
-                          <span className="text-xs text-gray-500 dark:text-dark-muted">
-                            {customer.phone || ""}
-                          </span>
-                          {isBlocked && (
-                            <span className="text-xs text-orange-600 dark:text-orange-400 font-medium mt-0.5">
-                              {blockReason}
+                          title={isBlocked ? blockReason : undefined}
+                          variants={listItemVariants}
+                          initial="hidden"
+                          animate="visible"
+                          exit="exit"
+                        >
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-medium">{customer.name}</span>
+                            <span className="text-xs text-gray-500 dark:text-dark-muted">
+                              {customer.phone || ""}
                             </span>
-                          )}
-                        </div>
-                        <span className={`text-xs font-semibold px-2 py-1 rounded whitespace-nowrap ml-2 ${isBlocked
-                          ? "bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400"
-                          : "text-white bg-indigo-600"
-                          }`}>
-                          {isBlocked ? "Blocked" : "Add"}
-                        </span>
-                      </motion.button>
-                    ))}
+                            {isBlocked && (
+                              <span className="text-xs text-orange-600 dark:text-orange-400 font-medium mt-0.5">
+                                {blockReason}
+                              </span>
+                            )}
+                          </div>
+                          <span
+                            className={`text-xs font-semibold px-2 py-1 rounded whitespace-nowrap ml-2 ${
+                              isBlocked
+                                ? "bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400"
+                                : "text-white bg-indigo-600"
+                            }`}
+                          >
+                            {isBlocked ? "Blocked" : "Add"}
+                          </span>
+                        </motion.button>
+                      ),
+                    )}
                   </motion.div>
                 )}
                 {debouncedAddSearchTerm && matchedCustomers.length === 0 && (
@@ -671,11 +755,165 @@ const LoanSeniorityPage = () => {
                     <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-dark-text">
                       Station Name
                     </label>
-                    <input
-                      value={stationName}
-                      onChange={(e) => setStationName(e.target.value)}
-                      className="w-full border border-gray-300 dark:border-dark-border rounded px-3 py-2 bg-white dark:bg-dark-bg text-gray-800 dark:text-dark-text focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-shadow"
-                    />
+                    <div className="relative" ref={stationDropdownRef}>
+                      <div
+                        className={`w-full border rounded px-3 py-2 bg-white dark:bg-dark-bg text-gray-800 dark:text-dark-text cursor-pointer flex items-center justify-between transition-all ${
+                          isStationDropdownOpen
+                            ? "border-indigo-500 ring-2 ring-indigo-500"
+                            : "border-gray-300 dark:border-dark-border"
+                        }`}
+                        onClick={() =>
+                          setIsStationDropdownOpen(!isStationDropdownOpen)
+                        }
+                      >
+                        <span
+                          className={
+                            stationName
+                              ? ""
+                              : "text-gray-400 dark:text-dark-muted"
+                          }
+                        >
+                          {stationName || "Select a fire station..."}
+                        </span>
+                        <motion.svg
+                          className="w-4 h-4 text-gray-500 dark:text-dark-muted"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          animate={{ rotate: isStationDropdownOpen ? 180 : 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </motion.svg>
+                      </div>
+                      <AnimatePresence>
+                        {isStationDropdownOpen && (
+                          <motion.div
+                            className="absolute z-50 w-full mt-1 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-lg overflow-hidden scrollbar-hide"
+                            initial={{ opacity: 0, y: -10, height: 0 }}
+                            animate={{ opacity: 1, y: 0, height: "auto" }}
+                            exit={{ opacity: 0, y: -10, height: 0 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <div className="p-2 border-b border-gray-100 dark:border-dark-border sticky top-0 bg-white dark:bg-dark-card">
+                              <div className="relative">
+                                <input
+                                  type="text"
+                                  value={stationSearchTerm}
+                                  onChange={(e) =>
+                                    setStationSearchTerm(e.target.value)
+                                  }
+                                  placeholder="Search fire stations..."
+                                  className="w-full border border-gray-300 dark:border-dark-border rounded px-3 py-2 pl-8 bg-white dark:bg-dark-bg text-gray-800 dark:text-dark-text text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                  onClick={(e) => e.stopPropagation()}
+                                  autoFocus
+                                />
+                                <svg
+                                  className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-dark-muted"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                  />
+                                </svg>
+                                {stationSearchTerm && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setStationSearchTerm("");
+                                    }}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-dark-text"
+                                  >
+                                    <svg
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M6 18L18 6M6 6l12 12"
+                                      />
+                                    </svg>
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            <div className="max-h-48 overflow-y-auto scrollbar-hide">
+                              {filteredStations.length > 0 ? (
+                                filteredStations.map((station) => (
+                                  <motion.button
+                                    key={station}
+                                    type="button"
+                                    onClick={() => {
+                                      setStationName(station);
+                                      setStationSearchTerm("");
+                                      setIsStationDropdownOpen(false);
+                                    }}
+                                    className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                                      stationName === station
+                                        ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 font-medium"
+                                        : "text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-800"
+                                    }`}
+                                    whileHover={{ x: 2 }}
+                                    transition={{ duration: 0.1 }}
+                                  >
+                                    {station}
+                                  </motion.button>
+                                ))
+                              ) : stationSearchTerm.trim().length > 0 ? (
+                                <motion.button
+                                  type="button"
+                                  onClick={() => {
+                                    setStationName(stationSearchTerm.trim());
+                                    setStationSearchTerm("");
+                                    setIsStationDropdownOpen(false);
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors font-medium"
+                                  whileHover={{ x: 2 }}
+                                  transition={{ duration: 0.1 }}
+                                >
+                                  + Add "{stationSearchTerm.trim()}" as custom
+                                  station
+                                </motion.button>
+                              ) : (
+                                <div className="px-3 py-4 text-sm text-gray-500 dark:text-dark-muted text-center">
+                                  No stations found. Type to add a custom
+                                  station name.
+                                </div>
+                              )}
+                            </div>
+                            {stationName && (
+                              <div className="p-2 border-t border-gray-100 dark:border-dark-border">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setStationName("");
+                                    setStationSearchTerm("");
+                                  }}
+                                  className="w-full text-left px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                >
+                                  Clear selection
+                                </button>
+                              </div>
+                            )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
                   </motion.div>
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
@@ -743,7 +981,7 @@ const LoanSeniorityPage = () => {
             </motion.div>
           )}
         </AnimatePresence>,
-        document.body
+        document.body,
       )}
 
       <GlassCard className="!p-4" hoverScale={false}>
@@ -907,7 +1145,7 @@ const LoanSeniorityPage = () => {
                                   setStationName(entry.station_name || "");
                                   setLoanType(entry.loan_type || "General");
                                   setLoanRequestDate(
-                                    entry.loan_request_date || ""
+                                    entry.loan_request_date || "",
                                   );
                                   setModalEditingId(entry.id);
                                 }}
@@ -1101,10 +1339,11 @@ const LoanSeniorityPage = () => {
                           <motion.button
                             key={page}
                             onClick={() => setCurrentPage(page)}
-                            className={`px-3 py-1 rounded border ${currentPage === page
-                              ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
-                              : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
-                              }`}
+                            className={`px-3 py-1 rounded border ${
+                              currentPage === page
+                                ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
+                                : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
+                            }`}
                             aria-label={`Go to page ${page}`}
                             aria-current={
                               currentPage === page ? "page" : undefined
@@ -1142,7 +1381,7 @@ const LoanSeniorityPage = () => {
                         );
                       }
                       return null;
-                    }
+                    },
                   )}
                   <motion.button
                     onClick={() =>
@@ -1176,8 +1415,6 @@ const LoanSeniorityPage = () => {
           </>
         )}
       </GlassCard>
-
-
 
       {/* Delete Confirmation Modal - WRAPPED IN PORTAL */}
       {ReactDOM.createPortal(
@@ -1213,7 +1450,8 @@ const LoanSeniorityPage = () => {
                   <span className="font-semibold text-gray-800 dark:text-dark-text">
                     {deleteTarget.name}
                   </span>{" "}
-                  from the seniority list? You can restore this entry later from the Trash.
+                  from the seniority list? You can restore this entry later from
+                  the Trash.
                 </motion.p>
                 <motion.div
                   className="flex justify-end gap-2"
@@ -1246,14 +1484,8 @@ const LoanSeniorityPage = () => {
             </motion.div>
           )}
         </AnimatePresence>,
-        document.body
+        document.body,
       )}
-
-
-
-
-
-
     </PageWrapper>
   );
 };

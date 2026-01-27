@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../../context/DataContext';
 import { useNavigate } from 'react-router-dom';
@@ -66,6 +67,18 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
     }, EXIT_DURATION);
   };
 
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && open && !isClosing) {
+        startClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, isClosing]); 
+
+
   const alreadyRequested = React.useMemo(() => {
     return seniorityList.some((entry) => entry.customer_id === customerId);
   }, [seniorityList, customerId]);
@@ -108,7 +121,9 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
   // Determine current animation state based on isClosing flag
   const animationState = isClosing ? 'hidden' : 'visible';
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
       <AlertPopup
         isOpen={alertConfig.isOpen}
@@ -197,7 +212,8 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 

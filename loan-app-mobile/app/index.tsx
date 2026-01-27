@@ -1,6 +1,6 @@
 /**
  * Main WebView Screen
- * 
+ *
  * The primary screen that wraps the web application in a WebView.
  * Handles:
  * - Loading, offline, and error states
@@ -12,41 +12,45 @@
  * - Push notification registration
  */
 
-import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { 
-  View, 
-  StyleSheet, 
-  BackHandler, 
+import React, { useRef, useState, useEffect, useCallback } from "react";
+import {
+  View,
+  StyleSheet,
+  BackHandler,
   Linking,
   AppState,
   Platform,
   Share,
   Alert,
   useColorScheme,
-} from 'react-native';
-import { WebView, WebViewMessageEvent, WebViewNavigation } from 'react-native-webview';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import NetInfo from '@react-native-community/netinfo';
-import * as Clipboard from 'expo-clipboard';
-import * as Haptics from 'expo-haptics';
-import * as Linking2 from 'expo-linking';
+} from "react-native";
+import {
+  WebView,
+  WebViewMessageEvent,
+  WebViewNavigation,
+} from "react-native-webview";
+import { SafeAreaView } from "react-native-safe-area-context";
+import NetInfo from "@react-native-community/netinfo";
+import * as Clipboard from "expo-clipboard";
+import * as Haptics from "expo-haptics";
+import * as Linking2 from "expo-linking";
 
-import { WEB_APP_URL, ENVIRONMENT } from '@/config/env';
-import { 
-  BridgeHandler, 
+import { WEB_APP_URL, ENVIRONMENT, TRUSTED_ORIGINS } from "@/config/env";
+import {
+  BridgeHandler,
   BRIDGE_INJECTION_SCRIPT,
   type WebToNativeCommand,
   type AuthSession,
-} from '@/native/bridge';
-import { 
-  getExpoPushToken, 
+} from "@/native/bridge";
+import {
+  getExpoPushToken,
   addNotificationReceivedListener,
   addNotificationResponseListener,
-} from '@/native/notifications';
+} from "@/native/notifications";
 
-import LoadingScreen from '@/components/LoadingScreen';
-import OfflineScreen from '@/components/OfflineScreen';
-import ErrorScreen from '@/components/ErrorScreen';
+import LoadingScreen from "@/components/LoadingScreen";
+import OfflineScreen from "@/components/OfflineScreen";
+import ErrorScreen from "@/components/ErrorScreen";
 
 // ============================================================================
 // MAIN COMPONENT
@@ -54,13 +58,16 @@ import ErrorScreen from '@/components/ErrorScreen';
 
 export default function WebViewScreen() {
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  
+  const isDark = colorScheme === "dark";
+
   // Refs
   const webViewRef = useRef<WebView>(null);
   const bridgeRef = useRef<BridgeHandler | null>(null);
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
+  const authSessionRef = useRef<AuthSession | null>(null);
+  const handlerUnsubscribersRef = useRef<Array<() => void>>([]);
+  const previousIsOfflineRef = useRef<boolean>(false);
+
   // State
   const [isLoading, setIsLoading] = useState(true);
   const [isOffline, setIsOffline] = useState(false);
@@ -69,143 +76,213 @@ export default function WebViewScreen() {
   const [currentUrl, setCurrentUrl] = useState(WEB_APP_URL);
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
 
+  // Keep ref in sync with state for use in closures without re-running effect
+  useEffect(() => {
+    authSessionRef.current = authSession;
+  }, [authSession]);
+
   // ============================================================================
   // BRIDGE SETUP
   // ============================================================================
 
   useEffect(() => {
     if (webViewRef.current) {
-      bridgeRef.current = new BridgeHandler(webViewRef as React.RefObject<WebView>);
-      
-      // Register message handlers
-      bridgeRef.current.on('AUTH_REQUEST', () => {
-        // If we have a stored session, send it to web
-        if (authSession) {
-          bridgeRef.current?.sendToWeb({ type: 'AUTH_TOKEN', payload: authSession });
-        }
-      });
+      // Clean up any previous handlers before creating new bridge
+      handlerUnsubscribersRef.current.forEach((unsubscribe) => unsubscribe());
+      handlerUnsubscribersRef.current = [];
 
-      bridgeRef.current.on('AUTH_LOGOUT', () => {
-        setAuthSession(null);
-        bridgeRef.current?.sendToWeb({ type: 'AUTH_CLEARED' });
-      });
+      bridgeRef.current = new BridgeHandler(
+        webViewRef as React.RefObject<WebView>,
+      );
 
-      bridgeRef.current.on('AUTH_SESSION_UPDATE', (payload) => {
-        // Store session from web for persistence
-        setAuthSession(payload as AuthSession);
-      });
-
-      bridgeRef.current.on('OPEN_EXTERNAL_LINK', (payload) => {
-        const { url } = payload as { url: string };
-        Linking.openURL(url).catch((err) => {
-          console.error('[WebView] Failed to open external link:', err);
-        });
-      });
-
-      bridgeRef.current.on('HAPTIC_FEEDBACK', async (payload) => {
-        const { style } = payload as { style: 'light' | 'medium' | 'heavy' };
-        try {
-          switch (style) {
-            case 'light':
-              await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              break;
-            case 'medium':
-              await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              break;
-            case 'heavy':
-              await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-              break;
-          }
-        } catch (err) {
-          // Haptics not available on all devices
-        }
-      });
-
-      bridgeRef.current.on('SHARE_CONTENT', async (payload) => {
-        const { title, text, url } = payload as { title?: string; text: string; url?: string };
-        try {
-          await Share.share({
-            title: title,
-            message: url ? `${text}\n${url}` : text,
-            url: Platform.OS === 'ios' ? url : undefined,
-          });
-        } catch (err) {
-          console.error('[WebView] Share failed:', err);
-        }
-      });
-
-      bridgeRef.current.on('COPY_TO_CLIPBOARD', async (payload) => {
-        const { text } = payload as { text: string };
-        await Clipboard.setStringAsync(text);
-        // Haptic feedback on copy
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      });
-
-      bridgeRef.current.on('REQUEST_PUSH_PERMISSION', async () => {
-        const result = await getExpoPushToken();
-        if (result.success && result.token) {
-          bridgeRef.current?.sendToWeb({
-            type: 'PUSH_TOKEN',
-            payload: { token: result.token, platform: result.platform },
-          });
-        } else {
-          bridgeRef.current?.sendToWeb({
-            type: 'PUSH_PERMISSION_RESULT',
-            payload: { granted: false, canAskAgain: true },
-          });
-        }
-      });
-
-      bridgeRef.current.on('NAVIGATION_READY', () => {
-        // Web is ready, send native ready signal back
-        bridgeRef.current?.sendToWeb({ type: 'NATIVE_READY' });
-        
-        // Clear timeout and dismiss loading - web app confirmed ready
-        if (loadingTimeoutRef.current) {
-          clearTimeout(loadingTimeoutRef.current);
-          loadingTimeoutRef.current = null;
-        }
-        setIsLoading(false);
-        
-        // Send push token if available
-        getExpoPushToken().then((result) => {
-          if (result.success && result.token) {
+      // Register message handlers and store unsubscribers
+      handlerUnsubscribersRef.current.push(
+        bridgeRef.current.on("AUTH_REQUEST", () => {
+          // If we have a stored session, send it to web
+          if (authSessionRef.current) {
             bridgeRef.current?.sendToWeb({
-              type: 'PUSH_TOKEN',
-              payload: { token: result.token, platform: result.platform },
+              type: "AUTH_TOKEN",
+              payload: authSessionRef.current,
             });
           }
-        });
-      });
+        }),
+      );
 
-      bridgeRef.current.on('PAGE_LOADED', (payload) => {
-        const { route } = payload as { route: string; title?: string };
-        
-        // Clear timeout and dismiss loading - page confirmed loaded
-        if (loadingTimeoutRef.current) {
-          clearTimeout(loadingTimeoutRef.current);
-          loadingTimeoutRef.current = null;
-        }
-        setIsLoading(false);
-        
-        if (__DEV__) {
-          console.log('[WebView] Page loaded:', route);
-        }
-      });
+      handlerUnsubscribersRef.current.push(
+        bridgeRef.current.on("AUTH_LOGOUT", () => {
+          setAuthSession(null);
+          bridgeRef.current?.sendToWeb({ type: "AUTH_CLEARED" });
+        }),
+      );
 
-      bridgeRef.current.on('ERROR_REPORT', (payload) => {
-        const { message, stack } = payload as { message: string; stack?: string };
-        console.error('[WebView] Error from web:', message, stack);
-      });
+      handlerUnsubscribersRef.current.push(
+        bridgeRef.current.on("AUTH_SESSION_UPDATE", (payload) => {
+          // Store session from web for persistence
+          setAuthSession(payload as AuthSession);
+        }),
+      );
 
-      bridgeRef.current.on('THEME_DETECTED', (payload) => {
-        // Could sync theme with native here if needed
-        if (__DEV__) {
-          console.log('[WebView] Theme detected:', payload);
-        }
-      });
+      handlerUnsubscribersRef.current.push(
+        bridgeRef.current.on("OPEN_EXTERNAL_LINK", (payload) => {
+          const { url } = payload as { url: string };
+          Linking.openURL(url).catch((err) => {
+            console.error("[WebView] Failed to open external link:", err);
+          });
+        }),
+      );
+
+      handlerUnsubscribersRef.current.push(
+        bridgeRef.current.on("HAPTIC_FEEDBACK", async (payload) => {
+          const { style } = payload as { style: "light" | "medium" | "heavy" };
+          try {
+            switch (style) {
+              case "light":
+                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                break;
+              case "medium":
+                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                break;
+              case "heavy":
+                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                break;
+            }
+          } catch (err) {
+            // Haptics not available on all devices
+          }
+        }),
+      );
+
+      handlerUnsubscribersRef.current.push(
+        bridgeRef.current.on("SHARE_CONTENT", async (payload) => {
+          const { title, text, url } = payload as {
+            title?: string;
+            text: string;
+            url?: string;
+          };
+          try {
+            await Share.share({
+              title: title,
+              message: url ? `${text}\n${url}` : text,
+              url: Platform.OS === "ios" ? url : undefined,
+            });
+          } catch (err) {
+            console.error("[WebView] Share failed:", err);
+          }
+        }),
+      );
+
+      handlerUnsubscribersRef.current.push(
+        bridgeRef.current.on("COPY_TO_CLIPBOARD", async (payload) => {
+          const { text } = payload as { text: string };
+          await Clipboard.setStringAsync(text);
+          // Haptic feedback on copy
+          await Haptics.notificationAsync(
+            Haptics.NotificationFeedbackType.Success,
+          );
+        }),
+      );
+
+      handlerUnsubscribersRef.current.push(
+        bridgeRef.current.on("REQUEST_PUSH_PERMISSION", async () => {
+          const result = await getExpoPushToken();
+          if (result.success && result.token) {
+            bridgeRef.current?.sendToWeb({
+              type: "PUSH_TOKEN",
+              payload: { token: result.token, platform: result.platform },
+            });
+          } else {
+            bridgeRef.current?.sendToWeb({
+              type: "PUSH_PERMISSION_RESULT",
+              payload: { granted: false, canAskAgain: true },
+            });
+          }
+        }),
+      );
+
+      handlerUnsubscribersRef.current.push(
+        bridgeRef.current.on("NAVIGATION_READY", () => {
+          // Web is ready, send native ready signal back
+          bridgeRef.current?.sendToWeb({ type: "NATIVE_READY" });
+
+          // Clear timeout and dismiss loading - web app confirmed ready
+          if (loadingTimeoutRef.current) {
+            clearTimeout(loadingTimeoutRef.current);
+            loadingTimeoutRef.current = null;
+          }
+          setIsLoading(false);
+
+          // Send push token if available
+          getExpoPushToken()
+            .then((result) => {
+              if (result.success && result.token) {
+                bridgeRef.current?.sendToWeb({
+                  type: "PUSH_TOKEN",
+                  payload: { token: result.token, platform: result.platform },
+                });
+              }
+            })
+            .catch((error) => {
+              console.error(
+                "[NativeBridge] Failed to get push token:",
+                error instanceof Error ? error.message : String(error),
+              );
+              // Log detailed context for debugging, but don't block the app
+              console.warn(
+                "[NativeBridge] Push token retrieval failed during initialization - app will continue without push notifications",
+              );
+            });
+        }),
+      );
+
+      handlerUnsubscribersRef.current.push(
+        bridgeRef.current.on("PAGE_LOADED", (payload) => {
+          const { route } = payload as { route: string; title?: string };
+
+          // Clear fallback timeout - page confirmed ready
+          // Loading screen dismissed immediately when this signal arrives
+          if (loadingTimeoutRef.current) {
+            clearTimeout(loadingTimeoutRef.current);
+            loadingTimeoutRef.current = null;
+            console.log(
+              "[WebView] PAGE_LOADED signal received, clearing fallback timeout",
+            );
+          }
+
+          console.log(
+            "[WebView] Web app ready - dismissing loading screen. Route:",
+            route,
+          );
+          setIsLoading(false);
+        }),
+      );
+
+      handlerUnsubscribersRef.current.push(
+        bridgeRef.current.on("ERROR_REPORT", (payload) => {
+          const { message, stack } = payload as {
+            message: string;
+            stack?: string;
+          };
+          console.error("[WebView] Error from web:", message, stack);
+        }),
+      );
+
+      handlerUnsubscribersRef.current.push(
+        bridgeRef.current.on("THEME_DETECTED", (payload) => {
+          // Could sync theme with native here if needed
+          if (__DEV__) {
+            console.log("[WebView] Theme detected:", payload);
+          }
+        }),
+      );
+
+      // Cleanup function: unsubscribe all handlers when component unmounts or bridge is recreated
+      return () => {
+        handlerUnsubscribersRef.current.forEach((unsubscribe) => unsubscribe());
+        handlerUnsubscribersRef.current = [];
+        bridgeRef.current = null;
+      };
     }
-  }, [authSession]);
+  }, []);
 
   // ============================================================================
   // NETWORK STATUS
@@ -213,15 +290,16 @@ export default function WebViewScreen() {
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
-      const wasOffline = isOffline;
-      setIsOffline(!state.isConnected);
-      
+      const wasOffline = previousIsOfflineRef.current;
+      const isNowOffline = !state.isConnected;
+      setIsOffline(isNowOffline);
+
       // Notify web of network change
       bridgeRef.current?.sendToWeb({
-        type: 'NETWORK_STATUS',
-        payload: { 
-          isConnected: state.isConnected ?? false, 
-          type: state.type 
+        type: "NETWORK_STATUS",
+        payload: {
+          isConnected: state.isConnected ?? false,
+          type: state.type,
         },
       });
 
@@ -229,19 +307,22 @@ export default function WebViewScreen() {
       if (wasOffline && state.isConnected) {
         webViewRef.current?.reload();
       }
+
+      // Update the ref to the new offline state
+      previousIsOfflineRef.current = isNowOffline;
     });
 
     return () => unsubscribe();
-  }, [isOffline]);
+  }, []);
 
   // ============================================================================
   // APP STATE
   // ============================================================================
 
   useEffect(() => {
-    const subscription = AppState.addEventListener('change', (nextAppState) => {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
       bridgeRef.current?.sendToWeb({
-        type: 'APP_STATE',
+        type: "APP_STATE",
         payload: { state: nextAppState },
       });
     });
@@ -254,15 +335,18 @@ export default function WebViewScreen() {
   // ============================================================================
 
   useEffect(() => {
-    if (Platform.OS !== 'android') return;
+    if (Platform.OS !== "android") return;
 
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (canGoBack && webViewRef.current) {
-        webViewRef.current.goBack();
-        return true; // Prevent default behavior
-      }
-      return false; // Allow default back behavior (exit app)
-    });
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        if (canGoBack && webViewRef.current) {
+          webViewRef.current.goBack();
+          return true; // Prevent default behavior
+        }
+        return false; // Allow default back behavior (exit app)
+      },
+    );
 
     return () => backHandler.remove();
   }, [canGoBack]);
@@ -271,9 +355,32 @@ export default function WebViewScreen() {
   // DEEP LINKING
   // ============================================================================
 
+  const handleDeepLink = useCallback((url: string) => {
+    try {
+      const parsed = Linking2.parse(url);
+      const path = parsed.path || "/";
+
+      if (__DEV__) {
+        console.log("[DeepLink] Handling:", url, "→", path);
+      }
+
+      // Navigate WebView to the path
+      const targetUrl = `${WEB_APP_URL}${path.startsWith("/") ? path : "/" + path}`;
+      setCurrentUrl(targetUrl);
+
+      // Also notify web of deep link
+      bridgeRef.current?.sendToWeb({
+        type: "DEEP_LINK",
+        payload: { url, path },
+      });
+    } catch (err) {
+      console.error("[DeepLink] Failed to parse:", err);
+    }
+  }, []);
+
   useEffect(() => {
     // Handle deep links when app is already open
-    const subscription = Linking2.addEventListener('url', ({ url }) => {
+    const subscription = Linking2.addEventListener("url", ({ url }) => {
       handleDeepLink(url);
     });
 
@@ -285,30 +392,7 @@ export default function WebViewScreen() {
     });
 
     return () => subscription.remove();
-  }, []);
-
-  const handleDeepLink = useCallback((url: string) => {
-    try {
-      const parsed = Linking2.parse(url);
-      const path = parsed.path || '/';
-      
-      if (__DEV__) {
-        console.log('[DeepLink] Handling:', url, '→', path);
-      }
-
-      // Navigate WebView to the path
-      const targetUrl = `${WEB_APP_URL}${path.startsWith('/') ? path : '/' + path}`;
-      setCurrentUrl(targetUrl);
-      
-      // Also notify web of deep link
-      bridgeRef.current?.sendToWeb({
-        type: 'DEEP_LINK',
-        payload: { url, path },
-      });
-    } catch (err) {
-      console.error('[DeepLink] Failed to parse:', err);
-    }
-  }, []);
+  }, [handleDeepLink]);
 
   // ============================================================================
   // PUSH NOTIFICATIONS
@@ -318,14 +402,14 @@ export default function WebViewScreen() {
     // Handle notification received while app is open
     const receivedListener = addNotificationReceivedListener((notification) => {
       if (__DEV__) {
-        console.log('[Notification] Received:', notification.request.content);
+        console.log("[Notification] Received:", notification.request.content);
       }
     });
 
     // Handle notification tap
     const responseListener = addNotificationResponseListener((response) => {
       const data = response.notification.request.content.data;
-      if (data?.route && typeof data.route === 'string') {
+      if (data?.route && typeof data.route === "string") {
         handleDeepLink(`loanapp://${data.route}`);
       }
     });
@@ -344,57 +428,76 @@ export default function WebViewScreen() {
     bridgeRef.current?.handleMessage(event.nativeEvent.data);
   }, []);
 
-  const handleNavigationStateChange = useCallback((navState: WebViewNavigation) => {
-    setCanGoBack(navState.canGoBack);
-  }, []);
+  const handleNavigationStateChange = useCallback(
+    (navState: WebViewNavigation) => {
+      setCanGoBack(navState.canGoBack);
+    },
+    [],
+  );
 
-  const handleShouldStartLoadWithRequest = useCallback((request: WebViewNavigation) => {
-    const { url } = request;
-    
-    // Allow navigation within our domain
-    if (url.startsWith(WEB_APP_URL) || url.startsWith('about:')) {
+  const handleShouldStartLoadWithRequest = useCallback(
+    (request: WebViewNavigation) => {
+      const { url } = request;
+
+      // Allow navigation within our domain
+      if (url.startsWith(WEB_APP_URL) || url.startsWith("about:")) {
+        return true;
+      }
+
+      // Handle tel: and mailto: links
+      if (
+        url.startsWith("tel:") ||
+        url.startsWith("mailto:") ||
+        url.startsWith("sms:")
+      ) {
+        Linking.openURL(url);
+        return false;
+      }
+
+      // Open external links in browser
+      if (url.startsWith("http://") || url.startsWith("https://")) {
+        Linking.openURL(url);
+        return false;
+      }
+
       return true;
-    }
-
-    // Handle tel: and mailto: links
-    if (url.startsWith('tel:') || url.startsWith('mailto:') || url.startsWith('sms:')) {
-      Linking.openURL(url);
-      return false;
-    }
-
-    // Open external links in browser
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      Linking.openURL(url);
-      return false;
-    }
-
-    return true;
-  }, []);
+    },
+    [],
+  );
 
   const handleLoadStart = useCallback(() => {
-    console.log('[WebView] Load started');
+    console.log("[WebView] Load started");
     setIsLoading(true);
     setError(null);
   }, []);
 
   const handleLoadEnd = useCallback(() => {
-    console.log('[WebView] Load ended, waiting for web app ready signal');
-    
-    // Don't immediately dismiss loading - wait for web app to signal ready
-    // Start a 10-second timeout as a failsafe
+    console.log(
+      "[WebView] HTML loaded. Waiting for web app PAGE_LOADED signal (event-driven)...",
+    );
+
+    // Set up a long fallback timeout in case web app crashes or never signals ready
+    // Normal case: PAGE_LOADED arrives in 50-500ms and dismisses this timeout
+    // Fallback case: If web app is broken, we give it 60 seconds before forcing dismiss
     if (loadingTimeoutRef.current) {
       clearTimeout(loadingTimeoutRef.current);
     }
+
     loadingTimeoutRef.current = setTimeout(() => {
-      console.warn('[WebView] Web app did not signal ready in 10s, forcing loading dismiss');
+      console.error(
+        "[WebView] Fallback timeout: Web app did not signal PAGE_LOADED within 60s",
+      );
+      console.error(
+        "[WebView] Forcing loading screen dismiss. App may not be fully ready.",
+      );
       setIsLoading(false);
       loadingTimeoutRef.current = null;
-    }, 10000);
+    }, 60000); // 60 second fallback (increased from 10 seconds)
   }, []);
 
   const handleError = useCallback((syntheticEvent: any) => {
     const { nativeEvent } = syntheticEvent;
-    setError(nativeEvent.description || 'Failed to load the application');
+    setError(nativeEvent.description || "Failed to load the application");
     setIsLoading(false);
   }, []);
 
@@ -428,7 +531,7 @@ export default function WebViewScreen() {
   if (error) {
     return (
       <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
-        <ErrorScreen 
+        <ErrorScreen
           error={error}
           onRetry={handleRetry}
           onReload={handleRetry}
@@ -438,13 +541,13 @@ export default function WebViewScreen() {
   }
 
   // Web Platform Support
-  if (Platform.OS === 'web') {
+  if (Platform.OS === "web") {
     return (
       <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
         {/* @ts-ignore: web-only iframe */}
         <iframe
           src={currentUrl}
-          style={{ width: '100%', height: '100%', border: 'none' }}
+          style={{ width: "100%", height: "100%", border: "none" }}
           onLoad={() => setIsLoading(false)}
         />
         {isLoading && (
@@ -457,45 +560,34 @@ export default function WebViewScreen() {
   }
 
   return (
-    <SafeAreaView 
+    <SafeAreaView
       style={[styles.container, isDark && styles.containerDark]}
-      edges={['top', 'left', 'right']} // Don't add bottom padding for web's bottom nav
+      edges={["top", "left", "right"]} // Don't add bottom padding for web's bottom nav
     >
       <WebView
         ref={webViewRef}
         source={{ uri: currentUrl }}
         style={styles.webView}
-        
         // JavaScript & Injection
         javaScriptEnabled={true}
         injectedJavaScriptBeforeContentLoaded={BRIDGE_INJECTION_SCRIPT}
-        
         // Improved loading reliability
-        // Improved loading reliability
-        startInLoadingState={false}
-        // renderLoading handled manually via isLoading overlay
-        
+        startInLoadingState={false} // renderLoading handled manually via isLoading overlay
         // User Agent (helps web detect native wrapper)
         applicationNameForUserAgent="LoanAppMobile/1.0"
-        
         // Allow inline media playback (iOS)
         allowsInlineMediaPlayback={true}
         mediaPlaybackRequiresUserAction={false}
-        
         // Performance
         cacheEnabled={true}
         cacheMode="LOAD_DEFAULT"
-        
         // Android: enable hardware acceleration
         androidLayerType="hardware"
-        
         // Prevent stale content
         incognito={false}
-        
-        // Security
-        originWhitelist={['*']}
+        // Security: restrict WebView to trusted origins only
+        originWhitelist={TRUSTED_ORIGINS}
         mixedContentMode="compatibility"
-        
         // Events
         onMessage={handleMessage}
         onNavigationStateChange={handleNavigationStateChange}
@@ -504,33 +596,30 @@ export default function WebViewScreen() {
         onLoadEnd={handleLoadEnd}
         onError={handleError}
         onHttpError={handleHttpError}
-        
         // Android specific
         domStorageEnabled={true}
         thirdPartyCookiesEnabled={true}
-        
         // iOS specific
-        allowsBackForwardNavigationGestures={Platform.OS === 'ios'}
-        decelerationRate={Platform.OS === 'ios' ? 'normal' : undefined}
-        contentInsetAdjustmentBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
-        
+        allowsBackForwardNavigationGestures={Platform.OS === "ios"}
+        decelerationRate={Platform.OS === "ios" ? "normal" : undefined}
+        contentInsetAdjustmentBehavior={
+          Platform.OS === "ios" ? "automatic" : undefined
+        }
         // Pull to refresh (Android)
         pullToRefreshEnabled={true}
-        
         // Render process handling
         onRenderProcessGone={(syntheticEvent) => {
           const { didCrash } = syntheticEvent.nativeEvent;
-          console.error('[WebView] Render process gone, crashed:', didCrash);
-          setError('The app encountered an issue. Please reload.');
+          console.error("[WebView] Render process gone, crashed:", didCrash);
+          setError("The app encountered an issue. Please reload.");
         }}
-        
         // Content process termination (iOS)
         onContentProcessDidTerminate={() => {
-          console.error('[WebView] Content process terminated');
+          console.error("[WebView] Content process terminated");
           webViewRef.current?.reload();
         }}
       />
-      
+
       {/* Loading overlay */}
       {isLoading && (
         <View style={styles.loadingOverlay}>
@@ -548,10 +637,10 @@ export default function WebViewScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
   },
   containerDark: {
-    backgroundColor: '#0F172A',
+    backgroundColor: "#0F172A",
   },
   webView: {
     flex: 1,

@@ -70,24 +70,24 @@ interface DataContextType {
   addCustomer: (customer: Omit<NewCustomer, "user_id">) => Promise<Customer>;
   updateCustomer: (
     customerId: string,
-    updates: Partial<Customer>
+    updates: Partial<Customer>,
   ) => Promise<Customer>;
   addLoan: (loan: NewLoan) => Promise<Loan>;
   updateLoan: (loanId: string, updates: Partial<Loan>) => Promise<Loan>;
   addSubscription: (subscription: NewSubscription) => Promise<Subscription>;
   updateSubscription: (
     subscriptionId: string,
-    updates: Partial<Subscription>
+    updates: Partial<Subscription>,
   ) => Promise<Subscription>;
   adjustSubscriptionForMisc: (
     customerId: string,
     amount: number,
-    date?: string
+    date?: string,
   ) => Promise<void>;
   addInstallment: (installment: NewInstallment) => Promise<Installment>;
   updateInstallment: (
     installmentId: string,
-    updates: Partial<Installment>
+    updates: Partial<Installment>,
   ) => Promise<Installment>;
   addDataEntry: (entry: NewDataEntry) => Promise<DataEntry>;
   deleteDataEntry: (id: string) => Promise<void>;
@@ -99,7 +99,7 @@ interface DataContextType {
   deletedSeniorityList: Array<any>;
   fetchSeniorityList: (
     overrideSession?: Session | null,
-    overrideIsScoped?: boolean
+    overrideIsScoped?: boolean,
   ) => Promise<void>;
   fetchDeletedSeniorityList: () => Promise<void>;
   addToSeniority: (
@@ -108,7 +108,7 @@ interface DataContextType {
       station_name?: string;
       loan_type?: string;
       loan_request_date?: string;
-    }
+    },
   ) => Promise<void>;
   updateSeniority: (
     id: string,
@@ -116,7 +116,7 @@ interface DataContextType {
       station_name?: string | null;
       loan_type?: string | null;
       loan_request_date?: string | null;
-    }
+    },
   ) => Promise<void>;
   removeFromSeniority: (id: string) => Promise<void>;
   restoreSeniorityEntry: (id: string) => Promise<void>;
@@ -154,7 +154,7 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 const BATCH_SIZE = 1000;
 const fetchAllRecords = async <T,>(
   queryBuilder: () => ReturnType<ReturnType<typeof supabase.from>["select"]>,
-  tableName?: string
+  tableName?: string,
 ): Promise<T[]> => {
   const allRecords: T[] = [];
   let from = 0;
@@ -165,7 +165,7 @@ const fetchAllRecords = async <T,>(
     batchNum++;
     const { data, error } = await queryBuilder().range(
       from,
-      from + BATCH_SIZE - 1
+      from + BATCH_SIZE - 1,
     );
     if (error) throw error;
     if (data && data.length > 0) {
@@ -180,7 +180,17 @@ const fetchAllRecords = async <T,>(
 };
 
 // Cache helper functions
+// NOTE: On mobile WebView, localStorage may be unreliable or isolated per process.
+// We disable caching entirely on native to avoid silent failures and stale data.
 const getCachedData = (key: string) => {
+  // Skip caching on mobile - WebView storage is unreliable
+  // Forces fresh fetches from Supabase instead
+  const isNative = typeof window !== "undefined" && window.isNativeApp?.();
+  if (isNative) {
+    console.log(`[Cache] Skipping cached data on mobile for key: ${key}`);
+    return null;
+  }
+
   try {
     const cached = localStorage.getItem(`loan_app_cache_${key}`);
     if (cached) {
@@ -197,13 +207,20 @@ const getCachedData = (key: string) => {
 };
 
 const setCachedData = (key: string, data: any) => {
+  // Skip caching on mobile - WebView storage is unreliable
+  const isNative = typeof window !== "undefined" && window.isNativeApp?.();
+  if (isNative) {
+    console.log(`[Cache] Skipping cache write on mobile for key: ${key}`);
+    return;
+  }
+
   try {
     localStorage.setItem(
       `loan_app_cache_${key}`,
       JSON.stringify({
         data,
         timestamp: Date.now(),
-      })
+      }),
     );
   } catch (err) {
     console.error("Error writing to cache:", err);
@@ -211,6 +228,12 @@ const setCachedData = (key: string, data: any) => {
 };
 
 const clearCache = (key?: string) => {
+  // Skip cache clearing on mobile (nothing to clear since we don't cache)
+  const isNative = typeof window !== "undefined" && window.isNativeApp?.();
+  if (isNative) {
+    return;
+  }
+
   try {
     if (key) {
       localStorage.removeItem(`loan_app_cache_${key}`);
@@ -239,9 +262,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [seniorityList, setSeniorityList] = useState<any[]>([]);
   const [deletedSeniorityList, setDeletedSeniorityList] = useState<any[]>([]);
   const [deletedDataEntries, setDeletedDataEntries] = useState<DataEntry[]>([]);
-  const [deletedSubscriptions, setDeletedSubscriptions] = useState<SubscriptionWithCustomer[]>([]);
+  const [deletedSubscriptions, setDeletedSubscriptions] = useState<
+    SubscriptionWithCustomer[]
+  >([]);
   const [deletedLoans, setDeletedLoans] = useState<LoanWithCustomer[]>([]);
-  const [deletedInstallments, setDeletedInstallments] = useState<Installment[]>([]);
+  const [deletedInstallments, setDeletedInstallments] = useState<Installment[]>(
+    [],
+  );
   const [deletedCustomers, setDeletedCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
@@ -265,7 +292,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // Sort each loan's installments by date (newest first) for consistency
     map.forEach((insts, loanId) => {
       insts.sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
       );
       map.set(loanId, insts);
     });
@@ -325,7 +352,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
               .order("date", { ascending: true });
           if (subscriptionsError) throw subscriptionsError;
           setSubscriptions(
-            (subscriptionsData as unknown as SubscriptionWithCustomer[]) || []
+            (subscriptionsData as unknown as SubscriptionWithCustomer[]) || [],
           );
 
           // Installments: fetch installments for loans owned by this customer (by loan_id)
@@ -368,7 +395,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                   .select("*")
                   .is("deleted_at", null)
                   .order("created_at", { ascending: false }),
-              "customers"
+              "customers",
             ),
             fetchAllRecords<LoanWithCustomer>(
               () =>
@@ -377,7 +404,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                   .select("*, customers(name, phone)")
                   .is("deleted_at", null)
                   .order("created_at", { ascending: false }),
-              "loans"
+              "loans",
             ),
             fetchAllRecords<SubscriptionWithCustomer>(
               () =>
@@ -386,7 +413,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                   .select("*, customers(name, phone)")
                   .is("deleted_at", null)
                   .order("created_at", { ascending: false }),
-              "subscriptions"
+              "subscriptions",
             ),
             fetchAllRecords<Installment>(
               () =>
@@ -395,7 +422,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                   .select("*")
                   .is("deleted_at", null)
                   .order("created_at", { ascending: false }),
-              "installments"
+              "installments",
             ),
             fetchAllRecords<DataEntry>(
               () =>
@@ -404,7 +431,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                   .select("*")
                   .is("deleted_at", null)
                   .order("date", { ascending: false }),
-              "data_entries"
+              "data_entries",
             ),
           ]);
 
@@ -419,11 +446,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             checkAndNotifyOverdueInstallments(
               installmentsData,
               loansData,
-              customersData
+              customersData,
             ).catch((notificationErr) => {
               console.error(
                 "Error checking overdue installments:",
-                notificationErr
+                notificationErr,
               );
             });
           }
@@ -440,7 +467,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     },
-    [isScopedCustomer, scopedCustomerId]
+    [isScopedCustomer, scopedCustomerId],
   );
 
   // UPDATED: Accepts optional arguments to avoid stale state during initialization and auth state changes.
@@ -484,7 +511,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         console.error("Failed to fetch loan seniority list", err);
       }
     },
-    [session, isScopedCustomer]
+    [session, isScopedCustomer],
   );
 
   // Fetch deleted seniority entries (admin only - RLS enforced)
@@ -644,7 +671,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       station_name?: string;
       loan_type?: string;
       loan_request_date?: string;
-    }
+    },
   ) => {
     if (
       isScopedCustomer &&
@@ -652,7 +679,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       customerId !== scopedCustomerId
     ) {
       throw new Error(
-        "Read-only access: scoped customers can only request seniority for their own account"
+        "Read-only access: scoped customers can only request seniority for their own account",
       );
     }
     try {
@@ -697,8 +724,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           await supabase.from("system_notifications").insert({
             type: "seniority_request",
             status: "processing", // Using 'processing' makes it blue/info
-            message: `${name} requested For Loan Seniority: ${details?.loan_type || "General"
-              }`,
+            message: `${name} requested For Loan Seniority: ${
+              details?.loan_type || "General"
+            }`,
             metadata: { customer_id: customerId, ...details },
           });
         } catch (notifyErr) {
@@ -709,14 +737,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       await fetchSeniorityList();
     } catch (err: any) {
       // Pass through the specific error message if it's our duplicate check
-      if (err.message === "This customer is already in the loan seniority list.") {
+      if (
+        err.message === "This customer is already in the loan seniority list."
+      ) {
         throw err;
       }
       throw new Error(
         parseSupabaseError(
           err,
-          `adding customer ${customerId} to seniority list`
-        )
+          `adding customer ${customerId} to seniority list`,
+        ),
       );
     }
   };
@@ -724,7 +754,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const removeFromSeniority = async (id: string) => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot modify seniority list"
+        "Read-only access: scoped customers cannot modify seniority list",
       );
     try {
       // Soft delete: set deleted_at timestamp instead of hard delete
@@ -746,7 +776,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const restoreSeniorityEntry = async (id: string) => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot restore seniority entries"
+        "Read-only access: scoped customers cannot restore seniority entries",
       );
     try {
       // Restore soft-deleted entry by clearing deleted_at
@@ -761,14 +791,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       await fetchSeniorityList();
       await fetchDeletedSeniorityList();
     } catch (err: any) {
-      throw new Error(parseSupabaseError(err, `restoring seniority item ${id}`));
+      throw new Error(
+        parseSupabaseError(err, `restoring seniority item ${id}`),
+      );
     }
   };
 
   const permanentDeleteSeniority = async (id: string) => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot permanently delete seniority entries"
+        "Read-only access: scoped customers cannot permanently delete seniority entries",
       );
     try {
       // Defensive check: verify the entry is soft-deleted before permanent deletion
@@ -782,7 +814,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
       if (!entry || (entry as any).deleted_at === null) {
         throw new Error(
-          "Cannot permanently delete: entry must be soft-deleted first (moved to trash)"
+          "Cannot permanently delete: entry must be soft-deleted first (moved to trash)",
         );
       }
 
@@ -794,7 +826,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
       await fetchDeletedSeniorityList();
     } catch (err: any) {
-      throw new Error(parseSupabaseError(err, `permanently deleting seniority item ${id}`));
+      throw new Error(
+        parseSupabaseError(err, `permanently deleting seniority item ${id}`),
+      );
     }
   };
 
@@ -804,11 +838,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       station_name?: string | null;
       loan_type?: string | null;
       loan_request_date?: string | null;
-    }
+    },
   ) => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot modify seniority list"
+        "Read-only access: scoped customers cannot modify seniority list",
       );
     try {
       const { data, error } = await supabase
@@ -827,7 +861,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   // ... [All CRUD operations remain unchanged] ...
   const updateCustomer = async (
     customerId: string,
-    updates: Partial<Customer>
+    updates: Partial<Customer>,
   ): Promise<Customer> => {
     // Allow scoped customers to update only their own station_name
     if (isScopedCustomer) {
@@ -836,7 +870,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         Object.keys(updates).length === 1 && "station_name" in updates;
       if (!isOwnRecord || !isOnlyStationName) {
         throw new Error(
-          "Read-only access: scoped customers can only update their own station name"
+          "Read-only access: scoped customers can only update their own station name",
         );
       }
     }
@@ -852,18 +886,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       return data as Customer;
     } catch (error) {
       throw new Error(
-        parseSupabaseError(error, `updating customer ${customerId}`)
+        parseSupabaseError(error, `updating customer ${customerId}`),
       );
     }
   };
 
   const updateLoan = async (
     loanId: string,
-    updates: Partial<Loan>
+    updates: Partial<Loan>,
   ): Promise<Loan> => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot perform updates"
+        "Read-only access: scoped customers cannot perform updates",
       );
     try {
       const { data, error } = await supabase
@@ -882,11 +916,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const updateSubscription = async (
     subscriptionId: string,
-    updates: Partial<Subscription>
+    updates: Partial<Subscription>,
   ): Promise<Subscription> => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot perform updates"
+        "Read-only access: scoped customers cannot perform updates",
       );
     try {
       const { data, error } = await supabase
@@ -900,7 +934,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       return data as Subscription;
     } catch (error) {
       throw new Error(
-        parseSupabaseError(error, `updating subscription ${subscriptionId}`)
+        parseSupabaseError(error, `updating subscription ${subscriptionId}`),
       );
     }
   };
@@ -908,11 +942,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const adjustSubscriptionForMisc = async (
     customerId: string,
     amount: number,
-    date?: string
+    date?: string,
   ): Promise<void> => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot perform subscription adjustments"
+        "Read-only access: scoped customers cannot perform subscription adjustments",
       );
     try {
       const { data: subs, error: subsError } = await supabase
@@ -954,19 +988,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       throw new Error(
         parseSupabaseError(
           error,
-          `adjusting subscription for misc entry for customer ${customerId}`
-        )
+          `adjusting subscription for misc entry for customer ${customerId}`,
+        ),
       );
     }
   };
 
   const updateInstallment = async (
     installmentId: string,
-    updates: Partial<Installment>
+    updates: Partial<Installment>,
   ): Promise<Installment> => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot perform updates"
+        "Read-only access: scoped customers cannot perform updates",
       );
     try {
       const { data, error } = await supabase
@@ -980,7 +1014,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       return data as Installment;
     } catch (error) {
       throw new Error(
-        parseSupabaseError(error, `updating installment ${installmentId}`)
+        parseSupabaseError(error, `updating installment ${installmentId}`),
       );
     }
   };
@@ -1000,7 +1034,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (typeof window === "undefined") return;
       try {
         window.sessionStorage.clear();
-      } catch (err) { }
+      } catch (err) {}
       try {
         const keysToRemove: string[] = [];
         for (let i = 0; i < window.localStorage.length; i++) {
@@ -1019,9 +1053,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         for (const k of keysToRemove) {
           try {
             window.localStorage.removeItem(k);
-          } catch (e) { }
+          } catch (e) {}
         }
-      } catch (err) { }
+      } catch (err) {}
       // ... [rest of cache clearing logic] ...
     } catch (err) {
       console.error("Error clearing client cache", err);
@@ -1032,7 +1066,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const addDataEntry = async (entry: NewDataEntry): Promise<DataEntry> => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot add data entries"
+        "Read-only access: scoped customers cannot add data entries",
       );
     try {
       const { data, error } = await supabase
@@ -1046,7 +1080,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           await adjustSubscriptionForMisc(
             entry.customer_id,
             Number(entry.amount),
-            entry.date
+            entry.date,
           );
         }
       } catch (err) {
@@ -1061,11 +1095,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const updateDataEntry = async (
     id: string,
-    updates: Partial<DataEntry>
+    updates: Partial<DataEntry>,
   ): Promise<DataEntry> => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot update data entries"
+        "Read-only access: scoped customers cannot update data entries",
       );
     try {
       const { data, error } = await supabase
@@ -1085,7 +1119,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const deleteDataEntry = async (id: string): Promise<void> => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot delete data entries"
+        "Read-only access: scoped customers cannot delete data entries",
       );
     try {
       // Soft delete: set deleted_at timestamp instead of hard delete
@@ -1107,7 +1141,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const restoreDataEntry = async (id: string): Promise<void> => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot restore data entries"
+        "Read-only access: scoped customers cannot restore data entries",
       );
     try {
       // Restore soft-deleted entry by clearing deleted_at
@@ -1129,7 +1163,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const permanentDeleteDataEntry = async (id: string): Promise<void> => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot permanently delete data entries"
+        "Read-only access: scoped customers cannot permanently delete data entries",
       );
     try {
       // Defensive check: verify the entry is soft-deleted before permanent deletion
@@ -1143,7 +1177,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
       if (!entry || (entry as any).deleted_at === null) {
         throw new Error(
-          "Cannot permanently delete: entry must be soft-deleted first (moved to trash)"
+          "Cannot permanently delete: entry must be soft-deleted first (moved to trash)",
         );
       }
 
@@ -1155,15 +1189,194 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
       await fetchDeletedDataEntries();
     } catch (err: any) {
-      throw new Error(parseSupabaseError(err, `permanently deleting data entry ${id}`));
+      throw new Error(
+        parseSupabaseError(err, `permanently deleting data entry ${id}`),
+      );
     }
   };
-
 
   // Ref to track the last processed session token to prevent redundant updates
   const lastSessionTokenRef = React.useRef<string | null>(null);
   // Ref to track the last authenticated user ID to prevent redundant fetches on token refresh
   const lastUserIdRef = React.useRef<string | null>(null);
+
+  // ============================================================================
+  // NATIVE BRIDGE INTEGRATION - Mobile WebView Communication
+  // ============================================================================
+  // This effect registers handlers for messages from the native mobile wrapper
+  // and notifies native when auth state changes. Only runs when inside native app.
+  useEffect(() => {
+    // Check if running in native app
+    const isNative = typeof window !== "undefined" && window.isNativeApp?.();
+    if (!isNative) return; // Skip on web
+
+    console.log("[NativeBridge] Setting up message handlers in web app");
+
+    // Create the native message handler callback
+    const nativeHandler = (message: any) => {
+      console.log("[NativeBridge] Received message from native:", message.type);
+
+      switch (message.type) {
+        case "AUTH_TOKEN": {
+          // Native sent auth session - set it in Supabase
+          const { accessToken, refreshToken } = message.payload;
+          console.log("[NativeBridge] Setting session from native auth token");
+          supabase.auth
+            .setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            })
+            .then(() => {
+              // Dispatch event to unblock the waiting Promise in initializeSession
+              console.log(
+                "[NativeBridge] Auth token set, dispatching native-auth-received event",
+              );
+              window.dispatchEvent(
+                new CustomEvent("native-auth-received", {
+                  detail: { success: true },
+                }),
+              );
+            })
+            .catch((err) => {
+              console.error("[NativeBridge] Failed to set session:", err);
+              // Still dispatch event so waiting Promise doesn't hang
+              window.dispatchEvent(
+                new CustomEvent("native-auth-received", {
+                  detail: { success: false, error: err },
+                }),
+              );
+            });
+          break;
+        }
+        case "NATIVE_READY": {
+          // Native wrapper is ready and initialized
+          console.log("[NativeBridge] Native wrapper is ready");
+          break;
+        }
+        case "PUSH_TOKEN": {
+          // Native sent push token - store via authenticated RPC
+          const { token, platform } = message.payload;
+          console.log(
+            "[NativeBridge] Storing push token:",
+            token.substring(0, 20) + "...",
+          );
+          // Use 'as any' to bypass type checking - this RPC may not be in generated types yet
+          (supabase.rpc as any)("update_push_token", {
+            p_token: token,
+            p_platform: platform,
+          })
+            .then(() => {
+              console.log("[NativeBridge] Push token stored successfully");
+            })
+            .catch((err: any) =>
+              console.warn("[NativeBridge] Failed to store push token:", err),
+            );
+          break;
+        }
+        case "NETWORK_STATUS": {
+          // Handle offline/online state changes
+          const { isConnected, type } = message.payload;
+          console.log(
+            "[NativeBridge] Network status:",
+            isConnected ? "online" : "offline",
+            `(${type})`,
+          );
+          // Could dispatch network state to context here if needed
+          break;
+        }
+        case "APP_STATE": {
+          // App moved to background/foreground
+          console.log("[NativeBridge] App state:", message.payload.state);
+          break;
+        }
+        case "DEEP_LINK": {
+          // Deep link navigation from native
+          const { url, path } = message.payload;
+          console.log("[NativeBridge] Deep link received:", path);
+          // Navigation is handled by native (via URL change in WebView)
+          break;
+        }
+        default:
+          if (typeof __DEV__ !== "undefined" && __DEV__) {
+            console.log("[NativeBridge] Unhandled message type:", message.type);
+          }
+      }
+    };
+
+    // Register handler for messages FROM native app
+    const unsubscribe = window.registerNativeHandler?.(nativeHandler) as
+      | (() => void)
+      | undefined
+      | void;
+
+    console.log("[NativeBridge] Message handler registered");
+
+    // Cleanup function: unregister the handler when component unmounts
+    return () => {
+      if (typeof unsubscribe === "function") {
+        // If registerNativeHandler returns an unsubscribe function, call it
+        unsubscribe();
+      }
+      console.log("[NativeBridge] Message handler unregistered");
+    };
+  }, []);
+
+  // When session changes, notify native to persist it
+  useEffect(() => {
+    const isNative = typeof window !== "undefined" && window.isNativeApp?.();
+    if (!isNative) return; // Skip on web
+
+    // Listen for Supabase auth state changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log(
+        "[NativeBridge] Auth state changed:",
+        event,
+        session ? "with session" : "no session",
+      );
+
+      if (event === "SIGNED_IN" && session) {
+        // User signed in - send session to native for persistence
+        console.log("[NativeBridge] Sending session to native for persistence");
+        // Note: isScopedCustomer/scopedCustomerId may be stale here
+        // Native should re-query or web should update after scope detection
+        window.NativeBridge?.updateSession({
+          accessToken: session.access_token,
+          refreshToken: session.refresh_token,
+          expiresAt: session.expires_at ?? 0,
+          user: {
+            id: session.user.id,
+            email: session.user.email,
+            isScopedCustomer: isScopedCustomer,
+            scopedCustomerId: scopedCustomerId,
+          },
+        });
+      } else if (event === "SIGNED_OUT") {
+        // User signed out - notify native to clear session
+        console.log("[NativeBridge] Notifying native of logout");
+        window.NativeBridge?.logout();
+      } else if (event === "TOKEN_REFRESHED" && session) {
+        // Token was refreshed - update native with new token
+        console.log("[NativeBridge] Updating native with refreshed token");
+        window.NativeBridge?.updateSession({
+          accessToken: session.access_token,
+          refreshToken: session.refresh_token,
+          expiresAt: session.expires_at ?? 0,
+          user: {
+            id: session.user.id,
+            email: session.user.email,
+            isScopedCustomer: isScopedCustomer,
+            scopedCustomerId: scopedCustomerId,
+          },
+        });
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [isScopedCustomer, scopedCustomerId]);
 
   // FIX: Simplified initialization for Chrome/Edge compatibility
   useEffect(() => {
@@ -1178,7 +1391,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       // Failsafe timeout to prevent infinite loading (helps WebView issues)
       loadingTimeoutId = setTimeout(() => {
         if (isMounted) {
-          console.error("[DataContext] Session initialization timed out after 30s - forcing loading=false");
+          console.error(
+            "[DataContext] Session initialization timed out after 30s - forcing loading=false",
+          );
           setLoading(false);
           setIsAuthChecking(false);
           setIsRefreshing(false);
@@ -1187,23 +1402,92 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
       // Progress markers to help diagnose where hangs occur
       const progressMarkers = [
-        setTimeout(() => console.log("[DataContext] Auth init: 5s elapsed, still working..."), 5000),
-        setTimeout(() => console.warn("[DataContext] Auth init: 15s elapsed, this is taking longer than expected"), 15000),
-        setTimeout(() => console.error("[DataContext] Auth init: 25s elapsed, approaching timeout!"), 25000),
+        setTimeout(
+          () =>
+            console.log(
+              "[DataContext] Auth init: 5s elapsed, still working...",
+            ),
+          5000,
+        ),
+        setTimeout(
+          () =>
+            console.warn(
+              "[DataContext] Auth init: 15s elapsed, this is taking longer than expected",
+            ),
+          15000,
+        ),
+        setTimeout(
+          () =>
+            console.error(
+              "[DataContext] Auth init: 25s elapsed, approaching timeout!",
+            ),
+          25000,
+        ),
       ];
 
       const clearProgressMarkers = () => {
         progressMarkers.forEach(clearTimeout);
       };
 
-
       try {
         // Get the current session
         console.log("[DataContext] Stage 1: Fetching session from Supabase...");
+
+        // If running in native app, request session from native first
+        const isNative =
+          typeof window !== "undefined" && window.isNativeApp?.();
+        if (isNative) {
+          console.log(
+            "[DataContext] Requesting auth session from native wrapper...",
+          );
+          window.NativeBridge?.requestAuth();
+
+          // Wait for native auth response via event, with fallback timeout
+          await new Promise<void>((resolve) => {
+            let eventListener: ((event: Event) => void) | null = null;
+            let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+            const cleanup = () => {
+              if (eventListener) {
+                window.removeEventListener(
+                  "native-auth-received",
+                  eventListener,
+                );
+              }
+              if (timeoutId) {
+                clearTimeout(timeoutId);
+              }
+            };
+
+            // Listen for the auth event from the message handler
+            eventListener = () => {
+              console.log(
+                "[DataContext] Received native-auth-received event, proceeding with session check",
+              );
+              cleanup();
+              resolve();
+            };
+
+            // Fallback timeout: if native never responds, proceed anyway after 2 seconds
+            timeoutId = setTimeout(() => {
+              console.warn(
+                "[DataContext] Native auth response timeout (2s), proceeding with cached/browser session",
+              );
+              cleanup();
+              resolve();
+            }, 2000);
+
+            window.addEventListener("native-auth-received", eventListener);
+          });
+        }
+
         const {
           data: { session },
         } = await supabase.auth.getSession();
-        console.log("[DataContext] Stage 1 complete: Session", session ? "exists" : "null");
+        console.log(
+          "[DataContext] Stage 1 complete: Session",
+          session ? "exists" : "null",
+        );
 
         if (!isMounted) return;
 
@@ -1270,6 +1554,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     .from("customers")
                     .select("*")
                     .eq("id", currentScopedId)
+                    .is("deleted_at", null)
                     .limit(1),
                   supabase
                     .from("loans")
@@ -1351,7 +1636,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                       .select("*")
                       .is("deleted_at", null)
                       .order("created_at", { ascending: false }),
-                  "customers"
+                  "customers",
                 ),
                 fetchAllRecords<LoanWithCustomer>(
                   () =>
@@ -1360,7 +1645,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                       .select("*, customers(name, phone)")
                       .is("deleted_at", null)
                       .order("created_at", { ascending: false }),
-                  "loans"
+                  "loans",
                 ),
                 fetchAllRecords<SubscriptionWithCustomer>(
                   () =>
@@ -1369,7 +1654,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                       .select("*, customers(name, phone)")
                       .is("deleted_at", null)
                       .order("created_at", { ascending: false }),
-                  "subscriptions"
+                  "subscriptions",
                 ),
                 fetchAllRecords<Installment>(
                   () =>
@@ -1378,7 +1663,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                       .select("*")
                       .is("deleted_at", null)
                       .order("created_at", { ascending: false }),
-                  "installments"
+                  "installments",
                 ),
                 fetchAllRecords<DataEntry>(
                   () =>
@@ -1387,7 +1672,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                       .select("*")
                       .is("deleted_at", null)
                       .order("date", { ascending: false }),
-                  "data_entries"
+                  "data_entries",
                 ),
               ]);
 
@@ -1404,11 +1689,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 checkAndNotifyOverdueInstallments(
                   installmentsData,
                   loansData,
-                  customersData
+                  customersData,
                 ).catch((notificationErr) => {
                   console.error(
                     "Error checking overdue installments during init:",
-                    notificationErr
+                    notificationErr,
                   );
                 });
               }
@@ -1456,7 +1741,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           } catch (err) {
             console.error(
               "Error fetching seniority list during initialization",
-              err
+              err,
             );
           }
         }
@@ -1507,6 +1792,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Report page load completion to native wrapper when app is ready
+  useEffect(() => {
+    if (!loading && typeof window !== "undefined" && window.isNativeApp?.()) {
+      // Notify native that web app is ready and data has loaded
+      console.log("[NativeBridge] Reporting page loaded to native");
+      window.NativeBridge?.reportPageLoad(
+        window.location.pathname || "/",
+        document.title || "I J Reddy Loan App",
+      );
+    }
+  }, [loading]);
 
   // Refetch data when user logs in (when session becomes available but data hasn't been loaded yet)
   useEffect(() => {
@@ -1593,7 +1890,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             (loansRes.data as unknown as LoanWithCustomer[]) || [];
           setLoans(loansArr);
           setSubscriptions(
-            (subsRes.data as unknown as SubscriptionWithCustomer[]) || []
+            (subsRes.data as unknown as SubscriptionWithCustomer[]) || [],
           );
           setDataEntries((dataEntriesRes.data as DataEntry[]) || []);
 
@@ -1647,7 +1944,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                   .select("*")
                   .is("deleted_at", null)
                   .order("created_at", { ascending: false }),
-              "customers"
+              "customers",
             ),
             fetchAllRecords<LoanWithCustomer>(
               () =>
@@ -1656,7 +1953,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                   .select("*, customers(name, phone)")
                   .is("deleted_at", null)
                   .order("created_at", { ascending: false }),
-              "loans"
+              "loans",
             ),
             fetchAllRecords<SubscriptionWithCustomer>(
               () =>
@@ -1665,7 +1962,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                   .select("*, customers(name, phone)")
                   .is("deleted_at", null)
                   .order("created_at", { ascending: false }),
-              "subscriptions"
+              "subscriptions",
             ),
             fetchAllRecords<Installment>(
               () =>
@@ -1674,7 +1971,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                   .select("*")
                   .is("deleted_at", null)
                   .order("created_at", { ascending: false }),
-              "installments"
+              "installments",
             ),
             fetchAllRecords<DataEntry>(
               () =>
@@ -1683,7 +1980,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                   .select("*")
                   .is("deleted_at", null)
                   .order("date", { ascending: false }),
-              "data_entries"
+              "data_entries",
             ),
           ]);
 
@@ -1700,11 +1997,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             checkAndNotifyOverdueInstallments(
               installmentsData,
               loansData,
-              customersData
+              customersData,
             ).catch((notificationErr) => {
               console.error(
                 "Error checking overdue installments after login:",
-                notificationErr
+                notificationErr,
               );
             });
           }
@@ -1782,11 +2079,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addCustomer = async (
-    customerData: Omit<NewCustomer, "user_id">
+    customerData: Omit<NewCustomer, "user_id">,
   ): Promise<Customer> => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot add customers"
+        "Read-only access: scoped customers cannot add customers",
       );
     try {
       const { data, error } = await supabase
@@ -1819,7 +2116,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
               const errData = await resp.json().catch(() => ({}));
               console.warn(
                 "⚠️  Background user creation failed:",
-                errData.error || resp.statusText
+                errData.error || resp.statusText,
               );
               try {
                 if (typeof window !== "undefined") {
@@ -1830,15 +2127,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                         customer_id: data.id,
                         message: errData.error || resp.statusText,
                       },
-                    })
+                    }),
                   );
                 }
-              } catch (e) { }
+              } catch (e) {}
             } else {
               const successData = await resp.json().catch(() => ({}));
               console.log(
                 "✅ Background user auto-created:",
-                successData.user_id || "<unknown>"
+                successData.user_id || "<unknown>",
               );
               try {
                 if (typeof window !== "undefined") {
@@ -1850,10 +2147,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                         user_id: successData.user_id,
                         message: "User created successfully",
                       },
-                    })
+                    }),
                   );
                 }
-              } catch (e) { }
+              } catch (e) {}
             }
           } catch (err) {
             console.warn("⚠️  Error during background user creation:", err);
@@ -1862,7 +2159,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       } catch (userCreateError) {
         console.warn(
           "⚠️  Failed to schedule background user creation:",
-          userCreateError
+          userCreateError,
         );
       }
 
@@ -1902,11 +2199,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addSubscription = async (
-    subscriptionData: NewSubscription
+    subscriptionData: NewSubscription,
   ): Promise<Subscription> => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot add subscriptions"
+        "Read-only access: scoped customers cannot add subscriptions",
       );
     try {
       const { data, error } = await supabase
@@ -1923,11 +2220,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addInstallment = async (
-    installmentData: NewInstallment
+    installmentData: NewInstallment,
   ): Promise<Installment> => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot add installments"
+        "Read-only access: scoped customers cannot add installments",
       );
     try {
       const { data, error } = await supabase
@@ -1946,7 +2243,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const deleteCustomer = async (customerId: string): Promise<void> => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot delete customers"
+        "Read-only access: scoped customers cannot delete customers",
       );
     try {
       const deletedAt = new Date().toISOString();
@@ -1960,18 +2257,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         setCustomers((prev) => prev.filter((c) => c.id !== customerId));
         setLoans((prev) => prev.filter((l) => l.customer_id !== customerId));
         setSubscriptions((prev) =>
-          prev.filter((s) => s.customer_id !== customerId)
+          prev.filter((s) => s.customer_id !== customerId),
         );
         setInstallments((prev) =>
-          prev.filter((i) => !optimisticLoanIds.includes(i.loan_id))
+          prev.filter((i) => !optimisticLoanIds.includes(i.loan_id)),
         );
         setDataEntries((prev) =>
-          prev.filter((d) => d.customer_id !== customerId)
+          prev.filter((d) => d.customer_id !== customerId),
         );
         setSeniorityList((prev) =>
-          prev.filter((s) => s.customer_id !== customerId)
+          prev.filter((s) => s.customer_id !== customerId),
         );
-      } catch (e) { }
+      } catch (e) {}
 
       // Soft delete the customer
       const { error: custErr } = await supabase
@@ -2033,7 +2330,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       // Revert optimistic update on error
       await fetchData();
       throw new Error(
-        parseSupabaseError(error, `deleting customer ${customerId}`)
+        parseSupabaseError(error, `deleting customer ${customerId}`),
       );
     }
   };
@@ -2060,7 +2357,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const restoreLoan = async (id: string): Promise<void> => {
     if (isScopedCustomer)
-      throw new Error("Read-only access: scoped customers cannot restore loans");
+      throw new Error(
+        "Read-only access: scoped customers cannot restore loans",
+      );
     try {
       // Restore soft-deleted entry by clearing deleted_at
       const { error } = await supabase
@@ -2081,7 +2380,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const permanentDeleteLoan = async (id: string): Promise<void> => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot permanently delete loans"
+        "Read-only access: scoped customers cannot permanently delete loans",
       );
     try {
       // Defensive check: verify the loan is soft-deleted before permanent deletion
@@ -2095,19 +2394,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
       if (!entry || (entry as any).deleted_at === null) {
         throw new Error(
-          "Cannot permanently delete: loan must be soft-deleted first (moved to trash)"
+          "Cannot permanently delete: loan must be soft-deleted first (moved to trash)",
         );
       }
 
       // Hard delete - permanently remove the loan (installments will cascade delete)
-      const { error } = await supabase
-        .from("loans")
-        .delete()
-        .eq("id", id);
+      const { error } = await supabase.from("loans").delete().eq("id", id);
       if (error) throw error;
       await fetchDeletedLoans();
     } catch (err: any) {
-      throw new Error(parseSupabaseError(err, `permanently deleting loan ${id}`));
+      throw new Error(
+        parseSupabaseError(err, `permanently deleting loan ${id}`),
+      );
     }
   };
 
@@ -2115,7 +2413,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const restoreCustomer = async (id: string): Promise<void> => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot restore customers"
+        "Read-only access: scoped customers cannot restore customers",
       );
     try {
       // Get the customer's deleted_at timestamp to restore matching related records
@@ -2198,7 +2496,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const permanentDeleteCustomer = async (id: string): Promise<void> => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot permanently delete customers"
+        "Read-only access: scoped customers cannot permanently delete customers",
       );
     try {
       // Defensive check: verify the customer is soft-deleted before permanent deletion
@@ -2212,7 +2510,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
       if (!customer || (customer as any).deleted_at === null) {
         throw new Error(
-          "Cannot permanently delete: customer must be soft-deleted first (moved to trash)"
+          "Cannot permanently delete: customer must be soft-deleted first (moved to trash)",
         );
       }
 
@@ -2286,7 +2584,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             const errData = await resp.json().catch(() => ({}));
             console.warn(
               "Warning: failed to delete linked auth user:",
-              errData.error || resp.statusText
+              errData.error || resp.statusText,
             );
           } else {
             console.log("✅ Linked auth user deleted for customer", id);
@@ -2294,21 +2592,23 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } catch (e) {
           console.warn(
             "Warning: error calling delete-user-from-customer function",
-            e
+            e,
           );
         }
       }
 
       await fetchDeletedCustomers();
     } catch (err: any) {
-      throw new Error(parseSupabaseError(err, `permanently deleting customer ${id}`));
+      throw new Error(
+        parseSupabaseError(err, `permanently deleting customer ${id}`),
+      );
     }
   };
 
   const deleteSubscription = async (subscriptionId: string): Promise<void> => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot delete subscriptions"
+        "Read-only access: scoped customers cannot delete subscriptions",
       );
     try {
       // Soft delete: set deleted_at timestamp instead of hard delete
@@ -2324,7 +2624,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       await fetchDeletedSubscriptions();
     } catch (error) {
       throw new Error(
-        parseSupabaseError(error, `deleting subscription ${subscriptionId}`)
+        parseSupabaseError(error, `deleting subscription ${subscriptionId}`),
       );
     }
   };
@@ -2332,7 +2632,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const restoreSubscription = async (id: string): Promise<void> => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot restore subscriptions"
+        "Read-only access: scoped customers cannot restore subscriptions",
       );
     try {
       // Restore soft-deleted entry by clearing deleted_at
@@ -2354,7 +2654,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const permanentDeleteSubscription = async (id: string): Promise<void> => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot permanently delete subscriptions"
+        "Read-only access: scoped customers cannot permanently delete subscriptions",
       );
     try {
       // Defensive check: verify the entry is soft-deleted before permanent deletion
@@ -2368,7 +2668,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
       if (!entry || (entry as any).deleted_at === null) {
         throw new Error(
-          "Cannot permanently delete: subscription must be soft-deleted first (moved to trash)"
+          "Cannot permanently delete: subscription must be soft-deleted first (moved to trash)",
         );
       }
 
@@ -2380,14 +2680,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
       await fetchDeletedSubscriptions();
     } catch (err: any) {
-      throw new Error(parseSupabaseError(err, `permanently deleting subscription ${id}`));
+      throw new Error(
+        parseSupabaseError(err, `permanently deleting subscription ${id}`),
+      );
     }
   };
 
   const deleteInstallment = async (installmentId: string): Promise<void> => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot delete installments"
+        "Read-only access: scoped customers cannot delete installments",
       );
     try {
       // Soft delete: set deleted_at timestamp instead of hard delete
@@ -2403,14 +2705,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       await fetchDeletedInstallments();
     } catch (error) {
       throw new Error(
-        parseSupabaseError(error, `deleting installment ${installmentId}`)
+        parseSupabaseError(error, `deleting installment ${installmentId}`),
       );
     }
   };
 
   const restoreInstallment = async (id: string): Promise<void> => {
     if (isScopedCustomer)
-      throw new Error("Read-only access: scoped customers cannot restore installments");
+      throw new Error(
+        "Read-only access: scoped customers cannot restore installments",
+      );
     try {
       // First, get the installment to find its loan_id
       const { data: installment, error: fetchError } = await supabase
@@ -2436,7 +2740,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
       if (!loan || (loan as any).deleted_at !== null) {
         throw new Error(
-          "Cannot restore: The parent loan has been deleted or does not exist. You can only permanently delete this installment."
+          "Cannot restore: The parent loan has been deleted or does not exist. You can only permanently delete this installment.",
         );
       }
 
@@ -2459,7 +2763,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const permanentDeleteInstallment = async (id: string): Promise<void> => {
     if (isScopedCustomer)
       throw new Error(
-        "Read-only access: scoped customers cannot permanently delete installments"
+        "Read-only access: scoped customers cannot permanently delete installments",
       );
     try {
       // Defensive check: verify the installment is soft-deleted before permanent deletion
@@ -2473,7 +2777,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
       if (!entry || (entry as any).deleted_at === null) {
         throw new Error(
-          "Cannot permanently delete: installment must be soft-deleted first (moved to trash)"
+          "Cannot permanently delete: installment must be soft-deleted first (moved to trash)",
         );
       }
 
@@ -2485,7 +2789,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
       await fetchDeletedInstallments();
     } catch (err: any) {
-      throw new Error(parseSupabaseError(err, `permanently deleting installment ${id}`));
+      throw new Error(
+        parseSupabaseError(err, `permanently deleting installment ${id}`),
+      );
     }
   };
 

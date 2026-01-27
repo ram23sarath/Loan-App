@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -10,7 +10,13 @@ interface ErrorBoundaryState {
   error?: Error;
 }
 
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundary extends React.Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
+  declare state: ErrorBoundaryState;
+  declare props: Readonly<ErrorBoundaryProps>;
+
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
@@ -21,8 +27,20 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    // Log to an error reporting service if desired
-    console.error('ErrorBoundary caught an error:', error, info);
+    // Log to console
+    console.error("ErrorBoundary caught an error:", error, info);
+
+    // Report to native mobile wrapper if running in native app
+    if (typeof window !== "undefined" && window.isNativeApp?.()) {
+      console.log(
+        "[ErrorBoundary] Reporting component crash to native wrapper",
+      );
+      window.NativeBridge?.reportError(
+        error.message,
+        error.stack,
+        info.componentStack,
+      );
+    }
   }
 
   render() {
@@ -34,7 +52,9 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       return (
         <div className="p-4 rounded border border-red-200 bg-red-50 text-red-700">
           <p className="font-semibold mb-1">Something went wrong.</p>
-          <p className="text-sm">{error?.message || 'Please try again later.'}</p>
+          <p className="text-sm">
+            {error?.message || "Please try again later."}
+          </p>
         </div>
       );
     }

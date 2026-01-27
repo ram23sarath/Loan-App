@@ -74,8 +74,29 @@ export const WEB_APP_URL = config.webUrl;
 export const SUPABASE_URL = config.supabaseUrl;
 export const SUPABASE_ANON_KEY = config.supabaseAnonKey;
 
+/**
+ * Extract domain from URL for WebView origin whitelist
+ * Example: 'https://example.com/path' -> 'https://example.com'
+ */
+function extractDomain(url: string): string {
+    try {
+        const urlObj = new URL(url);
+        return `${urlObj.protocol}//${urlObj.host}`;
+    } catch {
+        return url;
+    }
+}
+
+// Trusted origins for WebView - only allow known app domains
+export const TRUSTED_ORIGINS = [
+    extractDomain(WEB_APP_URL), // Main web app domain
+    'https://lhffcmefliaptsijuyay.supabase.co', // Supabase API calls
+    'https://welfare-ctr.netlify.app', // Production Netlify domain
+];
+
 // Debug helper (only logs in development)
 if (__DEV__) {
     console.log(`[ENV] Running in ${ENVIRONMENT} mode`);
     console.log(`[ENV] Web URL: ${WEB_APP_URL}`);
+    console.log(`[ENV] Trusted origins:`, TRUSTED_ORIGINS);
 }

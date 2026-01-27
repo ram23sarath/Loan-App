@@ -353,3 +353,86 @@ export type NewLoan = Database['public']['Tables']['loans']['Insert'];
 export type NewSubscription = Database['public']['Tables']['subscriptions']['Insert'];
 export type NewInstallment = Database['public']['Tables']['installments']['Insert'];
 export type NewLoanSeniority = Database['public']['Tables']['loan_seniority']['Insert'];
+
+// ============================================================================
+// NATIVE BRIDGE TYPES - Mobile WebView Integration
+// ============================================================================
+// Extend Window interface to include native bridge globals
+declare global {
+  interface Window {
+    /**
+     * Check if running inside native mobile app
+     */
+    isNativeApp?: () => boolean;
+
+    /**
+     * Register handler for messages from native app
+     */
+    registerNativeHandler?: (
+      handler: (message: NativeToWebMessage) => void,
+    ) => void;
+
+    /**
+     * Send a command to the native app
+     */
+    sendToNative?: (type: string, payload?: any) => void;
+
+    /**
+     * Convenience API for native bridge operations
+     */
+    NativeBridge?: {
+      requestAuth: () => void;
+      logout: () => void;
+      updateSession: (session: AuthSession) => void;
+      openExternalLink: (url: string) => void;
+      hapticFeedback: (style: 'light' | 'medium' | 'heavy') => void;
+      share: (content: { title?: string; text: string; url?: string }) => void;
+      copyToClipboard: (text: string) => void;
+      requestPushPermission: () => void;
+      reportPageLoad: (route: string, title?: string) => void;
+      reportError: (message: string, stack?: string, componentStack?: string) => void;
+      reportTheme: (mode: 'light' | 'dark') => void;
+    };
+
+    /**
+     * Queue for messages received before handler is registered
+     */
+    __nativeMessageQueue?: NativeToWebMessage[];
+    __NATIVE_BRIDGE_INITIALIZED?: boolean;
+  }
+}
+
+/**
+ * Types for native bridge messages
+ */
+export interface AuthSession {
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+  user: {
+    id: string;
+    email?: string;
+    isScopedCustomer?: boolean;
+    scopedCustomerId?: string | null;
+  };
+}
+
+export type NativeToWebMessage =
+  | { type: 'AUTH_TOKEN'; payload: AuthSession }
+  | { type: 'AUTH_CLEARED' }
+  | {
+      type: 'PUSH_TOKEN';
+      payload: { token: string; platform: 'ios' | 'android' | 'unknown' };
+    }
+  | {
+      type: 'PUSH_PERMISSION_RESULT';
+      payload: { granted: boolean; canAskAgain: boolean };
+    }
+  | { type: 'THEME_CHANGE'; payload: { mode: 'light' | 'dark' | 'system' } }
+  | {
+      type: 'NETWORK_STATUS';
+      payload: { isConnected: boolean; type: string | null };
+    }
+  | { type: 'APP_STATE'; payload: { state: string } }
+  | { type: 'DEEP_LINK'; payload: { url: string; path: string } }
+  | { type: 'NATIVE_READY' };

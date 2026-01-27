@@ -954,7 +954,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border" disable3D>
             <div className="mb-3 sm:mb-4">
               <h3 className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 text-base sm:text-2xl font-semibold text-pink-700 dark:text-pink-400">
-                <span>Misc Data Entries</span>
+                <span>Expenditures</span>
                 <div className="ml-auto sm:ml-0 w-full sm:w-auto">
                   <button
                     onClick={(e) => { e.stopPropagation(); setShowRecordDataEntry(true); }}
@@ -1120,7 +1120,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 </div>
               </div>
             ) : (
-              <p className="text-gray-500 dark:text-dark-muted">No data entries for this customer.</p>
+              <p className="text-gray-500 dark:text-dark-muted">No Expenditures for this customer</p>
             )}
           </GlassCard>
         </div>

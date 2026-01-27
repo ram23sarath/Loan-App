@@ -17,10 +17,11 @@
     "chart.js": "^4.5.0",
     "decimal.js": "^10.6.0",
     "dotenv": "^16.4.5",
+    "expo": "^54.0.32",
     "framer-motion": "^12.23.11",
-    "react": "^19.1.1",
+    "react": "19.2.3",
     "react-chartjs-2": "^5.3.0",
-    "react-dom": "^19.1.1",
+    "react-dom": "19.2.3",
     "react-hook-form": "^7.61.1",
     "react-router-dom": "^7.7.1",
     "xlsx": "^0.18.5"

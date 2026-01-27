@@ -115,8 +115,29 @@ const AnimatedRoutes = () => {
   const location = useLocation();
   const { isScopedCustomer } = useData();
   
-  // Skip loading spinner when in native wrapper (native has its own loading screen)
-  const suspenseFallback = isInNativeWrapper() ? null : (
+  // Show minimal spinner during lazy loading - required for native wrapper to avoid blank screens
+  // Native has its own loading screen for initial load, but Suspense fallback is needed for navigation
+  const suspenseFallback = isInNativeWrapper() ? (
+    // Minimal inline spinner for native wrapper - shows during lazy route transitions
+    <div style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      height: '100%',
+      minHeight: '50vh',
+      backgroundColor: 'inherit'
+    }}>
+      <div style={{ 
+        width: 36, 
+        height: 36, 
+        border: '3px solid #E5E7EB',
+        borderTopColor: '#4F46E5',
+        borderRadius: '50%',
+        animation: 'suspense-spin 0.8s linear infinite'
+      }} />
+      <style>{`@keyframes suspense-spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  ) : (
     <LazyPageWrapper>
       <div className="flex items-center justify-center h-full">
         <LoadingSpinner />

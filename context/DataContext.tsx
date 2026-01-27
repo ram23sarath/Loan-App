@@ -1154,6 +1154,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const initializeSession = async () => {
       if (!isMounted) return;
       setLoading(true);
+      console.log("[DataContext] Starting session initialization...");
 
       // Failsafe timeout to prevent infinite loading (helps WebView issues)
       loadingTimeoutId = setTimeout(() => {
@@ -1165,11 +1166,25 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         }
       }, 30000);
 
+      // Progress markers to help diagnose where hangs occur
+      const progressMarkers = [
+        setTimeout(() => console.log("[DataContext] Auth init: 5s elapsed, still working..."), 5000),
+        setTimeout(() => console.warn("[DataContext] Auth init: 15s elapsed, this is taking longer than expected"), 15000),
+        setTimeout(() => console.error("[DataContext] Auth init: 25s elapsed, approaching timeout!"), 25000),
+      ];
+
+      const clearProgressMarkers = () => {
+        progressMarkers.forEach(clearTimeout);
+      };
+
+
       try {
         // Get the current session
+        console.log("[DataContext] Stage 1: Fetching session from Supabase...");
         const {
           data: { session },
         } = await supabase.auth.getSession();
+        console.log("[DataContext] Stage 1 complete: Session", session ? "exists" : "null");
 
         if (!isMounted) return;
 
@@ -1186,6 +1201,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
         // If session exists, determine scope and fetch data
         if (session && session.user && session.user.id) {
+          console.log("[DataContext] Stage 2: Checking user scope...");
           try {
             const { data: matchedCustomers, error } = await supabase
               .from("customers")
@@ -1429,6 +1445,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         console.error("Error initializing session", err);
       } finally {
         if (isMounted) {
+          console.log("[DataContext] Session initialization complete");
+          clearProgressMarkers();
           setLoading(false);
           setIsRefreshing(false);
           if (loadingTimeoutId) clearTimeout(loadingTimeoutId);

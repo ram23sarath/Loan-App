@@ -1017,6 +1017,34 @@ const SummaryPage = () => {
             </div>
           </div>
 
+          {/* Net Total Bar - Full Width on Top */}
+          <motion.div
+            className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 dark:from-emerald-600 dark:to-teal-600 rounded-2xl p-6 shadow-lg mb-6"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 100, damping: 15 }}
+            whileHover={{ scale: 1.01 }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/20 text-white font-bold text-xl">
+                  =
+                </div>
+                <div>
+                  <div className="text-lg font-semibold text-white/90 uppercase tracking-wide">
+                    Net Total
+                  </div>
+                  <div className="text-sm text-white/70">
+                    Total Collected - Expenses
+                  </div>
+                </div>
+              </div>
+              <div className="text-4xl font-bold text-white">
+                <AnimatedNumber value={totalCollectedWithoutPrincipal - totalExpenses} />
+              </div>
+            </div>
+          </motion.div>
+
           <motion.div
             className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch"
             variants={mainContainerVariants}
@@ -1057,16 +1085,6 @@ const SummaryPage = () => {
               {/* Income breakdown as list items */}
               <div className="w-full mt-4">
                 <div className="space-y-3">
-                  {/* Loan Recovery (Principal) */}
-                  <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                      Loan Recovery (Principal)
-                    </span>
-                    <span className="text-lg font-bold text-blue-800 dark:text-blue-200">
-                      <AnimatedNumber value={totalPrincipalRecovered} />
-                    </span>
-                  </div>
-
                   {/* Subscriptions, Interest, Late Fees */}
                   {leftCards.map((card) => (
                     <div
@@ -1197,7 +1215,7 @@ const SummaryPage = () => {
                     Expenses
                   </div>
                   <div className="text-xs text-gray-400">
-                    Outgoing & disbursed principal
+                    Outgoing &amp; disbursed principal
                   </div>
                 </div>
               </div>

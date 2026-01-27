@@ -59,6 +59,7 @@ export default function WebViewScreen() {
   // Refs
   const webViewRef = useRef<WebView>(null);
   const bridgeRef = useRef<BridgeHandler | null>(null);
+  const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // State
   const [isLoading, setIsLoading] = useState(true);
@@ -158,7 +159,13 @@ export default function WebViewScreen() {
       bridgeRef.current.on('NAVIGATION_READY', () => {
         // Web is ready, send native ready signal back
         bridgeRef.current?.sendToWeb({ type: 'NATIVE_READY' });
-        setIsLoading(false); // Failsafe: ensure loading screen is dismissed
+        
+        // Clear timeout and dismiss loading - web app confirmed ready
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+          loadingTimeoutRef.current = null;
+        }
+        setIsLoading(false);
         
         // Send push token if available
         getExpoPushToken().then((result) => {
@@ -173,7 +180,14 @@ export default function WebViewScreen() {
 
       bridgeRef.current.on('PAGE_LOADED', (payload) => {
         const { route } = payload as { route: string; title?: string };
-        setIsLoading(false); // Failsafe: page is definitely loaded
+        
+        // Clear timeout and dismiss loading - page confirmed loaded
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+          loadingTimeoutRef.current = null;
+        }
+        setIsLoading(false);
+        
         if (__DEV__) {
           console.log('[WebView] Page loaded:', route);
         }
@@ -364,8 +378,18 @@ export default function WebViewScreen() {
   }, []);
 
   const handleLoadEnd = useCallback(() => {
-    console.log('[WebView] Load ended');
-    setIsLoading(false);
+    console.log('[WebView] Load ended, waiting for web app ready signal');
+    
+    // Don't immediately dismiss loading - wait for web app to signal ready
+    // Start a 10-second timeout as a failsafe
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+    }
+    loadingTimeoutRef.current = setTimeout(() => {
+      console.warn('[WebView] Web app did not signal ready in 10s, forcing loading dismiss');
+      setIsLoading(false);
+      loadingTimeoutRef.current = null;
+    }, 10000);
   }, []);
 
   const handleError = useCallback((syntheticEvent: any) => {

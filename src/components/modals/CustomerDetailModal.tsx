@@ -1,17 +1,29 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import ReactDOM from 'react-dom';
-import { motion, Variants, AnimatePresence } from 'framer-motion';
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import ReactDOM from "react-dom";
+import { motion, Variants, AnimatePresence } from "framer-motion";
 // NOTE: xlsx is dynamically imported in handleIndividualExport to reduce bundle size (~500KB)
-import type { Customer, LoanWithCustomer, SubscriptionWithCustomer, Installment, DataEntry } from '../../types';
-import GlassCard from '../ui/GlassCard';
-import RecordLoanModal from './RecordLoanModal';
-import RecordSubscriptionModal from './RecordSubscriptionModal';
-import RecordDataEntryModal from './RecordDataEntryModal';
-import useFocusTrap from '../hooks/useFocusTrap';
-import { XIcon, FileDownIcon, LandmarkIcon, HistoryIcon, Trash2Icon } from '../../constants';
-import { formatDate } from '../../utils/dateFormatter';
-import { formatNumberIndian } from '../../utils/numberFormatter';
-import DeleteConfirmationModal from './DeleteConfirmationModal';
+import type {
+  Customer,
+  LoanWithCustomer,
+  SubscriptionWithCustomer,
+  Installment,
+  DataEntry,
+} from "../../types";
+import GlassCard from "../ui/GlassCard";
+import RecordLoanModal from "./RecordLoanModal";
+import RecordSubscriptionModal from "./RecordSubscriptionModal";
+import RecordDataEntryModal from "./RecordDataEntryModal";
+import useFocusTrap from "../hooks/useFocusTrap";
+import {
+  XIcon,
+  FileDownIcon,
+  LandmarkIcon,
+  HistoryIcon,
+  Trash2Icon,
+} from "../../constants";
+import { formatDate } from "../../utils/dateFormatter";
+import { formatNumberIndian } from "../../utils/numberFormatter";
+import DeleteConfirmationModal from "./DeleteConfirmationModal";
 
 interface CustomerDetailModalProps {
   customer: Customer;
@@ -32,7 +44,7 @@ interface CustomerDetailModalProps {
 
 const backdropVariants: Variants = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.3, ease: 'easeInOut' } },
+  visible: { opacity: 1, transition: { duration: 0.3, ease: "easeInOut" } },
 };
 
 const modalVariants: Variants = {
@@ -43,35 +55,75 @@ const modalVariants: Variants = {
     scale: 1,
     transition: {
       duration: 0.4,
-      ease: 'easeOut',
+      ease: "easeOut",
       staggerChildren: 0.05,
       delayChildren: 0.1,
-    }
+    },
   },
-  exit: { opacity: 0, y: 50, scale: 0.95, transition: { duration: 0.25, ease: 'easeIn' } },
+  exit: {
+    opacity: 0,
+    y: 50,
+    scale: 0.95,
+    transition: { duration: 0.25, ease: "easeIn" },
+  },
 };
 
 const formatCurrency = (amount: number) => `₹${formatNumberIndian(amount)}`;
 
-// Define variants for the note's expansion
+// Payment threshold for determining ongoing loans (80% paid = loan in progress)
+const ONGOING_PAYMENT_THRESHOLD = 80;
+
+// Helper function to calculate payment percentage for a loan
+const calculatePaymentPercentage = (
+  loan: LoanWithCustomer,
+  installmentsByLoanId: Map<string, Installment[]>,
+): number => {
+  const loanInstallments = installmentsByLoanId.get(loan.id) || [];
+  const amountPaid = loanInstallments.reduce(
+    (acc, inst) => acc + inst.amount,
+    0,
+  );
+  const totalRepayable = loan.original_amount + loan.interest_amount;
+  if (totalRepayable === 0) return 100; // Treat zero-value loans as fully paid
+  return (amountPaid / totalRepayable) * 100;
+};
+// Helper function to check if a loan is ongoing (less than threshold% paid)
+const isLoanOngoing = (
+  loan: LoanWithCustomer,
+  installmentsByLoanId: Map<string, Installment[]>,
+): boolean => {
+  return (
+    calculatePaymentPercentage(loan, installmentsByLoanId) <
+    ONGOING_PAYMENT_THRESHOLD
+  );
+};
+
+// Helper function to stop event propagation with proper TypeScript typing
+// React.SyntheticEvent covers all event types (pointer, mouse, touch, etc.)
+const stopAllPropagation = (e: React.SyntheticEvent<unknown>): void => {
+  e.stopPropagation();
+};
+
+// Define variants for the note's expansion with concrete values for smooth animation
+// Using maxHeight allows interpolation between two concrete pixel values
 const noteVariants: Variants = {
   collapsed: {
-    height: 'auto',
+    maxHeight: "2.5rem", // ~2 lines of text (line-height ~1.25rem)
     opacity: 1,
-    overflow: 'hidden',
+    overflow: "hidden",
     transition: {
-      height: { duration: 0.3, ease: 'easeInOut' },
-      opacity: { duration: 0.2, ease: 'easeOut' },
-    }
+      maxHeight: { duration: 0.3, ease: "easeInOut" },
+      opacity: { duration: 0.2, ease: "easeOut" },
+    },
   },
   expanded: {
-    height: 'auto',
+    maxHeight: "500px", // Large enough to accommodate most notes
     opacity: 1,
-    overflow: 'visible',
+    overflow: "visible",
     transition: {
-      height: { duration: 0.3, ease: 'easeInOut' },
-      opacity: { duration: 0.2, ease: 'easeIn' },
-    }
+      maxHeight: { duration: 0.3, ease: "easeInOut" },
+      opacity: { duration: 0.2, ease: "easeIn" },
+    },
   },
 };
 
@@ -81,16 +133,16 @@ const installmentRowVariants: Variants = {
     height: 0,
     transition: {
       duration: 0.2,
-      ease: 'easeOut'
-    }
+      ease: "easeOut",
+    },
   },
   visible: {
     opacity: 1,
-    height: 'auto',
+    height: "auto",
     transition: {
       duration: 0.3,
-      ease: 'easeIn'
-    }
+      ease: "easeIn",
+    },
   },
 };
 
@@ -101,17 +153,17 @@ const installmentCardVariants: Variants = {
     marginTop: 0,
     transition: {
       duration: 0.2,
-      ease: 'easeOut'
-    }
+      ease: "easeOut",
+    },
   },
   visible: {
     opacity: 1,
-    height: 'auto',
-    marginTop: '0.75rem',
+    height: "auto",
+    marginTop: "0.75rem",
     transition: {
       duration: 0.3,
-      ease: 'easeIn'
-    }
+      ease: "easeIn",
+    },
   },
 };
 
@@ -120,7 +172,7 @@ const buttonVariants: Variants = {
   hover: {
     scale: 1.05,
     transition: {
-      type: 'spring',
+      type: "spring",
       stiffness: 400,
       damping: 20,
     },
@@ -128,7 +180,7 @@ const buttonVariants: Variants = {
   tap: {
     scale: 0.95,
     transition: {
-      type: 'spring',
+      type: "spring",
       stiffness: 400,
       damping: 20,
     },
@@ -153,14 +205,18 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 }) => {
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const [expandedLoanId, setExpandedLoanId] = useState<string | null>(null);
-  const [subscriptionSortBy, setSubscriptionSortBy] = useState<'date' | 'receipt' | 'amount'>('date');
-  const [subscriptionSortOrder, setSubscriptionSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [subscriptionSortBy, setSubscriptionSortBy] = useState<
+    "date" | "receipt" | "amount"
+  >("date");
+  const [subscriptionSortOrder, setSubscriptionSortOrder] = useState<
+    "asc" | "desc"
+  >("desc");
   const noteRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   // Lookup map for O(1) installment access by loan_id
   const installmentsByLoanId = useMemo(() => {
     const map = new Map<string, Installment[]>();
-    installments.forEach(inst => {
+    installments.forEach((inst) => {
       const existing = map.get(inst.loan_id) || [];
       existing.push(inst);
       map.set(inst.loan_id, existing);
@@ -174,40 +230,52 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     sorted.sort((a, b) => {
       let compareValue = 0;
 
-      if (subscriptionSortBy === 'date') {
+      if (subscriptionSortBy === "date") {
         compareValue = new Date(a.date).getTime() - new Date(b.date).getTime();
-      } else if (subscriptionSortBy === 'receipt') {
-        const receiptA = a.receipt || '';
-        const receiptB = b.receipt || '';
+      } else if (subscriptionSortBy === "receipt") {
+        const receiptA = a.receipt || "";
+        const receiptB = b.receipt || "";
         compareValue = receiptA.localeCompare(receiptB);
-      } else if (subscriptionSortBy === 'amount') {
+      } else if (subscriptionSortBy === "amount") {
         compareValue = a.amount - b.amount;
       }
 
-      return subscriptionSortOrder === 'desc' ? -compareValue : compareValue;
+      return subscriptionSortOrder === "desc" ? -compareValue : compareValue;
     });
     return sorted;
   }, [subscriptions, subscriptionSortBy, subscriptionSortOrder]);
 
   // Delete confirmation states
-  const [deleteLoanTarget, setDeleteLoanTarget] = useState<LoanWithCustomer | null>(null);
-  const [deleteSubTarget, setDeleteSubTarget] = useState<SubscriptionWithCustomer | null>(null);
-  const [deleteInstTarget, setDeleteInstTarget] = useState<Installment | null>(null);
-  const [deleteDataEntryTarget, setDeleteDataEntryTarget] = useState<DataEntry | null>(null);
+  const [deleteLoanTarget, setDeleteLoanTarget] =
+    useState<LoanWithCustomer | null>(null);
+  const [deleteSubTarget, setDeleteSubTarget] =
+    useState<SubscriptionWithCustomer | null>(null);
+  const [deleteInstTarget, setDeleteInstTarget] = useState<Installment | null>(
+    null,
+  );
+  const [deleteDataEntryTarget, setDeleteDataEntryTarget] =
+    useState<DataEntry | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exportSuccess, setExportSuccess] = useState<string | null>(null);
   const [showRecordLoan, setShowRecordLoan] = useState<boolean>(false);
-  const [showRecordSubscription, setShowRecordSubscription] = useState<boolean>(false);
-  const [showRecordDataEntry, setShowRecordDataEntry] = useState<boolean>(false);
-  const [editingDataEntry, setEditingDataEntry] = useState<DataEntry | null>(null);
+  const [showRecordSubscription, setShowRecordSubscription] =
+    useState<boolean>(false);
+  const [showRecordDataEntry, setShowRecordDataEntry] =
+    useState<boolean>(false);
+  const [editingDataEntry, setEditingDataEntry] = useState<DataEntry | null>(
+    null,
+  );
 
   const deleteLoanRef = useRef<HTMLDivElement | null>(null);
   const deleteSubRef = useRef<HTMLDivElement | null>(null);
   const deleteInstRef = useRef<HTMLDivElement | null>(null);
   const deleteDataEntryRef = useRef<HTMLDivElement | null>(null);
 
-  useFocusTrap(deleteLoanRef, 'button');
-  useFocusTrap(deleteSubRef, 'button');
-  useFocusTrap(deleteInstRef, 'button');
-  useFocusTrap(deleteDataEntryRef, 'button');
+  useFocusTrap(deleteLoanRef, "button");
+  useFocusTrap(deleteSubRef, "button");
+  useFocusTrap(deleteInstRef, "button");
+  useFocusTrap(deleteDataEntryRef, "button");
 
   const handleNoteClick = (id: string) => {
     setExpandedNoteId(expandedNoteId === id ? null : id);
@@ -215,9 +283,18 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
   // Calculate summary totals
   const summaryTotals = useMemo(() => {
-    const totalLoan = loans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0);
-    const totalSubscription = subscriptions.reduce((acc, sub) => acc + sub.amount, 0);
-    const totalMiscEntries = dataEntries.reduce((acc, entry) => acc + entry.amount, 0);
+    const totalLoan = loans.reduce(
+      (acc, loan) => acc + loan.original_amount + loan.interest_amount,
+      0,
+    );
+    const totalSubscription = subscriptions.reduce(
+      (acc, sub) => acc + sub.amount,
+      0,
+    );
+    const totalMiscEntries = dataEntries.reduce(
+      (acc, entry) => acc + entry.amount,
+      0,
+    );
     const netTotal = totalSubscription - totalMiscEntries;
 
     return {
@@ -228,33 +305,24 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     };
   }, [loans, subscriptions, dataEntries]);
 
-  // Calculate if customer has an ongoing loan
-  const hasOngoingLoan = useMemo(() => {
-    return loans.some((loan) => {
-      const loanInstallments = installmentsByLoanId.get(loan.id) || [];
-      const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
-      const totalRepayable = loan.original_amount + loan.interest_amount;
-      const paymentPercentage = (amountPaid / totalRepayable) * 100;
-      return paymentPercentage < 80; // Ongoing if less than 80% paid
-    });
-  }, [loans, installmentsByLoanId]);
-
   // Get details of ongoing loan for tooltip
+  // Reuse calculatePaymentPercentage helper to avoid duplicate computation
   const ongoingLoanInfo = useMemo(() => {
-    const ongoing = loans.find((loan) => {
-      const loanInstallments = installmentsByLoanId.get(loan.id) || [];
-      const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
-      const totalRepayable = loan.original_amount + loan.interest_amount;
-      const paymentPercentage = (amountPaid / totalRepayable) * 100;
-      return paymentPercentage < 80;
-    });
+    const ongoing = loans.find((loan) =>
+      isLoanOngoing(loan, installmentsByLoanId),
+    );
 
     if (!ongoing) return null;
 
+    const paymentPercentage = Math.round(
+      calculatePaymentPercentage(ongoing, installmentsByLoanId),
+    );
     const loanInstallments = installmentsByLoanId.get(ongoing.id) || [];
-    const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
+    const amountPaid = loanInstallments.reduce(
+      (acc, inst) => acc + inst.amount,
+      0,
+    );
     const totalRepayable = ongoing.original_amount + ongoing.interest_amount;
-    const paymentPercentage = Math.round((amountPaid / totalRepayable) * 100);
 
     return {
       paymentPercentage,
@@ -263,145 +331,211 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     };
   }, [loans, installmentsByLoanId]);
 
+  // Simple boolean derived from ongoingLoanInfo
+  const hasOngoingLoan = !!ongoingLoanInfo;
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (expandedNoteId && noteRefs.current[expandedNoteId] && !noteRefs.current[expandedNoteId]?.contains(event.target as Node)) {
+      if (
+        expandedNoteId &&
+        noteRefs.current[expandedNoteId] &&
+        !noteRefs.current[expandedNoteId]?.contains(event.target as Node)
+      ) {
         setExpandedNoteId(null);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [expandedNoteId]);
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
+      if (event.key !== "Escape") return;
       // If a delete confirmation is open, let the modal handle it
-      if (deleteDataEntryTarget || deleteInstTarget || deleteSubTarget || deleteLoanTarget) {
+      if (
+        deleteDataEntryTarget ||
+        deleteInstTarget ||
+        deleteSubTarget ||
+        deleteLoanTarget
+      ) {
         return;
       }
       // Otherwise close the whole modal
       onClose();
     };
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [deleteDataEntryTarget, deleteInstTarget, deleteSubTarget, deleteLoanTarget, onClose]);
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [
+    deleteDataEntryTarget,
+    deleteInstTarget,
+    deleteSubTarget,
+    deleteLoanTarget,
+    onClose,
+  ]);
 
   // Prevent background scrolling while modal is open (handle iOS/Android correctly)
   const scrollYRef = useRef<number>(0);
   useEffect(() => {
-    if (typeof document === 'undefined') return;
+    if (typeof document === "undefined") return;
     scrollYRef.current = window.scrollY || window.pageYOffset || 0;
     const bodyStyle = document.body.style;
-    bodyStyle.position = 'fixed';
+    bodyStyle.position = "fixed";
     bodyStyle.top = `-${scrollYRef.current}px`;
-    bodyStyle.left = '0';
-    bodyStyle.right = '0';
-    bodyStyle.width = '100%';
+    bodyStyle.left = "0";
+    bodyStyle.right = "0";
+    bodyStyle.width = "100%";
 
     return () => {
-      bodyStyle.position = '';
-      bodyStyle.top = '';
-      bodyStyle.left = '';
-      bodyStyle.right = '';
-      bodyStyle.width = '';
+      bodyStyle.position = "";
+      bodyStyle.top = "";
+      bodyStyle.left = "";
+      bodyStyle.right = "";
+      bodyStyle.width = "";
       window.scrollTo(0, scrollYRef.current);
     };
   }, []);
 
   const confirmDeleteLoan = async () => {
     if (!deleteLoanTarget) return;
+    setDeleteError(null);
     try {
       await deleteLoan(deleteLoanTarget.id);
       setDeleteLoanTarget(null);
-    } catch (error: any) {
-      alert(error.message);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      setDeleteError(msg);
+      setDeleteLoanTarget(null);
     }
   };
 
   const confirmDeleteSubscription = async () => {
     if (!deleteSubTarget) return;
+    setDeleteError(null);
     try {
       await deleteSubscription(deleteSubTarget.id);
       setDeleteSubTarget(null);
-    } catch (error: any) {
-      alert(error.message);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      setDeleteError(msg);
+      setDeleteSubTarget(null);
     }
   };
 
   const confirmDeleteInstallment = async () => {
     if (!deleteInstTarget) return;
+    setDeleteError(null);
     try {
       await deleteInstallment(deleteInstTarget.id);
       setDeleteInstTarget(null);
-    } catch (error: any) {
-      alert(error.message);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      setDeleteError(msg);
+      setDeleteInstTarget(null);
     }
   };
 
   const confirmDeleteDataEntry = async () => {
     if (!deleteDataEntryTarget || !deleteDataEntry) return;
+    setDeleteError(null);
     try {
       await deleteDataEntry(deleteDataEntryTarget.id);
       setDeleteDataEntryTarget(null);
-    } catch (error: any) {
-      alert(error.message);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      setDeleteError(msg);
+      setDeleteDataEntryTarget(null);
     }
   };
-
   const handleIndividualExport = async () => {
-    const XLSX = await import('xlsx');
-    const customerLoansData = loans.map(loan => {
-      const loanInstallments = installmentsByLoanId.get(loan.id) || [];
-      const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
-      const lateFeesPaid = loanInstallments.reduce((acc, inst) => acc + (inst.late_fee || 0), 0);
-      const totalRepayable = loan.original_amount + loan.interest_amount;
+    setExportError(null);
+    setExportSuccess(null);
+    try {
+      const XLSX = await import("xlsx");
+      const customerLoansData = loans.map((loan) => {
+        const loanInstallments = installmentsByLoanId.get(loan.id) || [];
+        const amountPaid = loanInstallments.reduce(
+          (acc, inst) => acc + inst.amount,
+          0,
+        );
+        const lateFeesPaid = loanInstallments.reduce(
+          (acc, inst) => acc + (inst.late_fee || 0),
+          0,
+        );
+        const totalRepayable = loan.original_amount + loan.interest_amount;
+        const isOngoing = isLoanOngoing(loan, installmentsByLoanId);
 
-      return {
-        'Loan ID': loan.id,
-        'Original Amount': loan.original_amount,
-        'Interest Amount': loan.interest_amount,
-        'Total Repayable': totalRepayable,
-        'Amount Paid': amountPaid,
-        'Late Fees Paid': lateFeesPaid,
-        'Balance': totalRepayable - amountPaid,
-        'Loan Date': formatDate(loan.payment_date),
-        'Status': amountPaid >= totalRepayable ? 'Paid Off' : 'In Progress',
-      };
-    });
+        return {
+          "Loan ID": loan.id,
+          "Original Amount": loan.original_amount,
+          "Interest Amount": loan.interest_amount,
+          "Total Repayable": totalRepayable,
+          "Amount Paid": amountPaid,
+          "Late Fees Paid": lateFeesPaid,
+          Balance: totalRepayable - amountPaid,
+          "Loan Date": formatDate(loan.payment_date),
+          Status: isOngoing ? "In Progress" : "Paid Off",
+        };
+      });
 
-    const customerSubscriptionsData = subscriptions.map(sub => ({
-      'Subscription ID': sub.id,
-      'Amount': sub.amount,
-      'Date': formatDate(sub.date),
-      'Receipt': sub.receipt,
-    }));
-
-    const customerInstallmentsData = installments
-      .filter(inst => loans.some(l => l.id === inst.loan_id))
-      .map(inst => ({
-        'Installment ID': inst.id,
-        'Loan ID': inst.loan_id,
-        'Installment Number': inst.installment_number,
-        'Amount Paid': inst.amount,
-        'Late Fee Paid': inst.late_fee || 0,
-        'Payment Date': formatDate(inst.date),
-        'Receipt Number': inst.receipt_number,
+      const customerSubscriptionsData = subscriptions.map((sub) => ({
+        "Subscription ID": sub.id,
+        Amount: sub.amount,
+        Date: formatDate(sub.date),
+        Receipt: sub.receipt,
       }));
 
-    const wb = XLSX.utils.book_new();
+      const customerInstallmentsData = installments
+        .filter((inst) => loans.some((l) => l.id === inst.loan_id))
+        .map((inst) => ({
+          "Installment ID": inst.id,
+          "Loan ID": inst.loan_id,
+          "Installment Number": inst.installment_number,
+          "Amount Paid": inst.amount,
+          "Late Fee Paid": inst.late_fee || 0,
+          "Payment Date": formatDate(inst.date),
+          "Receipt Number": inst.receipt_number,
+        }));
 
-    if (customerLoansData.length > 0) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(customerLoansData), 'Loans');
-    if (customerSubscriptionsData.length > 0) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(customerSubscriptionsData), 'Subscriptions');
-    if (customerInstallmentsData.length > 0) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(customerInstallmentsData), 'Installments');
+      const wb = XLSX.utils.book_new();
 
-    XLSX.writeFile(wb, `${customer.name}_Details.xlsx`);
+      if (customerLoansData.length > 0)
+        XLSX.utils.book_append_sheet(
+          wb,
+          XLSX.utils.json_to_sheet(customerLoansData),
+          "Loans",
+        );
+      if (customerSubscriptionsData.length > 0)
+        XLSX.utils.book_append_sheet(
+          wb,
+          XLSX.utils.json_to_sheet(customerSubscriptionsData),
+          "Subscriptions",
+        );
+      if (customerInstallmentsData.length > 0)
+        XLSX.utils.book_append_sheet(
+          wb,
+          XLSX.utils.json_to_sheet(customerInstallmentsData),
+          "Installments",
+        );
+
+      const sanitizedName = customer.name.replace(/[/\\?%*:|"<>]/g, "_");
+      XLSX.writeFile(wb, `${sanitizedName}_Details.xlsx`);
+      setExportSuccess(
+        `Data exported successfully: ${sanitizedName}_Details.xlsx`,
+      );
+    } catch (error) {
+      console.error("Export failed:", error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      setExportError(`Export failed: ${errorMsg}`);
+    }
   };
 
   return ReactDOM.createPortal(
     <motion.div
       className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-black/40 p-4"
-      style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+      style={{
+        paddingTop: "max(1rem, env(safe-area-inset-top))",
+        paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
+      }}
       variants={backdropVariants}
       initial="hidden"
       animate="visible"
@@ -411,26 +545,49 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
       <motion.div
         className="w-full max-w-6xl flex flex-col max-h-[95vh]"
         variants={modalVariants}
+        initial="hidden"
+        animate="visible"
         exit="exit"
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
-        <GlassCard className="!p-0 w-full flex-shrink-0 dark:bg-dark-card dark:border-dark-border" disable3D>
+        <GlassCard
+          className="!p-0 w-full flex-shrink-0 dark:bg-dark-card dark:border-dark-border"
+          disable3D
+        >
           <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 sm:p-5 md:p-6 border-b border-gray-200 dark:border-dark-border gap-4 md:gap-6">
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg sm:text-2xl md:text-3xl font-bold dark:text-dark-text truncate">{customer.name}</h2>
-              <p className="text-xs sm:text-sm md:text-base text-gray-500 dark:text-dark-muted mb-4">{customer.phone}</p>
+              <h2 className="text-lg sm:text-2xl md:text-3xl font-bold dark:text-dark-text truncate">
+                {customer.name}
+              </h2>
+              <p className="text-xs sm:text-sm md:text-base text-gray-500 dark:text-dark-muted mb-4">
+                {customer.phone}
+              </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm md:text-base">
                 <div className="p-2 sm:p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
-                  <span className="text-gray-600 dark:text-dark-muted text-xs sm:text-sm block mb-1">Loan:</span>
-                  <p className="font-bold text-green-600 dark:text-green-400 text-sm sm:text-base">{formatCurrency(summaryTotals.totalLoan)}</p>
+                  <span className="text-gray-600 dark:text-dark-muted text-xs sm:text-sm block mb-1">
+                    Loan:
+                  </span>
+                  <p className="font-bold text-green-600 dark:text-green-400 text-sm sm:text-base">
+                    {formatCurrency(summaryTotals.totalLoan)}
+                  </p>
                 </div>
                 <div className="p-2 sm:p-3 rounded-lg bg-cyan-50 dark:bg-cyan-900/20">
-                  <span className="text-gray-600 dark:text-dark-muted text-xs sm:text-sm block mb-1">Subscription:</span>
-                  <p className="font-bold text-cyan-600 dark:text-cyan-400 text-sm sm:text-base">{formatCurrency(summaryTotals.totalSubscription)}</p>
+                  <span className="text-gray-600 dark:text-dark-muted text-xs sm:text-sm block mb-1">
+                    Subscription:
+                  </span>
+                  <p className="font-bold text-cyan-600 dark:text-cyan-400 text-sm sm:text-base">
+                    {formatCurrency(summaryTotals.totalSubscription)}
+                  </p>
                 </div>
                 <div className="p-2 sm:p-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 col-span-2 sm:col-span-1">
-                  <span className="text-gray-600 dark:text-dark-muted text-xs sm:text-sm block mb-1">Net:</span>
-                  <p className={`font-bold text-sm sm:text-base ${summaryTotals.netTotal >= 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-red-600 dark:text-red-400'}`}>{formatCurrency(summaryTotals.netTotal)}</p>
+                  <span className="text-gray-600 dark:text-dark-muted text-xs sm:text-sm block mb-1">
+                    Net:
+                  </span>
+                  <p
+                    className={`font-bold text-sm sm:text-base ${summaryTotals.netTotal >= 0 ? "text-indigo-600 dark:text-indigo-400" : "text-red-600 dark:text-red-400"}`}
+                  >
+                    {formatCurrency(summaryTotals.netTotal)}
+                  </p>
                 </div>
               </div>
             </div>
@@ -441,7 +598,9 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                <FileDownIcon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" /> <span className="hidden sm:inline">Export Details</span><span className="sm:hidden">Export</span>
+                <FileDownIcon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />{" "}
+                <span className="hidden sm:inline">Export Details</span>
+                <span className="sm:hidden">Export</span>
               </motion.button>
               <motion.button
                 onClick={onClose}
@@ -457,10 +616,13 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
         <div
           className="mt-2 sm:mt-4 space-y-3 sm:space-y-6 flex-1 min-h-0 pb-6 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-slate-600 dark:scrollbar-track-slate-800 px-2 sm:px-0"
-          style={{ paddingBottom: 'calc(3rem + env(safe-area-inset-bottom))' }}
+          style={{ paddingBottom: "calc(3rem + env(safe-area-inset-bottom))" }}
         >
           {/* Loans Section */}
-          <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border" disable3D>
+          <GlassCard
+            className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border"
+            disable3D
+          >
             <h3 className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-base sm:text-2xl font-semibold dark:text-dark-text">
               <div className="flex items-center gap-2 sm:gap-3">
                 <LandmarkIcon className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -468,12 +630,23 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               </div>
               {loans.length > 0 && (
                 <span className="text-xs sm:text-lg font-normal text-green-600 dark:text-green-400 sm:ml-auto order-3 sm:order-none">
-                  (Total: {formatCurrency(loans.reduce((acc, loan) => acc + loan.original_amount + loan.interest_amount, 0))})
+                  (Total:{" "}
+                  {formatCurrency(
+                    loans.reduce(
+                      (acc, loan) =>
+                        acc + loan.original_amount + loan.interest_amount,
+                      0,
+                    ),
+                  )}
+                  )
                 </span>
               )}
               <div className="ml-auto sm:ml-0">
                 <motion.button
-                  onClick={(e) => { e.stopPropagation(); setShowRecordLoan(true); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowRecordLoan(true);
+                  }}
                   className="w-full sm:w-auto px-3 py-2 sm:py-1 rounded text-white text-xs sm:text-sm bg-indigo-600 hover:bg-indigo-700 font-semibold"
                   variants={buttonVariants}
                   initial="idle"
@@ -490,24 +663,51 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 <table className="min-w-full border-collapse hidden md:table">
                   <thead>
                     <tr className="bg-gray-100/70 dark:bg-slate-700">
-                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">#</th>
-                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Loan Amount</th>
-                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Interest</th>
-                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Total Repayable</th>
-                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Paid</th>
-                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Balance</th>
-                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Check #</th>
-                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Installments</th>
-                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Date</th>
-                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Status</th>
-                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Actions</th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
+                        #
+                      </th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
+                        Loan Amount
+                      </th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
+                        Interest
+                      </th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
+                        Total Repayable
+                      </th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
+                        Paid
+                      </th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
+                        Balance
+                      </th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
+                        Check #
+                      </th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
+                        Installments
+                      </th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
+                        Date
+                      </th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
+                        Status
+                      </th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {loans.map((loan, idx) => {
-                      const loanInstallments = installmentsByLoanId.get(loan.id) || [];
-                      const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
-                      const totalRepayable = loan.original_amount + loan.interest_amount;
+                      const loanInstallments =
+                        installmentsByLoanId.get(loan.id) || [];
+                      const amountPaid = loanInstallments.reduce(
+                        (acc, inst) => acc + inst.amount,
+                        0,
+                      );
+                      const totalRepayable =
+                        loan.original_amount + loan.interest_amount;
                       const balance = totalRepayable - amountPaid;
                       const isPaidOff = amountPaid >= totalRepayable;
                       const isExpanded = expandedLoanId === loan.id;
@@ -517,23 +717,43 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                           <tr className="even:bg-gray-50/50 hover:bg-indigo-50/50 transition-colors dark:even:bg-slate-700/50 dark:hover:bg-indigo-900/30">
                             <td className="px-4 py-2 border-b dark:border-dark-border font-medium text-sm text-gray-700 dark:text-dark-text">
                               <button
-                                onClick={() => setExpandedLoanId(isExpanded ? null : loan.id)}
+                                onClick={() =>
+                                  setExpandedLoanId(isExpanded ? null : loan.id)
+                                }
                                 className="flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400"
                               >
-                                <span>{isExpanded ? '▼' : '▶'}</span>
+                                <span>{isExpanded ? "▼" : "▶"}</span>
                                 <span>{idx + 1}</span>
                               </button>
                             </td>
-                            <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">{formatCurrency(loan.original_amount)}</td>
-                            <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">{formatCurrency(loan.interest_amount)}</td>
-                            <td className="px-4 py-2 border-b dark:border-dark-border font-semibold dark:text-dark-text">{formatCurrency(totalRepayable)}</td>
-                            <td className="px-4 py-2 border-b dark:border-dark-border text-green-600 dark:text-green-400">{formatCurrency(amountPaid)}</td>
-                            <td className="px-4 py-2 border-b dark:border-dark-border text-red-600 dark:text-red-400">{formatCurrency(balance)}</td>
-                            <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">{loan.check_number || '-'}</td>
-                            <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">{loanInstallments.length}/{loan.total_instalments}</td>
-                            <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">{formatDate(loan.payment_date)}</td>
-                            <td className={`px-4 py-2 border-b dark:border-dark-border font-semibold ${isPaidOff ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}`}>
-                              {isPaidOff ? 'Paid Off' : 'In Progress'}
+                            <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">
+                              {formatCurrency(loan.original_amount)}
+                            </td>
+                            <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">
+                              {formatCurrency(loan.interest_amount)}
+                            </td>
+                            <td className="px-4 py-2 border-b dark:border-dark-border font-semibold dark:text-dark-text">
+                              {formatCurrency(totalRepayable)}
+                            </td>
+                            <td className="px-4 py-2 border-b dark:border-dark-border text-green-600 dark:text-green-400">
+                              {formatCurrency(amountPaid)}
+                            </td>
+                            <td className="px-4 py-2 border-b dark:border-dark-border text-red-600 dark:text-red-400">
+                              {formatCurrency(balance)}
+                            </td>
+                            <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">
+                              {loan.check_number || "-"}
+                            </td>
+                            <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">
+                              {loanInstallments.length}/{loan.total_instalments}
+                            </td>
+                            <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">
+                              {formatDate(loan.payment_date)}
+                            </td>
+                            <td
+                              className={`px-4 py-2 border-b dark:border-dark-border font-semibold ${isPaidOff ? "text-green-600 dark:text-green-400" : "text-orange-600 dark:text-orange-400"}`}
+                            >
+                              {isPaidOff ? "Paid Off" : "In Progress"}
                             </td>
                             <td className="px-4 py-2 border-b dark:border-dark-border">
                               <div className="flex gap-2">
@@ -547,9 +767,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                                 )}
                                 <button
                                   onClick={() => setDeleteLoanTarget(loan)}
-                                  onMouseDown={(e) => e.stopPropagation()}
-                                  onTouchStart={(e) => e.stopPropagation()}
-                                  onPointerDown={(e) => (e as any).stopPropagation()}
+                                  onPointerDown={stopAllPropagation}
                                   className="px-2 py-1 rounded bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
                                 >
                                   <Trash2Icon className="w-4 h-4 text-red-500" />
@@ -565,35 +783,64 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                                 exit="hidden"
                                 variants={installmentRowVariants}
                               >
-                                <td colSpan={11} className="px-4 py-3 bg-indigo-50/30 dark:bg-indigo-900/20">
+                                <td
+                                  colSpan={11}
+                                  className="px-4 py-3 bg-indigo-50/30 dark:bg-indigo-900/20"
+                                >
                                   <motion.div
                                     className="space-y-2"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     transition={{ delay: 0.1 }}
                                   >
-                                    <h5 className="text-sm font-semibold text-gray-700 dark:text-dark-text mb-2">Installments Paid:</h5>
+                                    <h5 className="text-sm font-semibold text-gray-700 dark:text-dark-text mb-2">
+                                      Installments Paid:
+                                    </h5>
                                     <div className="space-y-1">
-                                      {loanInstallments.map(inst => (
-                                        <div key={inst.id} className="flex items-center justify-between p-2 bg-white dark:bg-slate-800 rounded border border-gray-200 dark:border-dark-border text-sm">
+                                      {loanInstallments.map((inst) => (
+                                        <div
+                                          key={inst.id}
+                                          className="flex items-center justify-between p-2 bg-white dark:bg-slate-800 rounded border border-gray-200 dark:border-dark-border text-sm"
+                                        >
                                           <div className="flex items-center gap-4">
-                                            <span className="font-medium text-gray-700 dark:text-dark-text">#{inst.installment_number}</span>
-                                            <span className="text-gray-600 dark:text-dark-muted">{formatDate(inst.date)}</span>
-                                            <span className="text-gray-600 dark:text-dark-muted">Receipt: {inst.receipt_number}</span>
+                                            <span className="font-medium text-gray-700 dark:text-dark-text">
+                                              #{inst.installment_number}
+                                            </span>
+                                            <span className="text-gray-600 dark:text-dark-muted">
+                                              {formatDate(inst.date)}
+                                            </span>
+                                            <span className="text-gray-600 dark:text-dark-muted">
+                                              Receipt: {inst.receipt_number}
+                                            </span>
                                           </div>
                                           <div className="flex items-center gap-2">
                                             <span className="font-semibold text-green-600 dark:text-green-400">
                                               {formatCurrency(inst.amount)}
-                                              {inst.late_fee && inst.late_fee > 0 && (
-                                                <span className="ml-1 text-xs text-orange-500">(+{formatCurrency(inst.late_fee)} late)</span>
-                                              )}
+                                              {inst.late_fee &&
+                                                inst.late_fee > 0 && (
+                                                  <span className="ml-1 text-xs text-orange-500">
+                                                    (+
+                                                    {formatCurrency(
+                                                      inst.late_fee,
+                                                    )}{" "}
+                                                    late)
+                                                  </span>
+                                                )}
                                             </span>
                                             {onEditInstallment && (
                                               <motion.button
-                                                onClick={() => onEditInstallment(inst)}
-                                                onMouseDown={(e) => e.stopPropagation()}
-                                                onTouchStart={(e) => e.stopPropagation()}
-                                                onPointerDown={(e) => (e as any).stopPropagation()}
+                                                onClick={() =>
+                                                  onEditInstallment(inst)
+                                                }
+                                                onMouseDown={(e) =>
+                                                  e.stopPropagation()
+                                                }
+                                                onTouchStart={(e) =>
+                                                  e.stopPropagation()
+                                                }
+                                                onPointerDown={
+                                                  stopAllPropagation
+                                                }
                                                 className="px-2 py-1 rounded bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
                                                 whileHover={{ scale: 1.02 }}
                                                 whileTap={{ scale: 0.98 }}
@@ -602,10 +849,16 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                                               </motion.button>
                                             )}
                                             <motion.button
-                                              onClick={() => setDeleteInstTarget(inst)}
-                                              onMouseDown={(e) => e.stopPropagation()}
-                                              onTouchStart={(e) => e.stopPropagation()}
-                                              onPointerDown={(e) => (e as any).stopPropagation()}
+                                              onClick={() =>
+                                                setDeleteInstTarget(inst)
+                                              }
+                                              onMouseDown={(e) =>
+                                                e.stopPropagation()
+                                              }
+                                              onTouchStart={(e) =>
+                                                e.stopPropagation()
+                                              }
+                                              onPointerDown={stopAllPropagation}
                                               className="px-2 py-1 rounded bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
                                               whileHover={{ scale: 1.02 }}
                                               whileTap={{ scale: 0.98 }}
@@ -630,60 +883,104 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 {/* Mobile Cards */}
                 <div className="md:hidden space-y-3">
                   {loans.map((loan, idx) => {
-                    const loanInstallments = installmentsByLoanId.get(loan.id) || [];
-                    const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
-                    const totalRepayable = loan.original_amount + loan.interest_amount;
+                    const loanInstallments =
+                      installmentsByLoanId.get(loan.id) || [];
+                    const amountPaid = loanInstallments.reduce(
+                      (acc, inst) => acc + inst.amount,
+                      0,
+                    );
+                    const totalRepayable =
+                      loan.original_amount + loan.interest_amount;
                     const balance = totalRepayable - amountPaid;
                     const isPaidOff = amountPaid >= totalRepayable;
                     const isExpanded = expandedLoanId === loan.id;
 
                     return (
-                      <div key={loan.id} className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-dark-border">
+                      <div
+                        key={loan.id}
+                        className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-dark-border"
+                      >
                         <div className="flex justify-between items-start mb-2">
                           <button
-                            onClick={() => setExpandedLoanId(isExpanded ? null : loan.id)}
+                            onClick={() =>
+                              setExpandedLoanId(isExpanded ? null : loan.id)
+                            }
                             className="text-xs text-gray-500 dark:text-dark-muted flex items-center gap-1"
                           >
-                            <span>{isExpanded ? '▼' : '▶'}</span>
+                            <span>{isExpanded ? "▼" : "▶"}</span>
                             <span>#{idx + 1}</span>
                           </button>
-                          <div className={`text-xs font-semibold px-2 py-1 rounded ${isPaidOff ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'}`}>
-                            {isPaidOff ? 'Paid Off' : 'In Progress'}
+                          <div
+                            className={`text-xs font-semibold px-2 py-1 rounded ${isPaidOff ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"}`}
+                          >
+                            {isPaidOff ? "Paid Off" : "In Progress"}
                           </div>
                         </div>
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-gray-600 dark:text-dark-muted">Date:</span>
-                            <span className="font-medium dark:text-dark-text">{formatDate(loan.payment_date)}</span>
+                            <span className="text-gray-600 dark:text-dark-muted">
+                              Date:
+                            </span>
+                            <span className="font-medium dark:text-dark-text">
+                              {formatDate(loan.payment_date)}
+                            </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600 dark:text-dark-muted">Loan Amount:</span>
-                            <span className="font-medium dark:text-dark-text">{formatCurrency(loan.original_amount)}</span>
+                            <span className="text-gray-600 dark:text-dark-muted">
+                              Loan Amount:
+                            </span>
+                            <span className="font-medium dark:text-dark-text">
+                              {formatCurrency(loan.original_amount)}
+                            </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600 dark:text-dark-muted">Interest:</span>
-                            <span className="font-medium dark:text-dark-text">{formatCurrency(loan.interest_amount)}</span>
+                            <span className="text-gray-600 dark:text-dark-muted">
+                              Interest:
+                            </span>
+                            <span className="font-medium dark:text-dark-text">
+                              {formatCurrency(loan.interest_amount)}
+                            </span>
                           </div>
                           <div className="flex justify-between border-t dark:border-dark-border pt-2">
-                            <span className="text-gray-600 dark:text-dark-muted font-semibold">Total Repayable:</span>
-                            <span className="font-bold dark:text-dark-text">{formatCurrency(totalRepayable)}</span>
+                            <span className="text-gray-600 dark:text-dark-muted font-semibold">
+                              Total Repayable:
+                            </span>
+                            <span className="font-bold dark:text-dark-text">
+                              {formatCurrency(totalRepayable)}
+                            </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600 dark:text-dark-muted">Paid:</span>
-                            <span className="font-medium text-green-600 dark:text-green-400">{formatCurrency(amountPaid)}</span>
+                            <span className="text-gray-600 dark:text-dark-muted">
+                              Paid:
+                            </span>
+                            <span className="font-medium text-green-600 dark:text-green-400">
+                              {formatCurrency(amountPaid)}
+                            </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600 dark:text-dark-muted">Balance:</span>
-                            <span className="font-medium text-red-600 dark:text-red-400">{formatCurrency(balance)}</span>
+                            <span className="text-gray-600 dark:text-dark-muted">
+                              Balance:
+                            </span>
+                            <span className="font-medium text-red-600 dark:text-red-400">
+                              {formatCurrency(balance)}
+                            </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-gray-600 dark:text-dark-muted">Installments:</span>
-                            <span className="font-medium dark:text-dark-text">{loanInstallments.length}/{loan.total_instalments}</span>
+                            <span className="text-gray-600 dark:text-dark-muted">
+                              Installments:
+                            </span>
+                            <span className="font-medium dark:text-dark-text">
+                              {loanInstallments.length}/{loan.total_instalments}
+                            </span>
                           </div>
                           {loan.check_number && (
                             <div className="flex justify-between">
-                              <span className="text-gray-600 dark:text-dark-muted">Check #:</span>
-                              <span className="font-medium dark:text-dark-text">{loan.check_number}</span>
+                              <span className="text-gray-600 dark:text-dark-muted">
+                                Check #:
+                              </span>
+                              <span className="font-medium dark:text-dark-text">
+                                {loan.check_number}
+                              </span>
                             </div>
                           )}
                         </div>
@@ -697,34 +994,53 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                               exit="hidden"
                               variants={installmentCardVariants}
                             >
-                              <h5 className="text-xs font-semibold text-gray-700 dark:text-dark-text">Installments Paid:</h5>
+                              <h5 className="text-xs font-semibold text-gray-700 dark:text-dark-text">
+                                Installments Paid:
+                              </h5>
                               <motion.div
                                 className="space-y-1"
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.1 }}
                               >
-                                {loanInstallments.map(inst => (
-                                  <div key={inst.id} className="flex items-start justify-between p-2 bg-white dark:bg-slate-700/50 rounded border border-gray-200 dark:border-dark-border text-xs">
+                                {loanInstallments.map((inst) => (
+                                  <div
+                                    key={inst.id}
+                                    className="flex items-start justify-between p-2 bg-white dark:bg-slate-700/50 rounded border border-gray-200 dark:border-dark-border text-xs"
+                                  >
                                     <div className="flex-1">
-                                      <div className="font-medium text-gray-700 dark:text-dark-text">Installment #{inst.installment_number}</div>
-                                      <div className="text-gray-600 dark:text-dark-muted mt-1">{formatDate(inst.date)}</div>
-                                      <div className="text-gray-600 dark:text-dark-muted">Receipt: {inst.receipt_number}</div>
+                                      <div className="font-medium text-gray-700 dark:text-dark-text">
+                                        Installment #{inst.installment_number}
+                                      </div>
+                                      <div className="text-gray-600 dark:text-dark-muted mt-1">
+                                        {formatDate(inst.date)}
+                                      </div>
+                                      <div className="text-gray-600 dark:text-dark-muted">
+                                        Receipt: {inst.receipt_number}
+                                      </div>
                                     </div>
                                     <div className="flex flex-col items-end gap-1">
                                       <span className="font-semibold text-green-600 dark:text-green-400">
                                         {formatCurrency(inst.amount)}
                                       </span>
                                       {inst.late_fee && inst.late_fee > 0 && (
-                                        <span className="text-xs text-orange-500">+{formatCurrency(inst.late_fee)} late</span>
+                                        <span className="text-xs text-orange-500">
+                                          +{formatCurrency(inst.late_fee)} late
+                                        </span>
                                       )}
                                       <div className="flex gap-1">
                                         {onEditInstallment && (
                                           <motion.button
-                                            onClick={() => onEditInstallment(inst)}
-                                            onMouseDown={(e) => e.stopPropagation()}
-                                            onTouchStart={(e) => e.stopPropagation()}
-                                            onPointerDown={(e) => (e as any).stopPropagation()}
+                                            onClick={() =>
+                                              onEditInstallment(inst)
+                                            }
+                                            onMouseDown={(e) =>
+                                              e.stopPropagation()
+                                            }
+                                            onTouchStart={(e) =>
+                                              e.stopPropagation()
+                                            }
+                                            onPointerDown={stopAllPropagation}
                                             className="px-2 py-1 rounded bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors text-xs"
                                             whileHover={{ scale: 1.02 }}
                                             whileTap={{ scale: 0.98 }}
@@ -733,10 +1049,16 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                                           </motion.button>
                                         )}
                                         <motion.button
-                                          onClick={() => setDeleteInstTarget(inst)}
-                                          onMouseDown={(e) => e.stopPropagation()}
-                                          onTouchStart={(e) => e.stopPropagation()}
-                                          onPointerDown={(e) => (e as any).stopPropagation()}
+                                          onClick={() =>
+                                            setDeleteInstTarget(inst)
+                                          }
+                                          onMouseDown={(e) =>
+                                            e.stopPropagation()
+                                          }
+                                          onTouchStart={(e) =>
+                                            e.stopPropagation()
+                                          }
+                                          onPointerDown={stopAllPropagation}
                                           className="px-2 py-1 rounded bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
                                           whileHover={{ scale: 1.02 }}
                                           whileTap={{ scale: 0.98 }}
@@ -758,7 +1080,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                               onClick={() => onEditLoan(loan)}
                               onMouseDown={(e) => e.stopPropagation()}
                               onTouchStart={(e) => e.stopPropagation()}
-                              onPointerDown={(e) => (e as any).stopPropagation()}
+                              onPointerDown={stopAllPropagation}
                               className="flex-1 px-3 py-2 rounded bg-blue-600 dark:bg-blue-500 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-400"
                             >
                               Edit
@@ -768,7 +1090,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                             onClick={() => setDeleteLoanTarget(loan)}
                             onMouseDown={(e) => e.stopPropagation()}
                             onTouchStart={(e) => e.stopPropagation()}
-                            onPointerDown={(e) => (e as any).stopPropagation()}
+                            onPointerDown={stopAllPropagation}
                             className="px-3 py-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
                           >
                             <Trash2Icon className="w-5 h-5" />
@@ -780,12 +1102,17 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 </div>
               </div>
             ) : (
-              <p className="text-gray-500 dark:text-dark-muted">No loan records for this customer.</p>
+              <p className="text-gray-500 dark:text-dark-muted">
+                No loan records for this customer.
+              </p>
             )}
           </GlassCard>
 
           {/* Subscriptions Section */}
-          <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border" disable3D>
+          <GlassCard
+            className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border"
+            disable3D
+          >
             <h3 className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-base sm:text-2xl font-semibold dark:text-dark-text">
               <div className="flex items-center gap-2 sm:gap-3">
                 <HistoryIcon className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -793,12 +1120,19 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               </div>
               {subscriptions.length > 0 && (
                 <span className="text-xs sm:text-lg font-normal text-cyan-600 dark:text-cyan-400 sm:ml-auto order-3 sm:order-none">
-                  (Total: {formatCurrency(subscriptions.reduce((acc, sub) => acc + sub.amount, 0))})
+                  (Total:{" "}
+                  {formatCurrency(
+                    subscriptions.reduce((acc, sub) => acc + sub.amount, 0),
+                  )}
+                  )
                 </span>
               )}
               <div className="ml-auto sm:ml-0">
                 <button
-                  onClick={(e) => { e.stopPropagation(); setShowRecordSubscription(true); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowRecordSubscription(true);
+                  }}
                   className="w-full sm:w-auto px-3 py-2 sm:py-1 rounded bg-cyan-600 text-white text-xs sm:text-sm hover:bg-cyan-700 font-semibold"
                 >
                   Record Subscription
@@ -811,60 +1145,89 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 <table className="min-w-full border-collapse hidden md:table">
                   <thead>
                     <tr className="bg-gray-100/70 dark:bg-slate-700">
-                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">#</th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
+                        #
+                      </th>
                       <th
                         onClick={() => {
-                          if (subscriptionSortBy === 'date') {
-                            setSubscriptionSortOrder(subscriptionSortOrder === 'asc' ? 'desc' : 'asc');
+                          if (subscriptionSortBy === "date") {
+                            setSubscriptionSortOrder(
+                              subscriptionSortOrder === "asc" ? "desc" : "asc",
+                            );
                           } else {
-                            setSubscriptionSortBy('date');
-                            setSubscriptionSortOrder('desc');
+                            setSubscriptionSortBy("date");
+                            setSubscriptionSortOrder("desc");
                           }
                         }}
                         className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text cursor-pointer hover:bg-gray-200/50 dark:hover:bg-slate-600/50 transition-colors"
                       >
-                        Date {subscriptionSortBy === 'date' && (subscriptionSortOrder === 'desc' ? '↓' : '↑')}
+                        Date{" "}
+                        {subscriptionSortBy === "date" &&
+                          (subscriptionSortOrder === "desc" ? "↓" : "↑")}
                       </th>
                       <th
                         onClick={() => {
-                          if (subscriptionSortBy === 'amount') {
-                            setSubscriptionSortOrder(subscriptionSortOrder === 'asc' ? 'desc' : 'asc');
+                          if (subscriptionSortBy === "amount") {
+                            setSubscriptionSortOrder(
+                              subscriptionSortOrder === "asc" ? "desc" : "asc",
+                            );
                           } else {
-                            setSubscriptionSortBy('amount');
-                            setSubscriptionSortOrder('asc');
+                            setSubscriptionSortBy("amount");
+                            setSubscriptionSortOrder("asc");
                           }
                         }}
                         className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text cursor-pointer hover:bg-gray-200/50 dark:hover:bg-slate-600/50 transition-colors"
                       >
-                        Amount {subscriptionSortBy === 'amount' && (subscriptionSortOrder === 'desc' ? '↓' : '↑')}
+                        Amount{" "}
+                        {subscriptionSortBy === "amount" &&
+                          (subscriptionSortOrder === "desc" ? "↓" : "↑")}
                       </th>
-                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Late Fee</th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
+                        Late Fee
+                      </th>
                       <th
                         onClick={() => {
-                          if (subscriptionSortBy === 'receipt') {
-                            setSubscriptionSortOrder(subscriptionSortOrder === 'asc' ? 'desc' : 'asc');
+                          if (subscriptionSortBy === "receipt") {
+                            setSubscriptionSortOrder(
+                              subscriptionSortOrder === "asc" ? "desc" : "asc",
+                            );
                           } else {
-                            setSubscriptionSortBy('receipt');
-                            setSubscriptionSortOrder('asc');
+                            setSubscriptionSortBy("receipt");
+                            setSubscriptionSortOrder("asc");
                           }
                         }}
                         className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text cursor-pointer hover:bg-gray-200/50 dark:hover:bg-slate-600/50 transition-colors"
                       >
-                        Receipt # {subscriptionSortBy === 'receipt' && (subscriptionSortOrder === 'desc' ? '↓' : '↑')}
+                        Receipt #{" "}
+                        {subscriptionSortBy === "receipt" &&
+                          (subscriptionSortOrder === "desc" ? "↓" : "↑")}
                       </th>
-                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">Actions</th>
+                      <th className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {sortedSubscriptions.map((sub, idx) => (
-                      <tr key={sub.id} className="even:bg-gray-50/50 hover:bg-cyan-50/50 transition-colors dark:even:bg-slate-700/50 dark:hover:bg-cyan-900/30">
-                        <td className="px-4 py-2 border-b dark:border-dark-border font-medium text-sm text-gray-700 dark:text-dark-text">{idx + 1}</td>
-                        <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">{formatDate(sub.date)}</td>
-                        <td className="px-4 py-2 border-b dark:border-dark-border font-semibold text-cyan-600 dark:text-cyan-400">{formatCurrency(sub.amount)}</td>
-                        <td className="px-4 py-2 border-b dark:border-dark-border text-orange-600 dark:text-orange-400">
-                          {sub.late_fee ? formatCurrency(sub.late_fee) : '-'}
+                      <tr
+                        key={sub.id}
+                        className="even:bg-gray-50/50 hover:bg-cyan-50/50 transition-colors dark:even:bg-slate-700/50 dark:hover:bg-cyan-900/30"
+                      >
+                        <td className="px-4 py-2 border-b dark:border-dark-border font-medium text-sm text-gray-700 dark:text-dark-text">
+                          {idx + 1}
                         </td>
-                        <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">{sub.receipt || '-'}</td>
+                        <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">
+                          {formatDate(sub.date)}
+                        </td>
+                        <td className="px-4 py-2 border-b dark:border-dark-border font-semibold text-cyan-600 dark:text-cyan-400">
+                          {formatCurrency(sub.amount)}
+                        </td>
+                        <td className="px-4 py-2 border-b dark:border-dark-border text-orange-600 dark:text-orange-400">
+                          {sub.late_fee ? formatCurrency(sub.late_fee) : "-"}
+                        </td>
+                        <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-muted">
+                          {sub.receipt || "-"}
+                        </td>
                         <td className="px-4 py-2 border-b dark:border-dark-border">
                           <div className="flex gap-2">
                             {onEditSubscription && (
@@ -872,7 +1235,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                                 onClick={() => onEditSubscription(sub)}
                                 onMouseDown={(e) => e.stopPropagation()}
                                 onTouchStart={(e) => e.stopPropagation()}
-                                onPointerDown={(e) => (e as any).stopPropagation()}
+                                onPointerDown={stopAllPropagation}
                                 className="px-2 py-1 rounded bg-blue-600 dark:bg-blue-500 text-white text-xs hover:bg-blue-700 dark:hover:bg-blue-400"
                               >
                                 Edit
@@ -894,28 +1257,49 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 {/* Mobile Cards */}
                 <div className="md:hidden space-y-3">
                   {sortedSubscriptions.map((sub, idx) => (
-                    <div key={sub.id} className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-dark-border">
+                    <div
+                      key={sub.id}
+                      className="p-3 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-dark-border"
+                    >
                       <div className="flex justify-between items-start mb-2">
-                        <div className="text-xs text-gray-500 dark:text-dark-muted">#{idx + 1}</div>
+                        <div className="text-xs text-gray-500 dark:text-dark-muted">
+                          #{idx + 1}
+                        </div>
                       </div>
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-dark-muted">Date:</span>
-                          <span className="font-medium dark:text-dark-text">{formatDate(sub.date)}</span>
+                          <span className="text-gray-600 dark:text-dark-muted">
+                            Date:
+                          </span>
+                          <span className="font-medium dark:text-dark-text">
+                            {formatDate(sub.date)}
+                          </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-dark-muted">Amount:</span>
-                          <span className="font-semibold text-cyan-600 dark:text-cyan-400">{formatCurrency(sub.amount)}</span>
+                          <span className="text-gray-600 dark:text-dark-muted">
+                            Amount:
+                          </span>
+                          <span className="font-semibold text-cyan-600 dark:text-cyan-400">
+                            {formatCurrency(sub.amount)}
+                          </span>
                         </div>
                         {sub.late_fee && sub.late_fee > 0 && (
                           <div className="flex justify-between">
-                            <span className="text-gray-600 dark:text-dark-muted">Late Fee:</span>
-                            <span className="font-medium text-orange-600 dark:text-orange-400">{formatCurrency(sub.late_fee)}</span>
+                            <span className="text-gray-600 dark:text-dark-muted">
+                              Late Fee:
+                            </span>
+                            <span className="font-medium text-orange-600 dark:text-orange-400">
+                              {formatCurrency(sub.late_fee)}
+                            </span>
                           </div>
                         )}
                         <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-dark-muted">Receipt #:</span>
-                          <span className="font-medium dark:text-dark-text">{sub.receipt || '-'}</span>
+                          <span className="text-gray-600 dark:text-dark-muted">
+                            Receipt #:
+                          </span>
+                          <span className="font-medium dark:text-dark-text">
+                            {sub.receipt || "-"}
+                          </span>
                         </div>
                       </div>
                       <div className="flex gap-2 mt-3 pt-3 border-t dark:border-dark-border">
@@ -939,7 +1323,9 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 </div>
               </div>
             ) : (
-              <p className="text-gray-500 dark:text-dark-muted">No subscription records for this customer.</p>
+              <p className="text-gray-500 dark:text-dark-muted">
+                No subscription records for this customer.
+              </p>
             )}
           </GlassCard>
 
@@ -951,13 +1337,19 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           )}
 
           {/* Data Entries Section */}
-          <GlassCard className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border" disable3D>
+          <GlassCard
+            className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border"
+            disable3D
+          >
             <div className="mb-3 sm:mb-4">
               <h3 className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 text-base sm:text-2xl font-semibold text-pink-700 dark:text-pink-400">
                 <span>Expenditures</span>
                 <div className="ml-auto sm:ml-0 w-full sm:w-auto">
                   <button
-                    onClick={(e) => { e.stopPropagation(); setShowRecordDataEntry(true); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowRecordDataEntry(true);
+                    }}
                     className="w-full sm:w-auto px-3 py-2 sm:py-1 rounded bg-pink-600 text-white text-xs sm:text-sm hover:bg-pink-700 font-semibold"
                   >
                     Record Entry
@@ -979,24 +1371,34 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                     <div className="col-span-2 text-right">Actions</div>
                   </div>
                   {/* Rows */}
-                  {dataEntries.map(entry => (
+                  {dataEntries.map((entry) => (
                     <div
                       key={entry.id}
                       className="grid grid-cols-12 gap-4 px-4 py-2 text-sm items-start border-b border-pink-100 dark:border-pink-900/30 last:border-b-0 w-full"
                     >
-                      <div className="col-span-2 text-left text-gray-700 dark:text-dark-text">{formatDate(entry.date)}</div>
+                      <div className="col-span-2 text-left text-gray-700 dark:text-dark-text">
+                        {formatDate(entry.date)}
+                      </div>
                       <div className="col-span-2 text-center">
-                        {entry.type === 'credit' ? (
-                          <span className="inline-block px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full dark:bg-green-900/30 dark:text-green-400">Credit</span>
+                        {entry.type === "credit" ? (
+                          <span className="inline-block px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full dark:bg-green-900/30 dark:text-green-400">
+                            Credit
+                          </span>
                         ) : (
-                          <span className="inline-block px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full dark:bg-red-900/30 dark:text-red-400">Expenditure</span>
+                          <span className="inline-block px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full dark:bg-red-900/30 dark:text-red-400">
+                            Expenditure
+                          </span>
                         )}
                       </div>
-                      <div className={`col-span-2 font-bold text-right ${entry.type === 'credit' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
-                        {entry.type === 'credit' ? '+' : '-'}
+                      <div
+                        className={`col-span-2 font-bold text-right ${entry.type === "credit" ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}
+                      >
+                        {entry.type === "credit" ? "+" : "-"}
                         {formatCurrency(entry.amount)}
                       </div>
-                      <div className="col-span-2 text-center text-gray-600 dark:text-dark-muted">{entry.receipt_number}</div>
+                      <div className="col-span-2 text-center text-gray-600 dark:text-dark-muted">
+                        {entry.receipt_number}
+                      </div>
                       <div className="col-span-2 text-left text-gray-600 dark:text-dark-muted">
                         <div
                           ref={(el) => (noteRefs.current[entry.id] = el)}
@@ -1005,11 +1407,17 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                         >
                           <motion.p
                             initial="collapsed"
-                            animate={expandedNoteId === entry.id ? 'expanded' : 'collapsed'}
+                            animate={
+                              expandedNoteId === entry.id
+                                ? "expanded"
+                                : "collapsed"
+                            }
                             variants={noteVariants}
-                            className={expandedNoteId !== entry.id ? 'truncate' : ''}
+                            className={
+                              expandedNoteId !== entry.id ? "truncate" : ""
+                            }
                           >
-                            {entry.notes || '-'}
+                            {entry.notes || "-"}
                           </motion.p>
                         </div>
                       </div>
@@ -1044,36 +1452,59 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 {/* Mobile Cards View */}
                 <div className="md:hidden space-y-3">
                   {dataEntries.map((entry, idx) => (
-                    <div key={entry.id} className="p-3 bg-pink-50 dark:bg-pink-900/10 rounded-lg border border-pink-200 dark:border-pink-900/30">
+                    <div
+                      key={entry.id}
+                      className="p-3 bg-pink-50 dark:bg-pink-900/10 rounded-lg border border-pink-200 dark:border-pink-900/30"
+                    >
                       <div className="flex justify-between items-start mb-2">
-                        <div className="text-xs text-gray-500 dark:text-dark-muted">#{idx + 1}</div>
+                        <div className="text-xs text-gray-500 dark:text-dark-muted">
+                          #{idx + 1}
+                        </div>
                         <div>
-                          {entry.type === 'credit' ? (
-                            <span className="inline-block px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full dark:bg-green-900/30 dark:text-green-400">Credit</span>
+                          {entry.type === "credit" ? (
+                            <span className="inline-block px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full dark:bg-green-900/30 dark:text-green-400">
+                              Credit
+                            </span>
                           ) : (
-                            <span className="inline-block px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full dark:bg-red-900/30 dark:text-red-400">Expenditure</span>
+                            <span className="inline-block px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full dark:bg-red-900/30 dark:text-red-400">
+                              Expenditure
+                            </span>
                           )}
                         </div>
                       </div>
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-dark-muted">Date:</span>
-                          <span className="font-medium dark:text-dark-text">{formatDate(entry.date)}</span>
+                          <span className="text-gray-600 dark:text-dark-muted">
+                            Date:
+                          </span>
+                          <span className="font-medium dark:text-dark-text">
+                            {formatDate(entry.date)}
+                          </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-dark-muted">Amount:</span>
-                          <span className={`font-bold ${entry.type === 'credit' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
-                            {entry.type === 'credit' ? '+' : '-'}
+                          <span className="text-gray-600 dark:text-dark-muted">
+                            Amount:
+                          </span>
+                          <span
+                            className={`font-bold ${entry.type === "credit" ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}
+                          >
+                            {entry.type === "credit" ? "+" : "-"}
                             {formatCurrency(entry.amount)}
                           </span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-dark-muted">Receipt #:</span>
-                          <span className="font-medium dark:text-dark-text">{entry.receipt_number}</span>
+                          <span className="text-gray-600 dark:text-dark-muted">
+                            Receipt #:
+                          </span>
+                          <span className="font-medium dark:text-dark-text">
+                            {entry.receipt_number}
+                          </span>
                         </div>
                         {entry.notes && (
                           <div className="pt-2 border-t border-pink-200 dark:border-pink-900/30">
-                            <span className="text-gray-600 dark:text-dark-muted text-xs font-semibold">Notes:</span>
+                            <span className="text-gray-600 dark:text-dark-muted text-xs font-semibold">
+                              Notes:
+                            </span>
                             <div
                               ref={(el) => (noteRefs.current[entry.id] = el)}
                               onClick={() => handleNoteClick(entry.id)}
@@ -1081,9 +1512,13 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                             >
                               <motion.p
                                 initial="collapsed"
-                                animate={expandedNoteId === entry.id ? 'expanded' : 'collapsed'}
+                                animate={
+                                  expandedNoteId === entry.id
+                                    ? "expanded"
+                                    : "collapsed"
+                                }
                                 variants={noteVariants}
-                                className={`text-gray-700 dark:text-dark-text text-sm ${expandedNoteId !== entry.id ? 'line-clamp-2' : ''}`}
+                                className={`text-gray-700 dark:text-dark-text text-sm ${expandedNoteId !== entry.id ? "line-clamp-2" : ""}`}
                               >
                                 {entry.notes}
                               </motion.p>
@@ -1120,7 +1555,9 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 </div>
               </div>
             ) : (
-              <p className="text-gray-500 dark:text-dark-muted">No Expenditures for this customer</p>
+              <p className="text-gray-500 dark:text-dark-muted">
+                No Expenditures for this customer
+              </p>
             )}
           </GlassCard>
         </div>
@@ -1132,13 +1569,18 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               customer={customer}
               onClose={() => setShowRecordLoan(false)}
               hasOngoingLoan={hasOngoingLoan}
-              ongoingLoanId={loans.find(l => {
-                const loanInstallments = installmentsByLoanId.get(l.id) || [];
-                const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
-                const totalRepayable = l.original_amount + l.interest_amount;
-                const paymentPercentage = (amountPaid / totalRepayable) * 100;
-                return paymentPercentage < 80;
-              })?.id || ''}
+              ongoingLoanId={
+                loans.find((l) => {
+                  const loanInstallments = installmentsByLoanId.get(l.id) || [];
+                  const amountPaid = loanInstallments.reduce(
+                    (acc, inst) => acc + inst.amount,
+                    0,
+                  );
+                  const totalRepayable = l.original_amount + l.interest_amount;
+                  const paymentPercentage = (amountPaid / totalRepayable) * 100;
+                  return paymentPercentage < 80;
+                })?.id || ""
+              }
             />
           )}
 
@@ -1168,17 +1610,183 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           )}
         </AnimatePresence>
 
+        {/* Delete Error Display */}
+        <AnimatePresence>
+          {deleteError && (
+            <motion.div
+              className="fixed bottom-4 right-4 max-w-sm p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg shadow-lg z-50"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 text-red-600 dark:text-red-400">
+                  <svg
+                    className="w-5 h-5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                    Error deleting record
+                  </p>
+                  <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                    {deleteError}
+                  </p>
+                </div>
+                <motion.button
+                  onClick={() => setDeleteError(null)}
+                  className="flex-shrink-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Export Error Display */}
+        <AnimatePresence>
+          {exportError && (
+            <motion.div
+              className="fixed bottom-4 right-4 max-w-sm p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg shadow-lg z-50"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 text-red-600 dark:text-red-400">
+                  <svg
+                    className="w-5 h-5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                    Export failed
+                  </p>
+                  <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                    {exportError}
+                  </p>
+                </div>
+                <motion.button
+                  onClick={() => setExportError(null)}
+                  className="flex-shrink-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Export Success Display */}
+        <AnimatePresence>
+          {exportSuccess && (
+            <motion.div
+              className="fixed bottom-4 right-4 max-w-sm p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg shadow-lg z-50"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 text-green-600 dark:text-green-400">
+                  <svg
+                    className="w-5 h-5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                    Export successful
+                  </p>
+                  <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                    {exportSuccess}
+                  </p>
+                </div>
+                <motion.button
+                  onClick={() => setExportSuccess(null)}
+                  className="flex-shrink-0 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </motion.button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         {/* Delete Loan Confirmation Modal */}
         <DeleteConfirmationModal
           isOpen={!!deleteLoanTarget}
-          onClose={() => setDeleteLoanTarget(null)}
+          onClose={() => {
+            setDeleteLoanTarget(null);
+            setDeleteError(null);
+          }}
           onConfirm={confirmDeleteLoan}
           title="Move Loan to Trash?"
           message={
             <>
               Are you sure you want to move the loan from{" "}
               <span className="font-semibold dark:text-dark-text">
-                {deleteLoanTarget ? formatDate(deleteLoanTarget.payment_date) : ""}
+                {deleteLoanTarget
+                  ? formatDate(deleteLoanTarget.payment_date)
+                  : ""}
               </span>{" "}
               to trash? You can restore it later from the Trash page.
             </>
@@ -1190,7 +1798,10 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
         {/* Delete Subscription Confirmation Modal */}
         <DeleteConfirmationModal
           isOpen={!!deleteSubTarget}
-          onClose={() => setDeleteSubTarget(null)}
+          onClose={() => {
+            setDeleteSubTarget(null);
+            setDeleteError(null);
+          }}
           onConfirm={confirmDeleteSubscription}
           title="Delete Subscription?"
           message={
@@ -1198,7 +1809,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               Are you sure you want to delete the subscription from{" "}
               <span className="font-semibold dark:text-dark-text">
                 {deleteSubTarget ? formatDate(deleteSubTarget.date) : ""}
-              </span>?
+              </span>
+              ?
             </>
           }
           isDeleting={false}
@@ -1208,7 +1820,10 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
         {/* Delete Installment Confirmation Modal */}
         <DeleteConfirmationModal
           isOpen={!!deleteInstTarget}
-          onClose={() => setDeleteInstTarget(null)}
+          onClose={() => {
+            setDeleteInstTarget(null);
+            setDeleteError(null);
+          }}
           onConfirm={confirmDeleteInstallment}
           title="Delete Installment?"
           message={
@@ -1216,7 +1831,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               Are you sure you want to delete installment{" "}
               <span className="font-semibold dark:text-dark-text">
                 #{deleteInstTarget?.installment_number}
-              </span>?
+              </span>
+              ?
             </>
           }
           isDeleting={false}
@@ -1226,15 +1842,21 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
         {/* Delete Data Entry Confirmation Modal */}
         <DeleteConfirmationModal
           isOpen={!!deleteDataEntryTarget}
-          onClose={() => setDeleteDataEntryTarget(null)}
+          onClose={() => {
+            setDeleteDataEntryTarget(null);
+            setDeleteError(null);
+          }}
           onConfirm={confirmDeleteDataEntry}
           title="Delete Data Entry?"
           message={
             <>
               Are you sure you want to delete the data entry from{" "}
               <span className="font-semibold dark:text-dark-text">
-                {deleteDataEntryTarget ? formatDate(deleteDataEntryTarget.date) : ""}
-              </span>?
+                {deleteDataEntryTarget
+                  ? formatDate(deleteDataEntryTarget.date)
+                  : ""}
+              </span>
+              ?
             </>
           }
           isDeleting={false}
@@ -1242,7 +1864,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
         />
       </motion.div>
     </motion.div>,
-    document.documentElement
+    document.documentElement,
   );
 };
 

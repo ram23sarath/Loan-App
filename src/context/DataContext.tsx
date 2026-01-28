@@ -7,7 +7,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import { supabase } from "../src/lib/supabase";
+import { supabase } from "../lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 import type {
   Customer,

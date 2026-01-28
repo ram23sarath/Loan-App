@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { supabase } from '../../../src/lib/supabase';
+import { supabase } from '../../../lib/supabase';
 
 export interface Notification {
     id: number | string;

@@ -2,7 +2,7 @@
 @import "tailwindcss";
 
 /* Tailwind v4: Source the config and enable class-based dark mode */
-@config "./tailwind.config.js";
+@config "../tailwind.config.js";
 /* stylelint-enable at-rule-no-unknown */
 
 /* Dark mode background transition */

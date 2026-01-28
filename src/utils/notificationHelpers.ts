@@ -1,4 +1,4 @@
-import { supabase } from '../src/lib/supabase';
+import { supabase } from '../lib/supabase';
 import type { Installment, Loan, Customer } from '../types';
 
 export type NotificationType = 'backup' | 'user_created' | 'seniority_request' | 'installment_default' | 'system';

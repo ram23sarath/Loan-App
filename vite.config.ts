@@ -10,7 +10,7 @@ export default defineConfig({
   //   VITE_SUPABASE_ANON_KEY - Your Supabase anon/public key
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, '.'),
+      '@': path.resolve(__dirname, 'src'),
     }
   },
   server: {

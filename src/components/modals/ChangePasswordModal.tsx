@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { supabase } from '../../src/lib/supabase';
+import { supabase } from '../../lib/supabase';
 import Toast from '../ui/Toast';
 
 interface ChangePasswordModalProps {

@@ -14,7 +14,7 @@ import {
   calculateSummaryData,
   expenseSubtypes,
 } from "../../utils/summaryCalculations";
-import { supabase } from "../../src/lib/supabase";
+import { supabase } from "../../lib/supabase";
 
 import type {
   LoanWithCustomer,

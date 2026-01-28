@@ -77,13 +77,13 @@ html[data-theme-transition="to-dark"]::view-transition-old(root) {
 
 html[data-theme-transition="to-dark"]::view-transition-new(root) {
   z-index: 9999;
-  animation: sphere-reveal 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: sphere-reveal 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 /* Going TO light mode: dark shrinks to reveal light underneath */
 html[data-theme-transition="to-light"]::view-transition-old(root) {
   z-index: 9999;
-  animation: sphere-shrink 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation: sphere-shrink 1.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 html[data-theme-transition="to-light"]::view-transition-new(root) {
@@ -120,7 +120,7 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
   z-index: 99999;
   pointer-events: none;
   clip-path: circle(0px at var(--theme-toggle-x, var(--x, 50%)) var(--theme-toggle-y, var(--y, 50%)));
-  transition: clip-path 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: clip-path 1.5s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .theme-transition-overlay.animate {

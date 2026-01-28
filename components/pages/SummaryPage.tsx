@@ -4,6 +4,7 @@ import { motion, useSpring, useTransform } from "framer-motion";
 
 import FYBreakdownModal from "../modals/FYBreakdownModal";
 import PageWrapper from "../ui/PageWrapper";
+import Toast from "../ui/Toast";
 import { useTheme } from "../../context/ThemeContext";
 import { MoonIcon, SunIcon, FileDownIcon } from "../../constants";
 import { useData } from "../../context/DataContext";
@@ -21,7 +22,13 @@ import type {
   Installment,
   DataEntry,
   Customer,
+  Loan,
+  Subscription,
 } from "../../types";
+import type {
+  PostgrestFilterBuilder,
+  PostgrestQueryBuilder,
+} from "@supabase/postgrest-js";
 
 const getButtonCenter = (button: HTMLElement) => {
   const rect = button.getBoundingClientRect();
@@ -34,7 +41,7 @@ const getButtonCenter = (button: HTMLElement) => {
 const AnimatedNumber = ({ value }: { value: number }) => {
   const spring = useSpring(0, { mass: 0.8, stiffness: 75, damping: 15 });
   const display = useTransform(spring, (current) =>
-    formatCurrencyIN(Math.round(current))
+    formatCurrencyIN(Math.round(current)),
   );
 
   useEffect(() => {
@@ -59,10 +66,15 @@ const SummaryPage = () => {
 
   // Export menu state
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastShow, setToastShow] = useState(false);
+  const [toastType, setToastType] = useState<"error" | "success" | "info">(
+    "error",
+  );
 
   // For scoped customers, fetch unfiltered data for summary calculations
   const [loansForSummary, setLoansForSummary] = useState<LoanWithCustomer[]>(
-    []
+    [],
   );
   const [installmentsForSummary, setInstallmentsForSummary] = useState<
     Installment[]
@@ -78,32 +90,44 @@ const SummaryPage = () => {
     const fetchUnfilteredData = async () => {
       if (isScopedCustomer) {
         try {
-          const fetchAll = async (
-            table: string,
-            queryModifier?: (q: any) => any
-          ) => {
-            let allData: any[] = [];
+          type TableName =
+            | "loans"
+            | "subscriptions"
+            | "data_entries"
+            | "installments";
+
+          const fetchAll = async <T,>(
+            table: TableName,
+            queryModifier?: (
+              q:
+                | PostgrestFilterBuilder<any, any, any, any>
+                | PostgrestQueryBuilder<any, any, any>,
+            ) =>
+              | PostgrestFilterBuilder<any, any, any, any>
+              | PostgrestQueryBuilder<any, any, any>,
+          ): Promise<T[]> => {
+            let allData: T[] = [];
             let from = 0;
             const batchSize = 1000;
             let hasMore = true;
             while (hasMore) {
-              let query = supabase
-                .from(table as any)
+              let query: any = supabase
+                .from(table)
                 .select(
                   table === "loans" || table === "subscriptions"
                     ? "*, customers(name, phone)"
-                    : "*"
+                    : "*",
                 );
               if (queryModifier) query = queryModifier(query);
 
               const { data, error } = await query.range(
                 from,
-                from + batchSize - 1
+                from + batchSize - 1,
               );
               if (error) throw error;
 
               if (data && data.length > 0) {
-                allData = [...allData, ...data];
+                allData = [...allData, ...(data as T[])];
                 from += batchSize;
                 hasMore = data.length === batchSize;
               } else {
@@ -115,16 +139,16 @@ const SummaryPage = () => {
 
           const [loansData, subsData, entriesData, installmentsData] =
             await Promise.all([
-              fetchAll("loans"),
-              fetchAll("subscriptions"),
-              fetchAll("data_entries"),
-              fetchAll("installments"),
+              fetchAll<LoanWithCustomer>("loans"),
+              fetchAll<SubscriptionWithCustomer>("subscriptions"),
+              fetchAll<DataEntry>("data_entries"),
+              fetchAll<Installment>("installments"),
             ]);
 
-          setLoansForSummary(loansData as LoanWithCustomer[]);
-          setSubscriptionsForSummary(subsData as SubscriptionWithCustomer[]);
-          setDataEntriesForSummary(entriesData as DataEntry[]);
-          setInstallmentsForSummary(installmentsData as Installment[]);
+          setLoansForSummary(loansData);
+          setSubscriptionsForSummary(subsData);
+          setDataEntriesForSummary(entriesData);
+          setInstallmentsForSummary(installmentsData);
         } catch (error) {
           console.error("Error fetching unfiltered data for summary:", error);
         }
@@ -198,13 +222,13 @@ const SummaryPage = () => {
       return Array.from(new Set(fallback)).sort((a, b) => b - a);
     }
     const rawMinYear = Math.min(
-      ...allDates.map((d) => getFYStartYearForDate(d))
+      ...allDates.map((d) => getFYStartYearForDate(d)),
     );
     const minYear = Math.max(2013, rawMinYear);
     // Ensure the current FY (based on today's date) is always available even if no data exists yet
     const maxYear = Math.max(
       ...allDates.map((d) => getFYStartYearForDate(d)),
-      defaultFYStart
+      defaultFYStart,
     );
     const opts: number[] = [];
     for (let y = maxYear; y >= minYear; y--) opts.push(y);
@@ -242,7 +266,7 @@ const SummaryPage = () => {
   // --- Data Calculation (overall totals) using shared utility ---
   const summaryData = useMemo(
     () => calculateSummaryData(loans, installments, subscriptions, dataEntries),
-    [loans, installments, subscriptions, dataEntries]
+    [loans, installments, subscriptions, dataEntries],
   );
 
   const {
@@ -264,37 +288,6 @@ const SummaryPage = () => {
   const totalCollectedWithoutPrincipal =
     totalSubscriptionCollected + totalInterestCollected + totalLateFeeCollected;
 
-  // Debug logging for verification
-  useEffect(() => {
-    console.log("=== SUMMARY VALUES DEBUG ===");
-    console.log("Total Subscription Collected:", totalSubscriptionCollected);
-    console.log("Total Interest Collected:", totalInterestCollected);
-    console.log("Total Late Fee Collected:", totalLateFeeCollected);
-    console.log(
-      "Total Collected (without Principal):",
-      totalCollectedWithoutPrincipal
-    );
-    console.log("=== SOURCE DATA ===");
-    console.log(
-      "Subscriptions count:",
-      subscriptions.length,
-      "Sum:",
-      subscriptions.reduce((a, s) => a + (s.amount || 0), 0)
-    );
-    console.log("Installments count:", installments.length);
-    console.log("Loans count:", loans.length);
-    console.log("Data Entries count:", dataEntries.length);
-  }, [
-    totalSubscriptionCollected,
-    totalInterestCollected,
-    totalLateFeeCollected,
-    totalCollectedWithoutPrincipal,
-    subscriptions,
-    installments,
-    loans,
-    dataEntries,
-  ]);
-
   // --- Data Calculation (financial year filtered totals) ---
   const { start: fyStart, end: fyEnd } = fyRange;
 
@@ -309,7 +302,7 @@ const SummaryPage = () => {
   const fySubscriptions = subscriptions.filter((s) => within(s.date));
   const fySubscriptionCollected = fySubscriptions.reduce(
     (acc, s) => acc + (s.amount || 0),
-    0
+    0,
   );
 
   // Subscription Return in FY from dataEntries
@@ -326,7 +319,7 @@ const SummaryPage = () => {
   ];
   const fyExpensesBySubtype: Record<string, number> = fyExpenseSubtypes.reduce(
     (acc, s) => ({ ...acc, [s]: 0 }),
-    {} as Record<string, number>
+    {} as Record<string, number>,
   );
 
   dataEntries.forEach((e) => {
@@ -342,7 +335,7 @@ const SummaryPage = () => {
   });
   const fyExpensesTotal = Object.values(fyExpensesBySubtype).reduce(
     (a, b) => a + b,
-    0
+    0,
   );
 
   // Late fees in FY (installments + subscriptions)
@@ -366,7 +359,7 @@ const SummaryPage = () => {
     const principalUntilEnd = Math.min(paidUntilEnd, loan.original_amount || 0);
     const principalBeforeStart = Math.min(
       paidBeforeStart,
-      loan.original_amount || 0
+      loan.original_amount || 0,
     );
     return acc + Math.max(0, principalUntilEnd - principalBeforeStart);
   }, 0);
@@ -391,15 +384,15 @@ const SummaryPage = () => {
       0,
       Math.min(
         paidUntilEnd - (loan.original_amount || 0),
-        loan.interest_amount || 0
-      )
+        loan.interest_amount || 0,
+      ),
     );
     const interestBeforeStart = Math.max(
       0,
       Math.min(
         paidBeforeStart - (loan.original_amount || 0),
-        loan.interest_amount || 0
-      )
+        loan.interest_amount || 0,
+      ),
     );
     return acc + Math.max(0, interestUntilEnd - interestBeforeStart);
   }, 0);
@@ -418,7 +411,7 @@ const SummaryPage = () => {
   const BREAKDOWN_PAGE_SIZE = 10;
 
   const openBreakdown = (
-    type: "subscriptions" | "interest" | "latefees" | "principal" | "total"
+    type: "subscriptions" | "interest" | "latefees" | "principal" | "total",
   ) => {
     setBreakdownType(type);
     setBreakdownPage(1);
@@ -479,7 +472,7 @@ const SummaryPage = () => {
       loans.forEach((loan) => {
         // Sort installments by date to track cumulative payments correctly
         const allInsts = (localInstallmentsByLoanId.get(loan.id) || []).sort(
-          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
         );
 
         let amountPaidSoFar = 0;
@@ -536,26 +529,26 @@ const SummaryPage = () => {
             .reduce((sum, i) => sum + (i.amount || 0), 0);
           const principalUntilEnd = Math.min(
             paidUntilEnd,
-            loan.original_amount || 0
+            loan.original_amount || 0,
           );
           const principalBeforeStart = Math.min(
             paidBeforeStart,
-            loan.original_amount || 0
+            loan.original_amount || 0,
           );
           const principalDuringFY = Math.max(
             0,
-            principalUntilEnd - principalBeforeStart
+            principalUntilEnd - principalBeforeStart,
           );
           const remainingAfterFY = Math.max(
             0,
-            (loan.original_amount || 0) - principalUntilEnd
+            (loan.original_amount || 0) - principalUntilEnd,
           );
 
           // Representative date: latest installment date within FY if present, otherwise null
           const latestInFY = instsInFY.length
             ? instsInFY.reduce((a, b) =>
-              new Date(a.date) > new Date(b.date) ? a : b
-            ).date
+                new Date(a.date) > new Date(b.date) ? a : b,
+              ).date
             : null;
 
           return {
@@ -565,7 +558,7 @@ const SummaryPage = () => {
             receipt: loan.receipt || null,
             customer: loan.customers?.name || "",
             notes: `Principal recovered (FY): ${formatCurrencyIN(
-              principalDuringFY
+              principalDuringFY,
             )}`,
             remaining: remainingAfterFY,
             _principalDuringFY: principalDuringFY,
@@ -648,7 +641,7 @@ const SummaryPage = () => {
     if (!isPaginatedBreakdown) return;
     const maxPage = Math.max(
       1,
-      Math.ceil(breakdownItems.length / BREAKDOWN_PAGE_SIZE)
+      Math.ceil(breakdownItems.length / BREAKDOWN_PAGE_SIZE),
     );
     setBreakdownPage((prev) => Math.min(prev, maxPage));
   }, [breakdownItems, isPaginatedBreakdown]);
@@ -656,7 +649,7 @@ const SummaryPage = () => {
   const handleBreakdownPageChange = (page: number) => {
     const maxPage = Math.max(
       1,
-      Math.ceil(breakdownItems.length / BREAKDOWN_PAGE_SIZE)
+      Math.ceil(breakdownItems.length / BREAKDOWN_PAGE_SIZE),
     );
     const clamped = Math.min(Math.max(page, 1), maxPage);
     setBreakdownPage(clamped);
@@ -665,10 +658,10 @@ const SummaryPage = () => {
   const breakdownPagination =
     isPaginatedBreakdown && breakdownItems.length > BREAKDOWN_PAGE_SIZE
       ? {
-        currentPage: breakdownPage,
-        totalPages: Math.ceil(breakdownItems.length / BREAKDOWN_PAGE_SIZE),
-        onPageChange: handleBreakdownPageChange,
-      }
+          currentPage: breakdownPage,
+          totalPages: Math.ceil(breakdownItems.length / BREAKDOWN_PAGE_SIZE),
+          onPageChange: handleBreakdownPageChange,
+        }
       : undefined;
 
   const collectedBreakdownCards = [
@@ -685,209 +678,245 @@ const SummaryPage = () => {
 
   // --- Export Functions (xlsx loaded dynamically to reduce bundle size) ---
   const handleExportSubscriptions = async () => {
-    const XLSX = await import("xlsx");
-    const subsForExport = subscriptions.map((sub) => ({
-      "Customer Name": sub.customers?.name ?? "Unknown",
-      "Customer Phone": sub.customers?.phone ?? "N/A",
-      Amount: sub.amount,
-      Receipt: sub.receipt,
-      Date: formatDate(sub.date),
-    }));
-    const ws = XLSX.utils.json_to_sheet(subsForExport);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Subscriptions");
-    XLSX.writeFile(wb, "Subscriptions_Data.xlsx");
-    setExportMenuOpen(false);
+    try {
+      const XLSX = await import("xlsx");
+      const subsForExport = subscriptions.map((sub) => ({
+        "Customer Name": sub.customers?.name ?? "Unknown",
+        "Customer Phone": sub.customers?.phone ?? "N/A",
+        Amount: sub.amount,
+        Receipt: sub.receipt,
+        Date: formatDate(sub.date),
+      }));
+      const ws = XLSX.utils.json_to_sheet(subsForExport);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Subscriptions");
+      XLSX.writeFile(wb, "Subscriptions_Data.xlsx");
+      setExportMenuOpen(false);
+    } catch (error) {
+      console.error("Error exporting subscriptions:", error);
+      setToastMessage("Failed to export subscriptions. Please try again.");
+      setToastType("error");
+      setToastShow(true);
+    }
   };
 
   const handleExportComprehensive = async () => {
-    const XLSX = await import("xlsx");
-    const customerSummaryData = contextCustomers.map((customer) => {
-      const customerLoans = loans.filter((l) => l.customer_id === customer.id);
-      const customerSubscriptions = subscriptions.filter(
-        (s) => s.customer_id === customer.id
-      );
-      const originalAmount = customerLoans.reduce(
-        (acc, loan) => acc + loan.original_amount,
-        0
-      );
-      const interestAmount = customerLoans.reduce(
-        (acc, loan) => acc + loan.interest_amount,
-        0
-      );
-      const totalAmount = originalAmount + interestAmount;
-      const subscriptionAmount = customerSubscriptions.reduce(
-        (acc, sub) => acc + sub.amount,
-        0
-      );
-      return {
-        Name: customer.name,
-        "Phone Number": customer.phone,
-        "Original Amount": originalAmount,
-        "Interest Amount": interestAmount,
-        "Total Amount": totalAmount,
-        "Subscription Amount": subscriptionAmount,
-      };
-    });
+    try {
+      const XLSX = await import("xlsx");
+      const customerSummaryData = contextCustomers.map((customer) => {
+        const customerLoans = loans.filter(
+          (l) => l.customer_id === customer.id,
+        );
+        const customerSubscriptions = subscriptions.filter(
+          (s) => s.customer_id === customer.id,
+        );
+        const originalAmount = customerLoans.reduce(
+          (acc, loan) => acc + loan.original_amount,
+          0,
+        );
+        const interestAmount = customerLoans.reduce(
+          (acc, loan) => acc + loan.interest_amount,
+          0,
+        );
+        const totalAmount = originalAmount + interestAmount;
+        const subscriptionAmount = customerSubscriptions.reduce(
+          (acc, sub) => acc + sub.amount,
+          0,
+        );
+        return {
+          Name: customer.name,
+          "Phone Number": customer.phone,
+          "Original Amount": originalAmount,
+          "Interest Amount": interestAmount,
+          "Total Amount": totalAmount,
+          "Subscription Amount": subscriptionAmount,
+        };
+      });
 
-    const allLoansData = loans.map((loan) => {
-      const loanInstallments = (
-        localInstallmentsByLoanId.get(loan.id) || []
-      ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const allLoansData = loans.map((loan) => {
+        const loanInstallments = (
+          localInstallmentsByLoanId.get(loan.id) || []
+        ).sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+        );
 
-      let amountPaid = 0;
-      let principalPaid = 0;
-      let interestCollected = 0;
+        let amountPaid = 0;
+        let principalPaid = 0;
+        let interestCollected = 0;
 
-      for (const inst of loanInstallments) {
-        amountPaid += inst.amount;
-        if (principalPaid < loan.original_amount) {
-          const principalPortion = Math.min(
-            inst.amount,
-            loan.original_amount - principalPaid
-          );
-          principalPaid += principalPortion;
-          const interestPortion = inst.amount - principalPortion;
-          interestCollected += interestPortion;
-        } else {
-          interestCollected += inst.amount;
+        for (const inst of loanInstallments) {
+          amountPaid += inst.amount;
+          if (principalPaid < loan.original_amount) {
+            const principalPortion = Math.min(
+              inst.amount,
+              loan.original_amount - principalPaid,
+            );
+            principalPaid += principalPortion;
+            const interestPortion = inst.amount - principalPortion;
+            interestCollected += interestPortion;
+          } else {
+            interestCollected += inst.amount;
+          }
         }
-      }
 
-      const totalRepayable = loan.original_amount + loan.interest_amount;
-      const isPaidOff = amountPaid >= totalRepayable;
+        const totalRepayable = loan.original_amount + loan.interest_amount;
+        const isPaidOff = amountPaid >= totalRepayable;
 
-      return {
-        "Loan ID": loan.id,
-        "Customer Name": loan.customers?.name ?? "N/A",
-        "Original Amount": loan.original_amount,
-        "Interest Amount": loan.interest_amount,
-        "Total Repayable": totalRepayable,
-        "Amount Paid": amountPaid,
-        "Principal Paid": principalPaid,
-        "Interest Collected": interestCollected,
-        Balance: totalRepayable - amountPaid,
-        "Loan Date": loan.payment_date,
-        Installments: `${loanInstallments.length} / ${loan.total_instalments}`,
-        Status: isPaidOff ? "Paid Off" : "In Progress",
-      };
-    });
+        return {
+          "Loan ID": loan.id,
+          "Customer Name": loan.customers?.name ?? "N/A",
+          "Original Amount": loan.original_amount,
+          "Interest Amount": loan.interest_amount,
+          "Total Repayable": totalRepayable,
+          "Amount Paid": amountPaid,
+          "Principal Paid": principalPaid,
+          "Interest Collected": interestCollected,
+          Balance: totalRepayable - amountPaid,
+          "Loan Date": loan.payment_date,
+          Installments: `${loanInstallments.length} / ${loan.total_instalments}`,
+          Status: isPaidOff ? "Paid Off" : "In Progress",
+        };
+      });
 
-    const allSubscriptionsData = subscriptions.map((sub) => ({
-      "Subscription ID": sub.id,
-      "Customer Name": sub.customers?.name ?? "N/A",
-      Amount: sub.amount,
-      Date: sub.date,
-      Receipt: sub.receipt,
-    }));
+      const allSubscriptionsData = subscriptions.map((sub) => ({
+        "Subscription ID": sub.id,
+        "Customer Name": sub.customers?.name ?? "N/A",
+        Amount: sub.amount,
+        Date: sub.date,
+        Receipt: sub.receipt,
+      }));
 
-    const allInstallmentsData = installments.map((inst) => {
-      const parentLoan = loans.find((l) => l.id === inst.loan_id);
-      return {
-        "Installment ID": inst.id,
-        "Loan ID": inst.loan_id,
-        "Customer Name": parentLoan?.customers?.name ?? "N/A",
-        "Installment Number": inst.installment_number,
-        "Amount Paid": inst.amount,
-        "Payment Date": inst.date,
-        "Receipt Number": inst.receipt_number,
-      };
-    });
+      const allInstallmentsData = installments.map((inst) => {
+        const parentLoan = loans.find((l) => l.id === inst.loan_id);
+        return {
+          "Installment ID": inst.id,
+          "Loan ID": inst.loan_id,
+          "Customer Name": parentLoan?.customers?.name ?? "N/A",
+          "Installment Number": inst.installment_number,
+          "Amount Paid": inst.amount,
+          "Payment Date": inst.date,
+          "Receipt Number": inst.receipt_number,
+        };
+      });
 
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.json_to_sheet(customerSummaryData),
-      "Customer Summary"
-    );
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.json_to_sheet(allLoansData),
-      "All Loans"
-    );
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.json_to_sheet(allSubscriptionsData),
-      "All Subscriptions"
-    );
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.json_to_sheet(allInstallmentsData),
-      "All Installments"
-    );
-    XLSX.writeFile(wb, "Comprehensive_Data_Report.xlsx");
-    setExportMenuOpen(false);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet(customerSummaryData),
+        "Customer Summary",
+      );
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet(allLoansData),
+        "All Loans",
+      );
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet(allSubscriptionsData),
+        "All Subscriptions",
+      );
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet(allInstallmentsData),
+        "All Installments",
+      );
+      XLSX.writeFile(wb, "Comprehensive_Data_Report.xlsx");
+      setExportMenuOpen(false);
+    } catch (error) {
+      console.error("Error exporting comprehensive report:", error);
+      setToastMessage(
+        "Failed to export comprehensive report. Please try again.",
+      );
+      setToastType("error");
+      setToastShow(true);
+    }
   };
 
   const handleExportLoans = async () => {
-    const XLSX = await import("xlsx");
-    const loansData = loans.map((loan) => {
-      const loanInstallments = (
-        localInstallmentsByLoanId.get(loan.id) || []
-      ).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    try {
+      const XLSX = await import("xlsx");
+      const loansData = loans.map((loan) => {
+        const loanInstallments = (
+          localInstallmentsByLoanId.get(loan.id) || []
+        ).sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+        );
 
-      let amountPaid = 0;
-      let principalPaid = 0;
-      let interestCollected = 0;
+        let amountPaid = 0;
+        let principalPaid = 0;
+        let interestCollected = 0;
 
-      for (const inst of loanInstallments) {
-        amountPaid += inst.amount;
-        if (principalPaid < loan.original_amount) {
-          const principalPortion = Math.min(
-            inst.amount,
-            loan.original_amount - principalPaid
-          );
-          principalPaid += principalPortion;
-          const interestPortion = inst.amount - principalPortion;
-          interestCollected += interestPortion;
-        } else {
-          interestCollected += inst.amount;
+        for (const inst of loanInstallments) {
+          amountPaid += inst.amount;
+          if (principalPaid < loan.original_amount) {
+            const principalPortion = Math.min(
+              inst.amount,
+              loan.original_amount - principalPaid,
+            );
+            principalPaid += principalPortion;
+            const interestPortion = inst.amount - principalPortion;
+            interestCollected += interestPortion;
+          } else {
+            interestCollected += inst.amount;
+          }
         }
-      }
 
-      const totalRepayable = loan.original_amount + loan.interest_amount;
-      const isPaidOff = amountPaid >= totalRepayable;
+        const totalRepayable = loan.original_amount + loan.interest_amount;
+        const isPaidOff = amountPaid >= totalRepayable;
 
-      return {
-        "Customer Name": loan.customers?.name ?? "N/A",
-        "Customer Phone": loan.customers?.phone ?? "N/A",
-        "Original Amount": loan.original_amount,
-        "Interest Amount": loan.interest_amount,
-        "Total Repayable": totalRepayable,
-        "Amount Paid": amountPaid,
-        "Principal Paid": principalPaid,
-        "Interest Collected": interestCollected,
-        Balance: totalRepayable - amountPaid,
-        "Loan Date": formatDate(loan.payment_date),
-        Installments: `${loanInstallments.length} / ${loan.total_instalments}`,
-        Status: isPaidOff ? "Paid Off" : "In Progress",
-      };
-    });
-    const ws = XLSX.utils.json_to_sheet(loansData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Loans");
-    XLSX.writeFile(wb, "Loans_Data.xlsx");
-    setExportMenuOpen(false);
+        return {
+          "Customer Name": loan.customers?.name ?? "N/A",
+          "Customer Phone": loan.customers?.phone ?? "N/A",
+          "Original Amount": loan.original_amount,
+          "Interest Amount": loan.interest_amount,
+          "Total Repayable": totalRepayable,
+          "Amount Paid": amountPaid,
+          "Principal Paid": principalPaid,
+          "Interest Collected": interestCollected,
+          Balance: totalRepayable - amountPaid,
+          "Loan Date": formatDate(loan.payment_date),
+          Installments: `${loanInstallments.length} / ${loan.total_instalments}`,
+          Status: isPaidOff ? "Paid Off" : "In Progress",
+        };
+      });
+      const ws = XLSX.utils.json_to_sheet(loansData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Loans");
+      XLSX.writeFile(wb, "Loans_Data.xlsx");
+      setExportMenuOpen(false);
+    } catch (error) {
+      console.error("Error exporting loans:", error);
+      setToastMessage("Failed to export loans. Please try again.");
+      setToastType("error");
+      setToastShow(true);
+    }
   };
 
   const handleExportSeniority = async () => {
-    const XLSX = await import("xlsx");
-    const seniorityData = seniorityList.map((item, index) => ({
-      Position: index + 1,
-      "Customer Name": item.customers?.name ?? "N/A",
-      "Customer Phone": item.customers?.phone ?? "N/A",
-      "Station Name": item.station_name ?? "N/A",
-      "Loan Type": item.loan_type ?? "N/A",
-      "Request Date": item.loan_request_date
-        ? formatDate(item.loan_request_date)
-        : "N/A",
-      "Added Date": formatDate(item.created_at),
-    }));
-    const ws = XLSX.utils.json_to_sheet(seniorityData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Seniority List");
-    XLSX.writeFile(wb, "Seniority_List.xlsx");
-    setExportMenuOpen(false);
+    try {
+      const XLSX = await import("xlsx");
+      const seniorityData = seniorityList.map((item, index) => ({
+        Position: index + 1,
+        "Customer Name": item.customers?.name ?? "N/A",
+        "Customer Phone": item.customers?.phone ?? "N/A",
+        "Station Name": item.station_name ?? "N/A",
+        "Loan Type": item.loan_type ?? "N/A",
+        "Request Date": item.loan_request_date
+          ? formatDate(item.loan_request_date)
+          : "N/A",
+        "Added Date": formatDate(item.created_at),
+      }));
+      const ws = XLSX.utils.json_to_sheet(seniorityData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Seniority List");
+      XLSX.writeFile(wb, "Seniority_List.xlsx");
+      setExportMenuOpen(false);
+    } catch (error) {
+      console.error("Error exporting seniority list:", error);
+      setToastMessage("Failed to export seniority list. Please try again.");
+      setToastType("error");
+      setToastShow(true);
+    }
   };
 
   // --- Animation Variants ---
@@ -958,8 +987,9 @@ const SummaryPage = () => {
                     <FileDownIcon className="w-5 h-5" />
                     <span className="hidden sm:inline">Export</span>
                     <svg
-                      className={`w-4 h-4 transition-transform ${exportMenuOpen ? "rotate-180" : ""
-                        }`}
+                      className={`w-4 h-4 transition-transform ${
+                        exportMenuOpen ? "rotate-180" : ""
+                      }`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -1019,28 +1049,30 @@ const SummaryPage = () => {
 
           {/* Net Total Bar - Full Width on Top */}
           <motion.div
-            className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 dark:from-emerald-600 dark:to-teal-600 rounded-2xl p-6 shadow-lg mb-6"
+            className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 dark:from-emerald-600 dark:to-teal-600 rounded-2xl p-4 sm:p-6 shadow-lg mb-6"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: "spring", stiffness: 100, damping: 15 }}
             whileHover={{ scale: 1.01 }}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/20 text-white font-bold text-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                <div className="inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 text-white font-bold text-lg sm:text-xl flex-shrink-0">
                   =
                 </div>
-                <div>
-                  <div className="text-lg font-semibold text-white/90 uppercase tracking-wide">
+                <div className="min-w-0">
+                  <div className="text-base sm:text-lg font-semibold text-white/90 uppercase tracking-wide truncate">
                     Net Total
                   </div>
-                  <div className="text-sm text-white/70">
+                  <div className="text-xs sm:text-sm text-white/70 truncate">
                     Total Collected - Expenses
                   </div>
                 </div>
               </div>
-              <div className="text-4xl font-bold text-white">
-                <AnimatedNumber value={totalCollectedWithoutPrincipal - totalExpenses} />
+              <div className="text-2xl sm:text-4xl font-bold text-white flex-shrink-0">
+                <AnimatedNumber
+                  value={totalCollectedWithoutPrincipal - totalExpenses}
+                />
               </div>
             </div>
           </motion.div>
@@ -1143,10 +1175,11 @@ const SummaryPage = () => {
                       Balance
                     </div>
                     <div
-                      className={`text-sm font-bold ${subscriptionBalance < 0
-                        ? "text-red-600 dark:text-red-400"
-                        : "text-cyan-800 dark:text-cyan-200"
-                        }`}
+                      className={`text-sm font-bold ${
+                        subscriptionBalance < 0
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-cyan-800 dark:text-cyan-200"
+                      }`}
                     >
                       <AnimatedNumber value={subscriptionBalance} />
                     </div>
@@ -1188,10 +1221,11 @@ const SummaryPage = () => {
                       Balance
                     </div>
                     <div
-                      className={`text-sm font-bold ${loanBalance < 0
-                        ? "text-red-600 dark:text-red-400"
-                        : "text-blue-800 dark:text-blue-200"
-                        }`}
+                      className={`text-sm font-bold ${
+                        loanBalance < 0
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-blue-800 dark:text-blue-200"
+                      }`}
                     >
                       <AnimatedNumber value={loanBalance} />
                     </div>
@@ -1248,7 +1282,7 @@ const SummaryPage = () => {
                           <AnimatedNumber value={(amt as number) || 0} />
                         </div>
                       </div>
-                    )
+                    ),
                   )}
                 </div>
               </div>
@@ -1278,8 +1312,9 @@ const SummaryPage = () => {
                     >
                       <span>{fyLabel(selectedFYStart)}</span>
                       <svg
-                        className={`w-4 h-4 ml-2 transition-transform ${fyDropdownOpen ? "rotate-180" : ""
-                          }`}
+                        className={`w-4 h-4 ml-2 transition-transform ${
+                          fyDropdownOpen ? "rotate-180" : ""
+                        }`}
                         fill="none"
                         stroke="currentColor"
                         strokeWidth="2"
@@ -1306,10 +1341,11 @@ const SummaryPage = () => {
                                 setFyDropdownOpen(false);
                                 setShowAllFYOptions(false);
                               }}
-                              className={`px-4 py-2 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-gray-800 dark:text-dark-text ${selectedFYStart === y
-                                ? "bg-indigo-50 dark:bg-indigo-900/50 font-bold"
-                                : ""
-                                }`}
+                              className={`px-4 py-2 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-gray-800 dark:text-dark-text ${
+                                selectedFYStart === y
+                                  ? "bg-indigo-50 dark:bg-indigo-900/50 font-bold"
+                                  : ""
+                              }`}
                             >
                               {fyLabel(y)}
                             </li>
@@ -1444,10 +1480,11 @@ const SummaryPage = () => {
                         Balance
                       </div>
                       <div
-                        className={`text-sm font-bold ${fyLoanBalance < 0
-                          ? "text-red-600 dark:text-red-400"
-                          : "text-blue-800 dark:text-blue-200"
-                          }`}
+                        className={`text-sm font-bold ${
+                          fyLoanBalance < 0
+                            ? "text-red-600 dark:text-red-400"
+                            : "text-blue-800 dark:text-blue-200"
+                        }`}
                       >
                         <AnimatedNumber value={fyLoanBalance} />
                       </div>
@@ -1550,6 +1587,13 @@ const SummaryPage = () => {
             summary={breakdownSummary}
             pagination={breakdownPagination}
             onClose={() => setBreakdownOpen(false)}
+          />
+
+          <Toast
+            message={toastMessage}
+            show={toastShow}
+            onClose={() => setToastShow(false)}
+            type={toastType}
           />
         </div>
       </div>

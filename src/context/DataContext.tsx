@@ -898,6 +898,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       ) {
         (async () => {
           try {
+            // Call directly to Supabase to update auth user
+            // Note: This is a client-side call but uses RLS-protected data
             const resp = await fetch(
               "/.netlify/functions/update-user-from-customer",
               {
@@ -914,6 +916,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
               console.error(
                 "Failed to update auth user after phone change:",
                 errData.error || resp.statusText,
+              );
+            } else {
+              console.log(
+                `Successfully synced auth credentials for customer ${customerId} to phone ${updates.phone}`,
               );
             }
           } catch (err) {

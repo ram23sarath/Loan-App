@@ -29,6 +29,9 @@ export const calculateSummaryData = (
   dataEntries: DataEntry[],
   installmentsByLoanId?: Map<string, Installment[]>
 ): SummaryData => {
+  const isExpenseType = (type: DataEntry['type']) =>
+    type === 'expense' || (type as string) === 'expenditure';
+
   // Helper to get installments for a loan (uses map if available, falls back to filter)
   const getInstallmentsForLoan = (loanId: string): Installment[] => {
     if (installmentsByLoanId) {
@@ -68,7 +71,7 @@ export const calculateSummaryData = (
   // Calculate Subscription Return Total
   const subscriptionReturnTotal = dataEntries.reduce((acc, entry) => {
     if (
-      entry.type === 'expense' &&
+      isExpenseType(entry.type) &&
       entry.subtype === 'Subscription Return'
     ) {
       return acc + (entry.amount || 0);
@@ -82,7 +85,7 @@ export const calculateSummaryData = (
 
   // Calculate Total Data Collected
   const totalDataCollected = dataEntries.reduce((acc, entry) => {
-    if (entry.type === 'expense') {
+    if (isExpenseType(entry.type)) {
       return acc - (entry.amount || 0);
     }
     return acc + (entry.amount || 0);
@@ -99,7 +102,7 @@ export const calculateSummaryData = (
 
   dataEntries.forEach((entry) => {
     if (
-      entry.type === 'expense' &&
+      isExpenseType(entry.type) &&
       entry.subtype &&
       expenseSubtypes.includes(entry.subtype)
     ) {

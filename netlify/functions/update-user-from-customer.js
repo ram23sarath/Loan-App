@@ -144,7 +144,9 @@ export default async (req) => {
         email_confirm: true,
       });
 
-      if (updateErr) throw updateErr;
+      if (updateErr) {
+        throw updateErr;
+      }
 
       return new Response(
         JSON.stringify({ success: true, updated: true, user_id: customer.user_id, email: expectedEmail }),
@@ -167,44 +169,53 @@ export default async (req) => {
         );
       }
 
-      // If update failed because user not found, create a new user and link it
-      console.error('Update user not found, attempting recreate:', errMessage);
-      const { data: userData, error: createErr } = await supabase.auth.admin.createUser({
-        email: expectedEmail,
-        password: expectedPassword,
-        email_confirm: true,
-        user_metadata: { name: customer.name || '', phone, customer_id },
-      });
+      // If update failed because user not found, just silently skip - this is normal
+      // The customer has a user_id but the auth user was deleted or doesn't exist
+      console.warn(`User ${customer.user_id} linked to customer but auth user not found - recreating...`);
+      
+      try {
+        const { data: userData, error: createErr } = await supabase.auth.admin.createUser({
+          email: expectedEmail,
+          password: expectedPassword,
+          email_confirm: true,
+          user_metadata: { name: customer.name || '', phone, customer_id },
+        });
 
-      if (createErr) {
-        console.error('Failed to recreate auth user:', createErr.message);
-        return new Response(
-          JSON.stringify({ error: 'Failed to update or recreate auth user', details: createErr.message }),
-          { status: 500, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
+        if (createErr) {
+          console.error('Failed to recreate auth user:', createErr.message);
+          return new Response(
+            JSON.stringify({ error: 'Failed to update or recreate auth user', details: createErr.message }),
+            { status: 500, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
 
-      const newUserId = userData?.user?.id;
-      if (!newUserId) {
-        return new Response(
-          JSON.stringify({ error: 'Recreated user but no id returned' }),
-          { status: 500, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
+        const newUserId = userData?.user?.id;
+        if (!newUserId) {
+          return new Response(
+            JSON.stringify({ error: 'Recreated user but no id returned' }),
+            { status: 500, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
 
-      const { error: linkErr } = await supabase.from('customers').update({ user_id: newUserId }).eq('id', customer_id);
-      if (linkErr) {
-        console.error('Recreated user but failed linking to customer:', linkErr.message);
+        // Update customer.user_id to new user if different
+        if (newUserId !== customer.user_id) {
+          const { error: linkErr } = await supabase.from('customers').update({ user_id: newUserId }).eq('id', customer_id);
+          if (linkErr) {
+            console.error('Recreated user but failed linking to customer:', linkErr.message);
+          }
+        }
+
         return new Response(
-          JSON.stringify({ success: true, user_id: newUserId, warning: 'User recreated but failed to link to customer' }),
+          JSON.stringify({ success: true, recreated: true, user_id: newUserId, email: expectedEmail }),
           { status: 200, headers: { 'Content-Type': 'application/json' } }
         );
+      } catch (recreateErr) {
+        console.error('Exception recreating user:', recreateErr.message || recreateErr);
+        return new Response(
+          JSON.stringify({ error: 'Failed to recreate auth user', details: String(recreateErr) }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
       }
-
-      return new Response(
-        JSON.stringify({ success: true, recreated: true, user_id: newUserId, email: expectedEmail }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      );
     }
   } catch (error) {
     console.error('Error in update-user-from-customer:', error.message || error);

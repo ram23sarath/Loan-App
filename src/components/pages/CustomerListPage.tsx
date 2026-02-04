@@ -69,18 +69,20 @@ const CustomerListPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   // Use useDeferredSearch for better React 18 concurrent rendering
   const debouncedSearchTerm = useDeferredSearch(searchTerm);
-  const [sortOption, setSortOption] = useState("date-desc");
+  const [sortOption, setSortOption] = useState("name-asc");
+  const FILTER_OPTIONS = ["DOP", "ADFO", "SFO", "Rtd", "FM"];
+  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
-    null
+    null,
   );
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [editModal, setEditModal] = useState<{
     type:
-    | "customer"
-    | "loan"
-    | "subscription"
-    | "customer_loan"
-    | "installment";
+      | "customer"
+      | "loan"
+      | "subscription"
+      | "customer_loan"
+      | "installment";
     data: any;
   } | null>(null);
 
@@ -115,7 +117,7 @@ const CustomerListPage = () => {
 
   const setCurrentPage = (
     section: "both" | "loans" | "subs" | "neither",
-    page: number
+    page: number,
   ) => {
     setCurrentPages((prev) => ({ ...prev, [section]: page }));
   };
@@ -134,16 +136,16 @@ const CustomerListPage = () => {
   const handleDeleteCustomer = (customer) => {
     const cid = customer.id;
     const dataEntriesCount = dataEntries.filter(
-      (d) => d.customer_id === cid
+      (d) => d.customer_id === cid,
     ).length;
     const customerLoans = loans.filter((l) => l.customer_id === cid);
     const loansCount = customerLoans.length;
     const installmentsCount = customerLoans.reduce(
       (acc, loan) => acc + (installmentsByLoanId.get(loan.id)?.length || 0),
-      0
+      0,
     );
     const subscriptionsCount = subscriptions.filter(
-      (s) => s.customer_id === cid
+      (s) => s.customer_id === cid,
     ).length;
     setDeleteCounts({
       dataEntries: dataEntriesCount,
@@ -171,10 +173,18 @@ const CustomerListPage = () => {
     setDeleteCounts(null);
   };
 
-
-
   const categorizedCustomers = useMemo(() => {
     let processedCustomers = [...customers];
+    // Apply name-based filters when selected
+    if (selectedFilters.length > 0) {
+      const lowered = selectedFilters.map((s) => s.toLowerCase());
+      processedCustomers = processedCustomers.filter((c) => {
+        const name = (c.name || "").toLowerCase();
+        return lowered.some((f) => name.includes(f));
+      });
+      // When filters are active, always sort by name ascending
+      processedCustomers.sort((a, b) => a.name.localeCompare(b.name));
+    }
 
     processedCustomers.sort((a, b) => {
       switch (sortOption) {
@@ -200,7 +210,7 @@ const CustomerListPage = () => {
           customer.name
             .toLowerCase()
             .includes(debouncedSearchTerm.toLowerCase()) ||
-          customer.phone.includes(debouncedSearchTerm)
+          customer.phone.includes(debouncedSearchTerm),
       );
     }
 
@@ -212,7 +222,7 @@ const CustomerListPage = () => {
     processedCustomers.forEach((customer) => {
       const hasLoans = loans.some((l) => l.customer_id === customer.id);
       const hasSubscriptions = subscriptions.some(
-        (s) => s.customer_id === customer.id
+        (s) => s.customer_id === customer.id,
       );
 
       if (hasLoans && hasSubscriptions) {
@@ -227,8 +237,51 @@ const CustomerListPage = () => {
     });
 
     return { withOnlyLoans, withOnlySubscriptions, withBoth, withNeither };
-  }, [customers, loans, subscriptions, debouncedSearchTerm, sortOption]);
+  }, [
+    customers,
+    loans,
+    subscriptions,
+    debouncedSearchTerm,
+    sortOption,
+    selectedFilters,
+  ]);
 
+  const totalDisplayed =
+    categorizedCustomers.withBoth.length +
+    categorizedCustomers.withOnlyLoans.length +
+    categorizedCustomers.withOnlySubscriptions.length +
+    categorizedCustomers.withNeither.length;
+
+  // compute per-filter counts (from full customers list)
+  const filterCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    FILTER_OPTIONS.forEach((opt) => {
+      const lc = opt.toLowerCase();
+      map[opt] = customers.filter((c) =>
+        (c.name || "").toLowerCase().includes(lc),
+      ).length;
+    });
+    return map;
+  }, [customers]);
+
+  // Auto-expand certain panels when a filter is applied and matches exist
+  React.useEffect(() => {
+    if (selectedFilters.length > 0) {
+      setExpandedSections((prev) => ({
+        ...prev,
+        subs:
+          categorizedCustomers.withOnlySubscriptions.length > 0
+            ? true
+            : prev.subs,
+        neither:
+          categorizedCustomers.withNeither.length > 0 ? true : prev.neither,
+      }));
+    }
+  }, [
+    selectedFilters.length,
+    categorizedCustomers.withOnlySubscriptions.length,
+    categorizedCustomers.withNeither.length,
+  ]);
   const formatCurrency = (value: number) => {
     return value.toLocaleString("en-IN", {
       style: "currency",
@@ -293,10 +346,11 @@ const CustomerListPage = () => {
                     setCurrentPage(section, page);
                     setPagePickerOpen(null);
                   }}
-                  className={`px-3 py-1 rounded border ${currentPage === page
-                    ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
-                    : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
-                    }`}
+                  className={`px-3 py-1 rounded border ${
+                    currentPage === page
+                      ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
+                      : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
+                  }`}
                 >
                   {page}
                 </button>
@@ -306,18 +360,18 @@ const CustomerListPage = () => {
             if (page === 2 && currentPage > 3) {
               const startPages = Array.from(
                 { length: currentPage - 3 },
-                (_, i) => i + 2
+                (_, i) => i + 2,
               );
               const maxOffset = Math.max(
                 0,
-                Math.ceil(startPages.length / 9) - 1
+                Math.ceil(startPages.length / 9) - 1,
               );
               const isOpen =
                 pagePickerOpen?.section === section &&
                 pagePickerOpen?.position === "start";
               const visiblePages = startPages.slice(
                 pagePickerOffset * 9,
-                (pagePickerOffset + 1) * 9
+                (pagePickerOffset + 1) * 9,
               );
 
               return (
@@ -342,7 +396,7 @@ const CustomerListPage = () => {
                         <button
                           onClick={() =>
                             setPagePickerOffset(
-                              Math.max(0, pagePickerOffset - 1)
+                              Math.max(0, pagePickerOffset - 1),
                             )
                           }
                           disabled={pagePickerOffset === 0}
@@ -354,14 +408,14 @@ const CustomerListPage = () => {
                           {pagePickerOffset * 9 + 1}-
                           {Math.min(
                             (pagePickerOffset + 1) * 9,
-                            startPages.length
+                            startPages.length,
                           )}{" "}
                           of {startPages.length}
                         </span>
                         <button
                           onClick={() =>
                             setPagePickerOffset(
-                              Math.min(maxOffset, pagePickerOffset + 1)
+                              Math.min(maxOffset, pagePickerOffset + 1),
                             )
                           }
                           disabled={pagePickerOffset >= maxOffset}
@@ -378,10 +432,11 @@ const CustomerListPage = () => {
                               setCurrentPage(section, p);
                               setPagePickerOpen(null);
                             }}
-                            className={`px-2 py-1 text-sm rounded ${currentPage === p
-                              ? "bg-indigo-600 text-white"
-                              : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
-                              }`}
+                            className={`px-2 py-1 text-sm rounded ${
+                              currentPage === p
+                                ? "bg-indigo-600 text-white"
+                                : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
+                            }`}
                           >
                             {p}
                           </button>
@@ -396,7 +451,7 @@ const CustomerListPage = () => {
             if (page === totalPages - 1 && currentPage < totalPages - 2) {
               const endPages = Array.from(
                 { length: totalPages - currentPage - 2 },
-                (_, i) => currentPage + 2 + i
+                (_, i) => currentPage + 2 + i,
               );
               const maxOffset = Math.max(0, Math.ceil(endPages.length / 9) - 1);
               const isOpen =
@@ -404,7 +459,7 @@ const CustomerListPage = () => {
                 pagePickerOpen?.position === "end";
               const visiblePages = endPages.slice(
                 pagePickerOffset * 9,
-                (pagePickerOffset + 1) * 9
+                (pagePickerOffset + 1) * 9,
               );
 
               return (
@@ -429,7 +484,7 @@ const CustomerListPage = () => {
                         <button
                           onClick={() =>
                             setPagePickerOffset(
-                              Math.max(0, pagePickerOffset - 1)
+                              Math.max(0, pagePickerOffset - 1),
                             )
                           }
                           disabled={pagePickerOffset === 0}
@@ -441,14 +496,14 @@ const CustomerListPage = () => {
                           {pagePickerOffset * 9 + 1}-
                           {Math.min(
                             (pagePickerOffset + 1) * 9,
-                            endPages.length
+                            endPages.length,
                           )}{" "}
                           of {endPages.length}
                         </span>
                         <button
                           onClick={() =>
                             setPagePickerOffset(
-                              Math.min(maxOffset, pagePickerOffset + 1)
+                              Math.min(maxOffset, pagePickerOffset + 1),
                             )
                           }
                           disabled={pagePickerOffset >= maxOffset}
@@ -465,10 +520,11 @@ const CustomerListPage = () => {
                               setCurrentPage(section, p);
                               setPagePickerOpen(null);
                             }}
-                            className={`px-2 py-1 text-sm rounded ${currentPage === p
-                              ? "bg-indigo-600 text-white"
-                              : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
-                              }`}
+                            className={`px-2 py-1 text-sm rounded ${
+                              currentPage === p
+                                ? "bg-indigo-600 text-white"
+                                : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
+                            }`}
                           >
                             {p}
                           </button>
@@ -510,7 +566,7 @@ const CustomerListPage = () => {
           <UsersIcon className="w-7 h-7 sm:w-10 sm:h-10" />
           <span>All Customers</span>
           <span className="ml-2 text-xl sm:text-4xl font-bold text-gray-400 dark:text-dark-muted">
-            ({customers.length})
+            ({totalDisplayed})
           </span>
           {isRefreshing && (
             <SpinnerIcon className="w-5 h-5 sm:w-8 sm:h-8 animate-spin text-indigo-500 dark:text-indigo-400" />
@@ -563,14 +619,53 @@ const CustomerListPage = () => {
               <option value="name-desc">Sort by Name (Z-A)</option>
             </select>
           </div>
+
+          <div className="mt-3 flex flex-wrap gap-2 items-center">
+            <div className="text-sm font-medium mr-2 text-gray-700 dark:text-dark-text">
+              Filters:
+            </div>
+            {FILTER_OPTIONS.map((opt) => {
+              const active = selectedFilters.includes(opt);
+              return (
+                <button
+                  key={opt}
+                  onClick={() => {
+                    setSelectedFilters((prev) =>
+                      prev.includes(opt)
+                        ? prev.filter((p) => p !== opt)
+                        : [...prev, opt],
+                    );
+                  }}
+                  className={`px-3 py-1 rounded-full text-sm border transition-colors flex items-center gap-2 ${
+                    active
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-white text-gray-700 border-gray-300 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text"
+                  }`}
+                >
+                  <span>{opt}</span>
+                  <span className="text-xs opacity-80">
+                    ({filterCounts[opt] || 0})
+                  </span>
+                </button>
+              );
+            })}
+            {selectedFilters.length > 0 && (
+              <button
+                onClick={() => setSelectedFilters([])}
+                className="ml-2 px-3 py-1 rounded-full text-sm bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text"
+              >
+                Clear
+              </button>
+            )}
+          </div>
         </GlassCard>
       )}
 
       {categorizedCustomers.withBoth.length === 0 &&
-        categorizedCustomers.withOnlyLoans.length === 0 &&
-        categorizedCustomers.withOnlySubscriptions.length === 0 &&
-        categorizedCustomers.withNeither.length === 0 &&
-        !isRefreshing ? (
+      categorizedCustomers.withOnlyLoans.length === 0 &&
+      categorizedCustomers.withOnlySubscriptions.length === 0 &&
+      categorizedCustomers.withNeither.length === 0 &&
+      !isRefreshing ? (
         <GlassCard>
           <p className="text-center text-gray-500 dark:text-dark-muted">
             {searchTerm
@@ -592,8 +687,9 @@ const CustomerListPage = () => {
                   Customers with Loans & Subscriptions
                 </h3>
                 <ChevronDownIcon
-                  className={`w-6 h-6 text-indigo-800 dark:text-indigo-400 transition-transform ${expandedSections.both ? "rotate-180" : ""
-                    }`}
+                  className={`w-6 h-6 text-indigo-800 dark:text-indigo-400 transition-transform ${
+                    expandedSections.both ? "rotate-180" : ""
+                  }`}
                 />
               </button>
               <AnimatePresence initial={true}>
@@ -612,7 +708,7 @@ const CustomerListPage = () => {
                     <div className="p-2 sm:p-4 pt-0">
                       {(() => {
                         const totalPages = Math.ceil(
-                          categorizedCustomers.withBoth.length / itemsPerPage
+                          categorizedCustomers.withBoth.length / itemsPerPage,
                         );
                         const start = (currentPages.both - 1) * itemsPerPage;
                         const end = start + itemsPerPage;
@@ -626,7 +722,7 @@ const CustomerListPage = () => {
                                 <thead className="dark:bg-slate-700">
                                   <tr>
                                     <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border w-12">
-                                      #
+                                      Sr.No
                                     </th>
                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
                                       Name
@@ -654,18 +750,20 @@ const CustomerListPage = () => {
                                 >
                                   {paginatedCustomers.map((customer, idx) => {
                                     const customerLoans = loans.filter(
-                                      (loan) => loan.customer_id === customer.id
+                                      (loan) =>
+                                        loan.customer_id === customer.id,
                                     );
                                     const customerSubscriptions =
                                       subscriptions.filter(
-                                        (sub) => sub.customer_id === customer.id
+                                        (sub) =>
+                                          sub.customer_id === customer.id,
                                       );
                                     const loanValue = customerLoans.reduce(
                                       (acc, loan) =>
                                         acc +
                                         loan.original_amount +
                                         loan.interest_amount,
-                                      0
+                                      0,
                                     );
                                     const rowNumber =
                                       (currentPages.both - 1) * itemsPerPage +
@@ -765,18 +863,18 @@ const CustomerListPage = () => {
                             <div className="sm:hidden space-y-3">
                               {paginatedCustomers.map((customer, idx) => {
                                 const customerLoans = loans.filter(
-                                  (loan) => loan.customer_id === customer.id
+                                  (loan) => loan.customer_id === customer.id,
                                 );
                                 const customerSubscriptions =
                                   subscriptions.filter(
-                                    (sub) => sub.customer_id === customer.id
+                                    (sub) => sub.customer_id === customer.id,
                                   );
                                 const loanValue = customerLoans.reduce(
                                   (acc, loan) =>
                                     acc +
                                     loan.original_amount +
                                     loan.interest_amount,
-                                  0
+                                  0,
                                 );
                                 const rowNumber =
                                   (currentPages.both - 1) * itemsPerPage +
@@ -785,12 +883,15 @@ const CustomerListPage = () => {
                                 const isValidPhone =
                                   customer.phone &&
                                   /^\d{10,15}$/.test(customer.phone);
-                                const message = `Hi ${customer.name
-                                  },\n\nLoans: ${customerLoans.length
-                                  }\nLoan Value: ${formatCurrency(
-                                    loanValue
-                                  )}\nSubscriptions: ${customerSubscriptions.length
-                                  }\n\nThank You, I J Reddy.`;
+                                const message = `Hi ${
+                                  customer.name
+                                },\n\nLoans: ${
+                                  customerLoans.length
+                                }\nLoan Value: ${formatCurrency(
+                                  loanValue,
+                                )}\nSubscriptions: ${
+                                  customerSubscriptions.length
+                                }\n\nThank You, I J Reddy.`;
                                 return (
                                   <div
                                     key={customer.id}
@@ -800,10 +901,11 @@ const CustomerListPage = () => {
                                     {draggingCardId === customer.id && (
                                       <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
                                         <div
-                                          className={`${isScopedCustomer
-                                            ? "w-full"
-                                            : "w-1/2"
-                                            } bg-green-500 flex items-center justify-start pl-4`}
+                                          className={`${
+                                            isScopedCustomer
+                                              ? "w-full"
+                                              : "w-1/2"
+                                          } bg-green-500 flex items-center justify-start pl-4`}
                                         >
                                           <WhatsAppIcon className="w-6 h-6 text-white" />
                                         </div>
@@ -847,14 +949,14 @@ const CustomerListPage = () => {
                                           openWhatsApp(
                                             customer.phone,
                                             message,
-                                            { cooldownMs: 1200 }
+                                            { cooldownMs: 1200 },
                                           );
                                         }
                                       }}
                                     >
                                       <div className="flex items-center gap-1">
                                         <span className="text-xs text-gray-400 dark:text-dark-muted">
-                                          #{rowNumber}
+                                          Sr.No {rowNumber}
                                         </span>
                                         <Link
                                           to={`/customers/${customer.id}`}
@@ -899,7 +1001,7 @@ const CustomerListPage = () => {
                                               openWhatsApp(
                                                 customer.phone,
                                                 message,
-                                                { cooldownMs: 1200 }
+                                                { cooldownMs: 1200 },
                                               );
                                           }}
                                           className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
@@ -966,8 +1068,9 @@ const CustomerListPage = () => {
                   Customers with Only Loans
                 </h3>
                 <ChevronDownIcon
-                  className={`w-6 h-6 text-blue-800 dark:text-indigo-400 transition-transform ${expandedSections.loans ? "rotate-180" : ""
-                    }`}
+                  className={`w-6 h-6 text-blue-800 dark:text-indigo-400 transition-transform ${
+                    expandedSections.loans ? "rotate-180" : ""
+                  }`}
                 />
               </button>
               <AnimatePresence initial={true}>
@@ -987,7 +1090,7 @@ const CustomerListPage = () => {
                       {(() => {
                         const totalPages = Math.ceil(
                           categorizedCustomers.withOnlyLoans.length /
-                          itemsPerPage
+                            itemsPerPage,
                         );
                         const start = (currentPages.loans - 1) * itemsPerPage;
                         const end = start + itemsPerPage;
@@ -1001,7 +1104,7 @@ const CustomerListPage = () => {
                                 <thead className="dark:bg-slate-700">
                                   <tr>
                                     <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border w-12">
-                                      #
+                                      Sr.No
                                     </th>
                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
                                       Name
@@ -1026,14 +1129,15 @@ const CustomerListPage = () => {
                                 >
                                   {paginatedCustomers.map((customer, idx) => {
                                     const customerLoans = loans.filter(
-                                      (loan) => loan.customer_id === customer.id
+                                      (loan) =>
+                                        loan.customer_id === customer.id,
                                     );
                                     const loanValue = customerLoans.reduce(
                                       (acc, loan) =>
                                         acc +
                                         loan.original_amount +
                                         loan.interest_amount,
-                                      0
+                                      0,
                                     );
                                     const rowNumber =
                                       (currentPages.loans - 1) * itemsPerPage +
@@ -1130,14 +1234,14 @@ const CustomerListPage = () => {
                             <div className="sm:hidden space-y-3">
                               {paginatedCustomers.map((customer, idx) => {
                                 const customerLoans = loans.filter(
-                                  (loan) => loan.customer_id === customer.id
+                                  (loan) => loan.customer_id === customer.id,
                                 );
                                 const loanValue = customerLoans.reduce(
                                   (acc, loan) =>
                                     acc +
                                     loan.original_amount +
                                     loan.interest_amount,
-                                  0
+                                  0,
                                 );
                                 const rowNumber =
                                   (currentPages.loans - 1) * itemsPerPage +
@@ -1146,11 +1250,13 @@ const CustomerListPage = () => {
                                 const isValidPhone =
                                   customer.phone &&
                                   /^\d{10,15}$/.test(customer.phone);
-                                const message = `Hi ${customer.name
-                                  },\n\nLoans: ${customerLoans.length
-                                  }\nLoan Value: ${formatCurrency(
-                                    loanValue
-                                  )}\n\nThank You, I J Reddy.`;
+                                const message = `Hi ${
+                                  customer.name
+                                },\n\nLoans: ${
+                                  customerLoans.length
+                                }\nLoan Value: ${formatCurrency(
+                                  loanValue,
+                                )}\n\nThank You, I J Reddy.`;
                                 return (
                                   <div
                                     key={customer.id}
@@ -1160,10 +1266,11 @@ const CustomerListPage = () => {
                                     {draggingCardId === customer.id && (
                                       <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
                                         <div
-                                          className={`${isScopedCustomer
-                                            ? "w-full"
-                                            : "w-1/2"
-                                            } bg-green-500 flex items-center justify-start pl-4`}
+                                          className={`${
+                                            isScopedCustomer
+                                              ? "w-full"
+                                              : "w-1/2"
+                                          } bg-green-500 flex items-center justify-start pl-4`}
                                         >
                                           <WhatsAppIcon className="w-6 h-6 text-white" />
                                         </div>
@@ -1210,14 +1317,14 @@ const CustomerListPage = () => {
                                           openWhatsApp(
                                             customer.phone,
                                             message,
-                                            { cooldownMs: 1200 }
+                                            { cooldownMs: 1200 },
                                           );
                                         }
                                       }}
                                     >
                                       <div className="flex items-center gap-1">
                                         <span className="text-xs text-gray-400 dark:text-dark-muted">
-                                          #{rowNumber}
+                                          Sr.No {rowNumber}
                                         </span>
                                         <Link
                                           to={`/customers/${customer.id}`}
@@ -1256,7 +1363,7 @@ const CustomerListPage = () => {
                                               openWhatsApp(
                                                 customer.phone,
                                                 message,
-                                                { cooldownMs: 1200 }
+                                                { cooldownMs: 1200 },
                                               );
                                           }}
                                           className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
@@ -1322,8 +1429,9 @@ const CustomerListPage = () => {
                   Customers with Only Subscriptions
                 </h3>
                 <ChevronDownIcon
-                  className={`w-6 h-6 text-cyan-800 dark:text-cyan-400 transition-transform ${expandedSections.subs ? "rotate-180" : ""
-                    }`}
+                  className={`w-6 h-6 text-cyan-800 dark:text-cyan-400 transition-transform ${
+                    expandedSections.subs ? "rotate-180" : ""
+                  }`}
                 />
               </button>
               <AnimatePresence initial={true}>
@@ -1343,14 +1451,14 @@ const CustomerListPage = () => {
                       {(() => {
                         const totalPages = Math.ceil(
                           categorizedCustomers.withOnlySubscriptions.length /
-                          itemsPerPage
+                            itemsPerPage,
                         );
                         const start = (currentPages.subs - 1) * itemsPerPage;
                         const end = start + itemsPerPage;
                         const paginatedCustomers =
                           categorizedCustomers.withOnlySubscriptions.slice(
                             start,
-                            end
+                            end,
                           );
                         return (
                           <>
@@ -1360,7 +1468,7 @@ const CustomerListPage = () => {
                                 <thead className="dark:bg-slate-700">
                                   <tr>
                                     <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border w-12">
-                                      #
+                                      Sr.No
                                     </th>
                                     <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
                                       Name
@@ -1386,12 +1494,13 @@ const CustomerListPage = () => {
                                   {paginatedCustomers.map((customer, idx) => {
                                     const customerSubscriptions =
                                       subscriptions.filter(
-                                        (sub) => sub.customer_id === customer.id
+                                        (sub) =>
+                                          sub.customer_id === customer.id,
                                       );
                                     const subValue =
                                       customerSubscriptions.reduce(
                                         (acc, sub) => acc + sub.amount,
-                                        0
+                                        0,
                                       );
                                     const rowNumber =
                                       (currentPages.subs - 1) * itemsPerPage +
@@ -1490,11 +1599,11 @@ const CustomerListPage = () => {
                               {paginatedCustomers.map((customer, idx) => {
                                 const customerSubscriptions =
                                   subscriptions.filter(
-                                    (sub) => sub.customer_id === customer.id
+                                    (sub) => sub.customer_id === customer.id,
                                   );
                                 const subValue = customerSubscriptions.reduce(
                                   (acc, sub) => acc + sub.amount,
-                                  0
+                                  0,
                                 );
                                 const rowNumber =
                                   (currentPages.subs - 1) * itemsPerPage +
@@ -1503,11 +1612,13 @@ const CustomerListPage = () => {
                                 const isValidPhone =
                                   customer.phone &&
                                   /^\d{10,15}$/.test(customer.phone);
-                                const message = `Hi ${customer.name
-                                  },\n\nSubscriptions: ${customerSubscriptions.length
-                                  }\nTotal Value: ${formatCurrency(
-                                    subValue
-                                  )}\n\nThank You, I J Reddy.`;
+                                const message = `Hi ${
+                                  customer.name
+                                },\n\nSubscriptions: ${
+                                  customerSubscriptions.length
+                                }\nTotal Value: ${formatCurrency(
+                                  subValue,
+                                )}\n\nThank You, I J Reddy.`;
                                 return (
                                   <div
                                     key={customer.id}
@@ -1517,10 +1628,11 @@ const CustomerListPage = () => {
                                     {draggingCardId === customer.id && (
                                       <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
                                         <div
-                                          className={`${isScopedCustomer
-                                            ? "w-full"
-                                            : "w-1/2"
-                                            } bg-green-500 flex items-center justify-start pl-4`}
+                                          className={`${
+                                            isScopedCustomer
+                                              ? "w-full"
+                                              : "w-1/2"
+                                          } bg-green-500 flex items-center justify-start pl-4`}
                                         >
                                           <WhatsAppIcon className="w-6 h-6 text-white" />
                                         </div>
@@ -1567,14 +1679,14 @@ const CustomerListPage = () => {
                                           openWhatsApp(
                                             customer.phone,
                                             message,
-                                            { cooldownMs: 1200 }
+                                            { cooldownMs: 1200 },
                                           );
                                         }
                                       }}
                                     >
                                       <div className="flex items-center gap-1">
                                         <span className="text-xs text-gray-400 dark:text-dark-muted">
-                                          #{rowNumber}
+                                          Sr.No {rowNumber}
                                         </span>
                                         <Link
                                           to={`/customers/${customer.id}`}
@@ -1613,7 +1725,7 @@ const CustomerListPage = () => {
                                               openWhatsApp(
                                                 customer.phone,
                                                 message,
-                                                { cooldownMs: 1200 }
+                                                { cooldownMs: 1200 },
                                               );
                                           }}
                                           className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
@@ -1683,8 +1795,9 @@ const CustomerListPage = () => {
                     Customers with No Records
                   </h3>
                   <ChevronDownIcon
-                    className={`w-6 h-6 text-gray-800 dark:text-gray-400 transition-transform ${expandedSections.neither ? "rotate-180" : ""
-                      }`}
+                    className={`w-6 h-6 text-gray-800 dark:text-gray-400 transition-transform ${
+                      expandedSections.neither ? "rotate-180" : ""
+                    }`}
                   />
                 </button>
                 <AnimatePresence initial={true}>
@@ -1704,7 +1817,7 @@ const CustomerListPage = () => {
                         {(() => {
                           const totalPages = Math.ceil(
                             categorizedCustomers.withNeither.length /
-                            itemsPerPage
+                              itemsPerPage,
                           );
                           const start =
                             (currentPages.neither - 1) * itemsPerPage;
@@ -1719,7 +1832,7 @@ const CustomerListPage = () => {
                                   <thead className="dark:bg-slate-700">
                                     <tr>
                                       <th className="px-2 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border w-12">
-                                        #
+                                        Sr.No
                                       </th>
                                       <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 dark:text-dark-text dark:border-dark-border">
                                         Name
@@ -1739,7 +1852,7 @@ const CustomerListPage = () => {
                                     {paginatedCustomers.map((customer, idx) => {
                                       const rowNumber =
                                         (currentPages.neither - 1) *
-                                        itemsPerPage +
+                                          itemsPerPage +
                                         idx +
                                         1;
                                       return (
@@ -1803,7 +1916,7 @@ const CustomerListPage = () => {
                                                 onClick={(e) => {
                                                   e.stopPropagation();
                                                   handleDeleteCustomer(
-                                                    customer
+                                                    customer,
                                                   );
                                                 }}
                                                 onPointerDownCapture={(e) =>
@@ -1843,10 +1956,11 @@ const CustomerListPage = () => {
                                       {draggingCardId === customer.id && (
                                         <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
                                           <div
-                                            className={`${isScopedCustomer
-                                              ? "w-full"
-                                              : "w-1/2"
-                                              } bg-green-500 flex items-center justify-start pl-4`}
+                                            className={`${
+                                              isScopedCustomer
+                                                ? "w-full"
+                                                : "w-1/2"
+                                            } bg-green-500 flex items-center justify-start pl-4`}
                                           >
                                             <WhatsAppIcon className="w-6 h-6 text-white" />
                                           </div>
@@ -1893,14 +2007,14 @@ const CustomerListPage = () => {
                                             openWhatsApp(
                                               customer.phone,
                                               message,
-                                              { cooldownMs: 1200 }
+                                              { cooldownMs: 1200 },
                                             );
                                           }
                                         }}
                                       >
                                         <div className="flex items-center gap-1">
                                           <span className="text-xs text-gray-400 dark:text-dark-muted">
-                                            #{rowNumber}
+                                            Sr.No {rowNumber}
                                           </span>
                                           <Link
                                             to={`/customers/${customer.id}`}
@@ -1927,7 +2041,7 @@ const CustomerListPage = () => {
                                                 openWhatsApp(
                                                   customer.phone,
                                                   message,
-                                                  { cooldownMs: 1200 }
+                                                  { cooldownMs: 1200 },
                                                 );
                                             }}
                                             className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
@@ -1986,11 +2100,11 @@ const CustomerListPage = () => {
             customer={selectedCustomer}
             loans={loans.filter((l) => l.customer_id === selectedCustomer.id)}
             subscriptions={subscriptions.filter(
-              (s) => s.customer_id === selectedCustomer.id
+              (s) => s.customer_id === selectedCustomer.id,
             )}
             installments={installments}
             dataEntries={dataEntries.filter(
-              (d) => d.customer_id === selectedCustomer.id
+              (d) => d.customer_id === selectedCustomer.id,
             )}
             onClose={() => setSelectedCustomer(null)}
             deleteLoan={deleteLoan}
@@ -2079,12 +2193,25 @@ const CustomerListPage = () => {
         message={
           <>
             <div className="text-sm text-gray-600 mb-3 space-y-1 dark:text-dark-muted">
-              <p><span className="font-medium">Loans: {deleteCounts?.loans ?? 0}</span></p>
-              <p><span className="font-medium">Installments: {deleteCounts?.installments ?? 0}</span></p>
-              <p><span className="font-medium">Subscriptions: {deleteCounts?.subscriptions ?? 0}</span></p>
+              <p>
+                <span className="font-medium">
+                  Loans: {deleteCounts?.loans ?? 0}
+                </span>
+              </p>
+              <p>
+                <span className="font-medium">
+                  Installments: {deleteCounts?.installments ?? 0}
+                </span>
+              </p>
+              <p>
+                <span className="font-medium">
+                  Subscriptions: {deleteCounts?.subscriptions ?? 0}
+                </span>
+              </p>
             </div>
             <p className="text-xs text-amber-600 dark:text-amber-400">
-              Customer and all related records will be moved to trash. You can restore them later.
+              Customer and all related records will be moved to trash. You can
+              restore them later.
             </p>
           </>
         }

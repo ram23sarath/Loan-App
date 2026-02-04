@@ -13,10 +13,10 @@ import EditModal from "../modals/EditModal";
 import RecordInstallmentModal from "../modals/RecordInstallmentModal";
 import DeleteConfirmationModal from "../modals/DeleteConfirmationModal";
 import { useDeferredSearch } from "../../utils/useDebounce";
-import { 
-  rowVariants, 
-  cardVariants, 
-  layoutTransition 
+import {
+  rowVariants,
+  cardVariants,
+  layoutTransition,
 } from "../../utils/useRowDeleteAnimation";
 
 // Performance Note: Removed unused staggerChildren animation variants
@@ -60,7 +60,7 @@ const LoanTableView: React.FC = () => {
   // Default to sorting by status so "In Progress" loans appear first
   const [sortField, setSortField] = React.useState("status");
   const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">(
-    "asc"
+    "asc",
   );
   const [currentPage, setCurrentPage] = React.useState(1);
   const itemsPerPage = 25;
@@ -100,8 +100,32 @@ const LoanTableView: React.FC = () => {
     (loanId: string) => {
       return installmentsByLoanId.get(loanId) || [];
     },
-    [installmentsByLoanId]
+    [installmentsByLoanId],
   );
+
+  // Build WhatsApp message for an installment and validate phone
+  const buildInstallmentMessage = (
+    customer: any,
+    inst: Installment,
+  ): { message: string; isValidPhone: boolean } => {
+    let message = "";
+    let isValidPhone = false;
+    if (customer && customer.phone && /^\d{10,15}$/.test(customer.phone)) {
+      isValidPhone = true;
+      message = `Hi ${customer.name}, your installment payment of ${formatCurrencyIN(
+        inst.amount,
+      )}`;
+      if (inst.late_fee && inst.late_fee > 0) {
+        message += ` (including a ${formatCurrencyIN(inst.late_fee)} late fee)`;
+      }
+      message += ` (Installment #${inst.installment_number}) was received on ${formatDate(
+        inst.date,
+        "whatsapp",
+      )}. Thank you.`;
+      message += " Thank You, I J Reddy.";
+    }
+    return { message, isValidPhone };
+  };
 
   // Memoize filtered loans to prevent recalculation on every render
   const filteredLoans = React.useMemo(() => {
@@ -137,8 +161,8 @@ const LoanTableView: React.FC = () => {
   const sortedLoans = React.useMemo(() => {
     if (!sortField) return filteredLoans;
     return [...filteredLoans].sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
+      let aValue: string | number | null;
+      let bValue: string | number | null;
       // small helper: if both values are purely numeric strings, compare numerically
       const compareMaybeNumeric = (x: any, y: any) => {
         const xs = x == null ? "" : String(x).trim();
@@ -204,6 +228,11 @@ const LoanTableView: React.FC = () => {
           aValue = "";
           bValue = "";
       }
+      // explicit null handling: place nulls last for ascending order
+      if (aValue === null && bValue === null) return 0;
+      if (aValue === null) return sortDirection === "asc" ? 1 : -1;
+      if (bValue === null) return sortDirection === "asc" ? -1 : 1;
+
       // if both are numbers, numeric compare
       if (typeof aValue === "number" && typeof bValue === "number") {
         return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
@@ -230,7 +259,7 @@ const LoanTableView: React.FC = () => {
 
   const [expandedRow, setExpandedRow] = React.useState<string | null>(null);
   const [draggingCardId, setDraggingCardId] = React.useState<string | null>(
-    null
+    null,
   );
   const [deleteTarget, setDeleteTarget] = React.useState<{
     id: string;
@@ -242,11 +271,15 @@ const LoanTableView: React.FC = () => {
   } | null>(null);
   const [deletingLoan, setDeletingLoan] = React.useState(false);
   const [deletingInstallment, setDeletingInstallment] = React.useState(false);
-  
+
   // Track IDs being deleted for background animation
-  const [animatingLoanId, setAnimatingLoanId] = React.useState<string | null>(null);
-  const [animatingInstallmentId, setAnimatingInstallmentId] = React.useState<string | null>(null);
-  
+  const [animatingLoanId, setAnimatingLoanId] = React.useState<string | null>(
+    null,
+  );
+  const [animatingInstallmentId, setAnimatingInstallmentId] = React.useState<
+    string | null
+  >(null);
+
   const [editTarget, setEditTarget] = React.useState<Installment | null>(null);
   const [editLoanTarget, setEditLoanTarget] =
     React.useState<LoanWithCustomer | null>(null);
@@ -288,14 +321,14 @@ const LoanTableView: React.FC = () => {
   // Close actions dropdown when clicking outside
   React.useEffect(() => {
     if (!expandedRow?.startsWith("actions-")) return;
-    
+
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest('.actions-dropdown-container')) {
+      if (!target.closest(".actions-dropdown-container")) {
         setExpandedRow(null);
       }
     };
-    
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [expandedRow]);
@@ -338,9 +371,9 @@ const LoanTableView: React.FC = () => {
     const emptyMessage =
       isScopedCustomer && scopedCustomerId
         ? (() => {
-          const customer = customerMap.get(scopedCustomerId);
-          return `No Loan Entries for ${customer?.name || "you"}`;
-        })()
+            const customer = customerMap.get(scopedCustomerId);
+            return `No Loan Entries for ${customer?.name || "you"}`;
+          })()
         : "No loans recorded yet.";
 
     return (
@@ -403,7 +436,7 @@ const LoanTableView: React.FC = () => {
         <thead>
           <tr className="bg-gray-100/70 dark:bg-slate-700">
             <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 dark:border-dark-border dark:text-dark-text whitespace-nowrap">
-              #
+              Sr.No
             </th>
             <th
               className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
@@ -481,339 +514,356 @@ const LoanTableView: React.FC = () => {
         {/* THIS SECTION CONTROLS THE INITIAL ROW-BY-ROW FADE IN */}
         <tbody>
           <AnimatePresence mode="popLayout">
-          {paginatedLoans.map((loan: LoanWithCustomer, idx: number) => {
-            // Use O(1) lookup - installments already sorted by date in the map
-            const loanInstallments = getLoanInstallments(loan.id);
-            const loanStatus = getLoanStatus(loan, loanInstallments);
-            const totalRepayable = loanStatus.totalRepayable;
-            const paid = loanStatus.paid;
-            const balance = totalRepayable - paid;
-            const isPaidOff = loanStatus.isPaidOff;
-            const isExpanded = expandedRow === loan.id;
-            const isDeleting = animatingLoanId === loan.id;
-            return (
-              <React.Fragment key={loan.id}>
-                <motion.tr
-                  layout={!!animatingLoanId} // Only enable layout animations during delete to prevent expensive recalcs
-                  variants={rowVariants}
-                  initial={false} // Skip initial animation for faster renders
-                  animate={isDeleting ? 'deleting' : 'visible'}
-                  exit="exit"
-                  transition={isDeleting ? layoutTransition : undefined}
-                  className={`even:bg-gray-50/50 hover:bg-indigo-50/50 transition-colors dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50 ${isDeleting ? 'pointer-events-none' : ''}`}
-                  style={{ overflow: 'hidden' }}
-                >
-                  <td className="px-4 py-2 border-b font-medium text-sm text-gray-700 dark:border-dark-border dark:text-dark-muted whitespace-nowrap">
-                    {(currentPage - 1) * itemsPerPage + idx + 1}
-                  </td>
-                  <td className="px-4 py-2 border-b dark:border-dark-border">
-                    <button
-                      className="font-bold text-indigo-700 hover:underline focus:outline-none text-left dark:text-indigo-400"
-                      onClick={() =>
-                        setExpandedRow(isExpanded ? null : loan.id)
-                      }
-                      aria-expanded={isExpanded}
-                    >
-                      {loan.customers?.name ?? "Unknown"}
-                    </button>
-                  </td>
-                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
-                    {formatCurrencyIN(totalRepayable)}
-                  </td>
-                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
-                    {formatCurrencyIN(loan.original_amount)}
-                  </td>
-                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
-                    {formatCurrencyIN(loan.interest_amount)}
-                  </td>
-                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
-                    {formatCurrencyIN(paid)}
-                  </td>
-                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
-                    {formatCurrencyIN(balance)}
-                  </td>
-                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
-                    {loan.check_number || "-"}
-                  </td>
-                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
-                    {loanInstallments.length}
-                  </td>
-                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
-                    {loan.total_instalments || "-"}
-                  </td>
-                  <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
-                    {loan.payment_date ? formatDate(loan.payment_date) : "-"}
-                  </td>
-                  <td
-                    className={`px-4 py-2 border-b font-semibold dark:border-dark-border whitespace-nowrap ${isPaidOff ? "text-green-600" : "text-orange-600"
-                      }`}
+            {paginatedLoans.map((loan: LoanWithCustomer, idx: number) => {
+              // Use O(1) lookup - installments already sorted by date in the map
+              const loanInstallments = getLoanInstallments(loan.id);
+              const loanStatus = getLoanStatus(loan, loanInstallments);
+              const totalRepayable = loanStatus.totalRepayable;
+              const paid = loanStatus.paid;
+              const balance = totalRepayable - paid;
+              const isPaidOff = loanStatus.isPaidOff;
+              const isExpanded = expandedRow === loan.id;
+              const isDeleting = animatingLoanId === loan.id;
+              return (
+                <React.Fragment key={loan.id}>
+                  <motion.tr
+                    layout={!!animatingLoanId} // Only enable layout animations during delete to prevent expensive recalcs
+                    variants={rowVariants}
+                    initial={false} // Skip initial animation for faster renders
+                    animate={isDeleting ? "deleting" : "visible"}
+                    exit="exit"
+                    transition={isDeleting ? layoutTransition : undefined}
+                    className={`even:bg-gray-50/50 hover:bg-indigo-50/50 transition-colors dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50 ${isDeleting ? "pointer-events-none" : ""}`}
+                    style={{ overflow: "hidden" }}
                   >
-                    {loanStatus.status}
-                  </td>
-                  {!isScopedCustomer && (
-                    <td className="px-2 py-2 border-b dark:border-dark-border">
-                      <div className="relative inline-block actions-dropdown-container">
-                        <motion.button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExpandedRow(expandedRow === `actions-${loan.id}` ? null : `actions-${loan.id}`);
-                          }}
-                          className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors"
-                          title="Actions"
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          <motion.svg 
-                            className="w-5 h-5 text-gray-600 dark:text-dark-text" 
-                            fill="none" 
-                            stroke="currentColor" 
-                            viewBox="0 0 24 24"
-                            animate={{ rotate: expandedRow === `actions-${loan.id}` ? 90 : 0 }}
-                            transition={{ duration: 0.2 }}
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                          </motion.svg>
-                        </motion.button>
-                        <AnimatePresence>
-                          {expandedRow === `actions-${loan.id}` && (
-                            <motion.div 
-                              className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-dark-card rounded-lg shadow-lg border border-gray-200 dark:border-dark-border py-1 min-w-[140px] overflow-hidden"
-                              initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                              animate={{ opacity: 1, scale: 1, y: 0 }}
-                              exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                              transition={{ duration: 0.15, ease: "easeOut" }}
-                            >
-                              <motion.button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setRecordInstallmentTarget(loan);
-                                  setExpandedRow(null);
-                                }}
-                                className="w-full px-3 py-2 text-left text-sm text-green-600 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center gap-2"
-                                whileHover={{ x: 4 }}
-                                transition={{ duration: 0.1 }}
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                                Installment
-                              </motion.button>
-                              <motion.button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditLoanTarget(loan);
-                                  setExpandedRow(null);
-                                }}
-                                className="w-full px-3 py-2 text-left text-sm text-blue-600 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center gap-2"
-                                whileHover={{ x: 4 }}
-                                transition={{ duration: 0.1 }}
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                                Edit
-                              </motion.button>
-                              <motion.button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDeleteLoanTarget({
-                                    id: loan.id,
-                                    customer: loan.customers?.name ?? null,
-                                  });
-                                  setExpandedRow(null);
-                                }}
-                                className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center gap-2"
-                                whileHover={{ x: 4 }}
-                                transition={{ duration: 0.1 }}
-                              >
-                                <Trash2Icon className="w-4 h-4" />
-                                Delete
-                              </motion.button>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
+                    <td className="px-4 py-2 border-b font-medium text-sm text-gray-700 dark:border-dark-border dark:text-dark-muted whitespace-nowrap">
+                      {(currentPage - 1) * itemsPerPage + idx + 1}
                     </td>
-                  )}
-                </motion.tr>
-
-                <AnimatePresence>
-                  {isExpanded && (
-                    <tr className="bg-gray-50/20 dark:bg-slate-800/20">
-                      <td
-                        colSpan={isScopedCustomer ? 12 : 13}
-                        className="p-0 border-b dark:border-dark-border"
+                    <td className="px-4 py-2 border-b dark:border-dark-border">
+                      <button
+                        className="font-bold text-indigo-700 hover:underline focus:outline-none text-left dark:text-indigo-400"
+                        onClick={() =>
+                          setExpandedRow(isExpanded ? null : loan.id)
+                        }
+                        aria-expanded={isExpanded}
                       >
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.3, ease: "easeInOut" }}
-                          className="overflow-hidden"
+                        {loan.customers?.name ?? "Unknown"}
+                      </button>
+                    </td>
+                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
+                      {formatCurrencyIN(totalRepayable)}
+                    </td>
+                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
+                      {formatCurrencyIN(loan.original_amount)}
+                    </td>
+                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
+                      {formatCurrencyIN(loan.interest_amount)}
+                    </td>
+                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
+                      {formatCurrencyIN(paid)}
+                    </td>
+                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
+                      {formatCurrencyIN(balance)}
+                    </td>
+                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
+                      {loan.check_number || "-"}
+                    </td>
+                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
+                      {loanInstallments.length}
+                    </td>
+                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
+                      {loan.total_instalments || "-"}
+                    </td>
+                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
+                      {loan.payment_date ? formatDate(loan.payment_date) : "-"}
+                    </td>
+                    <td
+                      className={`px-4 py-2 border-b font-semibold dark:border-dark-border whitespace-nowrap ${
+                        isPaidOff ? "text-green-600" : "text-orange-600"
+                      }`}
+                    >
+                      {loanStatus.status}
+                    </td>
+                    {!isScopedCustomer && (
+                      <td className="px-2 py-2 border-b dark:border-dark-border">
+                        <div className="relative inline-block actions-dropdown-container">
+                          <motion.button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedRow(
+                                expandedRow === `actions-${loan.id}`
+                                  ? null
+                                  : `actions-${loan.id}`,
+                              );
+                            }}
+                            className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors"
+                            title="Actions"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            <motion.svg
+                              className="w-5 h-5 text-gray-600 dark:text-dark-text"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              animate={{
+                                rotate:
+                                  expandedRow === `actions-${loan.id}` ? 90 : 0,
+                              }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                              />
+                            </motion.svg>
+                          </motion.button>
+                          <AnimatePresence>
+                            {expandedRow === `actions-${loan.id}` && (
+                              <motion.div
+                                className="absolute right-0 top-full mt-1 z-50 bg-white dark:bg-dark-card rounded-lg shadow-lg border border-gray-200 dark:border-dark-border py-1 min-w-[140px] overflow-hidden"
+                                initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                                transition={{ duration: 0.15, ease: "easeOut" }}
+                              >
+                                <motion.button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setRecordInstallmentTarget(loan);
+                                    setExpandedRow(null);
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-sm text-green-600 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center gap-2"
+                                  whileHover={{ x: 4 }}
+                                  transition={{ duration: 0.1 }}
+                                >
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                    />
+                                  </svg>
+                                  Installment
+                                </motion.button>
+                                <motion.button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditLoanTarget(loan);
+                                    setExpandedRow(null);
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-sm text-blue-600 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center gap-2"
+                                  whileHover={{ x: 4 }}
+                                  transition={{ duration: 0.1 }}
+                                >
+                                  <svg
+                                    className="w-4 h-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                    />
+                                  </svg>
+                                  Edit
+                                </motion.button>
+                                <motion.button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDeleteLoanTarget({
+                                      id: loan.id,
+                                      customer: loan.customers?.name ?? null,
+                                    });
+                                    setExpandedRow(null);
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center gap-2"
+                                  whileHover={{ x: 4 }}
+                                  transition={{ duration: 0.1 }}
+                                >
+                                  <Trash2Icon className="w-4 h-4" />
+                                  Delete
+                                </motion.button>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      </td>
+                    )}
+                  </motion.tr>
+
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <tr className="bg-gray-50/20 dark:bg-slate-800/20">
+                        <td
+                          colSpan={isScopedCustomer ? 12 : 13}
+                          className="p-0 border-b dark:border-dark-border"
                         >
-                          <div className="p-3 border rounded-lg bg-white/80 dark:bg-dark-card dark:border-dark-border">
-                            <h4 className="font-semibold text-gray-700 mb-2 dark:text-dark-text">
-                              Installments Paid
-                            </h4>
-                            {loanInstallments.length > 0 ? (
-                              <AnimatePresence mode="popLayout">
-                              <ul className="space-y-2">
-                                {loanInstallments.map((inst) => {
-                                  const customer = loan.customers;
-                                  const isInstDeleting = animatingInstallmentId === inst.id;
-                                  let message = "";
-                                  let whatsappUrl = "#";
-                                  let isValidPhone = false;
-                                  if (
-                                    customer &&
-                                    customer.phone &&
-                                    /^\d{10,15}$/.test(customer.phone)
-                                  ) {
-                                    isValidPhone = true;
-                                    message = `Hi ${customer.name}, your installment payment of ₹${inst.amount}`;
-                                    if (inst.late_fee && inst.late_fee > 0) {
-                                      message += ` (including a ₹${inst.late_fee} late fee)`;
-                                    }
-                                    message += ` (Installment #${inst.installment_number
-                                      }) was received on ${formatDate(
-                                        inst.date,
-                                        "whatsapp"
-                                      )}. Thank you.`;
-                                    // Append signature
-                                    message += " Thank You, I J Reddy.";
-                                    // build wa.me URL and ensure proper encoding
-                                    try {
-                                      whatsappUrl = `https://wa.me/${customer.phone
-                                        }?text=${encodeURIComponent(message)}`;
-                                    } catch (err) {
-                                      whatsappUrl = `https://api.whatsapp.com/send?phone=${customer.phone
-                                        }&text=${encodeURIComponent(message)}`;
-                                    }
-                                  }
-                                  return (
-                                    <motion.li
-                                      key={inst.id}
-                                      layout
-                                      variants={rowVariants}
-                                      initial="initial"
-                                      animate={isInstDeleting ? 'deleting' : 'visible'}
-                                      exit="exit"
-                                      transition={layoutTransition}
-                                      className={`flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gray-50 rounded px-3 py-2 border border-gray-200 gap-2 dark:bg-slate-700 dark:border-dark-border ${isInstDeleting ? 'pointer-events-none' : ''}`}
-                                      style={{ overflow: 'hidden' }}
-                                    >
-                                      <div>
-                                        <span className="font-medium dark:text-dark-text">
-                                          #{inst.installment_number}
-                                        </span>
-                                        <span className="ml-2 text-gray-600 dark:text-dark-muted">
-                                          {formatDate(inst.date)}
-                                        </span>
-                                        <span className="ml-2 text-green-700 font-semibold dark:text-green-400">
-                                          {formatCurrencyIN(inst.amount)}
-                                        </span>
-                                        {inst.late_fee > 0 && (
-                                          <span className="ml-2 text-orange-500 text-xs">
-                                            (+₹{inst.late_fee} late)
-                                          </span>
-                                        )}
-                                        <span className="ml-2 text-gray-500 text-xs dark:text-dark-muted">
-                                          Receipt: {inst.receipt_number || "-"}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <motion.button
-                                          onClick={() =>
-                                            isValidPhone &&
-                                            openWhatsApp(
-                                              customer?.phone,
-                                              message,
-                                              { cooldownMs: 1200 }
-                                            )
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3, ease: "easeInOut" }}
+                            className="overflow-hidden"
+                          >
+                            <div className="p-3 border rounded-lg bg-white/80 dark:bg-dark-card dark:border-dark-border">
+                              <h4 className="font-semibold text-gray-700 mb-2 dark:text-dark-text">
+                                Installments Paid
+                              </h4>
+                              {loanInstallments.length > 0 ? (
+                                <AnimatePresence mode="popLayout">
+                                  <ul className="space-y-2">
+                                    {loanInstallments.map((inst) => {
+                                      const customer = loan.customers;
+                                      const isInstDeleting =
+                                        animatingInstallmentId === inst.id;
+                                      const { message, isValidPhone } =
+                                        buildInstallmentMessage(customer, inst);
+                                      return (
+                                        <motion.li
+                                          key={inst.id}
+                                          layout
+                                          variants={rowVariants}
+                                          initial="initial"
+                                          animate={
+                                            isInstDeleting
+                                              ? "deleting"
+                                              : "visible"
                                           }
-                                          className="p-1 rounded-full hover:bg-green-500/10 transition-colors"
-                                          aria-label={`Send installment #${inst.installment_number} on WhatsApp`}
-                                          whileHover={{ scale: 1.2 }}
-                                          whileTap={{ scale: 0.9 }}
-                                          disabled={!isValidPhone}
+                                          exit="exit"
+                                          transition={layoutTransition}
+                                          className={`flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gray-50 rounded px-3 py-2 border border-gray-200 gap-2 dark:bg-slate-700 dark:border-dark-border ${isInstDeleting ? "pointer-events-none" : ""}`}
+                                          style={{ overflow: "hidden" }}
                                         >
-                                          <WhatsAppIcon className="w-4 h-4 text-green-500" />
-                                        </motion.button>
-                                        {!isScopedCustomer && (
-                                          <>
-                                            <motion.button
-                                              onClick={() => {
-                                                setEditTarget(inst);
-                                                setEditForm({
-                                                  date: inst.date,
-                                                  amount:
-                                                    inst.amount.toString(),
-                                                  late_fee:
-                                                    inst.late_fee?.toString() ||
-                                                    "",
-                                                  receipt_number:
-                                                    inst.receipt_number || "",
-                                                });
-                                              }}
-                                              onMouseDown={(e) =>
-                                                e.stopPropagation()
-                                              }
-                                              onTouchStart={(e) =>
-                                                e.stopPropagation()
-                                              }
-                                              onPointerDown={(e) =>
-                                                (e as any).stopPropagation()
-                                              }
-                                              className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700 ml-2"
-                                              aria-label={`Edit installment #${inst.installment_number}`}
-                                              whileHover={{ scale: 1.05 }}
-                                              whileTap={{ scale: 0.95 }}
-                                            >
-                                              Edit
-                                            </motion.button>
+                                          <div>
+                                            <span className="font-medium dark:text-dark-text">
+                                              #{inst.installment_number}
+                                            </span>
+                                            <span className="ml-2 text-gray-600 dark:text-dark-muted">
+                                              {formatDate(inst.date)}
+                                            </span>
+                                            <span className="ml-2 text-green-700 font-semibold dark:text-green-400">
+                                              {formatCurrencyIN(inst.amount)}
+                                            </span>
+                                            {inst.late_fee > 0 && (
+                                              <span className="ml-2 text-orange-500 text-xs">
+                                                (+₹{inst.late_fee} late)
+                                              </span>
+                                            )}
+                                            <span className="ml-2 text-gray-500 text-xs dark:text-dark-muted">
+                                              Receipt:{" "}
+                                              {inst.receipt_number || "-"}
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
                                             <motion.button
                                               onClick={() =>
-                                                setDeleteTarget({
-                                                  id: inst.id,
-                                                  number:
-                                                    inst.installment_number,
-                                                })
+                                                isValidPhone &&
+                                                openWhatsApp(
+                                                  customer?.phone,
+                                                  message,
+                                                  { cooldownMs: 1200 },
+                                                )
                                               }
-                                              onMouseDown={(e) =>
-                                                e.stopPropagation()
-                                              }
-                                              onTouchStart={(e) =>
-                                                e.stopPropagation()
-                                              }
-                                              onPointerDown={(e) =>
-                                                (e as any).stopPropagation()
-                                              }
-                                              className="px-2 py-1 rounded bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors ml-2"
-                                              aria-label={`Delete installment #${inst.installment_number}`}
-                                              whileHover={{ scale: 1.02 }}
-                                              whileTap={{ scale: 0.98 }}
+                                              className="p-1 rounded-full hover:bg-green-500/10 transition-colors"
+                                              aria-label={`Send installment #${inst.installment_number} on WhatsApp`}
+                                              whileHover={{ scale: 1.2 }}
+                                              whileTap={{ scale: 0.9 }}
+                                              disabled={!isValidPhone}
                                             >
-                                              <Trash2Icon className="w-4 h-4 text-red-500" />
+                                              <WhatsAppIcon className="w-4 h-4 text-green-500" />
                                             </motion.button>
-                                          </>
-                                        )}
-                                      </div>
-                                    </motion.li>
-                                  );
-                                })}
-                              </ul>
-                              </AnimatePresence>
-                            ) : (
-                              <p className="text-center text-gray-500 py-4 dark:text-dark-muted">
-                                No installments have been paid for this loan
-                                yet.
-                              </p>
-                            )}
-                          </div>
-                        </motion.div>
-                      </td>
-                    </tr>
-                  )}
-                </AnimatePresence>
-              </React.Fragment>
-            );
-          })}
+                                            {!isScopedCustomer && (
+                                              <>
+                                                <motion.button
+                                                  onClick={() => {
+                                                    setEditTarget(inst);
+                                                    setEditForm({
+                                                      date: inst.date,
+                                                      amount:
+                                                        inst.amount.toString(),
+                                                      late_fee:
+                                                        inst.late_fee?.toString() ||
+                                                        "",
+                                                      receipt_number:
+                                                        inst.receipt_number ||
+                                                        "",
+                                                    });
+                                                  }}
+                                                  onMouseDown={(e) =>
+                                                    e.stopPropagation()
+                                                  }
+                                                  onTouchStart={(e) =>
+                                                    e.stopPropagation()
+                                                  }
+                                                  onPointerDown={(e) =>
+                                                    (e as any).stopPropagation()
+                                                  }
+                                                  className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700 ml-2"
+                                                  aria-label={`Edit installment #${inst.installment_number}`}
+                                                  whileHover={{ scale: 1.05 }}
+                                                  whileTap={{ scale: 0.95 }}
+                                                >
+                                                  Edit
+                                                </motion.button>
+                                                <motion.button
+                                                  onClick={() =>
+                                                    setDeleteTarget({
+                                                      id: inst.id,
+                                                      number:
+                                                        inst.installment_number,
+                                                    })
+                                                  }
+                                                  onMouseDown={(e) =>
+                                                    e.stopPropagation()
+                                                  }
+                                                  onTouchStart={(e) =>
+                                                    e.stopPropagation()
+                                                  }
+                                                  onPointerDown={(e) =>
+                                                    (e as any).stopPropagation()
+                                                  }
+                                                  className="px-2 py-1 rounded bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors ml-2"
+                                                  aria-label={`Delete installment #${inst.installment_number}`}
+                                                  whileHover={{ scale: 1.02 }}
+                                                  whileTap={{ scale: 0.98 }}
+                                                >
+                                                  <Trash2Icon className="w-4 h-4 text-red-500" />
+                                                </motion.button>
+                                              </>
+                                            )}
+                                          </div>
+                                        </motion.li>
+                                      );
+                                    })}
+                                  </ul>
+                                </AnimatePresence>
+                              ) : (
+                                <p className="text-center text-gray-500 py-4 dark:text-dark-muted">
+                                  No installments have been paid for this loan
+                                  yet.
+                                </p>
+                              )}
+                            </div>
+                          </motion.div>
+                        </td>
+                      </tr>
+                    )}
+                  </AnimatePresence>
+                </React.Fragment>
+              );
+            })}
           </AnimatePresence>
         </tbody>
       </table>
@@ -822,355 +872,360 @@ const LoanTableView: React.FC = () => {
       {/* This `md:hidden` class is correct. It hides this view on desktop */}
       <div className="md:hidden mt-4 space-y-3">
         <AnimatePresence mode="popLayout">
-        {paginatedLoans.map((loan, idx) => {
-          // Use O(1) lookup - installments already sorted by date in the map
-          const loanInstallments = getLoanInstallments(loan.id);
-          const loanStatus = getLoanStatus(loan, loanInstallments);
-          const totalRepayable = loanStatus.totalRepayable;
-          const paid = loanStatus.paid;
-          const balance = totalRepayable - paid;
-          const customer = loan.customers;
-          const isDeleting = animatingLoanId === loan.id;
+          {paginatedLoans.map((loan, idx) => {
+            // Use O(1) lookup - installments already sorted by date in the map
+            const loanInstallments = getLoanInstallments(loan.id);
+            const loanStatus = getLoanStatus(loan, loanInstallments);
+            const totalRepayable = loanStatus.totalRepayable;
+            const paid = loanStatus.paid;
+            const balance = totalRepayable - paid;
+            const customer = loan.customers;
+            const isDeleting = animatingLoanId === loan.id;
 
-          // WhatsApp message construction for loan - matches displayed fields
-          let loanMessage = "";
-          let isValidPhone = false;
-          if (
-            customer &&
-            customer.phone &&
-            /^\d{10,15}$/.test(customer.phone)
-          ) {
-            isValidPhone = true;
-            loanMessage = `Hi ${customer.name
+            // WhatsApp message construction for loan - matches displayed fields
+            let loanMessage = "";
+            let isValidPhone = false;
+            if (
+              customer &&
+              customer.phone &&
+              /^\d{10,15}$/.test(customer.phone)
+            ) {
+              isValidPhone = true;
+              loanMessage = `Hi ${
+                customer.name
               }, this is regarding your loan.\n\nTotal Repayable: ${formatCurrencyIN(
-                totalRepayable
-              )}\nTotal Installments: ${loan.total_instalments
-              }\nPaid: ${formatCurrencyIN(paid)}\nInstallments Paid: ${loanInstallments.length
+                totalRepayable,
+              )}\nTotal Installments: ${
+                loan.total_instalments
+              }\nPaid: ${formatCurrencyIN(paid)}\nInstallments Paid: ${
+                loanInstallments.length
               }\nBalance: ${formatCurrencyIN(balance)}\n\nThank You, I J Reddy.`;
-          }
+            }
 
-          return (
-            <motion.div 
-              key={loan.id} 
-              layout={!!animatingLoanId} // Only enable layout animations during delete
-              variants={cardVariants}
-              initial={false} // Skip initial animation for faster renders
-              animate={isDeleting ? 'deleting' : 'visible'}
-              exit="exit"
-              transition={isDeleting ? layoutTransition : undefined}
-              className={`relative ${isDeleting ? 'pointer-events-none' : ''}`}
-              style={{ overflow: 'hidden' }}
-            >
-              {/* Swipe background indicators - only visible when dragging this card */}
-              {draggingCardId === loan.id && !isDeleting && (
-                <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
-                  <div
-                    className={`${isScopedCustomer ? "w-full" : "w-1/2"
-                      } bg-green-500 flex items-center justify-start pl-4`}
-                  >
-                    <WhatsAppIcon className="w-6 h-6 text-white" />
-                  </div>
-                  {!isScopedCustomer && (
-                    <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
-                      <Trash2Icon className="w-6 h-6 text-white" />
-                    </div>
-                  )}
-                </div>
-              )}
-
+            return (
               <motion.div
-                className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
-                drag={isDeleting ? false : "x"}
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.3}
-                dragMomentum={false}
-                dragDirectionLock={true}
-                style={{ touchAction: "pan-y" }}
-                onDragStart={() => {
-                  setDraggingCardId(loan.id);
-                  if (expandedRow === loan.id) {
-                    setExpandedRow(null);
-                  }
-                }}
-                onDragEnd={(_, info) => {
-                  setDraggingCardId(null);
-                  const threshold = 100;
-                  if (info.offset.x < -threshold && !isScopedCustomer) {
-                    // Swipe left - Delete
-                    setDeleteLoanTarget({
-                      id: loan.id,
-                      customer: customer?.name ?? null,
-                    });
-                  } else if (info.offset.x > threshold && isValidPhone) {
-                    // Swipe right - WhatsApp
-                    openWhatsApp(customer?.phone, loanMessage, {
-                      cooldownMs: 1200,
-                    });
-                  }
-                }}
+                key={loan.id}
+                layout={!!animatingLoanId} // Only enable layout animations during delete
+                variants={cardVariants}
+                initial={false} // Skip initial animation for faster renders
+                animate={isDeleting ? "deleting" : "visible"}
+                exit="exit"
+                transition={isDeleting ? layoutTransition : undefined}
+                className={`relative ${isDeleting ? "pointer-events-none" : ""}`}
+                style={{ overflow: "hidden" }}
               >
-                {/* Row 1: # Name and Total Repayable */}
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-1">
-                    <span className="text-xs text-gray-400 dark:text-dark-muted">
-                      #{(currentPage - 1) * itemsPerPage + idx + 1}
-                    </span>
-                    <button
-                      onClick={() =>
-                        setExpandedRow(expandedRow === loan.id ? null : loan.id)
-                      }
-                      className="text-sm font-semibold text-indigo-700 truncate underline dark:text-indigo-400"
+                {/* Swipe background indicators - only visible when dragging this card */}
+                {draggingCardId === loan.id && !isDeleting && (
+                  <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
+                    <div
+                      className={`${
+                        isScopedCustomer ? "w-full" : "w-1/2"
+                      } bg-green-500 flex items-center justify-start pl-4`}
                     >
-                      {customer?.name ?? "Unknown"}
-                    </button>
+                      <WhatsAppIcon className="w-6 h-6 text-white" />
+                    </div>
+                    {!isScopedCustomer && (
+                      <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
+                        <Trash2Icon className="w-6 h-6 text-white" />
+                      </div>
+                    )}
                   </div>
-                  <div className="text-lg font-bold dark:text-dark-text">
-                    {formatCurrencyIN(totalRepayable)}
-                  </div>
-                </div>
+                )}
 
-                {/* Row 2: Status */}
-                <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                  Status:{" "}
-                  <span
-                    className={`font-semibold ${loanStatus.isPaidOff
-                      ? "text-green-600"
-                      : "text-orange-600"
-                      }`}
-                  >
-                    {loanStatus.status}
-                  </span>
-                </div>
-
-                {/* Row 3: Total Installments */}
-                <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                  Total Installments:{" "}
-                  <span className="font-semibold text-gray-700 dark:text-dark-text">
-                    {loan.total_instalments}
-                  </span>
-                </div>
-
-                {/* Row 4: Paid */}
-                <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                  Paid:{" "}
-                  <span className="font-semibold text-green-600 dark:text-green-400">
-                    {formatCurrencyIN(paid)}
-                  </span>
-                </div>
-
-                {/* Row 4: Installments Paid */}
-                <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                  Installments Paid:{" "}
-                  <span className="font-semibold text-gray-700 dark:text-dark-text">
-                    {loanInstallments.length}
-                  </span>
-                </div>
-
-                {/* Row 5: Balance */}
-                <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
-                  Balance:{" "}
-                  <span className="font-semibold text-red-600 dark:text-red-400">
-                    {formatCurrencyIN(balance)}
-                  </span>
-                </div>
-
-                {/* Row 6: Action buttons */}
-                <div className="mt-3 flex items-center justify-evenly">
-                  <button
-                    onClick={() =>
-                      isValidPhone &&
+                <motion.div
+                  className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
+                  drag={isDeleting ? false : "x"}
+                  dragConstraints={{ left: 0, right: 0 }}
+                  dragElastic={0.3}
+                  dragMomentum={false}
+                  dragDirectionLock={true}
+                  style={{ touchAction: "pan-y" }}
+                  onDragStart={() => {
+                    setDraggingCardId(loan.id);
+                    if (expandedRow === loan.id) {
+                      setExpandedRow(null);
+                    }
+                  }}
+                  onDragEnd={(_, info) => {
+                    setDraggingCardId(null);
+                    const threshold = 100;
+                    if (info.offset.x < -threshold && !isScopedCustomer) {
+                      // Swipe left - Delete
+                      setDeleteLoanTarget({
+                        id: loan.id,
+                        customer: customer?.name ?? null,
+                      });
+                    } else if (info.offset.x > threshold && isValidPhone) {
+                      // Swipe right - WhatsApp
                       openWhatsApp(customer?.phone, loanMessage, {
                         cooldownMs: 1200,
-                      })
+                      });
                     }
-                    className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-                    disabled={!isValidPhone}
-                    aria-label={`Send loan details for ${customer?.name} on WhatsApp`}
-                  >
-                    <WhatsAppIcon className="w-5 h-5" />
-                  </button>
-                  {!isScopedCustomer && (
-                    <button
-                      onClick={() => setRecordInstallmentTarget(loan)}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onTouchStart={(e) => e.stopPropagation()}
-                      onPointerDown={(e) => (e as any).stopPropagation()}
-                      className="px-3 py-1 rounded bg-green-600 text-white text-sm hover:bg-green-700"
-                      title="Record installment"
+                  }}
+                >
+                  {/* Row 1: Sr.No Name and Total Repayable */}
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-400 dark:text-dark-muted">
+                        Sr.No {(currentPage - 1) * itemsPerPage + idx + 1}
+                      </span>
+                      <button
+                        onClick={() =>
+                          setExpandedRow(
+                            expandedRow === loan.id ? null : loan.id,
+                          )
+                        }
+                        className="text-sm font-semibold text-indigo-700 truncate underline dark:text-indigo-400"
+                      >
+                        {customer?.name ?? "Unknown"}
+                      </button>
+                    </div>
+                    <div className="text-lg font-bold dark:text-dark-text">
+                      {formatCurrencyIN(totalRepayable)}
+                    </div>
+                  </div>
+
+                  {/* Row 2: Status */}
+                  <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                    Status:{" "}
+                    <span
+                      className={`font-semibold ${
+                        loanStatus.isPaidOff
+                          ? "text-green-600"
+                          : "text-orange-600"
+                      }`}
                     >
-                      + Installments
-                    </button>
-                  )}
-                  {!isScopedCustomer && (
-                    <button
-                      onClick={() => setEditLoanTarget(loan)}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onTouchStart={(e) => e.stopPropagation()}
-                      onPointerDown={(e) => (e as any).stopPropagation()}
-                      className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
-                    >
-                      Edit
-                    </button>
-                  )}
-                  {!isScopedCustomer && (
+                      {loanStatus.status}
+                    </span>
+                  </div>
+
+                  {/* Row 3: Total Installments */}
+                  <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                    Total Installments:{" "}
+                    <span className="font-semibold text-gray-700 dark:text-dark-text">
+                      {loan.total_instalments}
+                    </span>
+                  </div>
+
+                  {/* Row 4: Paid */}
+                  <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                    Paid:{" "}
+                    <span className="font-semibold text-green-600 dark:text-green-400">
+                      {formatCurrencyIN(paid)}
+                    </span>
+                  </div>
+
+                  {/* Row 5: Installments Paid */}
+                  <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                    Installments Paid:{" "}
+                    <span className="font-semibold text-gray-700 dark:text-dark-text">
+                      {loanInstallments.length}
+                    </span>
+                  </div>
+                  {/* Row 5: Balance */}
+                  <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
+                    Balance:{" "}
+                    <span className="font-semibold text-red-600 dark:text-red-400">
+                      {formatCurrencyIN(balance)}
+                    </span>
+                  </div>
+
+                  {/* Row 6: Action buttons */}
+                  <div className="mt-3 flex items-center justify-evenly">
                     <button
                       onClick={() =>
-                        setDeleteLoanTarget({
-                          id: loan.id,
-                          customer: customer?.name ?? null,
+                        isValidPhone &&
+                        openWhatsApp(customer?.phone, loanMessage, {
+                          cooldownMs: 1200,
                         })
                       }
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onTouchStart={(e) => e.stopPropagation()}
-                      onPointerDown={(e) => (e as any).stopPropagation()}
-                      className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-                      aria-label={`Delete loan for ${customer?.name}`}
-                      title="Delete loan"
+                      className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                      disabled={!isValidPhone}
+                      aria-label={`Send loan details for ${customer?.name} on WhatsApp`}
                     >
-                      <Trash2Icon className="w-5 h-5" />
+                      <WhatsAppIcon className="w-5 h-5" />
                     </button>
-                  )}
-                </div>
-              </motion.div>
+                    {!isScopedCustomer && (
+                      <button
+                        onClick={() => setRecordInstallmentTarget(loan)}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => (e as any).stopPropagation()}
+                        className="px-3 py-1 rounded bg-green-600 text-white text-sm hover:bg-green-700"
+                        title="Record installment"
+                      >
+                        + Installments
+                      </button>
+                    )}
+                    {!isScopedCustomer && (
+                      <button
+                        onClick={() => setEditLoanTarget(loan)}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => (e as any).stopPropagation()}
+                        className="px-3 py-1 rounded bg-blue-600 text-white text-sm"
+                      >
+                        Edit
+                      </button>
+                    )}
+                    {!isScopedCustomer && (
+                      <button
+                        onClick={() =>
+                          setDeleteLoanTarget({
+                            id: loan.id,
+                            customer: customer?.name ?? null,
+                          })
+                        }
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => (e as any).stopPropagation()}
+                        className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                        aria-label={`Delete loan for ${customer?.name}`}
+                        title="Delete loan"
+                      >
+                        <Trash2Icon className="w-5 h-5" />
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
 
-              <AnimatePresence>
-                {expandedRow === loan.id && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.3, ease: "easeInOut" }}
-                    className="overflow-hidden"
-                  >
-                    <div className="mt-3 border-t pt-3 dark:border-dark-border">
-                      <h5 className="text-sm font-semibold mb-2 dark:text-dark-text">
-                        Installments
-                      </h5>
-                      <AnimatePresence mode="popLayout">
-                      <ul className="space-y-2">
-                        {loanInstallments.map((inst) => {
-                          // Build WhatsApp message for mobile view
-                          const isInstDeleting = animatingInstallmentId === inst.id;
-                          let message = "";
-                          let isValidPhone = false;
-                          if (
-                            customer &&
-                            customer.phone &&
-                            /^\d{10,15}$/.test(customer.phone)
-                          ) {
-                            isValidPhone = true;
-                            message = `Hi ${customer.name}, your installment payment of ₹${inst.amount}`;
-                            if (inst.late_fee && inst.late_fee > 0) {
-                              message += ` (including a ₹${inst.late_fee} late fee)`;
-                            }
-                            message += ` (Installment #${inst.installment_number
-                              }) was received on ${formatDate(
-                                inst.date,
-                                "whatsapp"
-                              )}. Thank you.`;
-                            message += " Thank You, I J Reddy.";
-                          }
-                          return (
-                            <motion.li
-                              key={inst.id}
-                              layout
-                              variants={rowVariants}
-                              initial="initial"
-                              animate={isInstDeleting ? 'deleting' : 'visible'}
-                              exit="exit"
-                              transition={layoutTransition}
-                              className={`flex items-center justify-between ${isInstDeleting ? 'pointer-events-none' : ''}`}
-                              style={{ overflow: 'hidden' }}
-                            >
-                              <div className="text-sm">
-                                <div className="dark:text-dark-text">
-                                  #{inst.installment_number} •{" "}
-                                  {formatDate(inst.date)}
-                                </div>
-                                <div className="text-green-700 font-semibold dark:text-green-400">
-                                  {formatCurrencyIN(inst.amount)}{" "}
-                                  {inst.late_fee > 0 && (
-                                    <span className="text-orange-500 text-xs">
-                                      (+{formatCurrencyIN(inst.late_fee)} late)
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-xs text-gray-500 dark:text-dark-muted">
-                                  Receipt: {inst.receipt_number || "-"}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (isValidPhone) {
-                                      openWhatsApp(customer?.phone, message, {
-                                        cooldownMs: 1200,
-                                      });
-                                    }
-                                  }}
-                                  className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-                                  aria-label={`Send installment #${inst.installment_number} on WhatsApp`}
-                                  disabled={!isValidPhone}
+                <AnimatePresence>
+                  {expandedRow === loan.id && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className="overflow-hidden"
+                    >
+                      <div className="mt-3 border-t pt-3 dark:border-dark-border">
+                        <h5 className="text-sm font-semibold mb-2 dark:text-dark-text">
+                          Installments
+                        </h5>
+                        <AnimatePresence mode="popLayout">
+                          <ul className="space-y-2">
+                            {loanInstallments.map((inst) => {
+                              // Build WhatsApp message for mobile view
+                              const isInstDeleting =
+                                animatingInstallmentId === inst.id;
+                              const { message, isValidPhone } =
+                                buildInstallmentMessage(customer, inst);
+                              return (
+                                <motion.li
+                                  key={inst.id}
+                                  layout
+                                  variants={rowVariants}
+                                  initial="initial"
+                                  animate={
+                                    isInstDeleting ? "deleting" : "visible"
+                                  }
+                                  exit="exit"
+                                  transition={layoutTransition}
+                                  className={`flex items-center justify-between ${isInstDeleting ? "pointer-events-none" : ""}`}
+                                  style={{ overflow: "hidden" }}
                                 >
-                                  <WhatsAppIcon className="w-4 h-4" />
-                                </button>
-                                {!isScopedCustomer && (
-                                  <>
+                                  <div className="text-sm">
+                                    <div className="dark:text-dark-text">
+                                      #{inst.installment_number} •{" "}
+                                      {formatDate(inst.date)}
+                                    </div>
+                                    <div className="text-green-700 font-semibold dark:text-green-400">
+                                      {formatCurrencyIN(inst.amount)}{" "}
+                                      {inst.late_fee > 0 && (
+                                        <span className="text-orange-500 text-xs">
+                                          (+{formatCurrencyIN(inst.late_fee)}{" "}
+                                          late)
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-dark-muted">
+                                      Receipt: {inst.receipt_number || "-"}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        setEditTarget(inst);
-                                        setEditForm({
-                                          date: inst.date,
-                                          amount: inst.amount.toString(),
-                                          late_fee:
-                                            inst.late_fee?.toString() || "",
-                                          receipt_number:
-                                            inst.receipt_number || "",
-                                        });
+                                        if (isValidPhone) {
+                                          openWhatsApp(
+                                            customer?.phone,
+                                            message,
+                                            {
+                                              cooldownMs: 1200,
+                                            },
+                                          );
+                                        }
                                       }}
-                                      onMouseDown={(e) => e.stopPropagation()}
-                                      onTouchStart={(e) => e.stopPropagation()}
-                                      onPointerDown={(e) =>
-                                        (e as any).stopPropagation()
-                                      }
-                                      className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+                                      className="p-2 rounded-md bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                                      aria-label={`Send installment #${inst.installment_number} on WhatsApp`}
+                                      disabled={!isValidPhone}
                                     >
-                                      Edit
+                                      <WhatsAppIcon className="w-4 h-4" />
                                     </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setDeleteTarget({
-                                          id: inst.id,
-                                          number: inst.installment_number,
-                                        });
-                                      }}
-                                      onMouseDown={(e) => e.stopPropagation()}
-                                      onTouchStart={(e) => e.stopPropagation()}
-                                      onPointerDown={(e) =>
-                                        (e as any).stopPropagation()
-                                      }
-                                      className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
-                                    >
-                                      <Trash2Icon className="w-4 h-4" />
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            </motion.li>
-                          );
-                        })}
-                      </ul>
-                      </AnimatePresence>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          );
-        })}
+                                    {!isScopedCustomer && (
+                                      <>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditTarget(inst);
+                                            setEditForm({
+                                              date: inst.date,
+                                              amount: inst.amount.toString(),
+                                              late_fee:
+                                                inst.late_fee?.toString() || "",
+                                              receipt_number:
+                                                inst.receipt_number || "",
+                                            });
+                                          }}
+                                          onMouseDown={(e) =>
+                                            e.stopPropagation()
+                                          }
+                                          onTouchStart={(e) =>
+                                            e.stopPropagation()
+                                          }
+                                          onPointerDown={(e) =>
+                                            (e as any).stopPropagation()
+                                          }
+                                          className="px-2 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+                                        >
+                                          Edit
+                                        </button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setDeleteTarget({
+                                              id: inst.id,
+                                              number: inst.installment_number,
+                                            });
+                                          }}
+                                          onMouseDown={(e) =>
+                                            e.stopPropagation()
+                                          }
+                                          onTouchStart={(e) =>
+                                            e.stopPropagation()
+                                          }
+                                          onPointerDown={(e) =>
+                                            (e as any).stopPropagation()
+                                          }
+                                          className="p-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                                        >
+                                          <Trash2Icon className="w-4 h-4" />
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                </motion.li>
+                              );
+                            })}
+                          </ul>
+                        </AnimatePresence>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
       </div>
 
@@ -1211,10 +1266,11 @@ const LoanTableView: React.FC = () => {
                       setCurrentPage(page);
                       setPagePickerOpen(null);
                     }}
-                    className={`px-3 py-1 rounded border ${currentPage === page
-                      ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
-                      : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
-                      }`}
+                    className={`px-3 py-1 rounded border ${
+                      currentPage === page
+                        ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600"
+                        : "border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700"
+                    }`}
                   >
                     {page}
                   </button>
@@ -1224,15 +1280,15 @@ const LoanTableView: React.FC = () => {
               if (page === 2 && currentPage > 3) {
                 const startPages = Array.from(
                   { length: currentPage - 3 },
-                  (_, i) => i + 2
+                  (_, i) => i + 2,
                 );
                 const maxOffset = Math.max(
                   0,
-                  Math.ceil(startPages.length / 9) - 1
+                  Math.ceil(startPages.length / 9) - 1,
                 );
                 const visiblePages = startPages.slice(
                   pagePickerOffset * 9,
-                  (pagePickerOffset + 1) * 9
+                  (pagePickerOffset + 1) * 9,
                 );
 
                 return (
@@ -1244,7 +1300,7 @@ const LoanTableView: React.FC = () => {
                     <button
                       onClick={() => {
                         setPagePickerOpen(
-                          pagePickerOpen === "start" ? null : "start"
+                          pagePickerOpen === "start" ? null : "start",
                         );
                         setPagePickerOffset(0);
                       }}
@@ -1259,7 +1315,7 @@ const LoanTableView: React.FC = () => {
                           <button
                             onClick={() =>
                               setPagePickerOffset(
-                                Math.max(0, pagePickerOffset - 1)
+                                Math.max(0, pagePickerOffset - 1),
                               )
                             }
                             disabled={pagePickerOffset === 0}
@@ -1271,14 +1327,14 @@ const LoanTableView: React.FC = () => {
                             {pagePickerOffset * 9 + 1}-
                             {Math.min(
                               (pagePickerOffset + 1) * 9,
-                              startPages.length
+                              startPages.length,
                             )}{" "}
                             of {startPages.length}
                           </span>
                           <button
                             onClick={() =>
                               setPagePickerOffset(
-                                Math.min(maxOffset, pagePickerOffset + 1)
+                                Math.min(maxOffset, pagePickerOffset + 1),
                               )
                             }
                             disabled={pagePickerOffset >= maxOffset}
@@ -1295,10 +1351,11 @@ const LoanTableView: React.FC = () => {
                                 setCurrentPage(p);
                                 setPagePickerOpen(null);
                               }}
-                              className={`px-2 py-1 text-sm rounded ${currentPage === p
-                                ? "bg-indigo-600 text-white"
-                                : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
-                                }`}
+                              className={`px-2 py-1 text-sm rounded ${
+                                currentPage === p
+                                  ? "bg-indigo-600 text-white"
+                                  : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
+                              }`}
                             >
                               {p}
                             </button>
@@ -1313,15 +1370,15 @@ const LoanTableView: React.FC = () => {
               if (page === totalPages - 1 && currentPage < totalPages - 2) {
                 const endPages = Array.from(
                   { length: totalPages - currentPage - 2 },
-                  (_, i) => currentPage + 2 + i
+                  (_, i) => currentPage + 2 + i,
                 );
                 const maxOffset = Math.max(
                   0,
-                  Math.ceil(endPages.length / 9) - 1
+                  Math.ceil(endPages.length / 9) - 1,
                 );
                 const visiblePages = endPages.slice(
                   pagePickerOffset * 9,
-                  (pagePickerOffset + 1) * 9
+                  (pagePickerOffset + 1) * 9,
                 );
 
                 return (
@@ -1333,7 +1390,7 @@ const LoanTableView: React.FC = () => {
                     <button
                       onClick={() => {
                         setPagePickerOpen(
-                          pagePickerOpen === "end" ? null : "end"
+                          pagePickerOpen === "end" ? null : "end",
                         );
                         setPagePickerOffset(0);
                       }}
@@ -1348,7 +1405,7 @@ const LoanTableView: React.FC = () => {
                           <button
                             onClick={() =>
                               setPagePickerOffset(
-                                Math.max(0, pagePickerOffset - 1)
+                                Math.max(0, pagePickerOffset - 1),
                               )
                             }
                             disabled={pagePickerOffset === 0}
@@ -1360,14 +1417,14 @@ const LoanTableView: React.FC = () => {
                             {pagePickerOffset * 9 + 1}-
                             {Math.min(
                               (pagePickerOffset + 1) * 9,
-                              endPages.length
+                              endPages.length,
                             )}{" "}
                             of {endPages.length}
                           </span>
                           <button
                             onClick={() =>
                               setPagePickerOffset(
-                                Math.min(maxOffset, pagePickerOffset + 1)
+                                Math.min(maxOffset, pagePickerOffset + 1),
                               )
                             }
                             disabled={pagePickerOffset >= maxOffset}
@@ -1384,10 +1441,11 @@ const LoanTableView: React.FC = () => {
                                 setCurrentPage(p);
                                 setPagePickerOpen(null);
                               }}
-                              className={`px-2 py-1 text-sm rounded ${currentPage === p
-                                ? "bg-indigo-600 text-white"
-                                : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
-                                }`}
+                              className={`px-2 py-1 text-sm rounded ${
+                                currentPage === p
+                                  ? "bg-indigo-600 text-white"
+                                  : "text-gray-700 dark:text-dark-text hover:bg-indigo-100 dark:hover:bg-slate-600"
+                              }`}
                             >
                               {p}
                             </button>
@@ -1452,18 +1510,18 @@ const LoanTableView: React.FC = () => {
 
               const loanAmount = parseRequiredNumber(
                 updated.original_amount,
-                "Loan amount"
+                "Loan amount",
               );
               const interestAmount = parseRequiredNumber(
                 updated.interest_amount,
-                "Interest amount"
+                "Interest amount",
               );
 
               let totalInstalments: number | null = null;
               const totalInstalmentsRaw = updated.total_instalments;
               const totalTrimmed =
                 totalInstalmentsRaw === undefined ||
-                  totalInstalmentsRaw === null
+                totalInstalmentsRaw === null
                   ? ""
                   : String(totalInstalmentsRaw).trim();
               if (totalTrimmed !== "") {
@@ -1474,7 +1532,7 @@ const LoanTableView: React.FC = () => {
                   parsedTotal < 0
                 ) {
                   errors.push(
-                    "Please enter a non-negative integer for total installments."
+                    "Please enter a non-negative integer for total installments.",
                   );
                 } else {
                   totalInstalments = parsedTotal;
@@ -1635,7 +1693,7 @@ const LoanTableView: React.FC = () => {
             </motion.div>
           )}
         </AnimatePresence>,
-        document.body
+        document.body,
       )}
 
       {/* Delete Loan Confirmation Modal */}
@@ -1645,11 +1703,11 @@ const LoanTableView: React.FC = () => {
         onConfirm={async () => {
           if (!deleteLoanTarget) return;
           const deleteId = deleteLoanTarget.id;
-          
+
           setDeletingLoan(true);
           // Start the background animation immediately
           setAnimatingLoanId(deleteId);
-          
+
           try {
             await deleteLoan(deleteId);
             // Close modal after successful delete
@@ -1669,8 +1727,8 @@ const LoanTableView: React.FC = () => {
             Are you sure you want to move the loan for{" "}
             <span className="font-semibold">
               {deleteLoanTarget?.customer ?? "this customer"}
-            </span>
-            {" "}to trash? You can restore it later from the Trash page.
+            </span>{" "}
+            to trash? You can restore it later from the Trash page.
           </>
         }
         isDeleting={deletingLoan}
@@ -1684,11 +1742,11 @@ const LoanTableView: React.FC = () => {
         onConfirm={async () => {
           if (!deleteTarget) return;
           const deleteId = deleteTarget.id;
-          
+
           setDeletingInstallment(true);
           // Start the background animation immediately
           setAnimatingInstallmentId(deleteId);
-          
+
           try {
             await deleteInstallment(deleteId);
             // Close modal after successful delete
@@ -1703,7 +1761,11 @@ const LoanTableView: React.FC = () => {
           }
         }}
         title="Delete Installment?"
-        message={<>Are you sure you want to delete installment #{deleteTarget?.number}?</>}
+        message={
+          <>
+            Are you sure you want to delete installment #{deleteTarget?.number}?
+          </>
+        }
         isDeleting={deletingInstallment}
         confirmText="Delete"
       />

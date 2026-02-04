@@ -55,8 +55,9 @@ const LoanDetailPage: React.FC = () => {
             Status
           </div>
           <div
-            className={`font-semibold ${loanStatus.isPaidOff ? "text-green-600" : "text-orange-600"
-              }`}
+            className={`font-semibold ${
+              loanStatus.isPaidOff ? "text-green-600" : "text-orange-600"
+            }`}
           >
             {loanStatus.status}
           </div>
@@ -123,7 +124,7 @@ const LoanDetailPage: React.FC = () => {
         <>
           {(() => {
             const totalPages = Math.ceil(
-              loanInstallments.length / itemsPerPage
+              loanInstallments.length / itemsPerPage,
             );
             const start = (currentPage - 1) * itemsPerPage;
             const end = start + itemsPerPage;
@@ -132,7 +133,7 @@ const LoanDetailPage: React.FC = () => {
               <>
                 <div className="overflow-x-auto border border-gray-100 rounded-lg dark:border-dark-border">
                   <div className="grid grid-cols-2 md:grid-cols-6 gap-2 md:gap-4 bg-indigo-50 text-xs font-semibold text-indigo-700 p-3 dark:bg-indigo-900/30 dark:text-indigo-400">
-                    <div>#</div>
+                    <div>Sr.No</div>
                     <div className="hidden md:block">Date</div>
                     <div className="text-right md:text-right">Amount</div>
                     <div className="hidden md:block md:text-right">
@@ -148,7 +149,7 @@ const LoanDetailPage: React.FC = () => {
                         className="grid grid-cols-2 md:grid-cols-6 gap-2 md:gap-4 items-center p-3 bg-white dark:bg-dark-card"
                       >
                         <div className="text-sm text-gray-700 dark:text-dark-text">
-                          #{inst.installment_number}
+                          Sr.No {inst.installment_number}
                         </div>
                         <div className="hidden md:block text-sm text-gray-600 dark:text-dark-muted">
                           {formatDate(inst.date)}
@@ -184,7 +185,7 @@ const LoanDetailPage: React.FC = () => {
                       Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
                       {Math.min(
                         currentPage * itemsPerPage,
-                        loanInstallments.length
+                        loanInstallments.length,
                       )}{" "}
                       of {loanInstallments.length} installments
                     </div>
@@ -218,10 +219,11 @@ const LoanDetailPage: React.FC = () => {
                               <button
                                 key={page}
                                 onClick={() => setCurrentPage(page)}
-                                className={`px-3 py-1 rounded border ${currentPage === page
+                                className={`px-3 py-1 rounded border ${
+                                  currentPage === page
                                     ? "bg-indigo-600 text-white border-indigo-600"
                                     : "border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700"
-                                  }`}
+                                }`}
                               >
                                 {page}
                               </button>
@@ -251,7 +253,7 @@ const LoanDetailPage: React.FC = () => {
                             );
                           }
                           return null;
-                        }
+                        },
                       )}
 
                       <button

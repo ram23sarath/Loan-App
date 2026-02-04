@@ -1069,7 +1069,7 @@ const LoanSeniorityPage = () => {
                 <thead>
                   <tr className="bg-gray-100 dark:bg-gray-800">
                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
-                      #
+                      Sr.No
                     </th>
                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
                       Customer
@@ -1210,7 +1210,7 @@ const LoanSeniorityPage = () => {
                     <div className="flex items-start justify-between">
                       <div className="min-w-0">
                         <div className="text-xs text-gray-400 dark:text-dark-muted">
-                          #{(currentPage - 1) * itemsPerPage + idx + 1}
+                          Sr.No {(currentPage - 1) * itemsPerPage + idx + 1}
                         </div>
                         <div className="font-semibold text-indigo-700 dark:text-indigo-400 truncate">
                           {entry.customers?.name || "Unknown"}

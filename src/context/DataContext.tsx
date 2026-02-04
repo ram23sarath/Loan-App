@@ -874,6 +874,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         );
       }
     }
+
+    // Capture previous phone from in-memory map so we can detect changes
+    const previous = customerMap.get(customerId);
+    const previousPhone = previous?.phone ?? null;
+
     try {
       const { data, error } = await supabase
         .from("customers")
@@ -882,7 +887,44 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
+
       await fetchData();
+
+      // If admin changed phone, trigger server-side update of the auth user
+      if (
+        !isScopedCustomer &&
+        updates.phone &&
+        updates.phone !== previousPhone
+      ) {
+        (async () => {
+          try {
+            const resp = await fetch(
+              "/.netlify/functions/update-user-from-customer",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  customer_id: customerId,
+                  phone: updates.phone,
+                }),
+              },
+            );
+            if (!resp.ok) {
+              const errData = await resp.json().catch(() => ({}));
+              console.error(
+                "Failed to update auth user after phone change:",
+                errData.error || resp.statusText,
+              );
+            }
+          } catch (err) {
+            console.error(
+              "Failed to update auth user after phone change:",
+              err,
+            );
+          }
+        })();
+      }
+
       return data as Customer;
     } catch (error) {
       throw new Error(
@@ -1297,7 +1339,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           break;
         }
         default:
-          if (typeof __DEV__ !== "undefined" && __DEV__) {
+          if (import.meta.env?.DEV) {
             console.log("[NativeBridge] Unhandled message type:", message.type);
           }
       }

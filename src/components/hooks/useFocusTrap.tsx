@@ -1,23 +1,35 @@
-import { useEffect } from 'react';
+import { useEffect } from "react";
+import type { RefObject } from "react";
 
-export default function useFocusTrap(containerRef: React.RefObject<HTMLElement | null>, initialFocusSelector?: string) {
+export default function useFocusTrap(
+  containerRef: RefObject<HTMLElement | null>,
+  initialFocusSelector?: string,
+) {
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
     const previouslyFocused = document.activeElement as HTMLElement | null;
 
-    const focusableSelector = 'a[href], area[href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const focusableSelector =
+      'a[href], area[href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-    const getFocusable = () => Array.from(el.querySelectorAll<HTMLElement>(focusableSelector)).filter(n => n.offsetParent !== null);
+    const getFocusable = (): HTMLElement[] => {
+      const nodes = Array.from(
+        el.querySelectorAll(focusableSelector),
+      ) as HTMLElement[];
+      return nodes.filter((node) => node.offsetParent !== null);
+    };
 
-    const initial = initialFocusSelector ? el.querySelector<HTMLElement>(initialFocusSelector) : getFocusable()[0];
+    const initial = initialFocusSelector
+      ? el.querySelector<HTMLElement>(initialFocusSelector)
+      : getFocusable()[0];
     try {
       initial?.focus();
-    } catch (e) { }
+    } catch (e) {}
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab') return;
+      if (e.key !== "Tab") return;
       const nodes = getFocusable();
       if (nodes.length === 0) {
         e.preventDefault();
@@ -39,11 +51,13 @@ export default function useFocusTrap(containerRef: React.RefObject<HTMLElement |
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      try { previouslyFocused?.focus(); } catch (e) { }
+      document.removeEventListener("keydown", handleKeyDown);
+      try {
+        previouslyFocused?.focus();
+      } catch (e) {}
     };
   }, [containerRef, initialFocusSelector]);
 }

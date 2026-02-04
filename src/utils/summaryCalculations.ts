@@ -68,7 +68,7 @@ export const calculateSummaryData = (
   // Calculate Subscription Return Total
   const subscriptionReturnTotal = dataEntries.reduce((acc, entry) => {
     if (
-      (entry as any).type === 'expenditure' &&
+      entry.type === 'expense' &&
       entry.subtype === 'Subscription Return'
     ) {
       return acc + (entry.amount || 0);
@@ -82,7 +82,7 @@ export const calculateSummaryData = (
 
   // Calculate Total Data Collected
   const totalDataCollected = dataEntries.reduce((acc, entry) => {
-    if (entry.type === 'expenditure') {
+    if (entry.type === 'expense') {
       return acc - (entry.amount || 0);
     }
     return acc + (entry.amount || 0);
@@ -99,7 +99,7 @@ export const calculateSummaryData = (
 
   dataEntries.forEach((entry) => {
     if (
-      entry.type === 'expenditure' &&
+      entry.type === 'expense' &&
       entry.subtype &&
       expenseSubtypes.includes(entry.subtype)
     ) {

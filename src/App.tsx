@@ -19,37 +19,36 @@ import InactivityLogoutModal from "./components/modals/InactivityLogoutModal";
 
 // Lazy load page components for better initial bundle size
 const AddCustomerPage = React.lazy(
-  () => import("./components/pages/AddCustomerPage")
+  () => import("./components/pages/AddCustomerPage"),
 );
 const AddRecordPage = React.lazy(
-  () => import("./components/pages/AddRecordPage")
+  () => import("./components/pages/AddRecordPage"),
 );
 const CustomerListPage = React.lazy(
-  () => import("./components/pages/CustomerListPage")
+  () => import("./components/pages/CustomerListPage"),
 );
 const CustomerDetailPageComponent = React.lazy(
-  () => import("./components/pages/CustomerDetailPage")
+  () => import("./components/pages/CustomerDetailPage"),
 );
 const LoanListPage = React.lazy(
-  () => import("./components/pages/LoanListPage")
+  () => import("./components/pages/LoanListPage"),
 );
 const LoanDetailPage = React.lazy(
-  () => import("./components/pages/LoanDetailPage")
+  () => import("./components/pages/LoanDetailPage"),
 );
 const LoanSeniorityPage = React.lazy(
-  () => import("./components/pages/LoanSeniorityPage")
+  () => import("./components/pages/LoanSeniorityPage"),
 );
 const SubscriptionListPage = React.lazy(
-  () => import("./components/pages/SubscriptionListPage")
+  () => import("./components/pages/SubscriptionListPage"),
 );
 const SummaryPage = React.lazy(() => import("./components/pages/SummaryPage"));
 const DataPage = React.lazy(() => import("./components/pages/DataPage"));
 const LoginPage = React.lazy(() => import("./components/pages/LoginPage"));
 const CustomerDashboard = React.lazy(
-  () => import("./components/pages/CustomerDashboard")
+  () => import("./components/pages/CustomerDashboard"),
 );
 const TrashPage = React.lazy(() => import("./components/pages/TrashPage"));
-
 
 // Wrapper to handle lazy loading timeouts
 const LazyPageWrapper: React.FC<{
@@ -105,37 +104,42 @@ const AdminOnlyRoute = ({ children }: { children: React.ReactNode }) => {
  * The native app sets 'ReactNativeWebView' on the window object
  */
 const isInNativeWrapper = (): boolean => {
-  return typeof window !== 'undefined' && 
-    (typeof (window as any).ReactNativeWebView !== 'undefined' ||
-     navigator.userAgent.includes('LoanAppMobile'));
+  return (
+    typeof window !== "undefined" &&
+    (typeof (window as any).ReactNativeWebView !== "undefined" ||
+      navigator.userAgent.includes("LoanAppMobile"))
+  );
 };
 
 // AnimatedRoutes component to handle page transitions
 const AnimatedRoutes = () => {
   const location = useLocation();
   const { isScopedCustomer } = useData();
-  
+
   // Show minimal spinner during lazy loading - required for native wrapper to avoid blank screens
   // Native has its own loading screen for initial load, but Suspense fallback is needed for navigation
   const suspenseFallback = isInNativeWrapper() ? (
     // Minimal inline spinner for native wrapper - shows during lazy route transitions
-    <div style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center',
-      height: '100%',
-      minHeight: '50vh',
-      backgroundColor: 'inherit'
-    }}>
-      <div style={{ 
-        width: 36, 
-        height: 36, 
-        border: '3px solid #E5E7EB',
-        borderTopColor: '#4F46E5',
-        borderRadius: '50%',
-        animation: 'suspense-spin 0.8s linear infinite'
-      }} />
-      <style>{`@keyframes suspense-spin { to { transform: rotate(360deg); } }`}</style>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100%",
+        minHeight: "50vh",
+        backgroundColor: "inherit",
+      }}
+    >
+      <div
+        style={{
+          width: 36,
+          height: 36,
+          border: "3px solid #E5E7EB",
+          borderTopColor: "#4F46E5",
+          borderRadius: "50%",
+          animation: "suspense-spin 0.8s linear infinite",
+        }}
+      />
     </div>
   ) : (
     <LazyPageWrapper>
@@ -144,7 +148,7 @@ const AnimatedRoutes = () => {
       </div>
     </LazyPageWrapper>
   );
-  
+
   return (
     <Suspense fallback={suspenseFallback}>
       <AnimatePresence mode="wait">
@@ -205,7 +209,6 @@ const AnimatedRoutes = () => {
           />
           <Route path="/data" element={<DataPage />} />
           <Route path="/trash" element={<TrashPage />} />
-
         </Routes>
       </AnimatePresence>
     </Suspense>
@@ -214,11 +217,31 @@ const AnimatedRoutes = () => {
 
 const AutoLogout = () => {
   const { signOut } = useData();
+  const location = useLocation();
+  const isLoginRoute = location.pathname === "/login";
   const [showLogoutModal, setShowLogoutModal] = React.useState(false);
   const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const modalTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null
+    null,
   );
+  const lastActivityRef = React.useRef<number>(Date.now());
+  const INACTIVITY_LIMIT_MS = 30 * 60 * 1000;
+  const MODAL_GRACE_MS = 2 * 60 * 1000;
+  const LAST_ACTIVITY_KEY = "loan_app_last_activity";
+
+  const getStoredLastActivity = React.useCallback(() => {
+    if (typeof window === "undefined") return Date.now();
+    const stored = window.localStorage.getItem(LAST_ACTIVITY_KEY);
+    const parsed = stored ? Number(stored) : NaN;
+    return Number.isFinite(parsed) ? parsed : Date.now();
+  }, []);
+
+  const setLastActivity = React.useCallback((timestamp: number) => {
+    lastActivityRef.current = timestamp;
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(LAST_ACTIVITY_KEY, String(timestamp));
+    }
+  }, []);
 
   const clearAllTimers = () => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -235,26 +258,43 @@ const AutoLogout = () => {
     clearAllTimers();
     setShowLogoutModal(false);
     // Restart inactivity timer after user confirms staying active
+    setLastActivity(Date.now());
     timerRef.current = setTimeout(() => {
+      const lastActivity = getStoredLastActivity();
+      const elapsed = Date.now() - lastActivity;
+      if (elapsed > INACTIVITY_LIMIT_MS) {
+        setShowLogoutModal(false);
+        signOut();
+        return;
+      }
       setShowLogoutModal(true);
       modalTimeoutRef.current = setTimeout(() => {
         setShowLogoutModal(false);
         signOut();
-      }, 2 * 60 * 1000);
-    }, 30 * 60 * 1000);
+      }, MODAL_GRACE_MS);
+    }, INACTIVITY_LIMIT_MS);
   };
 
   const resetTimer = React.useCallback(() => {
+    if (isLoginRoute) return;
     clearAllTimers();
+    setLastActivity(Date.now());
     timerRef.current = setTimeout(() => {
+      const lastActivity = getStoredLastActivity();
+      const elapsed = Date.now() - lastActivity;
+      if (elapsed > INACTIVITY_LIMIT_MS) {
+        setShowLogoutModal(false);
+        signOut();
+        return;
+      }
       setShowLogoutModal(true);
       // Set a timeout within the modal for auto-logout after 2 more minutes
       modalTimeoutRef.current = setTimeout(() => {
         setShowLogoutModal(false);
         signOut();
-      }, 2 * 60 * 1000); // 2 minutes to respond to modal
-    }, 30 * 60 * 1000); // 30 minutes
-  }, [signOut]);
+      }, MODAL_GRACE_MS);
+    }, INACTIVITY_LIMIT_MS); // 30 minutes
+  }, [getStoredLastActivity, isLoginRoute, setLastActivity, signOut]);
 
   const throttledResetTimer = React.useMemo(() => {
     let lastCall = 0;
@@ -269,6 +309,20 @@ const AutoLogout = () => {
   }, [resetTimer]);
 
   React.useEffect(() => {
+    if (isLoginRoute) {
+      clearAllTimers();
+      setShowLogoutModal(false);
+      return;
+    }
+
+    const storedLastActivity = getStoredLastActivity();
+    const elapsed = Date.now() - storedLastActivity;
+    if (elapsed > INACTIVITY_LIMIT_MS) {
+      setShowLogoutModal(false);
+      signOut();
+      return;
+    }
+
     window.addEventListener("mousemove", throttledResetTimer);
     window.addEventListener("keydown", resetTimer);
     window.addEventListener("click", resetTimer);
@@ -280,7 +334,13 @@ const AutoLogout = () => {
       window.removeEventListener("keydown", resetTimer);
       window.removeEventListener("click", resetTimer);
     };
-  }, [resetTimer, throttledResetTimer]);
+  }, [
+    getStoredLastActivity,
+    isLoginRoute,
+    resetTimer,
+    signOut,
+    throttledResetTimer,
+  ]);
 
   return (
     <InactivityLogoutModal
@@ -297,8 +357,8 @@ const App = () => {
   return (
     <DataProvider>
       <ThemeProvider>
-        <AutoLogout />
         <BrowserRouter>
+          <AutoLogout />
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route

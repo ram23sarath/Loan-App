@@ -64,6 +64,13 @@ html {
   transition: margin 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Suspense fallback spinner animation - used for native wrapper lazy route transitions */
+@keyframes suspense-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* ===== SPHERE/CIRCULAR THEME TRANSITION ===== */
 
 /* View Transitions API - Modern browsers */

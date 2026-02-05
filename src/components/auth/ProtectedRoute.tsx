@@ -29,10 +29,30 @@ const isInNativeWrapper = (): boolean => {
  */
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { session, isAuthChecking, isRefreshing } = useData();
+  const [isInitializing, setIsInitializing] = React.useState(true);
 
-  // Only block during initial auth check, not during data loading
+  // Brief delay to allow auth state to fully propagate after login
+  // This prevents the race condition where session is checked before state updates
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitializing(false);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Debug logging for auth state issues
+  React.useEffect(() => {
+    console.log('[ProtectedRoute] State:', {
+      hasSession: !!session,
+      isAuthChecking,
+      isInitializing,
+      pathname: window.location.pathname
+    });
+  }, [session, isAuthChecking, isInitializing]);
+
+  // Only block during initial auth check or initialization, not during data loading
   // Skip spinner when in native wrapper to avoid double loading screens
-  if (isAuthChecking) {
+  if (isAuthChecking || isInitializing) {
     // If in native app, don't show web spinner (native has its own)
     if (isInNativeWrapper()) {
       return null; // Render nothing, native loading screen is already visible

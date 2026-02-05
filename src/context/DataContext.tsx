@@ -1828,9 +1828,28 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
       // Handle sign in - set the session so user stays logged in
       if (_event === "SIGNED_IN") {
-        setSession(session);
-        lastSessionTokenRef.current = session?.access_token || null;
-        lastUserIdRef.current = session?.user?.id || null;
+        console.log("[Auth] onAuthStateChange: SIGNED_IN event received");
+        // Verify we have a fresh session to prevent stale state issues
+        if (session && session.access_token) {
+          // Only update if the token is different (avoids redundant updates)
+          if (lastSessionTokenRef.current !== session.access_token) {
+            console.log("[Auth] Updating session from SIGNED_IN event");
+            setSession(session);
+            lastSessionTokenRef.current = session.access_token;
+            lastUserIdRef.current = session.user?.id || null;
+            setIsAuthChecking(false);
+          }
+        }
+      }
+
+      // Handle token refresh - update session with new tokens
+      if (_event === "TOKEN_REFRESHED" && session) {
+        console.log("[Auth] onAuthStateChange: TOKEN_REFRESHED event received");
+        if (lastSessionTokenRef.current !== session.access_token) {
+          setSession(session);
+          lastSessionTokenRef.current = session.access_token;
+          lastUserIdRef.current = session.user?.id || null;
+        }
       }
     });
 
@@ -2106,11 +2125,28 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const signInWithPassword = async (email: string, pass: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      // Clear any stale session state before login to prevent race conditions
+      // This ensures ProtectedRoute doesn't see outdated state during re-login
+      console.log("[Auth] Clearing stale session state before login...");
+      setSession(null);
+      lastSessionTokenRef.current = null;
+      lastUserIdRef.current = null;
+
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password: pass,
       });
       if (error) throw error;
+
+      // Set session immediately from the response to prevent race condition
+      // where ProtectedRoute checks before onAuthStateChange fires
+      if (data.session) {
+        console.log("[Auth] Setting session immediately from login response");
+        setSession(data.session);
+        lastSessionTokenRef.current = data.session.access_token;
+        lastUserIdRef.current = data.session.user?.id || null;
+        setIsAuthChecking(false); // Ensure auth check is marked complete
+      }
     } catch (error) {
       throw new Error(parseSupabaseError(error, "signing in"));
     }

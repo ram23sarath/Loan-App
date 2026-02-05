@@ -5,6 +5,8 @@ import GlassCard from '../ui/GlassCard';
 import PageWrapper from '../ui/PageWrapper';
 import { motion } from 'framer-motion';
 import RequestSeniorityModal from '../ui/RequestSeniorityModal';
+import { supabase } from '../../lib/supabase';
+import type { Document } from '../../types';
 
 const CustomerDashboard = () => {
   const {
@@ -22,6 +24,11 @@ const CustomerDashboard = () => {
   const [stationName, setStationName] = React.useState('');
   const [loanType, setLoanType] = React.useState('General');
   const [loanRequestDate, setLoanRequestDate] = React.useState('');
+
+  // Document state for scoped customers
+  const [documents, setDocuments] = React.useState<Document[]>([]);
+  const [documentsLoading, setDocumentsLoading] = React.useState(false);
+  const [downloadingDocId, setDownloadingDocId] = React.useState<string | null>(null);
 
   // Get the current customer's data
   const customer = isScopedCustomer && scopedCustomerId
@@ -68,6 +75,58 @@ const CustomerDashboard = () => {
       : !meetsRepaymentThreshold
         ? `You need at least 80% repayment (current ${progressPercent}%).`
         : undefined;
+
+  // Fetch documents for scoped customers
+  React.useEffect(() => {
+    if (isScopedCustomer) {
+      const fetchDocs = async () => {
+        setDocumentsLoading(true);
+        try {
+          const { data, error } = await supabase
+            .from('documents')
+            .select('*')
+            .order('created_at', { ascending: false });
+          if (!error && data) {
+            setDocuments(data);
+          }
+        } catch (err) {
+          console.error('Failed to fetch documents:', err);
+        } finally {
+          setDocumentsLoading(false);
+        }
+      };
+      fetchDocs();
+    }
+  }, [isScopedCustomer]);
+
+  // Handle document download
+  const handleDownloadDocument = async (doc: Document) => {
+    setDownloadingDocId(doc.id);
+    try {
+      const { data, error } = await supabase.storage
+        .from('public-documents')
+        .createSignedUrl(doc.file_path, 60); // 60 seconds expiry
+      
+      if (error) throw error;
+      if (data?.signedUrl) {
+        // Fetch the file and trigger download
+        const response = await fetch(data.signedUrl);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = window.document.createElement('a');
+        link.href = url;
+        link.download = doc.name; // Use original filename
+        window.document.body.appendChild(link);
+        link.click();
+        window.document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      console.error('Failed to download document:', err);
+    } finally {
+      setDownloadingDocId(null);
+    }
+  };
 
 
   return (
@@ -180,7 +239,73 @@ const CustomerDashboard = () => {
           </GlassCard>
         </motion.div>
 
-
+        {/* Documents Section - Only for scoped customers */}
+        {isScopedCustomer && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+            className="mt-6"
+          >
+            <GlassCard className="!p-6 sm:!p-8">
+              <h2 className="text-xl font-bold text-gray-800 dark:text-dark-text mb-4 flex items-center gap-2">
+                <span>📄</span> Documents
+              </h2>
+              
+              {documentsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin text-3xl">⏳</div>
+                </div>
+              ) : documents.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 dark:text-dark-muted">
+                  <div className="text-4xl mb-2">📭</div>
+                  <p>No documents available yet.</p>
+                  <p className="text-sm mt-1">Check back later for updates from admin.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {documents.map((doc) => (
+                    <motion.div
+                      key={doc.id}
+                      className="flex items-center gap-3 p-4 bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 rounded-xl border border-violet-100 dark:border-violet-800"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      whileHover={{ scale: 1.01 }}
+                    >
+                      <span className="text-2xl">📜</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-gray-800 dark:text-dark-text truncate">
+                          {doc.name}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-dark-muted">
+                          {doc.file_size ? `${(doc.file_size / 1024).toFixed(1)} KB` : ''}
+                          {doc.file_size && ' • '}
+                          Uploaded {new Date(doc.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <motion.button
+                        onClick={() => handleDownloadDocument(doc)}
+                        disabled={downloadingDocId === doc.id}
+                        className="px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-400 text-white font-semibold rounded-lg transition-colors flex items-center gap-2"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        {downloadingDocId === doc.id ? (
+                          <span className="animate-spin">⏳</span>
+                        ) : (
+                          <>
+                            <span>⬇️</span>
+                            <span className="hidden sm:inline">Download</span>
+                          </>
+                        )}
+                      </motion.button>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
+            </GlassCard>
+          </motion.div>
+        )}
 
 
       </div>

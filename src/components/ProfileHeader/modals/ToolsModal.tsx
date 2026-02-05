@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '../../../lib/supabase';
+import type { Document } from '../../../types';
 
-type ToolsView = 'menu' | 'createUser' | 'changeUserPassword' | 'userStatus';
+type ToolsView = 'menu' | 'createUser' | 'changeUserPassword' | 'userStatus' | 'manageDocuments';
 
 interface ToolsModalProps {
     isOpen: boolean;
@@ -62,6 +64,13 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
     const [expandMissing, setExpandMissing] = useState(true);
     const [expandOrphaned, setExpandOrphaned] = useState(true);
 
+    // Document management state
+    const [documents, setDocuments] = useState<Document[]>([]);
+    const [documentsLoading, setDocumentsLoading] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
+
     // Reset state when modal closes
     React.useEffect(() => {
         if (!isOpen) {
@@ -78,6 +87,9 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
             setUserStatusError(null);
             setExpandMissing(true);
             setExpandOrphaned(true);
+            // Document management reset
+            setSelectedFile(null);
+            setUploadProgress(0);
         }
     }, [isOpen]);
 
@@ -199,7 +211,102 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
         }
     };
 
-    if (!isOpen || typeof document === 'undefined') return null;
+    // Fetch documents from Supabase
+    const fetchDocuments = async () => {
+        setDocumentsLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('documents')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            if (error) throw error;
+            setDocuments(data || []);
+        } catch (err: any) {
+            setToolsMessage({ type: 'error', text: `Failed to load documents: ${err.message}` });
+        } finally {
+            setDocumentsLoading(false);
+        }
+    };
+
+    // Upload document to Supabase Storage
+    const handleUploadDocument = async () => {
+        if (!selectedFile) return;
+        
+        setUploadProgress(10);
+        setToolsMessage(null);
+        
+        try {
+            // Generate unique filename
+            const timestamp = Date.now();
+            const fileName = `${timestamp}_${selectedFile.name}`;
+            const filePath = `documents/${fileName}`;
+            
+            setUploadProgress(30);
+            
+            // Upload to Supabase Storage
+            const { error: uploadError } = await supabase.storage
+                .from('public-documents')
+                .upload(filePath, selectedFile);
+            
+            if (uploadError) throw uploadError;
+            
+            setUploadProgress(70);
+            
+            // Create database record
+            const { error: dbError } = await supabase
+                .from('documents')
+                .insert({
+                    name: selectedFile.name,
+                    file_path: filePath,
+                    file_size: selectedFile.size,
+                    uploaded_by: 'admin', // Could be enhanced to use actual user email
+                });
+            
+            if (dbError) throw dbError;
+            
+            setUploadProgress(100);
+            setToolsMessage({ type: 'success', text: `"${selectedFile.name}" uploaded successfully!` });
+            setSelectedFile(null);
+            
+            // Refresh documents list
+            await fetchDocuments();
+        } catch (err: any) {
+            setToolsMessage({ type: 'error', text: `Upload failed: ${err.message}` });
+        } finally {
+            setUploadProgress(0);
+        }
+    };
+
+    // Delete document
+    const handleDeleteDocument = async (doc: Document) => {
+        setDeletingDocId(doc.id);
+        try {
+            // Delete from storage
+            const { error: storageError } = await supabase.storage
+                .from('public-documents')
+                .remove([doc.file_path]);
+            
+            if (storageError) throw storageError;
+            
+            // Delete from database
+            const { error: dbError } = await supabase
+                .from('documents')
+                .delete()
+                .eq('id', doc.id);
+            
+            if (dbError) throw dbError;
+            
+            setToolsMessage({ type: 'success', text: `"${doc.name}" deleted successfully!` });
+            await fetchDocuments();
+        } catch (err: any) {
+            setToolsMessage({ type: 'error', text: `Delete failed: ${err.message}` });
+        } finally {
+            setDeletingDocId(null);
+        }
+    };
+
+    if (!isOpen || typeof window === 'undefined') return null;
 
     return ReactDOM.createPortal(
         <AnimatePresence>
@@ -296,6 +403,25 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                                     <div className="text-left">
                                         <div className="font-semibold text-sm md:text-base">User Account Status</div>
                                         <div className="text-xs text-cyan-500 dark:text-cyan-400/70">Check customer account sync status</div>
+                                    </div>
+                                </motion.button>
+                                <motion.button
+                                    onClick={() => {
+                                        setToolsView('manageDocuments');
+                                        setToolsMessage(null);
+                                        fetchDocuments();
+                                    }}
+                                    className="w-full px-4 py-4 md:py-3 bg-violet-50 hover:bg-violet-100 active:bg-violet-200 text-violet-700 font-medium rounded-lg transition-colors flex items-center gap-3 dark:bg-violet-900/30 dark:hover:bg-violet-900/50 dark:text-violet-400"
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ type: 'spring', stiffness: 300, damping: 24, delay: 0.21 }}
+                                    whileHover={{ scale: 1.02, x: 4 }}
+                                    whileTap={{ scale: 0.98 }}
+                                >
+                                    <span className="text-xl">📄</span>
+                                    <div className="text-left">
+                                        <div className="font-semibold text-sm md:text-base">Manage Documents</div>
+                                        <div className="text-xs text-violet-500 dark:text-violet-400/70">Upload PDFs for customers</div>
                                     </div>
                                 </motion.button>
                                 <button
@@ -788,6 +914,157 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                                     </div>
                                 </motion.div>
                             )}
+                        </>
+                    )}
+
+                    {/* Manage Documents View */}
+                    {toolsView === 'manageDocuments' && (
+                        <>
+                            <motion.div
+                                className="flex items-center gap-3 mb-4"
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+                            >
+                                <motion.button
+                                    onClick={() => setToolsView('menu')}
+                                    className="text-gray-500 hover:text-gray-700 transition-colors p-1 -ml-1 dark:text-dark-muted dark:hover:text-dark-text"
+                                    whileHover={{ scale: 1.2, x: -3 }}
+                                    whileTap={{ scale: 0.9 }}
+                                >
+                                    <span className="text-xl">←</span>
+                                </motion.button>
+                                <h2 className="text-base md:text-lg font-bold text-gray-800 dark:text-dark-text flex-1">Manage Documents</h2>
+                                <motion.button
+                                    onClick={fetchDocuments}
+                                    disabled={documentsLoading}
+                                    className="text-violet-600 hover:text-violet-700 transition-colors p-1 dark:text-violet-400 dark:hover:text-violet-300"
+                                    whileHover={{ scale: 1.1, rotate: 180 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    title="Refresh"
+                                >
+                                    <span className="text-xl">{documentsLoading ? '⏳' : '🔄'}</span>
+                                </motion.button>
+                            </motion.div>
+
+                            {/* Message */}
+                            <AnimatePresence>
+                                {toolsMessage && (
+                                    <motion.div
+                                        className={`mb-4 p-3 rounded-lg text-sm ${toolsMessage.type === 'success' ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}
+                                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                        transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+                                    >
+                                        {toolsMessage.text}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            {/* Upload Section */}
+                            <motion.div
+                                className="mb-4 p-4 bg-violet-50 dark:bg-violet-900/20 rounded-lg border-2 border-dashed border-violet-200 dark:border-violet-800"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.1 }}
+                            >
+                                <div className="flex flex-col gap-3">
+                                    <div className="flex items-center gap-2">
+                                        <label className="flex-1">
+                                            <input
+                                                type="file"
+                                                accept=".pdf"
+                                                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                                                className="hidden"
+                                            />
+                                            <div className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-violet-200 dark:border-violet-700 rounded-lg text-sm cursor-pointer hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-colors truncate">
+                                                {selectedFile ? selectedFile.name : '📁 Choose PDF file...'}
+                                            </div>
+                                        </label>
+                                    </div>
+                                    {selectedFile && (
+                                        <div className="text-xs text-gray-500 dark:text-dark-muted">
+                                            Size: {(selectedFile.size / 1024).toFixed(1)} KB
+                                        </div>
+                                    )}
+                                    <motion.button
+                                        onClick={handleUploadDocument}
+                                        disabled={!selectedFile || uploadProgress > 0}
+                                        className="w-full px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-400 text-white font-semibold rounded-lg transition-colors"
+                                        whileHover={{ scale: selectedFile && uploadProgress === 0 ? 1.02 : 1 }}
+                                        whileTap={{ scale: 0.98 }}
+                                    >
+                                        {uploadProgress > 0 ? `Uploading... ${uploadProgress}%` : '⬆️ Upload Document'}
+                                    </motion.button>
+                                    {uploadProgress > 0 && (
+                                        <div className="w-full h-2 bg-violet-200 dark:bg-violet-900 rounded-full overflow-hidden">
+                                            <motion.div
+                                                className="h-full bg-violet-600"
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${uploadProgress}%` }}
+                                                transition={{ duration: 0.3 }}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            </motion.div>
+
+                            {/* Documents List */}
+                            <motion.div
+                                className="space-y-2"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.2 }}
+                            >
+                                <h3 className="text-sm font-semibold text-gray-700 dark:text-dark-text">
+                                    Uploaded Documents ({documents.length})
+                                </h3>
+                                
+                                {documentsLoading && documents.length === 0 ? (
+                                    <div className="text-center py-6">
+                                        <div className="animate-spin text-3xl mb-2">⏳</div>
+                                        <p className="text-sm text-gray-500 dark:text-dark-muted">Loading documents...</p>
+                                    </div>
+                                ) : documents.length === 0 ? (
+                                    <div className="text-center py-6 text-gray-500 dark:text-dark-muted">
+                                        <div className="text-3xl mb-2">📭</div>
+                                        <p className="text-sm">No documents uploaded yet</p>
+                                    </div>
+                                ) : (
+                                    <div className="max-h-48 overflow-y-auto space-y-2">
+                                        {documents.map((doc) => (
+                                            <motion.div
+                                                key={doc.id}
+                                                className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg"
+                                                initial={{ opacity: 0, x: -10 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                            >
+                                                <span className="text-xl">📄</span>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-medium text-sm text-gray-800 dark:text-dark-text truncate">
+                                                        {doc.name}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 dark:text-dark-muted">
+                                                        {doc.file_size ? `${(doc.file_size / 1024).toFixed(1)} KB` : 'Unknown size'}
+                                                        {' • '}
+                                                        {new Date(doc.created_at).toLocaleDateString()}
+                                                    </div>
+                                                </div>
+                                                <motion.button
+                                                    onClick={() => handleDeleteDocument(doc)}
+                                                    disabled={deletingDocId === doc.id}
+                                                    className="px-2 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 text-xs font-medium rounded"
+                                                    whileHover={{ scale: 1.05 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                >
+                                                    {deletingDocId === doc.id ? '...' : '🗑️'}
+                                                </motion.button>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                )}
+                            </motion.div>
                         </>
                     )}
                 </motion.div>

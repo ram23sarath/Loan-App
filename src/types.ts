@@ -362,6 +362,29 @@ export type Database = {
           }
         ]
       }
+      documents: {
+        Row: {
+          id: string
+          name: string
+          file_path: string
+          file_size: number | null
+          uploaded_by: string | null
+          created_at: string
+        }
+        Insert: {
+          name: string
+          file_path: string
+          file_size?: number | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          name?: string
+          file_path?: string
+          file_size?: number | null
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -385,6 +408,10 @@ export type NewLoan = Database['public']['Tables']['loans']['Insert'];
 export type NewSubscription = Database['public']['Tables']['subscriptions']['Insert'];
 export type NewInstallment = Database['public']['Tables']['installments']['Insert'];
 export type NewLoanSeniority = Database['public']['Tables']['loan_seniority']['Insert'];
+
+// Document types for PDF management
+export type Document = Database['public']['Tables']['documents']['Row'];
+export type NewDocument = Database['public']['Tables']['documents']['Insert'];
 
 // ============================================================================
 // NATIVE BRIDGE TYPES - Mobile WebView Integration

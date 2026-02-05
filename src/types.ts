@@ -334,6 +334,34 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_interest: {
+        Row: {
+          id: string
+          customer_id: string
+          total_interest_charged: number
+          last_applied_quarter: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          customer_id: string
+          total_interest_charged?: number
+          last_applied_quarter?: string | null
+        }
+        Update: {
+          total_interest_charged?: number
+          last_applied_quarter?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_interest_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -425,18 +453,18 @@ export type NativeToWebMessage =
   | { type: 'AUTH_TOKEN'; payload: AuthSession }
   | { type: 'AUTH_CLEARED' }
   | {
-      type: 'PUSH_TOKEN';
-      payload: { token: string; platform: 'ios' | 'android' | 'unknown' };
-    }
+    type: 'PUSH_TOKEN';
+    payload: { token: string; platform: 'ios' | 'android' | 'unknown' };
+  }
   | {
-      type: 'PUSH_PERMISSION_RESULT';
-      payload: { granted: boolean; canAskAgain: boolean };
-    }
+    type: 'PUSH_PERMISSION_RESULT';
+    payload: { granted: boolean; canAskAgain: boolean };
+  }
   | { type: 'THEME_CHANGE'; payload: { mode: 'light' | 'dark' | 'system' } }
   | {
-      type: 'NETWORK_STATUS';
-      payload: { isConnected: boolean; type: string | null };
-    }
+    type: 'NETWORK_STATUS';
+    payload: { isConnected: boolean; type: string | null };
+  }
   | { type: 'APP_STATE'; payload: { state: string } }
   | { type: 'DEEP_LINK'; payload: { url: string; path: string } }
   | { type: 'NATIVE_READY' };

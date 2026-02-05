@@ -9,6 +9,7 @@ import type {
   Installment,
   DataEntry,
 } from "../../types";
+import { supabase } from "../../lib/supabase";
 import GlassCard from "../ui/GlassCard";
 import RecordLoanModal from "./RecordLoanModal";
 import RecordSubscriptionModal from "./RecordSubscriptionModal";
@@ -213,6 +214,34 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   >("desc");
   const noteRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
+  // Interest state
+  const [interestCharged, setInterestCharged] = useState(0);
+
+  // Fetch interest for this customer
+  useEffect(() => {
+    const fetchInterest = async () => {
+      // Only fetch for the specific customer or all (if we expand later)
+      // Currently logic is tied to specific ID in backend, but frontend can just query by ID
+      try {
+        const { data, error } = await supabase
+          .from("customer_interest")
+          .select("total_interest_charged")
+          .eq("customer_id", customer.id)
+          .single();
+
+        if (data && !error) {
+          setInterestCharged(data.total_interest_charged || 0);
+        } else {
+          setInterestCharged(0);
+        }
+      } catch (err) {
+        console.error("Error fetching customer interest:", err);
+      }
+    };
+
+    fetchInterest();
+  }, [customer.id]);
+
   // Lookup map for O(1) installment access by loan_id
   const installmentsByLoanId = useMemo(() => {
     const map = new Map<string, Installment[]>();
@@ -223,6 +252,36 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     });
     return map;
   }, [installments]);
+
+  // ... (existing code)
+
+  // Calculate summary totals
+  const summaryTotals = useMemo(() => {
+    const totalLoan = loans.reduce(
+      (acc, loan) => acc + loan.original_amount + loan.interest_amount,
+      0,
+    );
+    // Subscription total = Sum of amounts + Interest Charged (Added as requested)
+    const rawSubscriptionTotal = subscriptions.reduce(
+      (acc, sub) => acc + sub.amount,
+      0,
+    );
+    const totalSubscription = rawSubscriptionTotal + interestCharged;
+
+    const totalMiscEntries = dataEntries.reduce(
+      (acc, entry) => acc + entry.amount,
+      0,
+    );
+    const netTotal = totalSubscription - totalMiscEntries;
+
+    return {
+      totalLoan,
+      totalSubscription,
+      totalMiscEntries,
+      netTotal,
+      interestCharged, // Export if needed for UI
+    };
+  }, [loans, subscriptions, dataEntries, interestCharged]);
 
   // Sorted subscriptions
   const sortedSubscriptions = useMemo(() => {
@@ -282,28 +341,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   };
 
   // Calculate summary totals
-  const summaryTotals = useMemo(() => {
-    const totalLoan = loans.reduce(
-      (acc, loan) => acc + loan.original_amount + loan.interest_amount,
-      0,
-    );
-    const totalSubscription = subscriptions.reduce(
-      (acc, sub) => acc + sub.amount,
-      0,
-    );
-    const totalMiscEntries = dataEntries.reduce(
-      (acc, entry) => acc + entry.amount,
-      0,
-    );
-    const netTotal = totalSubscription - totalMiscEntries;
 
-    return {
-      totalLoan,
-      totalSubscription,
-      totalMiscEntries,
-      netTotal,
-    };
-  }, [loans, subscriptions, dataEntries]);
 
   // Get details of ongoing loan for tooltip
   // Reuse calculatePaymentPercentage helper to avoid duplicate computation
@@ -579,6 +617,16 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                     {formatCurrency(summaryTotals.totalSubscription)}
                   </p>
                 </div>
+
+                <div className="p-2 sm:p-3 rounded-lg bg-orange-50 dark:bg-orange-900/20">
+                  <span className="text-gray-600 dark:text-dark-muted text-xs sm:text-sm block mb-1">
+                    Interest:
+                  </span>
+                  <p className="font-bold text-orange-600 dark:text-orange-400 text-sm sm:text-base">
+                    {formatCurrency(interestCharged)}
+                  </p>
+                </div>
+
                 <div className="p-2 sm:p-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 col-span-2 sm:col-span-1">
                   <span className="text-gray-600 dark:text-dark-muted text-xs sm:text-sm block mb-1">
                     Net:

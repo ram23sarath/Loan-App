@@ -158,6 +158,32 @@ const SummaryPage = () => {
     fetchUnfilteredData();
   }, [isScopedCustomer]);
 
+  // Interest deduction for all customers (Global Quarterly Interest)
+  const [interestDeduction, setInterestDeduction] = useState(0);
+
+  // Fetch total interest collected from all customers
+  useEffect(() => {
+    const fetchTotalInterest = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("customer_interest")
+          .select("total_interest_charged");
+
+        if (!error && data) {
+          const total = data.reduce(
+            (sum, row) => sum + (row.total_interest_charged || 0),
+            0,
+          );
+          setInterestDeduction(total);
+        }
+      } catch (err) {
+        console.error("Error fetching total interest deduction:", err);
+      }
+    };
+
+    fetchTotalInterest();
+  }, []);
+
   // Use unfiltered data for scoped customers, context data for admins
   const loans = isScopedCustomer ? loansForSummary : contextLoans;
   const installments = isScopedCustomer
@@ -287,6 +313,12 @@ const SummaryPage = () => {
   // Total Collected excluding Principal: only Subscriptions + Interest + Late Fees
   const totalCollectedWithoutPrincipal =
     totalSubscriptionCollected + totalInterestCollected + totalLateFeeCollected;
+
+  // Adjusted Total Collected: deduct quarterly interest charged for specific customer
+  const adjustedTotalCollected = totalCollectedWithoutPrincipal - interestDeduction;
+
+  // Adjusted Total Expenses: add quarterly interest charged (treated as expense)
+  const adjustedTotalExpenses = totalExpenses + interestDeduction;
 
   // --- Data Calculation (financial year filtered totals) ---
   const { start: fyStart, end: fyEnd } = fyRange;
@@ -1065,13 +1097,15 @@ const SummaryPage = () => {
                     Net Total
                   </div>
                   <div className="text-xs sm:text-sm text-white/70 truncate">
-                    Total Collected - Expenses
+                    Total Collected - Expenses - Interest
                   </div>
                 </div>
               </div>
               <div className="text-2xl sm:text-4xl font-bold text-white flex-shrink-0">
                 <AnimatedNumber
-                  value={totalCollectedWithoutPrincipal - totalExpenses}
+                  value={
+                    totalCollectedWithoutPrincipal - adjustedTotalExpenses
+                  }
                 />
               </div>
             </div>
@@ -1262,13 +1296,25 @@ const SummaryPage = () => {
                       Expenses
                     </div>
                     <div className="text-lg font-bold text-red-800 dark:text-red-200 mt-1">
-                      <AnimatedNumber value={totalExpenses} />
+                      <AnimatedNumber value={adjustedTotalExpenses} />
                     </div>
                   </div>
                 </div>
 
                 {/* Per-subtype breakdown */}
                 <div className="mt-3 space-y-2">
+                  {/* Subscription Interest Item */}
+                  {interestDeduction > 0 && (
+                    <div className="flex items-center justify-between px-3 py-1 rounded-md bg-red-25/30 dark:bg-red-900/30">
+                      <div className="text-sm text-gray-700 dark:text-gray-300">
+                        Subscription Interest
+                      </div>
+                      <div className="text-sm font-medium text-red-700 dark:text-red-300">
+                        <AnimatedNumber value={interestDeduction} />
+                      </div>
+                    </div>
+                  )}
+
                   {Object.entries(expenseTotalsBySubtype).map(
                     ([subtype, amt]) => (
                       <div

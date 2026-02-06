@@ -1093,6 +1093,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             lower.includes("supabase") ||
             lower.startsWith("sb-") ||
             lower.includes("gotrue") ||
+            lower === "loan_app_last_activity" ||
             (lower.includes("auth") && lower.includes("token"))
           ) {
             keysToRemove.push(key);

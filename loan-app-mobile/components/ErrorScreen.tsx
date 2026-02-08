@@ -5,7 +5,7 @@
  * Provides error details (in dev mode) and retry/reload options.
  */
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -13,6 +13,8 @@ import {
   TouchableOpacity,
   ScrollView,
   useColorScheme,
+  Animated,
+  Easing,
 } from 'react-native';
 
 interface ErrorScreenProps {
@@ -31,8 +33,30 @@ export default function ErrorScreen({
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
+  // Fade-in + slide-up entrance animation
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 400,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, slideAnim]);
+
   return (
     <View style={[styles.container, isDark && styles.containerDark]}>
+      <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -88,6 +112,7 @@ export default function ErrorScreen({
           If this problem persists, please try closing and reopening the app.
         </Text>
       </ScrollView>
+      </Animated.View>
     </View>
   );
 }

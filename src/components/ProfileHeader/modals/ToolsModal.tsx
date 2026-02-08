@@ -320,10 +320,10 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                 onTouchStart={onClose}
             >
                 <motion.div
-                    initial={{ scale: 0.95, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.95, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
+                    initial={{ scale: 0.97, opacity: 0, y: 8 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.98, opacity: 0, y: 4 }}
+                    transition={{ type: 'tween', ease: [0.25, 0.1, 0.25, 1], duration: 0.25 }}
                     className="bg-white rounded-2xl shadow-2xl p-4 md:p-6 w-[92%] max-w-md max-h-[85vh] overflow-y-auto dark:bg-dark-card dark:border dark:border-dark-border"
                     onClick={(e) => e.stopPropagation()}
                     onMouseDown={(e) => e.stopPropagation()}
@@ -335,9 +335,9 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                         <>
                             <motion.div
                                 className="flex items-center justify-between mb-4"
-                                initial={{ opacity: 0, y: -10 }}
+                                initial={{ opacity: 0, y: -6 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+                                transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}
                             >
                                 <h2 className="text-base md:text-lg font-bold text-gray-800 dark:text-dark-text">🛠️ Admin Tools</h2>
                                 <motion.button
@@ -356,9 +356,9 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                                         setToolsMessage(null);
                                     }}
                                     className="w-full px-4 py-4 md:py-3 bg-indigo-50 hover:bg-indigo-100 active:bg-indigo-200 text-indigo-700 font-medium rounded-lg transition-colors flex items-center gap-3 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 dark:text-indigo-400"
-                                    initial={{ opacity: 0, x: -20 }}
+                                    initial={{ opacity: 0, x: -8 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    transition={{ type: 'spring', stiffness: 300, damping: 24, delay: 0.1 }}
+                                    transition={{ type: 'tween', ease: 'easeOut', duration: 0.2, delay: 0.05 }}
                                     whileHover={{ scale: 1.02, x: 4 }}
                                     whileTap={{ scale: 0.98 }}
                                 >
@@ -374,9 +374,9 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                                         setToolsMessage(null);
                                     }}
                                     className="w-full px-4 py-4 md:py-3 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 text-amber-700 font-medium rounded-lg transition-colors flex items-center gap-3 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 dark:text-amber-400"
-                                    initial={{ opacity: 0, x: -20 }}
+                                    initial={{ opacity: 0, x: -8 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    transition={{ type: 'spring', stiffness: 300, damping: 24, delay: 0.15 }}
+                                    transition={{ type: 'tween', ease: 'easeOut', duration: 0.2, delay: 0.08 }}
                                     whileHover={{ scale: 1.02, x: 4 }}
                                     whileTap={{ scale: 0.98 }}
                                 >
@@ -393,9 +393,9 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                                         fetchUserStatus();
                                     }}
                                     className="w-full px-4 py-4 md:py-3 bg-cyan-50 hover:bg-cyan-100 active:bg-cyan-200 text-cyan-700 font-medium rounded-lg transition-colors flex items-center gap-3 dark:bg-cyan-900/30 dark:hover:bg-cyan-900/50 dark:text-cyan-400"
-                                    initial={{ opacity: 0, x: -20 }}
+                                    initial={{ opacity: 0, x: -8 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    transition={{ type: 'spring', stiffness: 300, damping: 24, delay: 0.18 }}
+                                    transition={{ type: 'tween', ease: 'easeOut', duration: 0.2, delay: 0.11 }}
                                     whileHover={{ scale: 1.02, x: 4 }}
                                     whileTap={{ scale: 0.98 }}
                                 >
@@ -412,9 +412,9 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                                         fetchDocuments();
                                     }}
                                     className="w-full px-4 py-4 md:py-3 bg-violet-50 hover:bg-violet-100 active:bg-violet-200 text-violet-700 font-medium rounded-lg transition-colors flex items-center gap-3 dark:bg-violet-900/30 dark:hover:bg-violet-900/50 dark:text-violet-400"
-                                    initial={{ opacity: 0, x: -20 }}
+                                    initial={{ opacity: 0, x: -8 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    transition={{ type: 'spring', stiffness: 300, damping: 24, delay: 0.21 }}
+                                    transition={{ type: 'tween', ease: 'easeOut', duration: 0.2, delay: 0.14 }}
                                     whileHover={{ scale: 1.02, x: 4 }}
                                     whileTap={{ scale: 0.98 }}
                                 >
@@ -434,9 +434,9 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                                 >
                                     <motion.span
                                         className="text-xl"
-                                        initial={{ opacity: 0, scale: 0 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ type: 'spring', stiffness: 400, damping: 20, delay: 0.2 }}
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        transition={{ duration: 0.2, delay: 0.15 }}
                                     >💾</motion.span>
                                     <div className="text-left">
                                         <div className="font-semibold text-sm md:text-base">Backup Database</div>
@@ -451,9 +451,9 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                                         onNavigateToTrash();
                                     }}
                                     className="w-full px-4 py-4 md:py-3 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-700 font-medium rounded-lg transition-colors flex items-center gap-3 dark:bg-rose-900/30 dark:hover:bg-rose-900/50 dark:text-rose-400"
-                                    initial={{ opacity: 0, x: -20 }}
+                                    initial={{ opacity: 0, x: -8 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    transition={{ type: 'spring', stiffness: 300, damping: 24, delay: 0.25 }}
+                                    transition={{ type: 'tween', ease: 'easeOut', duration: 0.2, delay: 0.17 }}
                                     whileHover={{ scale: 1.02, x: 4 }}
                                     whileTap={{ scale: 0.98 }}
                                 >

@@ -198,6 +198,29 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
   }
 }
 
+/* Gentle floating animation for splash background orbs */
+.premium-float {
+  animation: premiumFloat 10s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes premiumFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(20px, -15px) scale(1.03); }
+  50% { transform: translate(40px, 10px) scale(1.05); }
+  75% { transform: translate(15px, 20px) scale(1.02); }
+}
+
+/* Soft pulsing glow for emblem backgrounds */
+.premium-pulse-glow {
+  animation: premiumPulseGlow 3s ease-in-out infinite;
+}
+
+@keyframes premiumPulseGlow {
+  0%, 100% { opacity: 0.2; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(1.03); }
+}
+
 /* Elegant glow text */
 .premium-glow-text {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);

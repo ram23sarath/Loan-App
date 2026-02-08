@@ -23,6 +23,8 @@ import {
   Share,
   Alert,
   useColorScheme,
+  Animated,
+  Easing,
 } from "react-native";
 import {
   WebView,
@@ -72,9 +74,11 @@ export default function WebViewScreen() {
   const authSessionRef = useRef<AuthSession | null>(null);
   const handlerUnsubscribersRef = useRef<Array<() => void>>([]);
   const previousIsOfflineRef = useRef<boolean>(false);
+  const overlayOpacity = useRef(new Animated.Value(1)).current;
 
   // State
   const [isLoading, setIsLoading] = useState(true);
+  const [showOverlay, setShowOverlay] = useState(true);
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,6 +90,32 @@ export default function WebViewScreen() {
   useEffect(() => {
     authSessionRef.current = authSession;
   }, [authSession]);
+
+  // Animate loading overlay fade-in/fade-out
+  useEffect(() => {
+    if (isLoading) {
+      // Show overlay immediately, fade in
+      setShowOverlay(true);
+      Animated.timing(overlayOpacity, {
+        toValue: 1,
+        duration: 200,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start();
+    } else {
+      // Fade out, then unmount
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 350,
+        easing: Easing.in(Easing.ease),
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) {
+          setShowOverlay(false);
+        }
+      });
+    }
+  }, [isLoading, overlayOpacity]);
 
   // ============================================================================
   // LOAD PERSISTED SESSION ON MOUNT
@@ -595,10 +625,10 @@ export default function WebViewScreen() {
           style={{ width: "100%", height: "100%", border: "none" }}
           onLoad={() => setIsLoading(false)}
         />
-        {isLoading && (
-          <View style={styles.loadingOverlay}>
+        {showOverlay && (
+          <Animated.View style={[styles.loadingOverlay, { opacity: overlayOpacity }]}>
             <LoadingScreen message="Loading..." />
-          </View>
+          </Animated.View>
         )}
       </SafeAreaView>
     );
@@ -665,11 +695,11 @@ export default function WebViewScreen() {
         }}
       />
 
-      {/* Loading overlay */}
-      {isLoading && (
-        <View style={styles.loadingOverlay}>
+      {/* Loading overlay — animated fade-out for smooth transition */}
+      {showOverlay && (
+        <Animated.View style={[styles.loadingOverlay, { opacity: overlayOpacity }]}>
           <LoadingScreen message="Loading your dashboard..." />
-        </View>
+        </Animated.View>
       )}
     </SafeAreaView>
   );

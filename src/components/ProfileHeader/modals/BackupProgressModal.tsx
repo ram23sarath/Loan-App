@@ -49,8 +49,9 @@ const BackupProgressModal: React.FC<BackupProgressModalProps> = ({
             className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm"
         >
             <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
+                initial={{ scale: 0.97, opacity: 0, y: 8 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                transition={{ type: 'tween', ease: [0.25, 0.1, 0.25, 1], duration: 0.25 }}
                 className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 md:p-8 w-[90%] max-w-md mx-4"
             >
                 {/* Header */}

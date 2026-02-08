@@ -11,33 +11,33 @@ export const menuBackdropVariants: Variants = {
 };
 
 export const menuDropdownVariants: Variants = {
-    hidden: { opacity: 0, scale: 0.9, y: -10 },
+    hidden: { opacity: 0, scale: 0.97, y: -6 },
     visible: {
         opacity: 1,
         scale: 1,
         y: 0,
         transition: {
-            type: 'spring',
-            stiffness: 400,
-            damping: 25,
-            staggerChildren: 0.05,
-            delayChildren: 0.1,
+            type: 'tween',
+            ease: [0.25, 0.1, 0.25, 1],
+            duration: 0.2,
+            staggerChildren: 0.03,
+            delayChildren: 0.05,
         },
     },
     exit: {
         opacity: 0,
-        scale: 0.95,
-        y: -5,
+        scale: 0.98,
+        y: -3,
         transition: { duration: 0.15 },
     },
 };
 
 export const menuItemVariants: Variants = {
-    hidden: { opacity: 0, x: -10 },
+    hidden: { opacity: 0, x: -6 },
     visible: {
         opacity: 1,
         x: 0,
-        transition: { type: 'spring', stiffness: 300, damping: 24 },
+        transition: { type: 'tween', ease: 'easeOut', duration: 0.18 },
     },
 };
 
@@ -52,21 +52,21 @@ export const modalBackdropVariants: Variants = {
 };
 
 export const modalContentVariants: Variants = {
-    hidden: { opacity: 0, scale: 0.9, y: 20 },
+    hidden: { opacity: 0, scale: 0.97, y: 8 },
     visible: {
         opacity: 1,
         scale: 1,
         y: 0,
         transition: {
-            type: 'spring',
-            stiffness: 350,
-            damping: 25,
+            type: 'tween',
+            ease: [0.25, 0.1, 0.25, 1],
+            duration: 0.25,
         },
     },
     exit: {
         opacity: 0,
-        scale: 0.95,
-        y: 10,
+        scale: 0.98,
+        y: 4,
         transition: { duration: 0.15 },
     },
 };
@@ -114,14 +114,12 @@ export const avatarVariants: Variants = {
 // ============================================
 
 export const notificationItemVariants: Variants = {
-    hidden: { opacity: 0, scale: 0.8, filter: 'blur(10px)' },
-    visible: { opacity: 1, scale: 1, filter: 'blur(0px)' },
+    hidden: { opacity: 0, y: 6 },
+    visible: { opacity: 1, y: 0 },
     exit: {
         opacity: 0,
-        scale: 0.9,
-        x: [0, 20, -20, 0], // Shake
-        filter: ['blur(0px)', 'blur(5px)', 'blur(10px)'],
-        transition: { duration: 0.8, ease: 'easeInOut' },
+        x: 40,
+        transition: { duration: 0.25, ease: 'easeIn' },
     },
     swipeExit: {
         opacity: 0,

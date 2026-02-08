@@ -24,34 +24,20 @@ const LogoutConfirmModal: React.FC<LogoutConfirmModalProps> = ({ isOpen, onClose
                     transition={{ duration: 0.2 }}
                 >
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                        initial={{ opacity: 0, scale: 0.97, y: 8 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                        transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                        exit={{ opacity: 0, scale: 0.98, y: 4 }}
+                        transition={{ type: 'tween', ease: [0.25, 0.1, 0.25, 1], duration: 0.25 }}
                         className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm dark:bg-dark-card dark:border dark:border-dark-border"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <motion.div
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.1, type: 'spring', stiffness: 300, damping: 24 }}
-                        >
+                        <div>
                             <h2 className="text-lg font-bold text-gray-800 mb-2 dark:text-dark-text">Confirm Logout</h2>
-                        </motion.div>
-                        <motion.p
-                            className="text-gray-600 mb-6 dark:text-dark-muted"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.15 }}
-                        >
+                        </div>
+                        <p className="text-gray-600 mb-6 dark:text-dark-muted">
                             Are you sure you want to logout?
-                        </motion.p>
-                        <motion.div
-                            className="flex flex-col gap-3 sm:flex-row sm:justify-center"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2, type: 'spring', stiffness: 300, damping: 24 }}
-                        >
+                        </p>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
                             <motion.button
                                 onClick={onClose}
                                 className="flex-1 sm:flex-none px-6 py-3 sm:py-2 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 active:bg-gray-100 transition-colors min-h-[44px] sm:min-h-auto dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700 dark:active:bg-slate-600"
@@ -68,7 +54,7 @@ const LogoutConfirmModal: React.FC<LogoutConfirmModalProps> = ({ isOpen, onClose
                             >
                                 Yes, Logout
                             </motion.button>
-                        </motion.div>
+                        </div>
                     </motion.div>
                 </motion.div>
             )}

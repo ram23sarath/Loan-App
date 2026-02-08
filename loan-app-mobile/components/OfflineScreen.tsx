@@ -5,13 +5,15 @@
  * Provides a retry button to check connection again.
  */
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   TouchableOpacity,
   useColorScheme,
+  Animated,
+  Easing,
 } from 'react-native';
 
 interface OfflineScreenProps {
@@ -22,8 +24,30 @@ export default function OfflineScreen({ onRetry }: OfflineScreenProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
+  // Fade-in + slide-up entrance animation
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 400,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, slideAnim]);
+
   return (
     <View style={[styles.container, isDark && styles.containerDark]}>
+      <Animated.View style={{ alignItems: 'center', opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
       <View style={[styles.iconContainer, isDark && styles.iconContainerDark]}>
         <Text style={styles.icon}>📡</Text>
       </View>
@@ -49,6 +73,7 @@ export default function OfflineScreen({ onRetry }: OfflineScreenProps) {
       <Text style={[styles.hint, isDark && styles.hintDark]}>
         Make sure you're connected to Wi-Fi or mobile data
       </Text>
+      </Animated.View>
     </View>
   );
 }

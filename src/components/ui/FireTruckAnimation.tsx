@@ -17,24 +17,14 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
 
     return (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-white to-indigo-50/50 dark:from-slate-950 dark:via-slate-900 dark:to-indigo-950/50 overflow-hidden">
-            {/* Animated background gradient orbs */}
-            <motion.div
-                className="absolute top-1/4 -left-32 w-96 h-96 bg-gradient-to-r from-indigo-400/20 to-purple-400/20 rounded-full blur-3xl pointer-events-none"
-                animate={{
-                    x: [0, 50, 0],
-                    y: [0, 30, 0],
-                    scale: [1, 1.1, 1]
-                }}
-                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+            {/* Animated background gradient orbs — CSS-driven for GPU efficiency */}
+            <div
+                className="absolute top-1/4 -left-32 w-96 h-96 bg-gradient-to-r from-indigo-400/20 to-purple-400/20 rounded-full blur-3xl pointer-events-none premium-float"
+                style={{ animationDuration: '10s' }}
             />
-            <motion.div
-                className="absolute bottom-1/4 -right-32 w-96 h-96 bg-gradient-to-r from-pink-400/20 to-orange-400/20 rounded-full blur-3xl pointer-events-none"
-                animate={{
-                    x: [0, -50, 0],
-                    y: [0, -30, 0],
-                    scale: [1.1, 1, 1.1]
-                }}
-                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+            <div
+                className="absolute bottom-1/4 -right-32 w-96 h-96 bg-gradient-to-r from-pink-400/20 to-orange-400/20 rounded-full blur-3xl pointer-events-none premium-float"
+                style={{ animationDuration: '12s', animationDelay: '-4s' }}
             />
 
             {/* Subtle grid pattern overlay */}
@@ -44,26 +34,21 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
             <div className="relative z-10 flex flex-col items-center px-4">
                 {/* Three emblems container */}
                 <div className="relative mb-8 flex items-center justify-center gap-4 md:gap-8">
-                    {/* Left: AP Government Emblem - Fly in from left dramatically */}
+                    {/* Left: AP Government Emblem - Gentle fade-slide from left */}
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.5, x: -100, rotate: -15 }}
-                        animate={{ opacity: 1, scale: 1, x: 0, rotate: 0 }}
+                        initial={{ opacity: 0, x: -30 }}
+                        animate={{ opacity: 1, x: 0 }}
                         transition={{ 
-                            type: "spring",
-                            stiffness: 260,
-                            damping: 20,
-                            delay: 0.1 
+                            type: "tween",
+                            duration: 0.5,
+                            ease: [0.25, 0.1, 0.25, 1],
+                            delay: 0.15 
                         }}
                         className="relative"
                     >
                         {/* Glowing ring behind image */}
-                        <motion.div
-                            className="absolute inset-0 -m-3 rounded-2xl bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 opacity-20 blur-xl"
-                            animate={{
-                                opacity: [0.2, 0.4, 0.2],
-                                scale: [1, 1.05, 1]
-                            }}
-                            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        <div
+                            className="absolute inset-0 -m-3 rounded-2xl bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 opacity-20 blur-xl premium-pulse-glow"
                         />
                         <div className="relative p-1 rounded-2xl bg-gradient-to-br from-green-500 via-emerald-500 to-teal-500">
                             <div className="bg-white dark:bg-slate-900 rounded-xl p-2">
@@ -76,27 +61,22 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
                         </div>
                     </motion.div>
 
-                    {/* Center: Officer Image - Pop up with impact */}
+                    {/* Center: Officer Image - Smooth scale-up from center */}
                     <motion.div
-                        initial={{ opacity: 0, scale: 0, y: 100 }}
+                        initial={{ opacity: 0, scale: 0.85, y: 15 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         transition={{ 
-                            type: "spring",
-                            stiffness: 300,
-                            damping: 20,
-                            mass: 1.2,
-                            delay: 0.4
+                            type: "tween",
+                            duration: 0.55,
+                            ease: [0.25, 0.1, 0.25, 1],
+                            delay: 0.35
                         }}
                         className="relative"
                     >
                         {/* Glowing ring behind image */}
-                        <motion.div
-                            className="absolute inset-0 -m-4 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-20 blur-xl"
-                            animate={{
-                                opacity: [0.2, 0.4, 0.2],
-                                scale: [1, 1.05, 1]
-                            }}
-                            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        <div
+                            className="absolute inset-0 -m-4 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-20 blur-xl premium-pulse-glow"
+                            style={{ animationDelay: '-1s' }}
                         />
                         <div className="relative p-1 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500">
                             <div className="bg-white dark:bg-slate-900 rounded-xl p-2">
@@ -109,26 +89,22 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
                         </div>
                     </motion.div>
 
-                    {/* Right: AP Fire Truck - Fly in from right dramatically */}
+                    {/* Right: AP Fire Truck - Gentle fade-slide from right */}
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.5, x: 100, rotate: 15 }}
-                        animate={{ opacity: 1, scale: 1, x: 0, rotate: 0 }}
+                        initial={{ opacity: 0, x: 30 }}
+                        animate={{ opacity: 1, x: 0 }}
                         transition={{ 
-                            type: "spring",
-                            stiffness: 260,
-                            damping: 20,
-                            delay: 0.2
+                            type: "tween",
+                            duration: 0.5,
+                            ease: [0.25, 0.1, 0.25, 1],
+                            delay: 0.2 
                         }}
                         className="relative"
                     >
                         {/* Glowing ring behind image */}
-                        <motion.div
-                            className="absolute inset-0 -m-3 rounded-2xl bg-gradient-to-r from-red-500 via-orange-500 to-amber-500 opacity-20 blur-xl"
-                            animate={{
-                                opacity: [0.2, 0.4, 0.2],
-                                scale: [1, 1.05, 1]
-                            }}
-                            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        <div
+                            className="absolute inset-0 -m-3 rounded-2xl bg-gradient-to-r from-red-500 via-orange-500 to-amber-500 opacity-20 blur-xl premium-pulse-glow"
+                            style={{ animationDelay: '-2s' }}
                         />
                         <div className="relative p-1 rounded-2xl bg-gradient-to-br from-red-500 via-orange-500 to-amber-500">
                             <div className="bg-white dark:bg-slate-900 rounded-xl p-2">
@@ -144,32 +120,27 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
 
                 {/* Premium welcome text */}
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
+                    transition={{ duration: 0.5, delay: 0.45, ease: "easeOut" }}
                     className="text-center mb-6"
                 >
-                    <motion.p
-                        className="text-sm uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400 font-semibold mb-3"
-                        initial={{ opacity: 0, letterSpacing: '0.1em' }}
-                        animate={{ opacity: 1, letterSpacing: '0.3em' }}
-                        transition={{ duration: 0.8, delay: 0.4 }}
-                    >
+                    <p className="text-sm uppercase tracking-[0.3em] text-gray-500 dark:text-gray-400 font-semibold mb-3">
                         Welcome to
-                    </motion.p>
+                    </p>
                     <motion.h1
                         className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tight mb-2"
-                        initial={{ opacity: 0, y: 10 }}
+                        initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.5 }}
+                        transition={{ duration: 0.5, delay: 0.55, ease: "easeOut" }}
                     >
                         <span className="premium-gradient-text">CTR District Welfare</span>
                     </motion.h1>
                     <motion.h2
                         className="text-2xl md:text-3xl font-bold"
-                        initial={{ opacity: 0, y: 10 }}
+                        initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.6 }}
+                        transition={{ duration: 0.5, delay: 0.65, ease: "easeOut" }}
                     >
                         <span className="premium-shimmer-text">LoanApp</span>
                     </motion.h2>
@@ -178,16 +149,12 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
                 {/* Decorative divider */}
                 <motion.div
                     className="flex items-center gap-3 mb-6"
-                    initial={{ opacity: 0, scaleX: 0 }}
+                    initial={{ opacity: 0, scaleX: 0.3 }}
                     animate={{ opacity: 1, scaleX: 1 }}
-                    transition={{ duration: 0.8, delay: 0.7 }}
+                    transition={{ duration: 0.6, delay: 0.7, ease: "easeOut" }}
                 >
                     <div className="w-12 h-0.5 bg-gradient-to-r from-transparent to-indigo-400 rounded-full" />
-                    <motion.div
-                        className="w-2 h-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500"
-                        animate={{ scale: [1, 1.3, 1] }}
-                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                    />
+                    <div className="w-2 h-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 premium-pulse-glow" />
                     <div className="w-12 h-0.5 bg-gradient-to-l from-transparent to-purple-400 rounded-full" />
                 </motion.div>
             </div>
@@ -199,19 +166,19 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
                 <div className="absolute bottom-6 left-0 right-0 h-px bg-gradient-to-r from-transparent via-yellow-400/40 to-transparent" />
 
                 <motion.div
-                    initial={{ x: '-25vw' }}
-                    animate={{ x: '120vw' }}
+                    initial={{ x: '-20vw' }}
+                    animate={{ x: '110vw' }}
                     transition={{
                         duration: 4,
-                        ease: [0.45, 0, 0.55, 1],
+                        ease: [0.22, 0.68, 0.36, 1],
                     }}
                     className="absolute left-0"
                 >
                     <motion.div
-                        animate={{ y: [0, -3, 0] }}
+                        animate={{ y: [0, -2, 0] }}
                         transition={{
                             repeat: Infinity,
-                            duration: 0.35,
+                            duration: 0.5,
                             ease: "easeInOut"
                         }}
                         className="relative"
@@ -219,7 +186,7 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
                         {/* Enhanced speed lines */}
                         <motion.div
                             initial={{ opacity: 0 }}
-                            animate={{ opacity: [0, 0.6, 0] }}
+                            animate={{ opacity: [0, 0.4, 0] }}
                             transition={{ duration: 3, times: [0, 0.5, 1] }}
                             className="absolute top-1/2 -translate-y-1/2 -left-16 flex flex-col gap-1"
                         >
@@ -230,11 +197,7 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
 
                         {/* Fire truck with glow */}
                         <div className="relative">
-                            <motion.div
-                                className="absolute inset-0 blur-lg bg-red-500/30 rounded-full"
-                                animate={{ opacity: [0.3, 0.5, 0.3] }}
-                                transition={{ duration: 0.5, repeat: Infinity }}
-                            />
+                            <div className="absolute inset-0 blur-lg bg-red-500/20 rounded-full" />
                             <img
                                 src="/firetruck.png"
                                 alt="Fire Truck"
@@ -247,38 +210,38 @@ const FireTruckAnimation: React.FC<FireTruckAnimationProps> = ({ onComplete }) =
 
             {/* Premium loading indicator */}
             <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8, duration: 0.6 }}
+                transition={{ delay: 0.8, duration: 0.5, ease: "easeOut" }}
                 className="absolute bottom-8 md:bottom-12 flex flex-col items-center gap-4"
             >
                 <motion.p
                     className="text-sm text-gray-500 dark:text-gray-400 font-medium tracking-wide"
                     animate={{ opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                 >
                     Preparing your dashboard...
                 </motion.p>
 
                 {/* Animated dots with gradient */}
                 <div className="flex gap-2">
-                    {[0, 1, 2, 3, 4].map((i) => (
+                    {[0, 1, 2].map((i) => (
                         <motion.div
                             key={i}
                             animate={{
-                                scale: [1, 1.4, 1],
+                                scale: [1, 1.2, 1],
                                 opacity: [0.4, 1, 0.4]
                             }}
                             transition={{
                                 repeat: Infinity,
-                                duration: 1.2,
-                                delay: i * 0.15,
+                                duration: 1.4,
+                                delay: i * 0.2,
                                 ease: "easeInOut"
                             }}
                             className="w-2 h-2 rounded-full"
                             style={{
-                                background: `linear-gradient(135deg, ${['#818cf8', '#a78bfa', '#c084fc', '#e879f9', '#f472b6'][i]
-                                    }, ${['#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899'][i]
+                                background: `linear-gradient(135deg, ${['#818cf8', '#a78bfa', '#c084fc'][i]
+                                    }, ${['#6366f1', '#8b5cf6', '#a855f7'][i]
                                     })`
                             }}
                         />

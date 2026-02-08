@@ -57,18 +57,18 @@ const ProfilePanelModal: React.FC<ProfilePanelModalProps> = ({
                     onClick={onClose}
                 >
                     <motion.div
-                        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                        initial={{ scale: 0.97, opacity: 0, y: 8 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
-                        exit={{ scale: 0.95, opacity: 0, y: 10 }}
-                        transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                        exit={{ scale: 0.98, opacity: 0, y: 4 }}
+                        transition={{ type: 'tween', ease: [0.25, 0.1, 0.25, 1], duration: 0.25 }}
                         className="bg-white rounded-xl shadow-2xl p-4 md:p-6 w-full max-w-sm md:max-w-md max-h-[90vh] overflow-y-auto z-[100] dark:bg-dark-card dark:border dark:border-dark-border"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <motion.div
                             className="flex items-center justify-between mb-4"
-                            initial={{ opacity: 0, y: -10 }}
+                            initial={{ opacity: 0, y: -6 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+                            transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}
                         >
                             <h2 className="text-lg md:text-2xl font-bold text-gray-800 dark:text-dark-text">Profile</h2>
                             <motion.button

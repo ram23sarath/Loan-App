@@ -1,12 +1,12 @@
-import React from 'react';
-import { useData } from '../../context/DataContext';
-import { useNavigate } from 'react-router-dom';
-import GlassCard from '../ui/GlassCard';
-import PageWrapper from '../ui/PageWrapper';
-import { motion } from 'framer-motion';
-import RequestSeniorityModal from '../ui/RequestSeniorityModal';
-import { supabase } from '../../lib/supabase';
-import type { Document } from '../../types';
+import React from "react";
+import { useData } from "../../context/DataContext";
+import { useNavigate } from "react-router-dom";
+import GlassCard from "../ui/GlassCard";
+import PageWrapper from "../ui/PageWrapper";
+import { motion } from "framer-motion";
+import RequestSeniorityModal from "../ui/RequestSeniorityModal";
+import { supabase } from "../../lib/supabase";
+import type { Document } from "../../types";
 
 const CustomerDashboard = () => {
   const {
@@ -21,19 +21,24 @@ const CustomerDashboard = () => {
   const navigate = useNavigate();
 
   const [showRequestModal, setShowRequestModal] = React.useState(false);
-  const [stationName, setStationName] = React.useState('');
-  const [loanType, setLoanType] = React.useState('General');
-  const [loanRequestDate, setLoanRequestDate] = React.useState('');
+  const [stationName, setStationName] = React.useState("");
+  const [loanType, setLoanType] = React.useState("General");
+  const [loanRequestDate, setLoanRequestDate] = React.useState("");
 
   // Document state for scoped customers
   const [documents, setDocuments] = React.useState<Document[]>([]);
   const [documentsLoading, setDocumentsLoading] = React.useState(false);
-  const [downloadingDocId, setDownloadingDocId] = React.useState<string | null>(null);
+  const [downloadingDocId, setDownloadingDocId] = React.useState<string | null>(
+    null,
+  );
 
   // Get the current customer's data
-  const customer = isScopedCustomer && scopedCustomerId
-    ? customerMap.get(scopedCustomerId)
-    : customers.length > 0 ? customers[0] : null;
+  const customer =
+    isScopedCustomer && scopedCustomerId
+      ? customerMap.get(scopedCustomerId)
+      : customers.length > 0
+        ? customers[0]
+        : null;
 
   const customerLoans = React.useMemo(() => {
     if (!customer) return [];
@@ -51,8 +56,12 @@ const CustomerDashboard = () => {
     let maxProgress = 0;
     customerLoans.forEach((loan) => {
       const loanInstallments = installmentsByLoanId.get(loan.id) || [];
-      const paidAmount = loanInstallments.reduce((sum, inst) => sum + (inst.amount || 0), 0);
-      const totalRepayable = (loan.original_amount || 0) + (loan.interest_amount || 0);
+      const paidAmount = loanInstallments.reduce(
+        (sum, inst) => sum + (inst.amount || 0),
+        0,
+      );
+      const totalRepayable =
+        (loan.original_amount || 0) + (loan.interest_amount || 0);
       if (totalRepayable > 0) {
         const progress = Math.min(paidAmount / totalRepayable, 1);
         if (progress > maxProgress) {
@@ -65,13 +74,19 @@ const CustomerDashboard = () => {
   }, [customerLoans, installmentsByLoanId]);
 
   // Allow requests if: no existing loans (first-time) OR 80%+ repayment progress
-  const meetsRepaymentThreshold = customerLoans.length === 0 || repaymentProgress >= 0.8;
-  const canRequest = Boolean(isScopedCustomer && customer && !hasPendingSeniorityRequest && meetsRepaymentThreshold);
+  const meetsRepaymentThreshold =
+    customerLoans.length === 0 || repaymentProgress >= 0.8;
+  const canRequest = Boolean(
+    isScopedCustomer &&
+    customer &&
+    !hasPendingSeniorityRequest &&
+    meetsRepaymentThreshold,
+  );
   const progressPercent = Math.round(repaymentProgress * 100);
   const requestDisabledReason = !customer
-    ? 'No customer found for this account.'
+    ? "No customer found for this account."
     : hasPendingSeniorityRequest
-      ? 'Request already submitted and pending.'
+      ? "Request already submitted and pending."
       : !meetsRepaymentThreshold
         ? `You need at least 80% repayment (current ${progressPercent}%).`
         : undefined;
@@ -83,14 +98,14 @@ const CustomerDashboard = () => {
         setDocumentsLoading(true);
         try {
           const { data, error } = await supabase
-            .from('documents')
-            .select('*')
-            .order('created_at', { ascending: false });
+            .from("documents")
+            .select("*")
+            .order("created_at", { ascending: false });
           if (!error && data) {
             setDocuments(data);
           }
         } catch (err) {
-          console.error('Failed to fetch documents:', err);
+          console.error("Failed to fetch documents:", err);
         } finally {
           setDocumentsLoading(false);
         }
@@ -104,16 +119,26 @@ const CustomerDashboard = () => {
     setDownloadingDocId(doc.id);
     try {
       const { data, error } = await supabase.storage
-        .from('public-documents')
+        .from("public-documents")
         .createSignedUrl(doc.file_path, 60); // 60 seconds expiry
-      
+
       if (error) throw error;
       if (data?.signedUrl) {
+        const isNative =
+          typeof window !== "undefined" && window.isNativeApp?.();
+        if (isNative && window.sendToNative) {
+          window.sendToNative("REQUEST_FILE_DOWNLOAD", {
+            url: data.signedUrl,
+            filename: doc.name,
+          });
+          return;
+        }
+
         // Fetch the file and trigger download
         const response = await fetch(data.signedUrl);
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        const link = window.document.createElement('a');
+        const link = window.document.createElement("a");
         link.href = url;
         link.download = doc.name; // Use original filename
         window.document.body.appendChild(link);
@@ -122,12 +147,11 @@ const CustomerDashboard = () => {
         window.URL.revokeObjectURL(url);
       }
     } catch (err) {
-      console.error('Failed to download document:', err);
+      console.error("Failed to download document:", err);
     } finally {
       setDownloadingDocId(null);
     }
   };
-
 
   return (
     <PageWrapper>
@@ -153,15 +177,13 @@ const CustomerDashboard = () => {
         <RequestSeniorityModal
           open={showRequestModal}
           onClose={() => setShowRequestModal(false)}
-          customerId={customer?.id || ''}
-          customerName={customer?.name || ''}
+          customerId={customer?.id || ""}
+          customerName={customer?.name || ""}
           defaultStation={stationName}
           defaultLoanType={loanType}
           defaultDate={loanRequestDate}
           isScopedCustomer={isScopedCustomer}
         />
-
-
 
         {/* Quick Actions */}
         <motion.div
@@ -177,7 +199,7 @@ const CustomerDashboard = () => {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => navigate('/loans')}
+                onClick={() => navigate("/loans")}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
               >
                 View My Loans
@@ -185,7 +207,7 @@ const CustomerDashboard = () => {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => navigate('/subscriptions')}
+                onClick={() => navigate("/subscriptions")}
                 className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
               >
                 View Subscriptions
@@ -193,7 +215,7 @@ const CustomerDashboard = () => {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => navigate('/data')}
+                onClick={() => navigate("/data")}
                 className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
               >
                 View Misc Entries
@@ -201,7 +223,7 @@ const CustomerDashboard = () => {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => navigate('/summary')}
+                onClick={() => navigate("/summary")}
                 className="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
               >
                 View Summary Dashboard
@@ -228,9 +250,9 @@ const CustomerDashboard = () => {
             {isScopedCustomer && (
               <p className="mt-2 text-sm text-gray-700 dark:text-dark-muted">
                 {hasPendingSeniorityRequest
-                  ? 'Your request is already in the loan seniority list.'
+                  ? "Your request is already in the loan seniority list."
                   : customerLoans.length === 0
-                    ? 'No existing loans. You are eligible to request your first loan.'
+                    ? "No existing loans. You are eligible to request your first loan."
                     : meetsRepaymentThreshold
                       ? `Eligibility met: ${progressPercent}% of loan repayment completed.`
                       : `Eligibility blocked until 80% repayment is completed. Current progress: ${progressPercent}%.`}
@@ -251,7 +273,7 @@ const CustomerDashboard = () => {
               <h2 className="text-xl font-bold text-gray-800 dark:text-dark-text mb-4 flex items-center gap-2">
                 <span>📄</span> Documents
               </h2>
-              
+
               {documentsLoading ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin text-3xl">⏳</div>
@@ -260,7 +282,9 @@ const CustomerDashboard = () => {
                 <div className="text-center py-8 text-gray-500 dark:text-dark-muted">
                   <div className="text-4xl mb-2">📭</div>
                   <p>No documents available yet.</p>
-                  <p className="text-sm mt-1">Check back later for updates from admin.</p>
+                  <p className="text-sm mt-1">
+                    Check back later for updates from admin.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -278,9 +302,12 @@ const CustomerDashboard = () => {
                           {doc.name}
                         </div>
                         <div className="text-sm text-gray-500 dark:text-dark-muted">
-                          {doc.file_size ? `${(doc.file_size / 1024).toFixed(1)} KB` : ''}
-                          {doc.file_size && ' • '}
-                          Uploaded {new Date(doc.created_at).toLocaleDateString()}
+                          {doc.file_size
+                            ? `${(doc.file_size / 1024).toFixed(1)} KB`
+                            : ""}
+                          {doc.file_size && " • "}
+                          Uploaded{" "}
+                          {new Date(doc.created_at).toLocaleDateString()}
                         </div>
                       </div>
                       <motion.button
@@ -306,12 +333,9 @@ const CustomerDashboard = () => {
             </GlassCard>
           </motion.div>
         )}
-
-
       </div>
     </PageWrapper>
   );
 };
 
 export default CustomerDashboard;
-

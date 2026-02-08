@@ -23,6 +23,7 @@ export type WebToNativeCommand =
   | { type: 'AUTH_LOGOUT' }
   | { type: 'AUTH_SESSION_UPDATE'; payload: AuthSession }
   | { type: 'OPEN_EXTERNAL_LINK'; payload: { url: string } }
+  | { type: 'REQUEST_FILE_DOWNLOAD'; payload: { url: string; filename?: string } }
   | { type: 'HAPTIC_FEEDBACK'; payload: { style: 'light' | 'medium' | 'heavy' } }
   | { type: 'SHARE_CONTENT'; payload: { title?: string; text: string; url?: string } }
   | { type: 'COPY_TO_CLIPBOARD'; payload: { text: string } }

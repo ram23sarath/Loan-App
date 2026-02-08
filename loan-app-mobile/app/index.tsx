@@ -36,6 +36,8 @@ import NetInfo from "@react-native-community/netinfo";
 import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
 import * as Linking2 from "expo-linking";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
 
 import { WEB_APP_URL, ENVIRONMENT, TRUSTED_ORIGINS } from "@/config/env";
 import {
@@ -188,6 +190,48 @@ export default function WebViewScreen() {
           Linking.openURL(url).catch((err) => {
             console.error("[WebView] Failed to open external link:", err);
           });
+        }),
+      );
+
+      handlerUnsubscribersRef.current.push(
+        bridgeRef.current.on("REQUEST_FILE_DOWNLOAD", async (payload) => {
+          const { url, filename } = payload as {
+            url?: string;
+            filename?: string;
+          };
+
+          if (!url) {
+            Alert.alert("Download failed", "Missing download URL.");
+            return;
+          }
+
+          const fallbackName = `document-${Date.now()}`;
+          const safeName = (
+            filename && filename.trim().length > 0
+              ? filename.trim()
+              : fallbackName
+          ).replace(/[^\w.\-() ]+/g, "_");
+
+          const baseDir =
+            FileSystem.documentDirectory || FileSystem.cacheDirectory;
+          if (!baseDir) {
+            Alert.alert("Download failed", "No writable directory available.");
+            return;
+          }
+
+          const targetUri = `${baseDir}${safeName}`;
+
+          try {
+            const result = await FileSystem.downloadAsync(url, targetUri);
+            if (await Sharing.isAvailableAsync()) {
+              await Sharing.shareAsync(result.uri);
+            } else {
+              await Linking.openURL(result.uri);
+            }
+          } catch (err) {
+            console.error("[WebView] File download failed:", err);
+            Alert.alert("Download failed", "Unable to save the file.");
+          }
         }),
       );
 
@@ -626,7 +670,9 @@ export default function WebViewScreen() {
           onLoad={() => setIsLoading(false)}
         />
         {showOverlay && (
-          <Animated.View style={[styles.loadingOverlay, { opacity: overlayOpacity }]}>
+          <Animated.View
+            style={[styles.loadingOverlay, { opacity: overlayOpacity }]}
+          >
             <LoadingScreen message="Loading..." />
           </Animated.View>
         )}
@@ -697,7 +743,9 @@ export default function WebViewScreen() {
 
       {/* Loading overlay — animated fade-out for smooth transition */}
       {showOverlay && (
-        <Animated.View style={[styles.loadingOverlay, { opacity: overlayOpacity }]}>
+        <Animated.View
+          style={[styles.loadingOverlay, { opacity: overlayOpacity }]}
+        >
           <LoadingScreen message="Loading your dashboard..." />
         </Animated.View>
       )}

@@ -1288,6 +1288,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             })
             .catch((err) => {
               console.error("[NativeBridge] Failed to set session:", err);
+
+              // If refresh token is invalid, notify native to clear storage
+              if (
+                err?.code === "refresh_token_not_found" ||
+                err?.message?.includes("refresh_token_not_found")
+              ) {
+                console.warn(
+                  "[NativeBridge] Invalid refresh token - notifying native to clear storage",
+                );
+                window.NativeBridge?.logout();
+              }
+
               // Still dispatch event so waiting Promise doesn't hang
               window.dispatchEvent(
                 new CustomEvent("native-auth-received", {
@@ -1368,6 +1380,27 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
       console.log("[NativeBridge] Message handler unregistered");
     };
+  }, []);
+
+  // Report page render to native wrapper when DataProvider mounts.
+  // This is a safety net: bridge.ts also sends PAGE_LOADED on window.load,
+  // but this ensures it fires even if the bridge load event was missed.
+  useEffect(() => {
+    const isNative = typeof window !== "undefined" && window.isNativeApp?.();
+    if (!isNative) return;
+
+    // Small delay to ensure React has painted something visible
+    const timer = setTimeout(() => {
+      console.log(
+        "[NativeBridge] Reporting page render to native (DataProvider mounted)",
+      );
+      window.NativeBridge?.reportPageLoad(
+        window.location.pathname || "/",
+        "I J Reddy Loan App",
+      );
+    }, 200);
+
+    return () => clearTimeout(timer);
   }, []);
 
   // When session changes, notify native to persist it
@@ -1530,9 +1563,33 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           });
         }
 
+        let sessionResult;
+        try {
+          sessionResult = await supabase.auth.getSession();
+        } catch (sessionError: any) {
+          // Handle refresh_token_not_found error
+          if (
+            sessionError?.code === "refresh_token_not_found" ||
+            sessionError?.message?.includes("refresh_token_not_found")
+          ) {
+            console.warn(
+              "[DataContext] Refresh token not found - clearing session and notifying native",
+            );
+            // Clear the invalid session
+            await supabase.auth.signOut({ scope: "local" });
+            // Notify native to clear its stored session
+            if (isNative) {
+              window.NativeBridge?.logout();
+            }
+            sessionResult = { data: { session: null }, error: null };
+          } else {
+            throw sessionError;
+          }
+        }
+
         const {
           data: { session },
-        } = await supabase.auth.getSession();
+        } = sessionResult;
         console.log(
           "[DataContext] Stage 1 complete: Session",
           session ? "exists" : "null",
@@ -1861,17 +1918,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Report page load completion to native wrapper when app is ready
-  useEffect(() => {
-    if (!loading && typeof window !== "undefined" && window.isNativeApp?.()) {
-      // Notify native that web app is ready and data has loaded
-      console.log("[NativeBridge] Reporting page loaded to native");
-      window.NativeBridge?.reportPageLoad(
-        window.location.pathname || "/",
-        document.title || "I J Reddy Loan App",
-      );
-    }
-  }, [loading]);
+  // PAGE_LOADED is now sent on DataProvider mount (above) and by bridge.ts on window.load.
+  // Web app shows its own loading indicators while data loads in background.
 
   // Refetch data when user logs in (when session becomes available but data hasn't been loaded yet)
   useEffect(() => {

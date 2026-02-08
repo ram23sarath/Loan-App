@@ -47,6 +47,11 @@ import {
   addNotificationReceivedListener,
   addNotificationResponseListener,
 } from "@/native/notifications";
+import {
+  loadAuthSession,
+  saveAuthSession,
+  clearAuthSession,
+} from "@/native/storage";
 
 import LoadingScreen from "@/components/LoadingScreen";
 import OfflineScreen from "@/components/OfflineScreen";
@@ -70,6 +75,7 @@ export default function WebViewScreen() {
 
   // State
   const [isLoading, setIsLoading] = useState(true);
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [canGoBack, setCanGoBack] = useState(false);
@@ -80,6 +86,23 @@ export default function WebViewScreen() {
   useEffect(() => {
     authSessionRef.current = authSession;
   }, [authSession]);
+
+  // ============================================================================
+  // LOAD PERSISTED SESSION ON MOUNT
+  // ============================================================================
+
+  useEffect(() => {
+    loadAuthSession()
+      .then((session) => {
+        if (session) {
+          console.log("[Storage] Loaded persisted auth session");
+          setAuthSession(session);
+        }
+      })
+      .catch((error) => {
+        console.error("[Storage] Failed to load persisted session:", error);
+      });
+  }, []);
 
   // ============================================================================
   // BRIDGE SETUP
@@ -109,16 +132,23 @@ export default function WebViewScreen() {
       );
 
       handlerUnsubscribersRef.current.push(
-        bridgeRef.current.on("AUTH_LOGOUT", () => {
+        bridgeRef.current.on("AUTH_LOGOUT", async () => {
           setAuthSession(null);
+          await clearAuthSession().catch((err) =>
+            console.error("[Storage] Failed to clear session:", err),
+          );
           bridgeRef.current?.sendToWeb({ type: "AUTH_CLEARED" });
         }),
       );
 
       handlerUnsubscribersRef.current.push(
-        bridgeRef.current.on("AUTH_SESSION_UPDATE", (payload) => {
+        bridgeRef.current.on("AUTH_SESSION_UPDATE", async (payload) => {
           // Store session from web for persistence
-          setAuthSession(payload as AuthSession);
+          const session = payload as AuthSession;
+          setAuthSession(session);
+          await saveAuthSession(session).catch((err) =>
+            console.error("[Storage] Failed to save session:", err),
+          );
         }),
       );
 
@@ -253,6 +283,14 @@ export default function WebViewScreen() {
             route,
           );
           setIsLoading(false);
+
+          // Mark that initial load is complete - subsequent navigations won't show loading
+          if (!hasInitiallyLoaded) {
+            setHasInitiallyLoaded(true);
+            console.log(
+              "[WebView] Initial load complete - subsequent navigations will not show loading overlay",
+            );
+          }
         }),
       );
 
@@ -467,33 +505,40 @@ export default function WebViewScreen() {
 
   const handleLoadStart = useCallback(() => {
     console.log("[WebView] Load started");
-    setIsLoading(true);
-    setError(null);
-  }, []);
+
+    // Only show loading overlay on initial load, not on SPA navigation
+    if (!hasInitiallyLoaded) {
+      setIsLoading(true);
+      setError(null);
+    } else {
+      console.log(
+        "[WebView] SPA navigation detected - not showing loading overlay",
+      );
+    }
+  }, [hasInitiallyLoaded]);
 
   const handleLoadEnd = useCallback(() => {
-    console.log(
-      "[WebView] HTML loaded. Waiting for web app PAGE_LOADED signal (event-driven)...",
-    );
+    console.log("[WebView] HTML loaded. Dismissing loading screen shortly...");
 
-    // Set up a long fallback timeout in case web app crashes or never signals ready
-    // Normal case: PAGE_LOADED arrives in 50-500ms and dismisses this timeout
-    // Fallback case: If web app is broken, we give it 60 seconds before forcing dismiss
+    // Dismiss loading screen directly after a short delay.
+    // This is the GUARANTEED path — doesn't depend on any bridge message.
+    // The delay gives React a moment to render something visible.
+    // If PAGE_LOADED arrives first (via bridge), it dismisses even faster.
     if (loadingTimeoutRef.current) {
       clearTimeout(loadingTimeoutRef.current);
     }
 
     loadingTimeoutRef.current = setTimeout(() => {
-      console.error(
-        "[WebView] Fallback timeout: Web app did not signal PAGE_LOADED within 60s",
-      );
-      console.error(
-        "[WebView] Forcing loading screen dismiss. App may not be fully ready.",
+      console.log(
+        "[WebView] Dismissing loading screen (handleLoadEnd fallback)",
       );
       setIsLoading(false);
+      if (!hasInitiallyLoaded) {
+        setHasInitiallyLoaded(true);
+      }
       loadingTimeoutRef.current = null;
-    }, 60000); // 60 second fallback (increased from 10 seconds)
-  }, []);
+    }, 1500); // 1.5 seconds — enough for React to render at least a loading spinner
+  }, [hasInitiallyLoaded]);
 
   const handleError = useCallback((syntheticEvent: any) => {
     const { nativeEvent } = syntheticEvent;

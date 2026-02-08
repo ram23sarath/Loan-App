@@ -25,6 +25,7 @@
     "expo-linking": "~8.0.11",
     "expo-notifications": "~0.32.16",
     "expo-router": "~6.0.22",
+    "expo-secure-store": "^15.0.8",
     "expo-splash-screen": "~31.0.13",
     "expo-status-bar": "~3.0.9",
     "expo-updates": "~29.0.16",
@@ -40,6 +41,7 @@
     "@babel/core": "^7.25.0",
     "@types/react": "~19.1.10",
     "babel-plugin-transform-remove-console": "^6.9.4",
+    "eas-cli": "^16.32.0",
     "eslint": "^8.57.0",
     "eslint-config-expo": "~10.0.0",
     "typescript": "~5.9.2"

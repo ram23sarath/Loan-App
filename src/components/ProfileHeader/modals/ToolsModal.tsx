@@ -330,9 +330,16 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                     onTouchStart={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
                 >
-                    {/* Main Menu */}
-                    {toolsView === 'menu' && (
-                        <>
+                    <AnimatePresence mode="wait">
+                        {/* Main Menu */}
+                        {toolsView === 'menu' && (
+                            <motion.div
+                                key="tools-menu"
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -4 }}
+                                transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
+                            >
                             <motion.div
                                 className="flex items-center justify-between mb-4"
                                 initial={{ opacity: 0, y: -6 }}
@@ -464,12 +471,18 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                                     </div>
                                 </motion.button>
                             </div>
-                        </>
-                    )}
+                            </motion.div>
+                        )}
 
-                    {/* Create User Form */}
-                    {toolsView === 'createUser' && (
-                        <>
+                        {/* Create User Form */}
+                        {toolsView === 'createUser' && (
+                            <motion.div
+                                key="tools-create-user"
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -4 }}
+                                transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
+                            >
                             <motion.div
                                 className="flex items-center gap-3 mb-4"
                                 initial={{ opacity: 0, x: -10 }}
@@ -606,12 +619,18 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                                     {toolsLoading ? 'Creating...' : createUserIsAdmin ? 'Create Admin User' : 'Create Scoped User'}
                                 </button>
                             </form>
-                        </>
-                    )}
+                            </motion.div>
+                        )}
 
-                    {/* Change User Password Form */}
-                    {toolsView === 'changeUserPassword' && (
-                        <>
+                        {/* Change User Password Form */}
+                        {toolsView === 'changeUserPassword' && (
+                            <motion.div
+                                key="tools-change-password"
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -4 }}
+                                transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
+                            >
                             <motion.div
                                 className="flex items-center gap-3 mb-4"
                                 initial={{ opacity: 0, x: -10 }}
@@ -686,12 +705,18 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                                     {toolsLoading ? 'Changing...' : 'Change Password'}
                                 </motion.button>
                             </form>
-                        </>
-                    )}
+                            </motion.div>
+                        )}
 
-                    {/* User Status Dashboard */}
-                    {toolsView === 'userStatus' && (
-                        <>
+                        {/* User Status Dashboard */}
+                        {toolsView === 'userStatus' && (
+                            <motion.div
+                                key="tools-user-status"
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -4 }}
+                                transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
+                            >
                             <motion.div
                                 className="flex items-center gap-3 mb-4"
                                 initial={{ opacity: 0, x: -10 }}
@@ -914,159 +939,165 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                                     </div>
                                 </motion.div>
                             )}
-                        </>
-                    )}
-
-                    {/* Manage Documents View */}
-                    {toolsView === 'manageDocuments' && (
-                        <>
-                            <motion.div
-                                className="flex items-center gap-3 mb-4"
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-                            >
-                                <motion.button
-                                    onClick={() => setToolsView('menu')}
-                                    className="text-gray-500 hover:text-gray-700 transition-colors p-1 -ml-1 dark:text-dark-muted dark:hover:text-dark-text"
-                                    whileHover={{ scale: 1.2, x: -3 }}
-                                    whileTap={{ scale: 0.9 }}
-                                >
-                                    <span className="text-xl">←</span>
-                                </motion.button>
-                                <h2 className="text-base md:text-lg font-bold text-gray-800 dark:text-dark-text flex-1">Manage Documents</h2>
-                                <motion.button
-                                    onClick={fetchDocuments}
-                                    disabled={documentsLoading}
-                                    className="text-violet-600 hover:text-violet-700 transition-colors p-1 dark:text-violet-400 dark:hover:text-violet-300"
-                                    whileHover={{ scale: 1.1, rotate: 180 }}
-                                    whileTap={{ scale: 0.9 }}
-                                    title="Refresh"
-                                >
-                                    <span className="text-xl">{documentsLoading ? '⏳' : '🔄'}</span>
-                                </motion.button>
                             </motion.div>
+                        )}
 
-                            {/* Message */}
-                            <AnimatePresence>
-                                {toolsMessage && (
-                                    <motion.div
-                                        className={`mb-4 p-3 rounded-lg text-sm ${toolsMessage.type === 'success' ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}
-                                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                                        transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-                                    >
-                                        {toolsMessage.text}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-
-                            {/* Upload Section */}
+                        {/* Manage Documents View */}
+                        {toolsView === 'manageDocuments' && (
                             <motion.div
-                                className="mb-4 p-4 bg-violet-50 dark:bg-violet-900/20 rounded-lg border-2 border-dashed border-violet-200 dark:border-violet-800"
-                                initial={{ opacity: 0, y: 10 }}
+                                key="tools-manage-docs"
+                                initial={{ opacity: 0, y: 6 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.1 }}
+                                exit={{ opacity: 0, y: -4 }}
+                                transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
                             >
-                                <div className="flex flex-col gap-3">
-                                    <div className="flex items-center gap-2">
-                                        <label className="flex-1">
-                                            <input
-                                                type="file"
-                                                accept=".pdf"
-                                                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                                                className="hidden"
-                                            />
-                                            <div className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-violet-200 dark:border-violet-700 rounded-lg text-sm cursor-pointer hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-colors truncate">
-                                                {selectedFile ? selectedFile.name : '📁 Choose PDF file...'}
-                                            </div>
-                                        </label>
-                                    </div>
-                                    {selectedFile && (
-                                        <div className="text-xs text-gray-500 dark:text-dark-muted">
-                                            Size: {(selectedFile.size / 1024).toFixed(1)} KB
-                                        </div>
-                                    )}
+                                <motion.div
+                                    className="flex items-center gap-3 mb-4"
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+                                >
                                     <motion.button
-                                        onClick={handleUploadDocument}
-                                        disabled={!selectedFile || uploadProgress > 0}
-                                        className="w-full px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-400 text-white font-semibold rounded-lg transition-colors"
-                                        whileHover={{ scale: selectedFile && uploadProgress === 0 ? 1.02 : 1 }}
-                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => setToolsView('menu')}
+                                        className="text-gray-500 hover:text-gray-700 transition-colors p-1 -ml-1 dark:text-dark-muted dark:hover:text-dark-text"
+                                        whileHover={{ scale: 1.2, x: -3 }}
+                                        whileTap={{ scale: 0.9 }}
                                     >
-                                        {uploadProgress > 0 ? `Uploading... ${uploadProgress}%` : '⬆️ Upload Document'}
+                                        <span className="text-xl">←</span>
                                     </motion.button>
-                                    {uploadProgress > 0 && (
-                                        <div className="w-full h-2 bg-violet-200 dark:bg-violet-900 rounded-full overflow-hidden">
-                                            <motion.div
-                                                className="h-full bg-violet-600"
-                                                initial={{ width: 0 }}
-                                                animate={{ width: `${uploadProgress}%` }}
-                                                transition={{ duration: 0.3 }}
-                                            />
+                                    <h2 className="text-base md:text-lg font-bold text-gray-800 dark:text-dark-text flex-1">Manage Documents</h2>
+                                    <motion.button
+                                        onClick={fetchDocuments}
+                                        disabled={documentsLoading}
+                                        className="text-violet-600 hover:text-violet-700 transition-colors p-1 dark:text-violet-400 dark:hover:text-violet-300"
+                                        whileHover={{ scale: 1.1, rotate: 180 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        title="Refresh"
+                                    >
+                                        <span className="text-xl">{documentsLoading ? '⏳' : '🔄'}</span>
+                                    </motion.button>
+                                </motion.div>
+
+                                {/* Message */}
+                                <AnimatePresence>
+                                    {toolsMessage && (
+                                        <motion.div
+                                            className={`mb-4 p-3 rounded-lg text-sm ${toolsMessage.type === 'success' ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}
+                                            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                                            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+                                        >
+                                            {toolsMessage.text}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
+                                {/* Upload Section */}
+                                <motion.div
+                                    className="mb-4 p-4 bg-violet-50 dark:bg-violet-900/20 rounded-lg border-2 border-dashed border-violet-200 dark:border-violet-800"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.1 }}
+                                >
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex items-center gap-2">
+                                            <label className="flex-1">
+                                                <input
+                                                    type="file"
+                                                    accept=".pdf"
+                                                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                                                    className="hidden"
+                                                />
+                                                <div className="w-full px-3 py-2 bg-white dark:bg-slate-700 border border-violet-200 dark:border-violet-700 rounded-lg text-sm cursor-pointer hover:bg-violet-50 dark:hover:bg-violet-900/30 transition-colors truncate">
+                                                    {selectedFile ? selectedFile.name : '📁 Choose PDF file...'}
+                                                </div>
+                                            </label>
+                                        </div>
+                                        {selectedFile && (
+                                            <div className="text-xs text-gray-500 dark:text-dark-muted">
+                                                Size: {(selectedFile.size / 1024).toFixed(1)} KB
+                                            </div>
+                                        )}
+                                        <motion.button
+                                            onClick={handleUploadDocument}
+                                            disabled={!selectedFile || uploadProgress > 0}
+                                            className="w-full px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-400 text-white font-semibold rounded-lg transition-colors"
+                                            whileHover={{ scale: selectedFile && uploadProgress === 0 ? 1.02 : 1 }}
+                                            whileTap={{ scale: 0.98 }}
+                                        >
+                                            {uploadProgress > 0 ? `Uploading... ${uploadProgress}%` : '⬆️ Upload Document'}
+                                        </motion.button>
+                                        {uploadProgress > 0 && (
+                                            <div className="w-full h-2 bg-violet-200 dark:bg-violet-900 rounded-full overflow-hidden">
+                                                <motion.div
+                                                    className="h-full bg-violet-600"
+                                                    initial={{ width: 0 }}
+                                                    animate={{ width: `${uploadProgress}%` }}
+                                                    transition={{ duration: 0.3 }}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                </motion.div>
+
+                                {/* Documents List */}
+                                <motion.div
+                                    className="space-y-2"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 0.2 }}
+                                >
+                                    <h3 className="text-sm font-semibold text-gray-700 dark:text-dark-text">
+                                        Uploaded Documents ({documents.length})
+                                    </h3>
+                                    {documentsLoading && documents.length === 0 ? (
+                                        <div className="text-center py-6">
+                                            <div className="animate-spin text-3xl mb-2">⏳</div>
+                                            <p className="text-sm text-gray-500 dark:text-dark-muted">Loading documents...</p>
+                                        </div>
+                                    ) : documents.length === 0 ? (
+                                        <div className="text-center py-6 text-gray-500 dark:text-dark-muted">
+                                            <div className="text-3xl mb-2">📭</div>
+                                            <p className="text-sm">No documents uploaded yet</p>
+                                        </div>
+                                    ) : (
+                                        <div className="max-h-48 overflow-y-auto space-y-2">
+                                            {documents.map((doc) => (
+                                                <motion.div
+                                                    key={doc.id}
+                                                    className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg"
+                                                    initial={{ opacity: 0, x: -10 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                >
+                                                    <span className="text-xl">📄</span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="font-medium text-sm text-gray-800 dark:text-dark-text truncate">
+                                                            {doc.name}
+                                                        </div>
+                                                        <div className="text-xs text-gray-500 dark:text-dark-muted">
+                                                            {doc.file_size ? `${(doc.file_size / 1024).toFixed(1)} KB` : 'Unknown size'}
+                                                            {' • '}
+                                                            {new Date(doc.created_at).toLocaleDateString()}
+                                                        </div>
+                                                    </div>
+                                                    <motion.button
+                                                        onClick={() => handleDeleteDocument(doc)}
+                                                        disabled={deletingDocId === doc.id}
+                                                        className="px-2 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 text-xs font-medium rounded"
+                                                        whileHover={{ scale: 1.05 }}
+                                                        whileTap={{ scale: 0.95 }}
+                                                    >
+                                                        {deletingDocId === doc.id ? '...' : '🗑️'}
+                                                    </motion.button>
+                                                </motion.div>
+                                            ))}
                                         </div>
                                     )}
-                                </div>
+                                </motion.div>
                             </motion.div>
-
-                            {/* Documents List */}
-                            <motion.div
-                                className="space-y-2"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.2 }}
-                            >
-                                <h3 className="text-sm font-semibold text-gray-700 dark:text-dark-text">
-                                    Uploaded Documents ({documents.length})
-                                </h3>
-                                
-                                {documentsLoading && documents.length === 0 ? (
-                                    <div className="text-center py-6">
-                                        <div className="animate-spin text-3xl mb-2">⏳</div>
-                                        <p className="text-sm text-gray-500 dark:text-dark-muted">Loading documents...</p>
-                                    </div>
-                                ) : documents.length === 0 ? (
-                                    <div className="text-center py-6 text-gray-500 dark:text-dark-muted">
-                                        <div className="text-3xl mb-2">📭</div>
-                                        <p className="text-sm">No documents uploaded yet</p>
-                                    </div>
-                                ) : (
-                                    <div className="max-h-48 overflow-y-auto space-y-2">
-                                        {documents.map((doc) => (
-                                            <motion.div
-                                                key={doc.id}
-                                                className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg"
-                                                initial={{ opacity: 0, x: -10 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                            >
-                                                <span className="text-xl">📄</span>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="font-medium text-sm text-gray-800 dark:text-dark-text truncate">
-                                                        {doc.name}
-                                                    </div>
-                                                    <div className="text-xs text-gray-500 dark:text-dark-muted">
-                                                        {doc.file_size ? `${(doc.file_size / 1024).toFixed(1)} KB` : 'Unknown size'}
-                                                        {' • '}
-                                                        {new Date(doc.created_at).toLocaleDateString()}
-                                                    </div>
-                                                </div>
-                                                <motion.button
-                                                    onClick={() => handleDeleteDocument(doc)}
-                                                    disabled={deletingDocId === doc.id}
-                                                    className="px-2 py-1 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 text-xs font-medium rounded"
-                                                    whileHover={{ scale: 1.05 }}
-                                                    whileTap={{ scale: 0.95 }}
-                                                >
-                                                    {deletingDocId === doc.id ? '...' : '🗑️'}
-                                                </motion.button>
-                                            </motion.div>
-                                        ))}
-                                    </div>
-                                )}
-                            </motion.div>
-                        </>
-                    )}
+                        )}
+                    </AnimatePresence>
                 </motion.div>
             </motion.div>
         </AnimatePresence>,

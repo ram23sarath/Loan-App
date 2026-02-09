@@ -1,5 +1,6 @@
 import React from "react";
 import { useData } from "../../context/DataContext";
+import { useRouteReady } from "../RouteReadySignal";
 import { useNavigate } from "react-router-dom";
 import GlassCard from "../ui/GlassCard";
 import PageWrapper from "../ui/PageWrapper";
@@ -19,6 +20,7 @@ const CustomerDashboard = () => {
     seniorityList,
   } = useData();
   const navigate = useNavigate();
+  const signalRouteReady = useRouteReady();
 
   const [showRequestModal, setShowRequestModal] = React.useState(false);
   const [stationName, setStationName] = React.useState("");
@@ -28,6 +30,11 @@ const CustomerDashboard = () => {
   // Document state for scoped customers
   const [documents, setDocuments] = React.useState<Document[]>([]);
   const [documentsLoading, setDocumentsLoading] = React.useState(false);
+
+  // Signal readiness on mount
+  React.useEffect(() => {
+    signalRouteReady();
+  }, [signalRouteReady]);
   const [downloadingDocId, setDownloadingDocId] = React.useState<string | null>(
     null,
   );

@@ -1,7 +1,14 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import Toast from "../ui/Toast";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { useLocation } from "react-router-dom";
+import { useRouteReady } from "../RouteReadySignal";
 import { motion, AnimatePresence } from "framer-motion";
 import { useData } from "../../context/DataContext";
 import GlassCard from "../ui/GlassCard";
@@ -28,6 +35,7 @@ type LoanInputs = {
 type SubscriptionInputs = Omit<NewSubscription, "customer_id"> & {
   late_fee?: number | null;
 };
+
 type InstallmentInputs = Omit<NewInstallment, "loan_id" | "customer_id">;
 
 const getTodayDateString = (): string => {
@@ -39,6 +47,7 @@ const getTodayDateString = (): string => {
 };
 
 const AddRecordPage = () => {
+  const signalRouteReady = useRouteReady();
   const {
     customers,
     customerMap,
@@ -50,6 +59,10 @@ const AddRecordPage = () => {
     addInstallment,
   } = useData();
   const location = useLocation();
+
+  useEffect(() => {
+    signalRouteReady();
+  }, [signalRouteReady]);
   const [customerSearch, setCustomerSearch] = useState("");
   const debouncedCustomerSearch = useDebounce(customerSearch, 300);
 
@@ -81,7 +94,10 @@ const AddRecordPage = () => {
   const hasOngoingLoan = useMemo(() => {
     return customerLoans.some((loan) => {
       const loanInstallments = installmentsByLoanId.get(loan.id) || [];
-      const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
+      const amountPaid = loanInstallments.reduce(
+        (acc, inst) => acc + inst.amount,
+        0,
+      );
       const totalRepayable = loan.original_amount + loan.interest_amount;
       const paymentPercentage = (amountPaid / totalRepayable) * 100;
       return paymentPercentage < 80; // Ongoing if less than 80% paid
@@ -92,7 +108,10 @@ const AddRecordPage = () => {
   const ongoingLoanInfo = useMemo(() => {
     const ongoing = customerLoans.find((loan) => {
       const loanInstallments = installmentsByLoanId.get(loan.id) || [];
-      const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
+      const amountPaid = loanInstallments.reduce(
+        (acc, inst) => acc + inst.amount,
+        0,
+      );
       const totalRepayable = loan.original_amount + loan.interest_amount;
       const paymentPercentage = (amountPaid / totalRepayable) * 100;
       return paymentPercentage < 80;
@@ -101,7 +120,10 @@ const AddRecordPage = () => {
     if (!ongoing) return null;
 
     const loanInstallments = installmentsByLoanId.get(ongoing.id) || [];
-    const amountPaid = loanInstallments.reduce((acc, inst) => acc + inst.amount, 0);
+    const amountPaid = loanInstallments.reduce(
+      (acc, inst) => acc + inst.amount,
+      0,
+    );
     const totalRepayable = ongoing.original_amount + ongoing.interest_amount;
     const paymentPercentage = Math.round((amountPaid / totalRepayable) * 100);
 
@@ -172,12 +194,13 @@ const AddRecordPage = () => {
     if (loanInProgress) {
       setActiveLoan(loanInProgress);
 
-      const loanInstallments = installmentsByLoanId.get(loanInProgress.id) || [];
+      const loanInstallments =
+        installmentsByLoanId.get(loanInProgress.id) || [];
       const sortedInstallments = [...loanInstallments].sort(
-        (a, b) => b.installment_number - a.installment_number
+        (a, b) => b.installment_number - a.installment_number,
       );
       const paidNumbers = new Set(
-        loanInstallments.map((i) => i.installment_number)
+        loanInstallments.map((i) => i.installment_number),
       );
       setPaidInstallmentNumbers(paidNumbers);
 
@@ -187,16 +210,13 @@ const AddRecordPage = () => {
 
         if (nextInstallmentNumber <= loanInProgress.total_instalments) {
           installmentForm.setValue("amount", lastInstallment.amount);
-          installmentForm.setValue(
-            "installment_number",
-            nextInstallmentNumber
-          );
+          installmentForm.setValue("installment_number", nextInstallmentNumber);
           installmentForm.setValue("date", getTodayDateString());
         }
       } else {
         const monthlyAmount = Math.round(
           (loanInProgress.original_amount + loanInProgress.interest_amount) /
-          loanInProgress.total_instalments
+            loanInProgress.total_instalments,
         );
         installmentForm.setValue("amount", monthlyAmount);
         installmentForm.setValue("installment_number", 1);
@@ -209,7 +229,13 @@ const AddRecordPage = () => {
       setPaidInstallmentNumbers(new Set());
       setAction((prev) => (prev === "installment" ? null : prev));
     }
-  }, [selectedCustomerId, customerLoans, installments, installmentForm, resetAll]);
+  }, [
+    selectedCustomerId,
+    customerLoans,
+    installments,
+    installmentForm,
+    resetAll,
+  ]);
 
   const handleLoanSubmit: SubmitHandler<LoanInputs> = async (data) => {
     if (!selectedCustomerId) return;
@@ -235,7 +261,7 @@ const AddRecordPage = () => {
       await addLoan(newLoanData);
       const selectedCustomer = customerMap.get(selectedCustomerId);
       setLastRecordData({
-        type: 'loan',
+        type: "loan",
         customerPhone: selectedCustomer?.phone,
         data: {
           customerName: selectedCustomer?.name,
@@ -243,7 +269,7 @@ const AddRecordPage = () => {
           interest_amount: data.totalRepayableAmount - data.original_amount,
           payment_date: data.payment_date,
           total_instalments: data.total_instalments,
-        }
+        },
       });
       showTemporarySuccess("Loan recorded successfully!");
     } catch (error: any) {
@@ -252,10 +278,11 @@ const AddRecordPage = () => {
   };
 
   const handleSubscriptionSubmit: SubmitHandler<SubscriptionInputs> = async (
-    data
+    data,
   ) => {
     if (!selectedCustomerId) return;
-    const sanitizedLateFee = (data.late_fee != null && !isNaN(data.late_fee)) ? data.late_fee : null;
+    const sanitizedLateFee =
+      data.late_fee != null && !isNaN(data.late_fee) ? data.late_fee : null;
     const newSubscriptionData: NewSubscription = {
       ...data,
       late_fee: sanitizedLateFee,
@@ -266,7 +293,7 @@ const AddRecordPage = () => {
       await addSubscription(newSubscriptionData);
       const selectedCustomer = customerMap.get(selectedCustomerId);
       setLastRecordData({
-        type: 'subscription',
+        type: "subscription",
         customerPhone: selectedCustomer?.phone,
         data: {
           customerName: selectedCustomer?.name,
@@ -274,7 +301,7 @@ const AddRecordPage = () => {
           date: data.date,
           receipt: data.receipt,
           late_fee: data.late_fee,
-        }
+        },
       });
       showTemporarySuccess("Subscription recorded successfully!", () => {
         if (activeLoan) setAction("installment");
@@ -286,14 +313,14 @@ const AddRecordPage = () => {
   };
 
   const handleInstallmentSubmit: SubmitHandler<InstallmentInputs> = async (
-    data
+    data,
   ) => {
     if (!activeLoan) return;
 
     const loanInstallments = installmentsByLoanId.get(activeLoan.id) || [];
     const totalPaid = loanInstallments.reduce(
       (sum, inst) => sum + inst.amount,
-      0
+      0,
     );
     const totalRepayable =
       activeLoan.original_amount + activeLoan.interest_amount;
@@ -322,7 +349,7 @@ const AddRecordPage = () => {
       const newInstallment = await addInstallment(installmentPayload);
       const selectedCustomer = customerMap.get(selectedCustomerId);
       setLastRecordData({
-        type: 'installment',
+        type: "installment",
         customerPhone: selectedCustomer?.phone,
         data: {
           customerName: selectedCustomer?.name,
@@ -332,8 +359,9 @@ const AddRecordPage = () => {
           receipt_number: data.receipt_number,
           late_fee: data.late_fee,
           loanAmount: activeLoan.original_amount,
-          totalRepayable: activeLoan.original_amount + activeLoan.interest_amount,
-        }
+          totalRepayable:
+            activeLoan.original_amount + activeLoan.interest_amount,
+        },
       });
 
       setShowSuccess(`Installment #${data.installment_number} recorded!`);
@@ -358,35 +386,41 @@ const AddRecordPage = () => {
   };
 
   const formVariants = {
-    hidden: { opacity: 0, y: -20, height: 0, overflow: 'hidden' },
+    hidden: { opacity: 0, y: -20, height: 0, overflow: "hidden" },
     visible: {
       opacity: 1,
       y: 0,
       height: "auto",
-      overflow: 'visible',
+      overflow: "visible",
       transition: { duration: 0.4 },
     },
-    exit: { opacity: 0, y: -20, height: 0, overflow: 'hidden', transition: { duration: 0.3 } },
+    exit: {
+      opacity: 0,
+      y: -20,
+      height: 0,
+      overflow: "hidden",
+      transition: { duration: 0.3 },
+    },
   };
 
   // UPDATED: Added marginTop/marginBottom control to exit variant to prevent 'space-y' snap
   const actionButtonsVariants = {
-    hidden: { 
-      opacity: 0, 
-      y: 10, 
-      height: 0, 
-      marginTop: 0, 
-      marginBottom: 0, 
-      overflow: 'hidden' 
+    hidden: {
+      opacity: 0,
+      y: 10,
+      height: 0,
+      marginTop: 0,
+      marginBottom: 0,
+      overflow: "hidden",
     },
     visible: {
       opacity: 1,
       y: 0,
       height: "auto",
-      // We don't force margin here so Tailwind classes apply, 
+      // We don't force margin here so Tailwind classes apply,
       // but Framer Motion will measure them for the exit animation.
-      overflow: 'visible',
-      transition: { duration: 0.3, ease: "easeOut" }
+      overflow: "visible",
+      transition: { duration: 0.3, ease: "easeOut" },
     },
     exit: {
       opacity: 0,
@@ -394,34 +428,37 @@ const AddRecordPage = () => {
       height: 0,
       marginTop: 0, // Collapses the space-y margin
       marginBottom: 0,
-      overflow: 'hidden',
-      transition: { 
+      overflow: "hidden",
+      transition: {
         height: { duration: 0.3, ease: "easeInOut" },
         marginTop: { duration: 0.3, ease: "easeInOut" },
         marginBottom: { duration: 0.3, ease: "easeInOut" },
-        opacity: { duration: 0.2 } // Fade out slightly faster than collapse
-      }
+        opacity: { duration: 0.2 }, // Fade out slightly faster than collapse
+      },
     },
   };
 
   const monthlyInstallment = activeLoan
     ? (
-      (activeLoan.original_amount + activeLoan.interest_amount) /
-      activeLoan.total_instalments
-    ).toFixed(2)
+        (activeLoan.original_amount + activeLoan.interest_amount) /
+        activeLoan.total_instalments
+      ).toFixed(2)
     : 0;
   const availableInstallmentNumbers = activeLoan
     ? Array.from(
-      { length: activeLoan.total_instalments },
-      (_, i) => i + 1
-    ).filter((num) => !paidInstallmentNumbers.has(num))
+        { length: activeLoan.total_instalments },
+        (_, i) => i + 1,
+      ).filter((num) => !paidInstallmentNumbers.has(num))
     : [];
 
   const inputStyles =
     "w-full bg-gray-50 dark:bg-dark-bg border border-gray-300 dark:border-dark-border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400 dark:placeholder-dark-muted text-gray-800 dark:text-dark-text";
   const dateInputStyles =
     "w-full bg-white dark:bg-dark-bg border border-gray-300 dark:border-dark-border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400 dark:placeholder-dark-muted text-gray-800 dark:text-dark-text text-base block";
-  const dateInputInlineStyles = { minHeight: '42px', WebkitAppearance: 'none' as const };
+  const dateInputInlineStyles = {
+    minHeight: "42px",
+    WebkitAppearance: "none" as const,
+  };
   const selectStyles =
     "w-full bg-gray-50 dark:bg-dark-bg border border-gray-300 dark:border-dark-border rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-800 dark:text-dark-text";
   const { isSubmitting: isSubmittingLoan } = loanForm.formState;
@@ -439,7 +476,7 @@ const AddRecordPage = () => {
     return customers.filter(
       (c) =>
         c.name.toLowerCase().includes(debouncedCustomerSearch.toLowerCase()) ||
-        c.phone.includes(debouncedCustomerSearch)
+        c.phone.includes(debouncedCustomerSearch),
     );
   }, [customers, debouncedCustomerSearch]);
 
@@ -499,15 +536,16 @@ const AddRecordPage = () => {
                 >
                   {selectedCustomerId
                     ? (() => {
-                      const selected = customerMap.get(selectedCustomerId);
-                      return selected
-                        ? `${selected.name} (${selected.phone})`
-                        : "Select...";
-                    })()
+                        const selected = customerMap.get(selectedCustomerId);
+                        return selected
+                          ? `${selected.name} (${selected.phone})`
+                          : "Select...";
+                      })()
                     : "Select..."}
                   <svg
-                    className={`w-4 h-4 ml-2 transition-transform ${dropdownOpen ? "rotate-180" : ""
-                      }`}
+                    className={`w-4 h-4 ml-2 transition-transform ${
+                      dropdownOpen ? "rotate-180" : ""
+                    }`}
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
@@ -539,8 +577,18 @@ const AddRecordPage = () => {
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-dark-muted hover:text-gray-600 dark:hover:text-dark-text p-1"
                           aria-label="Clear search"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M6 18L18 6M6 6l12 12"
+                            />
                           </svg>
                         </button>
                       )}
@@ -554,10 +602,11 @@ const AddRecordPage = () => {
                       {filteredCustomers.map((customer) => (
                         <li
                           key={customer.id}
-                          className={`px-4 py-2 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-gray-800 dark:text-dark-text ${selectedCustomerId === customer.id
-                            ? "bg-indigo-50 dark:bg-indigo-900/50 font-bold"
-                            : ""
-                            }`}
+                          className={`px-4 py-2 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-gray-800 dark:text-dark-text ${
+                            selectedCustomerId === customer.id
+                              ? "bg-indigo-50 dark:bg-indigo-900/50 font-bold"
+                              : ""
+                          }`}
                           onClick={() => {
                             setSelectedCustomerId(customer.id);
                             setDropdownOpen(false);
@@ -590,11 +639,16 @@ const AddRecordPage = () => {
                           whileTap={{ scale: !hasOngoingLoan ? 0.95 : 1 }}
                           onClick={() => setAction("loan")}
                           disabled={isAnySubmitting || hasOngoingLoan}
-                          className={`font-bold py-2 px-6 rounded-lg transition-colors ${hasOngoingLoan
-                            ? 'bg-gray-400 text-gray-700 cursor-not-allowed opacity-60'
-                            : 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50'
-                            } disabled:opacity-50 disabled:cursor-not-allowed`}
-                          title={hasOngoingLoan ? `Ongoing loan at ${ongoingLoanInfo?.paymentPercentage}% paid. Customer must pay >80% before recording new loan.` : ''}
+                          className={`font-bold py-2 px-6 rounded-lg transition-colors ${
+                            hasOngoingLoan
+                              ? "bg-gray-400 text-gray-700 cursor-not-allowed opacity-60"
+                              : "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50"
+                          } disabled:opacity-50 disabled:cursor-not-allowed`}
+                          title={
+                            hasOngoingLoan
+                              ? `Ongoing loan at ${ongoingLoanInfo?.paymentPercentage}% paid. Customer must pay >80% before recording new loan.`
+                              : ""
+                          }
                         >
                           Record Another Loan
                         </motion.button>
@@ -675,7 +729,7 @@ const AddRecordPage = () => {
                   >
                     <form
                       onSubmit={installmentForm.handleSubmit(
-                        handleInstallmentSubmit
+                        handleInstallmentSubmit,
                       )}
                       className="space-y-4 overflow-hidden"
                     >
@@ -728,13 +782,13 @@ const AddRecordPage = () => {
                           </select>
                           {installmentForm.formState.errors
                             .installment_number && (
-                              <p className="text-red-600 dark:text-red-400 text-sm mt-1">
-                                {
-                                  installmentForm.formState.errors
-                                    .installment_number.message
-                                }
-                              </p>
-                            )}
+                            <p className="text-red-600 dark:text-red-400 text-sm mt-1">
+                              {
+                                installmentForm.formState.errors
+                                  .installment_number.message
+                              }
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -950,7 +1004,7 @@ const AddRecordPage = () => {
                   >
                     <form
                       onSubmit={subscriptionForm.handleSubmit(
-                        handleSubscriptionSubmit
+                        handleSubscriptionSubmit,
                       )}
                       className="space-y-4 overflow-hidden"
                     >
@@ -1066,7 +1120,9 @@ const AddRecordPage = () => {
                     className="mt-4 p-4 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-lg"
                   >
                     <div className="text-center mb-4">
-                      <span className="font-semibold text-lg">{showSuccess}</span>
+                      <span className="font-semibold text-lg">
+                        {showSuccess}
+                      </span>
                     </div>
 
                     {lastRecordData && lastRecordData.customerPhone && (
@@ -1075,15 +1131,19 @@ const AddRecordPage = () => {
                           type="button"
                           onClick={() => {
                             const data = lastRecordData.data;
-                            let message = '';
-                            if (lastRecordData.type === 'loan') {
+                            let message = "";
+                            if (lastRecordData.type === "loan") {
                               message = `Hi ${data.customerName}, your loan of ₹${data.original_amount.toLocaleString()} with interest ₹${data.interest_amount.toLocaleString()} (Total: ₹${(data.original_amount + data.interest_amount).toLocaleString()}) has been recorded. Payment date: ${formatDate(data.payment_date)}. Total installments: ${data.total_instalments}. Thank You, I J Reddy.`;
-                            } else if (lastRecordData.type === 'subscription') {
-                              message = `Hi ${data.customerName}, your subscription of ₹${data.amount.toLocaleString()} was recorded on ${formatDate(data.date)}${data.late_fee && data.late_fee > 0 ? ` (Late fee: ₹${data.late_fee})` : ''}. Thank You, I J Reddy.`;
-                            } else if (lastRecordData.type === 'installment') {
-                              message = `Hi ${data.customerName}, your installment payment of ₹${data.amount.toLocaleString()} (Installment #${data.installment_number}) has been recorded on ${formatDate(data.date)}. Receipt: ${data.receipt_number}${data.late_fee && data.late_fee > 0 ? ` (Late fee: ₹${data.late_fee})` : ''}. Thank You, I J Reddy.`;
+                            } else if (lastRecordData.type === "subscription") {
+                              message = `Hi ${data.customerName}, your subscription of ₹${data.amount.toLocaleString()} was recorded on ${formatDate(data.date)}${data.late_fee && data.late_fee > 0 ? ` (Late fee: ₹${data.late_fee})` : ""}. Thank You, I J Reddy.`;
+                            } else if (lastRecordData.type === "installment") {
+                              message = `Hi ${data.customerName}, your installment payment of ₹${data.amount.toLocaleString()} (Installment #${data.installment_number}) has been recorded on ${formatDate(data.date)}. Receipt: ${data.receipt_number}${data.late_fee && data.late_fee > 0 ? ` (Late fee: ₹${data.late_fee})` : ""}. Thank You, I J Reddy.`;
                             }
-                            openWhatsApp(lastRecordData.customerPhone, message, { cooldownMs: 800 });
+                            openWhatsApp(
+                              lastRecordData.customerPhone,
+                              message,
+                              { cooldownMs: 800 },
+                            );
                           }}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}

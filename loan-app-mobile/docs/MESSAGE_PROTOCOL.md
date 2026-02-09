@@ -69,6 +69,17 @@ interface Message {
 
 // Web app is ready to receive messages
 { type: 'NAVIGATION_READY' }
+
+// Web app is visually ready (fonts loaded, critical content rendered).
+// Signals native to dismiss loading overlay.
+{ type: 'APP_READY' }
+
+// Web app acknowledges it can handle the deep link internally
+{ 
+  type: 'DEEP_LINK_ACK',
+  payload: { path: string }
+}
+
 ```
 
 ### UI Feedback

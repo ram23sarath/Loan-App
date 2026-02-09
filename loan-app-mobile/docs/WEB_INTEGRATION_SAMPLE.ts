@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Web App Integration Sample
  * 
@@ -12,108 +13,143 @@
 // =============================================================================
 
 import { useEffect, useCallback } from 'react';
-import { supabase } from './lib/supabase';
+// import { supabase } from './lib/supabase'; // Uncomment in your actual app
+const supabase = {} as any; // Mock for sample
+
 
 /**
  * Hook to integrate with the native mobile app wrapper
  */
 export function useNativeBridge() {
-    // Check if running inside the native app
-    const isNative = typeof window !== 'undefined' && window.isNativeApp?.();
+  // Check if running inside the native app
+  const isNative = typeof window !== 'undefined' && window.isNativeApp?.();
 
-    // Handle messages from native app
-    const handleNativeMessage = useCallback((message: any) => {
-        console.log('[NativeBridge] Received:', message.type);
+  // Handle messages from native app
+  const handleNativeMessage = useCallback((message: any) => {
+    console.log('[NativeBridge] Received:', message.type);
 
-        switch (message.type) {
-            case 'NATIVE_READY':
-                // Native is ready, we can start communicating
-                console.log('[NativeBridge] Native app is ready');
-                break;
+    switch (message.type) {
+      case 'NATIVE_READY':
+        // Native is ready, we can start communicating
+        console.log('[NativeBridge] Native app is ready');
+        break;
 
-            case 'PUSH_TOKEN':
-                // Store push token in Supabase via authenticated RPC
-                // This requires the update_push_token function (see notifications.ts SQL)
-                supabase.rpc('update_push_token', {
-                    p_token: message.payload.token,
-                    p_platform: message.payload.platform,
-                }).then(({ error }) => {
-                    if (error) {
-                        console.error('[NativeBridge] Failed to store push token:', error);
-                    } else {
-                        console.log('[NativeBridge] Push token stored successfully');
-                    }
-                });
-                break;
+      case 'PUSH_TOKEN':
+        // Store push token in Supabase via authenticated RPC
+        // This requires the update_push_token function (see notifications.ts SQL)
+        supabase.rpc('update_push_token', {
+          p_token: message.payload.token,
+          p_platform: message.payload.platform,
+        }).then(({ error }) => {
+          if (error) {
+            console.error('[NativeBridge] Failed to store push token:', error);
+          } else {
+            console.log('[NativeBridge] Push token stored successfully');
+          }
+        });
+        break;
 
-            case 'NETWORK_STATUS':
-                // Handle online/offline state
-                if (!message.payload.isConnected) {
-                    console.warn('[NativeBridge] Device is offline');
-                    // You could show an offline banner here
-                }
-                break;
-
-            case 'APP_STATE':
-                // Handle app going to background/foreground
-                if (message.payload.state === 'active') {
-                    // App came to foreground - refresh data
-                    // fetchData(); // Call your data refresh function
-                }
-                break;
-
-            case 'DEEP_LINK':
-                // Handle deep link navigation
-                const path = message.payload.path;
-                if (path && path !== '/') {
-                    // Use your router to navigate
-                    // navigate(path);
-                    console.log('[NativeBridge] Navigate to:', path);
-                }
-                break;
-
-            case 'THEME_CHANGE':
-                // Native theme changed
-                // You could sync your theme context here
-                break;
+      case 'NETWORK_STATUS':
+        // Handle online/offline state
+        if (!message.payload.isConnected) {
+          console.warn('[NativeBridge] Device is offline');
+          // You could show an offline banner here
         }
-    }, []);
+        break;
 
-    // Set up bridge on mount
-    useEffect(() => {
-        if (!isNative) return;
+      case 'APP_STATE':
+        // Handle app going to background/foreground
+        if (message.payload.state === 'active') {
+          // App came to foreground - refresh data
+          // fetchData(); // Call your data refresh function
+        }
+        break;
 
-        // Register our message handler
-        window.registerNativeHandler?.(handleNativeMessage);
+      case 'DEEP_LINK':
+        // Handle deep link navigation
+        const path = message.payload.path;
+        if (path && path !== '/') {
+          // Use your router to navigate
+          // navigate(path);
+          console.log('[NativeBridge] Navigate to:', path);
+        }
+        break;
 
-        // Listen for auth state changes and sync to native
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            (event, session) => {
-                if (session) {
-                    // Send session to native for persistence
-                    window.NativeBridge?.updateSession({
-                        accessToken: session.access_token,
-                        refreshToken: session.refresh_token,
-                        expiresAt: session.expires_at ?? 0,
-                        user: {
-                            id: session.user.id,
-                            email: session.user.email,
-                        },
-                    });
-                } else if (event === 'SIGNED_OUT') {
-                    // Notify native of logout
-                    window.NativeBridge?.logout();
-                }
-            }
-        );
+      case 'THEME_CHANGE':
+        // Native theme changed
+        // You could sync your theme context here
+        break;
+    }
+  }, []);
 
-        return () => {
-            subscription.unsubscribe();
-        };
-    }, [isNative, handleNativeMessage]);
+  // Set up bridge on mount
+  useEffect(() => {
+    if (!isNative) return;
 
-    return { isNative };
+    // Register our message handler
+    window.registerNativeHandler?.(handleNativeMessage);
+
+    // Listen for auth state changes and sync to native
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (session) {
+          // Send session to native for persistence
+          window.NativeBridge?.updateSession({
+            accessToken: session.access_token,
+            refreshToken: session.refresh_token,
+            expiresAt: session.expires_at ?? 0,
+            user: {
+              id: session.user.id,
+              email: session.user.email,
+            },
+          });
+        } else if (event === 'SIGNED_OUT') {
+          // Notify native of logout
+          window.NativeBridge?.logout();
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, [isNative, handleNativeMessage]);
+
+  return { isNative };
 }
+
+/**
+ * ### Route Readiness Signal (Prevent Jitter)
+ *
+ * To ensure the native loading overlay only dismisses when your content is visually stable
+ * (fonts loaded, layout active), wrap your routes or use a hook:
+ *
+ * ```typescript
+ * import { useEffect } from 'react';
+ * import { useLocation } from 'react-router-dom';
+ *
+ * export const RouteReadySignal = ({ children }: { children: React.ReactNode }) => {
+ *   const location = useLocation();
+ *
+ *   useEffect(() => {
+ *     // Function to signal readiness
+ *     const signalReady = () => {
+ *       if (window.isNativeApp?.()) {
+ *         window.sendToNative?.('APP_READY');
+ *       }
+ *     };
+ *
+ *     // Check if fonts are ready
+ *     if (document.fonts?.ready) {
+ *       document.fonts.ready.then(signalReady);
+ *     } else {
+ *       // Fallback for older browsers
+ *       setTimeout(signalReady, 50);
+ *     }
+ *   }, [location.pathname]); // Re-run on route change
+ *
+ *   return <>{children}</>;
+ * };
+ * ```
+ */
 
 
 // =============================================================================
@@ -212,12 +248,20 @@ function NotificationSettings() {
   useEffect(() => {
     if (!isNative) return;
     
-    // Listen for push token
-    window.registerNativeHandler?.((msg) => {
+    // Define stable handler function
+    const handler = (msg: any) => {
       if (msg.type === 'PUSH_TOKEN') {
         setHasToken(true);
       }
-    });
+    };
+
+    // Listen for push token
+    window.registerNativeHandler?.(handler);
+
+    // Cleanup: unregister the handler on unmount or dependency change
+    return () => {
+      window.unregisterNativeHandler?.(handler);
+    };
   }, [isNative]);
 
   if (!isNative) return null; // Don't show on web

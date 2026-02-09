@@ -31,7 +31,13 @@ export type WebToNativeCommand =
   | { type: 'NAVIGATION_READY' }
   | { type: 'PAGE_LOADED'; payload: { route: string; title?: string } }
   | { type: 'ERROR_REPORT'; payload: { message: string; stack?: string; componentStack?: string } }
-  | { type: 'THEME_DETECTED'; payload: { mode: 'light' | 'dark' } };
+  | { type: 'THEME_DETECTED'; payload: { mode: 'light' | 'dark' } }
+  | { type: 'DEEP_LINK_ACK'; payload: { path: string; requestId?: string } }
+  /**
+   * Signal that the web app is visually ready (fonts loaded, critical content rendered).
+   * Sent after initial load and route changes to dismiss the native loading overlay.
+   */
+  | { type: 'APP_READY' };
 
 // ============================================================================
 // MESSAGE TYPES - Native → Web Responses
@@ -46,7 +52,7 @@ export type NativeToWebResponse =
   | { type: 'THEME_CHANGE'; payload: { mode: 'light' | 'dark' | 'system' } }
   | { type: 'NETWORK_STATUS'; payload: { isConnected: boolean; type: string | null } }
   | { type: 'APP_STATE'; payload: { state: string } }
-  | { type: 'DEEP_LINK'; payload: { url: string; path: string } }
+  | { type: 'DEEP_LINK'; payload: { url: string; path: string; requestId?: string } }
   | { type: 'NATIVE_READY' };
 
 // ============================================================================
@@ -385,6 +391,14 @@ export const BRIDGE_INJECTION_SCRIPT = `
     
     reportTheme: function(mode) {
       window.sendToNative('THEME_DETECTED', { mode: mode });
+    },
+    
+    reportDeepLinkAck: function(path, requestId) {
+      window.sendToNative('DEEP_LINK_ACK', { path: path, requestId: requestId });
+    },
+    
+    reportAppReady: function() {
+      window.sendToNative('APP_READY');
     }
   };
   

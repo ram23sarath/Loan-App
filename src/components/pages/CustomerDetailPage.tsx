@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useRouteReady } from "../RouteReadySignal";
 import { useData } from "../../context/DataContext";
 import CustomerDetailModal from "../modals/CustomerDetailModal";
 import EditModal from "../modals/EditModal";
@@ -10,6 +11,7 @@ import type { Loan, Subscription, Installment } from "../../types";
 const CustomerDetailPage: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const signalRouteReady = useRouteReady();
   const {
     customers,
     loans,
@@ -28,6 +30,11 @@ const CustomerDetailPage: React.FC = () => {
   const [editModal, setEditModal] = useState<
     | { type: "loan"; data: Loan }
     | { type: "subscription"; data: Subscription }
+  | null>(null);
+
+  useEffect(() => {
+    signalRouteReady();
+  }, [signalRouteReady]);
     | { type: "installment"; data: Installment }
     | null
   >(null);

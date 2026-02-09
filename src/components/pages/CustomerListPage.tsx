@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import ReactDOM from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import { useData } from "../../context/DataContext";
+import { useRouteReady } from "../RouteReadySignal";
 import GlassCard from "../ui/GlassCard";
 import PageWrapper from "../ui/PageWrapper";
 import {
@@ -36,6 +37,7 @@ const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 const CustomerListPage = () => {
+  const signalRouteReady = useRouteReady();
   const {
     customers,
     loans,
@@ -110,6 +112,11 @@ const CustomerListPage = () => {
     position: "start" | "end";
   } | null>(null);
   const [pagePickerOffset, setPagePickerOffset] = React.useState(0);
+
+  // Signal readiness on mount
+  useEffect(() => {
+    signalRouteReady();
+  }, [signalRouteReady]);
 
   const toggleSection = (key: "both" | "loans" | "subs" | "neither") => {
     setExpandedSections((prev) => ({ ...prev, [key]: !prev[key] }));

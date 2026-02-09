@@ -493,5 +493,5 @@ export type NativeToWebMessage =
     payload: { isConnected: boolean; type: string | null };
   }
   | { type: 'APP_STATE'; payload: { state: string } }
-  | { type: 'DEEP_LINK'; payload: { url: string; path: string } }
+  | { type: 'DEEP_LINK'; payload: { url: string; path: string; requestId?: string } }
   | { type: 'NATIVE_READY' };

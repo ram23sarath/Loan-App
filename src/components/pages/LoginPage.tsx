@@ -3,6 +3,7 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import { useNavigate, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useData } from "../../context/DataContext";
+import { useRouteReady } from "../RouteReadySignal";
 import GlassCard from "../ui/GlassCard";
 import Toast from "../ui/Toast";
 import FireTruckAnimation from "../ui/FireTruckAnimation";
@@ -67,6 +68,7 @@ const LoginPage = () => {
   };
 
   // Detect if screen is mobile size and preload animation images
+  const signalRouteReady = useRouteReady();
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -89,8 +91,11 @@ const LoginPage = () => {
       img.src = src;
     });
 
+    // Signal to native wrapper that this page is ready
+    signalRouteReady();
+
     return () => window.removeEventListener("resize", checkMobile);
-  }, []);
+  }, [signalRouteReady]);
 
   const handleScrollToLogin = () => {
     if (!showLoginOnMobile) setShowLoginOnMobile(true);

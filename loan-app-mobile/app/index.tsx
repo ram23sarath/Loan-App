@@ -14,7 +14,6 @@
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import {
-  View,
   StyleSheet,
   BackHandler,
   Linking,
@@ -39,11 +38,10 @@ import * as Linking2 from "expo-linking";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 
-import { WEB_APP_URL, ENVIRONMENT, TRUSTED_ORIGINS } from "@/config/env";
+import { WEB_APP_URL, TRUSTED_ORIGINS } from "@/config/env";
 import {
   BridgeHandler,
   BRIDGE_INJECTION_SCRIPT,
-  type WebToNativeCommand,
   type AuthSession,
 } from "@/native/bridge";
 import {
@@ -57,7 +55,7 @@ import {
   clearAuthSession,
 } from "@/native/storage";
 
-import LoadingScreen from "@/components/LoadingScreen";
+import SkeletonLoading from "@/components/SkeletonLoading";
 import OfflineScreen from "@/components/OfflineScreen";
 import ErrorScreen from "@/components/ErrorScreen";
 
@@ -73,9 +71,13 @@ export default function WebViewScreen() {
   const webViewRef = useRef<WebView>(null);
   const bridgeRef = useRef<BridgeHandler | null>(null);
   const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const deepLinkTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingDeepLinkPathRef = useRef<string | null>(null);
+  const pendingDeepLinkIdRef = useRef<string | null>(null);
   const authSessionRef = useRef<AuthSession | null>(null);
   const handlerUnsubscribersRef = useRef<Array<() => void>>([]);
   const previousIsOfflineRef = useRef<boolean>(false);
+  const hasInitiallyLoadedRef = useRef(false);
   const overlayOpacity = useRef(new Animated.Value(1)).current;
 
   // State
@@ -87,6 +89,32 @@ export default function WebViewScreen() {
   const [canGoBack, setCanGoBack] = useState(false);
   const [currentUrl, setCurrentUrl] = useState(WEB_APP_URL);
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
+
+  const markInitiallyLoaded = useCallback(() => {
+    if (!hasInitiallyLoadedRef.current) {
+      hasInitiallyLoadedRef.current = true;
+      setHasInitiallyLoaded(true);
+    }
+  }, []);
+
+  // ============================================================================
+  // CLEANUP PENDING TIMEOUTS ON UNMOUNT
+  // ============================================================================
+
+  useEffect(() => {
+    return () => {
+      // Clear any pending loading timeouts
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
+      // Clear any pending deep link timeouts
+      if (deepLinkTimeoutRef.current) {
+        clearTimeout(deepLinkTimeoutRef.current);
+        deepLinkTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // Keep ref in sync with state for use in closures without re-running effect
   useEffect(() => {
@@ -347,24 +375,30 @@ export default function WebViewScreen() {
           if (loadingTimeoutRef.current) {
             clearTimeout(loadingTimeoutRef.current);
             loadingTimeoutRef.current = null;
-            console.log(
-              "[WebView] PAGE_LOADED signal received, clearing fallback timeout",
-            );
+          }
+
+          console.log("[WebView] PAGE_LOADED signal received. Route:", route);
+          setIsLoading(false);
+
+          // Mark that initial load is complete
+          markInitiallyLoaded();
+        }),
+      );
+
+      handlerUnsubscribersRef.current.push(
+        bridgeRef.current.on("APP_READY", () => {
+          // Explicit signal that app is visually ready
+          if (loadingTimeoutRef.current) {
+            clearTimeout(loadingTimeoutRef.current);
+            loadingTimeoutRef.current = null;
           }
 
           console.log(
-            "[WebView] Web app ready - dismissing loading screen. Route:",
-            route,
+            "[WebView] APP_READY signal received - dismissing loading screen",
           );
           setIsLoading(false);
 
-          // Mark that initial load is complete - subsequent navigations won't show loading
-          if (!hasInitiallyLoaded) {
-            setHasInitiallyLoaded(true);
-            console.log(
-              "[WebView] Initial load complete - subsequent navigations will not show loading overlay",
-            );
-          }
+          markInitiallyLoaded();
         }),
       );
 
@@ -387,6 +421,28 @@ export default function WebViewScreen() {
         }),
       );
 
+      handlerUnsubscribersRef.current.push(
+        bridgeRef.current.on("DEEP_LINK_ACK", (payload) => {
+          const { path, requestId } = payload as {
+            path: string;
+            requestId?: string;
+          };
+          console.log("[DeepLink] Web acknowledged deep link for:", path);
+
+          // Only clear timeout if this ACK is for the currently pending deep link
+          // (Prevents late ACKs from clearing timeouts for newer deep links)
+          if (
+            requestId === pendingDeepLinkIdRef.current &&
+            deepLinkTimeoutRef.current
+          ) {
+            clearTimeout(deepLinkTimeoutRef.current);
+            deepLinkTimeoutRef.current = null;
+            pendingDeepLinkPathRef.current = null;
+            pendingDeepLinkIdRef.current = null;
+          }
+        }),
+      );
+
       // Cleanup function: unsubscribe all handlers when component unmounts or bridge is recreated
       return () => {
         handlerUnsubscribersRef.current.forEach((unsubscribe) => unsubscribe());
@@ -394,7 +450,7 @@ export default function WebViewScreen() {
         bridgeRef.current = null;
       };
     }
-  }, []);
+  }, [markInitiallyLoaded]);
 
   // ============================================================================
   // NETWORK STATUS
@@ -476,15 +532,43 @@ export default function WebViewScreen() {
         console.log("[DeepLink] Handling:", url, "→", path);
       }
 
-      // Navigate WebView to the path
-      const targetUrl = `${WEB_APP_URL}${path.startsWith("/") ? path : "/" + path}`;
-      setCurrentUrl(targetUrl);
+      // If bridge is not ready (cold start), navigate via reload immediately
+      if (!bridgeRef.current) {
+        const targetUrl = `${WEB_APP_URL}${path.startsWith("/") ? path : "/" + path}`;
+        setCurrentUrl(targetUrl);
+        pendingDeepLinkPathRef.current = null;
+        pendingDeepLinkIdRef.current = null;
+        return;
+      }
 
-      // Also notify web of deep link
-      bridgeRef.current?.sendToWeb({
+      // Generate a unique ID for this deep link request to prevent race conditions
+      const requestId = `${Date.now()}-${Math.random()}`;
+      pendingDeepLinkPathRef.current = path;
+      pendingDeepLinkIdRef.current = requestId;
+
+      // If bridge is ready, try to send to web first
+      bridgeRef.current.sendToWeb({
         type: "DEEP_LINK",
-        payload: { url, path },
+        payload: { url, path, requestId },
       });
+
+      // Set a timeout to force reload if web doesn't ACK
+      // Use shorter timeout for warm loads (app already open) since bridge is responsive
+      // Use longer timeout for cold starts when app is still initializing
+      const ackTimeoutMs = hasInitiallyLoadedRef.current ? 350 : 1200;
+
+      if (deepLinkTimeoutRef.current) clearTimeout(deepLinkTimeoutRef.current);
+
+      deepLinkTimeoutRef.current = setTimeout(() => {
+        console.log(
+          `[DeepLink] Web did not ACK in ${ackTimeoutMs}ms, forcing reload`,
+        );
+        const targetUrl = `${WEB_APP_URL}${path.startsWith("/") ? path : "/" + path}`;
+        setCurrentUrl(targetUrl);
+        deepLinkTimeoutRef.current = null;
+        pendingDeepLinkPathRef.current = null;
+        pendingDeepLinkIdRef.current = null;
+      }, ackTimeoutMs);
     } catch (err) {
       console.error("[DeepLink] Failed to parse:", err);
     }
@@ -580,24 +664,21 @@ export default function WebViewScreen() {
   const handleLoadStart = useCallback(() => {
     console.log("[WebView] Load started");
 
-    // Only show loading overlay on initial load, not on SPA navigation
-    if (!hasInitiallyLoaded) {
-      setIsLoading(true);
-      setError(null);
-    } else {
-      console.log(
-        "[WebView] SPA navigation detected - not showing loading overlay",
-      );
-    }
-  }, [hasInitiallyLoaded]);
+    // Show loading overlay
+    // React Native WebView `onLoadStart` only fires for actual network loads (navigation),
+    // not for History API pushState/replaceState, so this generally indicates a full load.
+    setIsLoading(true);
+    setError(null);
+  }, []);
 
   const handleLoadEnd = useCallback(() => {
-    console.log("[WebView] HTML loaded. Dismissing loading screen shortly...");
+    console.log(
+      "[WebView] HTML loaded. Waiting for readiness signal or timeout...",
+    );
 
-    // Dismiss loading screen directly after a short delay.
-    // This is the GUARANTEED path — doesn't depend on any bridge message.
-    // The delay gives React a moment to render something visible.
-    // If PAGE_LOADED arrives first (via bridge), it dismisses even faster.
+    // Dismiss loading screen fallback
+    // We prefer the 'APP_READY' or 'PAGE_LOADED' signal from the web app,
+    // but this ensures the overlay doesn't stay forever if the signals are missed.
     if (loadingTimeoutRef.current) {
       clearTimeout(loadingTimeoutRef.current);
     }
@@ -607,12 +688,10 @@ export default function WebViewScreen() {
         "[WebView] Dismissing loading screen (handleLoadEnd fallback)",
       );
       setIsLoading(false);
-      if (!hasInitiallyLoaded) {
-        setHasInitiallyLoaded(true);
-      }
+      markInitiallyLoaded();
       loadingTimeoutRef.current = null;
-    }, 1500); // 1.5 seconds — enough for React to render at least a loading spinner
-  }, [hasInitiallyLoaded]);
+    }, 300); // 300ms timeout - prefer APP_READY signal, but safety net for stuck loads
+  }, [markInitiallyLoaded]);
 
   const handleError = useCallback((syntheticEvent: any) => {
     const { nativeEvent } = syntheticEvent;
@@ -673,7 +752,7 @@ export default function WebViewScreen() {
           <Animated.View
             style={[styles.loadingOverlay, { opacity: overlayOpacity }]}
           >
-            <LoadingScreen message="Loading..." />
+            <SkeletonLoading />
           </Animated.View>
         )}
       </SafeAreaView>
@@ -746,7 +825,7 @@ export default function WebViewScreen() {
         <Animated.View
           style={[styles.loadingOverlay, { opacity: overlayOpacity }]}
         >
-          <LoadingScreen message="Loading your dashboard..." />
+          <SkeletonLoading />
         </Animated.View>
       )}
     </SafeAreaView>

@@ -9,6 +9,7 @@ import ReactDOM from "react-dom";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import PageWrapper from "../ui/PageWrapper";
 import GlassCard from "../ui/GlassCard";
+import { useRouteReady } from "../RouteReadySignal";
 import { UsersIcon } from "../../constants";
 import { FIRE_STATIONS } from "../../constants/fireStations";
 import { useData } from "../../context/DataContext";
@@ -183,6 +184,7 @@ const searchResultVariants: Variants = {
 };
 
 const LoanSeniorityPage = () => {
+  const signalRouteReady = useRouteReady();
   const {
     customers,
     loans,
@@ -230,6 +232,11 @@ const LoanSeniorityPage = () => {
   const closeAlert = () => {
     setAlertConfig((prev) => ({ ...prev, isOpen: false }));
   };
+
+  // Signal readiness on mount
+  useEffect(() => {
+    signalRouteReady();
+  }, [signalRouteReady]);
 
   useEffect(() => {
     fetchSeniorityList().catch((err) =>

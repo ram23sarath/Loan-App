@@ -8,6 +8,7 @@ import React, {
 import ReactDOM from "react-dom";
 import { Trash2Icon } from "../../constants";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouteReady } from "../RouteReadySignal";
 import { useData } from "../../context/DataContext";
 import { formatDate } from "../../utils/dateFormatter";
 import { useDebounce } from "../../utils/useDebounce";
@@ -16,6 +17,7 @@ import { type DataEntry } from "../../types";
 import PageWrapper from "../ui/PageWrapper";
 
 const DataPage = () => {
+  const signalRouteReady = useRouteReady();
   const {
     customers = [],
     dataEntries = [],
@@ -25,6 +27,11 @@ const DataPage = () => {
     isScopedCustomer,
     scopedCustomerId,
   } = useData();
+
+  // Signal readiness on mount
+  useEffect(() => {
+    signalRouteReady();
+  }, [signalRouteReady]);
 
   // State for the edit modal (full entry edit)
   const [editEntryId, setEditEntryId] = useState<string | null>(null);
@@ -95,7 +102,7 @@ const DataPage = () => {
   const [toastMsg, setToastMsg] = useState("");
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(
-    isScopedCustomer ? scopedCustomerId ?? null : null
+    isScopedCustomer ? (scopedCustomerId ?? null) : null,
   );
   const notesRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
@@ -119,7 +126,7 @@ const DataPage = () => {
   const displayedDataEntries = useMemo(() => {
     if (isScopedCustomer && scopedCustomerId) {
       return dataEntries.filter(
-        (entry) => entry.customer_id === scopedCustomerId
+        (entry) => entry.customer_id === scopedCustomerId,
       );
     }
     return dataEntries;
@@ -144,7 +151,7 @@ const DataPage = () => {
     });
 
     return Array.from(map.values()).sort((a, b) =>
-      a.name.localeCompare(b.name)
+      a.name.localeCompare(b.name),
     );
   }, [displayedDataEntries, customerMap]);
 
@@ -153,7 +160,7 @@ const DataPage = () => {
     if (!debouncedCustomerSearchTerm.trim()) return customerEntryGroups;
     const searchLower = debouncedCustomerSearchTerm.toLowerCase();
     return customerEntryGroups.filter((group) =>
-      group.name.toLowerCase().includes(searchLower)
+      group.name.toLowerCase().includes(searchLower),
     );
   }, [customerEntryGroups, debouncedCustomerSearchTerm]);
 
@@ -167,7 +174,7 @@ const DataPage = () => {
     // If search is active and selected customer is not in filtered results, clear selection
     if (debouncedCustomerSearchTerm.trim()) {
       const selectedInFiltered = filteredCustomerGroups.some(
-        (g) => g.customerId === selectedCustomerId
+        (g) => g.customerId === selectedCustomerId,
       );
       if (!selectedInFiltered) {
         setSelectedCustomerId(null);
@@ -193,7 +200,7 @@ const DataPage = () => {
   const selectedGroupEntries = useMemo(() => {
     if (!selectedCustomerId) return [] as typeof displayedDataEntries;
     const group = customerEntryGroups.find(
-      (g) => g.customerId === selectedCustomerId
+      (g) => g.customerId === selectedCustomerId,
     );
     return group?.entries || [];
   }, [customerEntryGroups, selectedCustomerId]);
@@ -215,7 +222,7 @@ const DataPage = () => {
         if (isNaN(timeA)) {
           console.warn(
             `[DataPage] Invalid date detected for entry ID "${a.id}":`,
-            compareA
+            compareA,
           );
           compareA = Infinity; // Sort invalid dates to the end
         } else {
@@ -225,7 +232,7 @@ const DataPage = () => {
         if (isNaN(timeB)) {
           console.warn(
             `[DataPage] Invalid date detected for entry ID "${b.id}":`,
-            compareB
+            compareB,
           );
           compareB = Infinity; // Sort invalid dates to the end
         } else {
@@ -257,7 +264,7 @@ const DataPage = () => {
   const paginatedEntries = useMemo(() => {
     return sortedEntries.slice(
       (currentPage - 1) * itemsPerPage,
-      currentPage * itemsPerPage
+      currentPage * itemsPerPage,
     );
   }, [sortedEntries, currentPage, itemsPerPage]);
 
@@ -270,7 +277,7 @@ const DataPage = () => {
   const filteredCustomers = useMemo(() => {
     if (!debouncedCustomerFilter) return customers;
     return customers.filter((c) =>
-      c.name.toLowerCase().includes(debouncedCustomerFilter.toLowerCase())
+      c.name.toLowerCase().includes(debouncedCustomerFilter.toLowerCase()),
     );
   }, [customers, debouncedCustomerFilter]);
 
@@ -345,7 +352,7 @@ const DataPage = () => {
         e.stopPropagation();
         if (typeof (e as any).stopImmediatePropagation === "function")
           (e as any).stopImmediatePropagation();
-      } catch (_) { }
+      } catch (_) {}
       setEditEntryId(null);
     };
     document.addEventListener("keydown", handleEscape, true);
@@ -361,7 +368,7 @@ const DataPage = () => {
         e.stopPropagation();
         if (typeof (e as any).stopImmediatePropagation === "function")
           (e as any).stopImmediatePropagation();
-      } catch (_) { }
+      } catch (_) {}
       setDeleteId(null);
     };
     document.addEventListener("keydown", handleEscape, true);
@@ -377,7 +384,7 @@ const DataPage = () => {
         e.stopPropagation();
         if (typeof (e as any).stopImmediatePropagation === "function")
           (e as any).stopImmediatePropagation();
-      } catch (_) { }
+      } catch (_) {}
       setShowCustomerModal(false);
     };
     document.addEventListener("keydown", handleEscape, true);
@@ -386,7 +393,7 @@ const DataPage = () => {
 
   // Sorting handler
   const handleSortColumn = (
-    column: "date" | "type" | "subtype" | "amount" | "receipt" | "notes"
+    column: "date" | "type" | "subtype" | "amount" | "receipt" | "notes",
   ) => {
     if (sortColumn === column) {
       // Toggle direction if clicking the same column
@@ -401,7 +408,7 @@ const DataPage = () => {
 
   // Helper function to render sort indicator
   const getSortIndicator = (
-    column: "date" | "type" | "subtype" | "amount" | "receipt" | "notes"
+    column: "date" | "type" | "subtype" | "amount" | "receipt" | "notes",
   ) => {
     if (sortColumn !== column) return " ↕️";
     return sortDirection === "asc" ? " ↑" : " ↓";
@@ -412,7 +419,7 @@ const DataPage = () => {
     (
       e: React.ChangeEvent<
         HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-      >
+      >,
     ) => {
       const { name, value } = e.target as HTMLInputElement &
         HTMLSelectElement &
@@ -432,7 +439,7 @@ const DataPage = () => {
         return { ...prevForm, [name]: value };
       });
     },
-    []
+    [],
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -594,10 +601,11 @@ const DataPage = () => {
         <motion.div
           layout
           transition={{ type: "spring", stiffness: 280, damping: 30 }}
-          className={`bg-white rounded-xl shadow-md flex flex-col gap-6 border border-gray-200/80 mx-auto dark:bg-dark-card dark:border-dark-border ${showTable
+          className={`bg-white rounded-xl shadow-md flex flex-col gap-6 border border-gray-200/80 mx-auto dark:bg-dark-card dark:border-dark-border ${
+            showTable
               ? "p-6 md:p-8 w-[90%] md:w-full md:max-w-full max-w-md"
               : "p-6 md:p-8 w-[90%] max-w-md md:max-w-2xl md:min-h-[calc(100vh-4rem)]"
-            }`}
+          }`}
         >
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
             <h2 className="text-xl md:text-2xl font-bold text-indigo-700 md:uppercase md:tracking-widest whitespace-normal break-words dark:text-indigo-400">
@@ -622,8 +630,9 @@ const DataPage = () => {
           </div>
 
           <div
-            className={`w-full min-h-[300px] md:min-h-[500px] relative flex-1 flex flex-col ${showTable ? "px-2" : ""
-              }`}
+            className={`w-full min-h-[300px] md:min-h-[500px] relative flex-1 flex flex-col ${
+              showTable ? "px-2" : ""
+            }`}
           >
             <AnimatePresence mode="wait">
               {showTable ? (
@@ -649,7 +658,7 @@ const DataPage = () => {
                     >
                       {selectedCustomerId
                         ? customerMap.get(selectedCustomerId) ||
-                        "Select Customer"
+                          "Select Customer"
                         : "-- All Customers --"}
                     </button>
                   </div>
@@ -701,10 +710,11 @@ const DataPage = () => {
                                   <button
                                     key={group.customerId}
                                     type="button"
-                                    className={`w-full text-left px-3 py-2 rounded-lg border transition-colors duration-150 ${selectedCustomerId === group.customerId
+                                    className={`w-full text-left px-3 py-2 rounded-lg border transition-colors duration-150 ${
+                                      selectedCustomerId === group.customerId
                                         ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-500/60 dark:bg-indigo-900/20 dark:text-indigo-200"
                                         : "border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50 dark:border-dark-border dark:hover:border-indigo-800 dark:hover:bg-slate-700/50 dark:text-dark-text"
-                                      }`}
+                                    }`}
                                     onClick={() => {
                                       setSelectedCustomerId(group.customerId);
                                       setCurrentPage(1);
@@ -814,8 +824,8 @@ const DataPage = () => {
                           </thead>
                           <tbody className="bg-white dark:bg-dark-card">
                             {!selectedCustomerId ||
-                              customerEntryGroups.length === 0 ||
-                              selectedGroupEntries.length === 0 ? (
+                            customerEntryGroups.length === 0 ||
+                            selectedGroupEntries.length === 0 ? (
                               <tr>
                                 <td
                                   colSpan={8}
@@ -825,11 +835,12 @@ const DataPage = () => {
                                     ? "Select a customer to view their entries"
                                     : isScopedCustomer && scopedCustomerId
                                       ? (() => {
-                                        const customerName =
-                                          customerMap.get(scopedCustomerId);
-                                        return `No Entries for ${customerName || "you"
+                                          const customerName =
+                                            customerMap.get(scopedCustomerId);
+                                          return `No Entries for ${
+                                            customerName || "you"
                                           } yet!`;
-                                      })()
+                                        })()
                                       : "No entries for this customer."}
                                 </td>
                               </tr>
@@ -864,10 +875,11 @@ const DataPage = () => {
                                       {entry.subtype || "-"}
                                     </td>
                                     <td
-                                      className={`px-4 py-3 font-bold text-left ${entry.type === "credit"
+                                      className={`px-4 py-3 font-bold text-left ${
+                                        entry.type === "credit"
                                           ? "text-green-700 dark:text-green-400"
                                           : "text-red-700 dark:text-red-400"
-                                        }`}
+                                      }`}
                                     >
                                       ₹{formatNumberIndian(entry.amount)}
                                     </td>
@@ -881,8 +893,9 @@ const DataPage = () => {
                                       className="px-4 py-3 text-gray-600 text-left dark:text-dark-muted"
                                     >
                                       <div
-                                        className={`cursor-pointer break-words whitespace-pre-wrap ${!isExpanded ? "line-clamp-2" : ""
-                                          }`}
+                                        className={`cursor-pointer break-words whitespace-pre-wrap ${
+                                          !isExpanded ? "line-clamp-2" : ""
+                                        }`}
                                         onClick={() =>
                                           handleNoteClick(entry.id)
                                         }
@@ -927,18 +940,19 @@ const DataPage = () => {
                         {/* Mobile Cards */}
                         <div className="md:hidden bg-white dark:bg-dark-card">
                           {!selectedCustomerId ||
-                            customerEntryGroups.length === 0 ||
-                            selectedGroupEntries.length === 0 ? (
+                          customerEntryGroups.length === 0 ||
+                          selectedGroupEntries.length === 0 ? (
                             <div className="text-center text-gray-500 py-16 text-base dark:text-dark-muted">
                               {!selectedCustomerId
                                 ? "Select a customer to view their entries"
                                 : isScopedCustomer && scopedCustomerId
                                   ? (() => {
-                                    const customerName =
-                                      customerMap.get(scopedCustomerId);
-                                    return `No Entries for ${customerName || "you"
+                                      const customerName =
+                                        customerMap.get(scopedCustomerId);
+                                      return `No Entries for ${
+                                        customerName || "you"
                                       } yet!`;
-                                  })()
+                                    })()
                                   : "No entries for this customer."}
                             </div>
                           ) : (
@@ -963,10 +977,11 @@ const DataPage = () => {
                                     </div>
                                     <div className={`text-right flex-shrink-0`}>
                                       <div
-                                        className={`font-bold text-base sm:text-lg ${entry.type === "credit"
+                                        className={`font-bold text-base sm:text-lg ${
+                                          entry.type === "credit"
                                             ? "text-green-700 dark:text-green-400"
                                             : "text-red-700 dark:text-red-400"
-                                          }`}
+                                        }`}
                                       >
                                         ₹{formatNumberIndian(entry.amount)}
                                       </div>
@@ -1066,7 +1081,7 @@ const DataPage = () => {
                             Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
                             {Math.min(
                               currentPage * itemsPerPage,
-                              sortedEntries.length
+                              sortedEntries.length,
                             )}{" "}
                             of {sortedEntries.length} entries
                           </div>
@@ -1091,7 +1106,7 @@ const DataPage = () => {
                             {/* Page numbers */}
                             {Array.from(
                               { length: totalPages },
-                              (_, i) => i + 1
+                              (_, i) => i + 1,
                             ).map((page) => {
                               // Show first, last, current, and neighbors
                               if (
@@ -1103,10 +1118,11 @@ const DataPage = () => {
                                   <button
                                     key={page}
                                     onClick={() => setCurrentPage(page)}
-                                    className={`px-3 py-1 rounded border ${currentPage === page
+                                    className={`px-3 py-1 rounded border ${
+                                      currentPage === page
                                         ? "bg-indigo-600 text-white border-indigo-600"
                                         : "border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-dark-border dark:text-dark-text dark:hover:bg-slate-700"
-                                      }`}
+                                    }`}
                                   >
                                     {page}
                                   </button>
@@ -1142,7 +1158,7 @@ const DataPage = () => {
                             <button
                               onClick={() =>
                                 setCurrentPage(
-                                  Math.min(totalPages, currentPage + 1)
+                                  Math.min(totalPages, currentPage + 1),
                                 )
                               }
                               disabled={currentPage === totalPages}
@@ -1201,7 +1217,7 @@ const DataPage = () => {
                         >
                           {form.customerId
                             ? customerMap.get(form.customerId) ||
-                            "Select Customer"
+                              "Select Customer"
                             : "Select Customer"}
                           <svg
                             className="w-4 h-4 ml-2 text-gray-500 dark:text-dark-muted"
@@ -1246,10 +1262,11 @@ const DataPage = () => {
                                 filteredCustomers.map((c) => (
                                   <div
                                     key={c.id}
-                                    className={`p-2 cursor-pointer hover:bg-indigo-100 text-sm dark:hover:bg-slate-700 dark:text-dark-text ${form.customerId === c.id
+                                    className={`p-2 cursor-pointer hover:bg-indigo-100 text-sm dark:hover:bg-slate-700 dark:text-dark-text ${
+                                      form.customerId === c.id
                                         ? "bg-indigo-50 font-semibold dark:bg-indigo-900/30"
                                         : ""
-                                      }`}
+                                    }`}
                                     onClick={() => {
                                       setForm({ ...form, customerId: c.id });
                                       setShowCustomerDropdown(false);
@@ -1469,10 +1486,11 @@ const DataPage = () => {
                           setCurrentPage(1);
                           setShowCustomerModal(false);
                         }}
-                        className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${selectedCustomerId === null
+                        className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${
+                          selectedCustomerId === null
                             ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-500/60 dark:bg-indigo-900/20 dark:text-indigo-200"
                             : "border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50 dark:border-dark-border dark:hover:border-indigo-800 dark:hover:bg-slate-700/50 dark:text-dark-text"
-                          }`}
+                        }`}
                       >
                         <div className="font-semibold">All Customers</div>
                         <div className="text-xs text-gray-500 dark:text-dark-muted">
@@ -1485,11 +1503,11 @@ const DataPage = () => {
                         .filter((group) =>
                           debouncedMobileCustomerSearch.trim()
                             ? group.name
-                              .toLowerCase()
-                              .includes(
-                                debouncedMobileCustomerSearch.toLowerCase()
-                              )
-                            : true
+                                .toLowerCase()
+                                .includes(
+                                  debouncedMobileCustomerSearch.toLowerCase(),
+                                )
+                            : true,
                         )
                         .map((group) => {
                           const creditTotal = group.entries
@@ -1507,10 +1525,11 @@ const DataPage = () => {
                                 setCurrentPage(1);
                                 setShowCustomerModal(false);
                               }}
-                              className={`w-full text-left px-3 py-3 rounded-lg border transition-colors ${selectedCustomerId === group.customerId
+                              className={`w-full text-left px-3 py-3 rounded-lg border transition-colors ${
+                                selectedCustomerId === group.customerId
                                   ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:border-indigo-500/60 dark:bg-indigo-900/20 dark:text-indigo-200"
                                   : "border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50 dark:border-dark-border dark:hover:border-indigo-800 dark:hover:bg-slate-700/50 dark:text-dark-text"
-                                }`}
+                              }`}
                             >
                               <div className="flex items-center justify-between gap-2 mb-1">
                                 <div className="font-semibold truncate">
@@ -1544,8 +1563,8 @@ const DataPage = () => {
                           group.name
                             .toLowerCase()
                             .includes(
-                              debouncedMobileCustomerSearch.toLowerCase()
-                            )
+                              debouncedMobileCustomerSearch.toLowerCase(),
+                            ),
                         ) && (
                           <div className="text-center text-gray-500 py-8 text-sm dark:text-dark-muted">
                             No customers found.
@@ -1556,7 +1575,7 @@ const DataPage = () => {
                 </motion.div>
               )}
             </AnimatePresence>,
-            document.body
+            document.body,
           )}
 
         {typeof document !== "undefined" &&
@@ -1627,12 +1646,12 @@ const DataPage = () => {
                             if (newDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
                               const year = parseInt(
                                 newDate.substring(0, 4),
-                                10
+                                10,
                               );
                               // Only allow years between 1990 and 2050
                               if (year < 1990 || year > 2050) {
                                 console.warn(
-                                  `[DataPage] Year ${year} is outside valid range (1990-2050)`
+                                  `[DataPage] Year ${year} is outside valid range (1990-2050)`,
                                 );
                                 return; // Reject the change
                               }
@@ -1753,7 +1772,7 @@ const DataPage = () => {
                 </motion.div>
               )}
             </AnimatePresence>,
-            document.body
+            document.body,
           )}
 
         {typeof document !== "undefined" &&
@@ -1807,7 +1826,7 @@ const DataPage = () => {
                 </motion.div>
               )}
             </AnimatePresence>,
-            document.body
+            document.body,
           )}
 
         <div className="fixed top-4 right-4 z-50">

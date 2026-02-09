@@ -16,6 +16,7 @@ import LoadingSpinner from "./components/ui/LoadingSpinner";
 import { useData } from "./context/DataContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import InactivityLogoutModal from "./components/modals/InactivityLogoutModal";
+import { RouteReadySignal } from "./components/RouteReadySignal";
 
 // Lazy load page components for better initial bundle size
 const AddCustomerPage = React.lazy(
@@ -359,32 +360,34 @@ const App = () => {
       <ThemeProvider>
         <BrowserRouter>
           <AutoLogout />
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route
-              path="/*"
-              element={
-                <ProtectedRoute>
-                  <div className="w-full h-screen overflow-hidden relative">
-                    <ProfileHeader ref={profileRef} />
-                    <div className="flex w-full h-screen overflow-hidden">
-                      <Sidebar profileRef={profileRef} />
-                      <main
-                        className="flex-1 h-full overflow-y-auto sidebar-transition"
-                        // Use the CSS variable set by Sidebar to offset content when sidebar is visible on desktop.
-                        style={{
-                          paddingLeft: "var(--sidebar-offset, 0px)",
-                          scrollbarGutter: "stable",
-                        }}
-                      >
-                        <AnimatedRoutes />
-                      </main>
+          <RouteReadySignal>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route
+                path="/*"
+                element={
+                  <ProtectedRoute>
+                    <div className="w-full h-screen overflow-hidden relative">
+                      <ProfileHeader ref={profileRef} />
+                      <div className="flex w-full h-screen overflow-hidden">
+                        <Sidebar profileRef={profileRef} />
+                        <main
+                          className="flex-1 h-full overflow-y-auto sidebar-transition"
+                          // Use the CSS variable set by Sidebar to offset content when sidebar is visible on desktop.
+                          style={{
+                            paddingLeft: "var(--sidebar-offset, 0px)",
+                            scrollbarGutter: "stable",
+                          }}
+                        >
+                          <AnimatedRoutes />
+                        </main>
+                      </div>
                     </div>
-                  </div>
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </RouteReadySignal>
         </BrowserRouter>
       </ThemeProvider>
     </DataProvider>

@@ -6,6 +6,7 @@ import FYBreakdownModal from "../modals/FYBreakdownModal";
 import PageWrapper from "../ui/PageWrapper";
 import Toast from "../ui/Toast";
 import { useTheme } from "../../context/ThemeContext";
+import { useRouteReady } from "../RouteReadySignal";
 import { MoonIcon, SunIcon, FileDownIcon } from "../../constants";
 import { useData } from "../../context/DataContext";
 import { formatCurrencyIN } from "../../utils/numberFormatter";
@@ -53,6 +54,7 @@ const AnimatedNumber = ({ value }: { value: number }) => {
 
 const SummaryPage = () => {
   const { theme, toggleTheme } = useTheme();
+  const signalRouteReady = useRouteReady();
 
   const {
     loans: contextLoans = [],
@@ -71,6 +73,11 @@ const SummaryPage = () => {
   const [toastType, setToastType] = useState<"error" | "success" | "info">(
     "error",
   );
+
+  // Signal readiness on initial mount
+  useEffect(() => {
+    signalRouteReady();
+  }, [signalRouteReady]);
 
   // For scoped customers, fetch unfiltered data for summary calculations
   const [loansForSummary, setLoansForSummary] = useState<LoanWithCustomer[]>(
@@ -315,7 +322,8 @@ const SummaryPage = () => {
     totalSubscriptionCollected + totalInterestCollected + totalLateFeeCollected;
 
   // Adjusted Total Collected: deduct quarterly interest charged for specific customer
-  const adjustedTotalCollected = totalCollectedWithoutPrincipal - interestDeduction;
+  const adjustedTotalCollected =
+    totalCollectedWithoutPrincipal - interestDeduction;
 
   // Adjusted Total Expenses: add quarterly interest charged (treated as expense)
   const adjustedTotalExpenses = totalExpenses + interestDeduction;
@@ -1103,9 +1111,7 @@ const SummaryPage = () => {
               </div>
               <div className="text-2xl sm:text-4xl font-bold text-white flex-shrink-0">
                 <AnimatedNumber
-                  value={
-                    totalCollectedWithoutPrincipal - adjustedTotalExpenses
-                  }
+                  value={totalCollectedWithoutPrincipal - adjustedTotalExpenses}
                 />
               </div>
             </div>

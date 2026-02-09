@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { useRouteReady } from "../RouteReadySignal";
 import { useData } from "../../context/DataContext";
 import GlassCard from "../ui/GlassCard";
 import { formatDate } from "../../utils/dateFormatter";
@@ -9,8 +10,13 @@ import { getLoanStatus } from "../../utils/loanStatus";
 const LoanDetailPage: React.FC = () => {
   const { id } = useParams();
   const { loans, installmentsByLoanId, loading } = useData();
+  const signalRouteReady = useRouteReady();
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 25;
+
+  useEffect(() => {
+    signalRouteReady();
+  }, [signalRouteReady]);
 
   if (loading) {
     return (

@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import SubscriptionTableView from "./SubscriptionTableView";
+import { useRouteReady } from "../RouteReadySignal";
 import { useData } from "../../context/DataContext";
 import PageWrapper from "../ui/PageWrapper";
 import { HistoryIcon, SpinnerIcon } from "../../constants";
@@ -8,6 +9,7 @@ import { formatDate } from "../../utils/dateFormatter";
 import DeleteConfirmationModal from "../modals/DeleteConfirmationModal";
 
 const SubscriptionListPage = () => {
+  const signalRouteReady = useRouteReady();
   const { subscriptions, deleteSubscription, isRefreshing, isScopedCustomer } =
     useData();
 
@@ -15,21 +17,27 @@ const SubscriptionListPage = () => {
     React.useState<SubscriptionWithCustomer | null>(null);
   const [deleting, setDeleting] = React.useState(false);
 
+  useEffect(() => {
+    signalRouteReady();
+  }, [signalRouteReady]);
+
   const handleDeleteSubscription = (sub: SubscriptionWithCustomer) => {
     setPendingDelete(sub);
   };
 
   // Track the ID being deleted for background animation
-  const [animatingDeleteId, setAnimatingDeleteId] = React.useState<string | null>(null);
+  const [animatingDeleteId, setAnimatingDeleteId] = React.useState<
+    string | null
+  >(null);
 
   const confirmDelete = async () => {
     if (!pendingDelete) return;
     const deleteId = pendingDelete.id;
-    
+
     setDeleting(true);
     // Start the background animation immediately
     setAnimatingDeleteId(deleteId);
-    
+
     try {
       await deleteSubscription(deleteId);
       // Close modal after successful delete
@@ -83,4 +91,3 @@ const SubscriptionListPage = () => {
 };
 
 export default SubscriptionListPage;
-

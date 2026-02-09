@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, Suspense, lazy } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { useNavigate, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -6,7 +6,9 @@ import { useData } from "../../context/DataContext";
 import { useRouteReady } from "../RouteReadySignal";
 import GlassCard from "../ui/GlassCard";
 import Toast from "../ui/Toast";
-import FireTruckAnimation from "../ui/FireTruckAnimation";
+import LoadingSpinner from "../ui/LoadingSpinner";
+// Lazy load the heavy animation component
+const FireTruckAnimation = lazy(() => import(/* webpackChunkName: "firetruck-animation" */ '../ui/FireTruckAnimation'));
 import { EyeIcon, EyeOffIcon } from "../../constants";
 
 type FormInputs = {
@@ -187,7 +189,11 @@ const LoginPage = () => {
 
   // Show only the animation when it's active
   if (showAnimation) {
-    return <FireTruckAnimation onComplete={handleAnimationComplete} />;
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        <FireTruckAnimation onComplete={handleAnimationComplete} />
+      </Suspense>
+    );
   }
 
   return (

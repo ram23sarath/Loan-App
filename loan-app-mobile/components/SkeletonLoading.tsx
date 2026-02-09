@@ -1,11 +1,13 @@
-import React, { useEffect, useRef } from "react";
-import {
-  View,
-  StyleSheet,
-  Animated,
+import React, { useEffect } from "react";
+import { View, StyleSheet, useColorScheme } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  withSequence,
   Easing,
-  useColorScheme,
-} from "react-native";
+} from "react-native-reanimated";
 import { lightTheme, darkTheme } from "../config/theme";
 
 /**
@@ -17,81 +19,99 @@ import { lightTheme, darkTheme } from "../config/theme";
 export default function SkeletonLoading() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
-  const opacity = useRef(new Animated.Value(0.3)).current;
+  const opacity = useSharedValue(0.3);
 
   useEffect(() => {
-    const pulseAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacity, {
-          toValue: 0.7,
+    opacity.value = withRepeat(
+      withSequence(
+        withTiming(0.7, {
           duration: 800,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
         }),
-        Animated.timing(opacity, {
-          toValue: 0.3,
+        withTiming(0.3, {
           duration: 800,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
         }),
-      ]),
+      ),
+      -1,
     );
+  }, []);
 
-    pulseAnimation.start();
-
-    return () => pulseAnimation.stop();
-  }, [opacity]);
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: opacity.value,
+    };
+  });
 
   const bgStyle = isDark ? styles.skeletonDark : styles.skeletonLight;
   const containerStyle = isDark ? styles.containerDark : styles.containerLight;
 
   return (
-    <View style={[styles.container, containerStyle]}>
-      {/* Header Skeleton */}
-      <View style={styles.header}>
-        <Animated.View style={[styles.avatar, bgStyle, { opacity }]} />
-        <View style={styles.headerText}>
-          <Animated.View
-            style={[styles.textLine, styles.w40, bgStyle, { opacity }]}
+    <View
+      testID="skeleton-loading-container"
+      style={[styles.container, containerStyle]}
+      pointerEvents="none"
+      // @ts-ignore: Web-only prop for stability checks
+      className="skeleton--nonblocking"
+      // @ts-ignore: Web/Accessibility prop
+      aria-hidden={true}
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Animated.View style={[animatedStyle, { flex: 1 }]}>
+        {/* Header Skeleton */}
+        <View style={styles.header} testID="skeleton-header">
+          <View
+            style={[styles.avatar, bgStyle]}
+            testID="skeleton-header-avatar"
           />
-          <Animated.View
-            style={[
-              styles.textLine,
-              styles.w60,
-              styles.mt2,
-              bgStyle,
-              { opacity },
-            ]}
-          />
-        </View>
-      </View>
-
-      {/* Hero Card Skeleton */}
-      <Animated.View style={[styles.heroCard, bgStyle, { opacity }]} />
-
-      {/* List Items Skeleton */}
-      <View style={styles.listContainer}>
-        <Animated.View style={[styles.listHeader, bgStyle, { opacity }]} />
-        {[1, 2, 3].map((key) => (
-          <View key={key} style={styles.listItem}>
-            <Animated.View style={[styles.icon, bgStyle, { opacity }]} />
-            <View style={styles.itemText}>
-              <Animated.View
-                style={[styles.textLine, styles.w70, bgStyle, { opacity }]}
-              />
-              <Animated.View
-                style={[
-                  styles.textLine,
-                  styles.w40,
-                  styles.mt2,
-                  bgStyle,
-                  { opacity },
-                ]}
-              />
-            </View>
+          <View style={styles.headerText} testID="skeleton-header-text">
+            <View
+              style={[styles.textLine, styles.w40, bgStyle]}
+              testID="skeleton-header-line-1"
+            />
+            <View
+              style={[styles.textLine, styles.w60, styles.mt2, bgStyle]}
+              testID="skeleton-header-line-2"
+            />
           </View>
-        ))}
-      </View>
+        </View>
+
+        {/* Hero Card Skeleton */}
+        <View style={[styles.heroCard, bgStyle]} testID="skeleton-hero-card" />
+
+        {/* List Items Skeleton */}
+        <View style={styles.listContainer} testID="skeleton-list-container">
+          <View
+            style={[styles.listHeader, bgStyle]}
+            testID="skeleton-list-header"
+          />
+          {[1, 2, 3].map((key) => (
+            <View
+              key={key}
+              style={styles.listItem}
+              testID={`skeleton-list-item-${key}`}
+            >
+              <View
+                style={[styles.icon, bgStyle]}
+                testID={`skeleton-list-item-${key}-icon`}
+              />
+              <View
+                style={styles.itemText}
+                testID={`skeleton-list-item-${key}-text`}
+              >
+                <View
+                  style={[styles.textLine, styles.w70, bgStyle]}
+                  testID={`skeleton-list-item-${key}-line-1`}
+                />
+                <View
+                  style={[styles.textLine, styles.w40, styles.mt2, bgStyle]}
+                  testID={`skeleton-list-item-${key}-line-2`}
+                />
+              </View>
+            </View>
+          ))}
+        </View>
+      </Animated.View>
     </View>
   );
 }

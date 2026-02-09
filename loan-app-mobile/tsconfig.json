@@ -23,7 +23,8 @@
     "noEmit": true,
     "types": [
       "expo",
-      "@types/react"
+      "react",
+      "jest"
     ]
   },
   "include": [

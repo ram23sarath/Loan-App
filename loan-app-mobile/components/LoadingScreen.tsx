@@ -5,15 +5,21 @@
  * Features an animated loading indicator with the app branding.
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
-  Animated, 
-  Easing,
   useColorScheme,
 } from 'react-native';
+import Animated, { 
+  Easing, 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withRepeat, 
+  withTiming, 
+  withSequence 
+} from 'react-native-reanimated';
 
 interface LoadingScreenProps {
   message?: string;
@@ -23,50 +29,46 @@ export default function LoadingScreen({ message = 'Loading...' }: LoadingScreenP
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   
-  const spinValue = useRef(new Animated.Value(0)).current;
-  const pulseValue = useRef(new Animated.Value(1)).current;
+  const spinValue = useSharedValue(0);
+  const pulseValue = useSharedValue(1);
 
   useEffect(() => {
-    // Spinning animation
-    const spinAnimation = Animated.loop(
-      Animated.timing(spinValue, {
-        toValue: 1,
+    spinValue.value = withRepeat(
+      withTiming(360, {
         duration: 1500,
         easing: Easing.linear,
-        useNativeDriver: true,
-      })
+      }),
+      -1
     );
 
-    // Pulse animation
-    const pulseAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseValue, {
-          toValue: 1.1,
+    pulseValue.value = withRepeat(
+      withSequence(
+        withTiming(1.1, {
           duration: 800,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
         }),
-        Animated.timing(pulseValue, {
-          toValue: 1,
+        withTiming(1, {
           duration: 800,
           easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
+        })
+      ),
+      -1,
+      true // reverse? No, the sequence handles it, but let's check original. 
+           // Original was: 1 -> 1.1 -> 1. Loop.
+           // So sequence 1.1 then 1 is correct. withRepeat -1 loops it.
     );
+  }, []);
 
-    spinAnimation.start();
-    pulseAnimation.start();
-
-    return () => {
-      spinAnimation.stop();
-      pulseAnimation.stop();
+  const spinAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ rotate: `${spinValue.value}deg` }],
     };
-  }, [spinValue, pulseValue]);
+  });
 
-  const spin = spinValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
+  const pulseAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: pulseValue.value }],
+    };
   });
 
   return (
@@ -74,14 +76,14 @@ export default function LoadingScreen({ message = 'Loading...' }: LoadingScreenP
       <Animated.View 
         style={[
           styles.loaderContainer,
-          { transform: [{ scale: pulseValue }] }
+          pulseAnimatedStyle
         ]}
       >
         <Animated.View 
           style={[
             styles.spinner,
             isDark && styles.spinnerDark,
-            { transform: [{ rotate: spin }] }
+            spinAnimatedStyle
           ]}
         />
         <View style={[styles.innerCircle, isDark && styles.innerCircleDark]}>

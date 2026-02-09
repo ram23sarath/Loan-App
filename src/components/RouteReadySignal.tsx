@@ -4,6 +4,10 @@ import React, {
   useCallback,
   useEffect,
 } from "react";
+import {
+  initVisualStability,
+  isVisuallyStable,
+} from "../utils/visualStability";
 
 /**
  * Context for route readiness signaling.
@@ -37,7 +41,7 @@ export const RouteReadySignal: React.FC<{ children: React.ReactNode }> = ({
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
-    const doSignal = () => {
+    const doSignal = async () => {
       if (cancelled) return;
       // Check if running in native app wrapper
       if (
@@ -45,34 +49,30 @@ export const RouteReadySignal: React.FC<{ children: React.ReactNode }> = ({
         window.isNativeApp?.() &&
         window.sendToNative
       ) {
-        // Wait for multiple animation frames to ensure browser has painted
+        // Wait for visual stability (layout shifts, paint, fonts)
+        await isVisuallyStable();
+
+        if (cancelled) return;
+
+        // Additional frame wait to ensure render
         requestAnimationFrame(() => {
           if (cancelled) return;
-          requestAnimationFrame(() => {
-            if (cancelled) return;
-            window.sendToNative?.("APP_READY");
+          window.sendToNative?.("PAGE_LOADED", {
+            route: window.location.pathname,
+            title: document.title,
           });
+          window.sendToNative?.("APP_READY");
         });
       }
     };
 
-    // Wait for fonts to be ready before signaling
-    if (typeof document !== "undefined" && document.fonts?.ready) {
-      document.fonts.ready
-        .then(() => {
-          if (!cancelled) {
-            timeoutId = setTimeout(doSignal, 50);
-          }
-        })
-        .catch(() => {
-          if (!cancelled) {
-            timeoutId = setTimeout(doSignal, 50);
-          }
-        });
-    } else {
-      timeoutId = setTimeout(doSignal, 100);
-    }
+    // Initialize checking immediately if not already done
+    initVisualStability();
 
+    // Execute signal logic
+    doSignal().catch((err) => {
+      console.error("Route ready signal failed:", err);
+    });
     return () => {
       cancelled = true;
       if (timeoutId) clearTimeout(timeoutId);

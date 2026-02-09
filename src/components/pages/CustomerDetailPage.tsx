@@ -8,6 +8,19 @@ import PageWrapper from "../ui/PageWrapper";
 import GlassCard from "../ui/GlassCard";
 import type { Loan, Subscription, Installment } from "../../types";
 
+// Type guard to narrow updated to Installment shape
+const isInstallmentUpdate = (updated: any): updated is Installment => {
+  return (
+    updated &&
+    typeof updated === "object" &&
+    typeof updated.id === "string" &&
+    typeof updated.amount === "number" &&
+    typeof updated.date === "string" &&
+    typeof updated.receipt_number === "string" &&
+    (updated.late_fee === null || typeof updated.late_fee === "number")
+  );
+};
+
 const CustomerDetailPage: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -30,14 +43,13 @@ const CustomerDetailPage: React.FC = () => {
   const [editModal, setEditModal] = useState<
     | { type: "loan"; data: Loan }
     | { type: "subscription"; data: Subscription }
-  | null>(null);
+    | { type: "installment"; data: Installment }
+    | null
+  >(null);
 
   useEffect(() => {
     signalRouteReady();
   }, [signalRouteReady]);
-    | { type: "installment"; data: Installment }
-    | null
-  >(null);
 
   if (loading) {
     return (
@@ -121,6 +133,9 @@ const CustomerDetailPage: React.FC = () => {
                   receipt: updated.receipt,
                 });
               } else if (editModal.type === "installment") {
+                if (!isInstallmentUpdate(updated)) {
+                  throw new Error("Invalid installment data");
+                }
                 await updateInstallment(updated.id, {
                   amount: updated.amount,
                   late_fee: updated.late_fee ?? 0,

@@ -257,13 +257,10 @@ export const BRIDGE_INJECTION_SCRIPT = `
       lastUrl = newUrl;
       console.log('[NativeBridge] URL changed to:', lastUrl);
       
-      // Give React a moment to complete render before signaling
-      // This ensures components are mounted and visible when native dismisses loading
-      setTimeout(function() {
-        if (window.sendToNative) {
-          window.sendToNative('PAGE_LOADED', { route: window.location.pathname });
-        }
-      }, 50); // 50ms delay - imperceptible to users but ensures render completes
+      // Signal page loaded - web app will send APP_READY when stable if needed
+      if (window.sendToNative) {
+        window.sendToNative('PAGE_LOADED', { route: window.location.pathname });
+      }
     }
   };
   
@@ -290,15 +287,7 @@ export const BRIDGE_INJECTION_SCRIPT = `
   });
   window.addEventListener('load', function() {
     console.log('[NativeBridge] Window loaded');
-    // Always send PAGE_LOADED on initial window load, even if URL hasn't changed.
-    // notifyUrlChange() only fires on URL changes, which misses the case where
-    // the user has a session and the page loads on the same route.
-    setTimeout(function() {
-      if (window.sendToNative) {
-        console.log('[NativeBridge] Sending initial PAGE_LOADED on window.load');
-        window.sendToNative('PAGE_LOADED', { route: window.location.pathname, title: document.title || 'I J Reddy Loan App' });
-      }
-    }, 100); // Small delay to ensure React has started rendering
+    // Web app will send APP_READY when visually stable
   });
   
   /**

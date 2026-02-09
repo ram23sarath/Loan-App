@@ -155,8 +155,13 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: premiumGradientFlow 9s ease-in-out infinite;
   will-change: background-position;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .premium-gradient-text {
+    animation: premiumGradientFlow 9s ease-in-out infinite;
+  }
 }
 
 @keyframes premiumGradientFlow {
@@ -185,7 +190,12 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: shimmerFlow 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .premium-shimmer-text {
+    animation: shimmerFlow 3s ease-in-out infinite;
+  }
 }
 
 @keyframes shimmerFlow {
@@ -200,25 +210,58 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
 
 /* Gentle floating animation for splash background orbs */
 .premium-float {
-  animation: premiumFloat 10s ease-in-out infinite;
   will-change: transform;
 }
 
-@keyframes premiumFloat {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  25% { transform: translate(20px, -15px) scale(1.03); }
-  50% { transform: translate(40px, 10px) scale(1.05); }
-  75% { transform: translate(15px, 20px) scale(1.02); }
+@media (prefers-reduced-motion: no-preference) {
+  .premium-float {
+    animation: premiumFloat 10s ease-in-out infinite;
+  }
 }
 
-/* Soft pulsing glow for emblem backgrounds */
-.premium-pulse-glow {
-  animation: premiumPulseGlow 3s ease-in-out infinite;
+@keyframes premiumFloat {
+
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  25% {
+    transform: translate(20px, -15px) scale(1.03);
+  }
+
+  50% {
+    transform: translate(40px, 10px) scale(1.05);
+  }
+
+  75% {
+    transform: translate(15px, 20px) scale(1.02);
+  }
+}
+
+/* Soft pulsing glow for emblem backgrounds - merged animation with opacity, scale, and drop-shadow */
+.premium-pulse-glow {}
+
+@media (prefers-reduced-motion: no-preference) {
+  .premium-pulse-glow {
+    animation: premiumPulseGlow 3s ease-in-out infinite;
+  }
 }
 
 @keyframes premiumPulseGlow {
-  0%, 100% { opacity: 0.2; transform: scale(1); }
-  50% { opacity: 0.35; transform: scale(1.03); }
+
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(1);
+    filter: drop-shadow(0 0 8px rgba(129, 140, 248, 0.4));
+  }
+
+  50% {
+    opacity: 0.35;
+    transform: scale(1.03);
+    filter: drop-shadow(0 0 20px rgba(192, 132, 252, 0.6));
+  }
 }
 
 /* Elegant glow text */
@@ -246,8 +289,13 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: goldShift 4s ease-in-out infinite;
   text-shadow: 0 2px 10px rgba(246, 211, 101, 0.4);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .premium-gold-text {
+    animation: goldShift 4s ease-in-out infinite;
+  }
 }
 
 @keyframes goldShift {
@@ -278,7 +326,11 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
   background: linear-gradient(90deg, #818cf8, #c084fc, #f472b6, #22d3ee);
   background-size: 200% 100%;
   border-radius: 2px;
-  animation: underlineShimmer 3s ease-in-out infinite;
+
+}@media (prefers-reduced-motion: no-preference) {
+  .premium-underline::after {
+    animation: underlineShimmer 3s ease-in-out infinite;
+  }
 }
 
 @keyframes underlineShimmer {
@@ -294,11 +346,15 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
 }
 
 /* Floating animation for emphasis */
-.premium-float {
-  animation: elegantFloat 6s ease-in-out infinite;
+.premium-float-emphasis {}
+
+@media (prefers-reduced-motion: no-preference) {
+  .premium-float-emphasis {
+    animation: premiumFloatEmphasis 6s ease-in-out infinite;
+  }
 }
 
-@keyframes elegantFloat {
+@keyframes premiumFloatEmphasis {
 
   0%,
   100% {
@@ -310,26 +366,13 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
   }
 }
 
-/* Subtle pulse glow */
-.premium-pulse-glow {
-  animation: pulseGlow 3s ease-in-out infinite;
-}
-
-@keyframes pulseGlow {
-
-  0%,
-  100% {
-    filter: drop-shadow(0 0 8px rgba(129, 140, 248, 0.4));
-  }
-
-  50% {
-    filter: drop-shadow(0 0 20px rgba(192, 132, 252, 0.6));
-  }
-}
-
 /* Letter spacing animation */
-.premium-breathe {
-  animation: breatheSpacing 8s ease-in-out infinite;
+.premium-breathe {}
+
+@media (prefers-reduced-motion: no-preference) {
+  .premium-breathe {
+    animation: breatheSpacing 8s ease-in-out infinite;
+  }
 }
 
 @keyframes breatheSpacing {
@@ -345,8 +388,12 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
 }
 
 /* Elegant fade-in from below */
-.premium-reveal {
-  animation: revealUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.premium-reveal {}
+
+@media (prefers-reduced-motion: no-preference) {
+  .premium-reveal {
+    animation: revealUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
 }
 
 @keyframes revealUp {
@@ -396,12 +443,20 @@ html[data-theme-transition="to-light"]::view-transition-new(root) {
   }
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.3s ease;
+.animate-fade-in {}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease;
+  }
 }
 
-.animate-modal-in {
-  animation: modalIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+.animate-modal-in {}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-modal-in {
+    animation: modalIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
 }
 
 /* iOS date input styling - comprehensive fix */
@@ -661,4 +716,111 @@ input[type="date"]::-moz-calendar-picker-indicator:hover {
   .hide-in-mobile-landscape {
     display: none !important;
   }
+}
+
+/* ===== OPTIMIZED ANIMATIONS (GPU ACCELERATED) ===== */
+
+/* Truck bounce animation - replaces JS spring */
+@keyframes truck-bounce {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+.animate-truck-bounce {
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-truck-bounce {
+    animation: truck-bounce 0.65s ease-in-out infinite;
+  }
+}
+
+/* Text pulse animation - replaces JS opacity loop */
+@keyframes pulse-opacity {
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-pulse-opacity {
+  will-change: opacity;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .animate-pulse-opacity {
+    animation: pulse-opacity 2.5s ease-in-out infinite;
+  }
+}
+
+/* Loading dots animation - replaces JS stagger loop */
+@keyframes dot-animation {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+.dot-animation {
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dot-animation {
+    animation: dot-animation 1.4s ease-in-out infinite both;
+  }
+}
+
+/* Speed lines animation - replaces JS opacity loop */
+@keyframes speed-lines-flash {
+
+  0%,
+  100% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.truck-speed-lines {
+  will-change: opacity;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .truck-speed-lines {
+    animation: speed-lines-flash 2s ease-in-out infinite;
+  }
+}
+
+
+
+/* Helper for staggered delays */
+.delay-200 {
+  animation-delay: 0.2s;
+}
+
+.delay-400 {
+  animation-delay: 0.4s;
 }

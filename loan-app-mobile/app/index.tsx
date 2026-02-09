@@ -683,14 +683,21 @@ export default function WebViewScreen() {
       clearTimeout(loadingTimeoutRef.current);
     }
 
+    // Prefer APP_READY signal, but use aggressive timeouts as safety net
+    // Shorter timeout for subsequent loads since resources might be cached
+    const isFirstLoad = !hasInitiallyLoadedRef.current;
+    // extended timeout to allow for visual stability check (min 200ms + render time)
+    // APP_READY signal will normally dismiss this much earlier
+    const timeoutDuration = isFirstLoad ? 2000 : 500;
+
     loadingTimeoutRef.current = setTimeout(() => {
       console.log(
-        "[WebView] Dismissing loading screen (handleLoadEnd fallback)",
+        `[WebView] Dismissing loading screen (handleLoadEnd fallback: ${timeoutDuration}ms)`,
       );
       setIsLoading(false);
       markInitiallyLoaded();
       loadingTimeoutRef.current = null;
-    }, 300); // 300ms timeout - prefer APP_READY signal, but safety net for stuck loads
+    }, timeoutDuration);
   }, [markInitiallyLoaded]);
 
   const handleError = useCallback((syntheticEvent: any) => {

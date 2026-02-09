@@ -1,7 +1,8 @@
-import React from 'react';
-import { motion, Transition, Variants } from 'framer-motion';
-import { useData } from '../../context/DataContext';
-import Toast from './Toast';
+import React from "react";
+import { motion, Transition, Variants } from "framer-motion";
+import { useReducedMotion } from "../hooks/useReducedMotion";
+import { useData } from "../../context/DataContext";
+import Toast from "./Toast";
 
 // Smooth page variants - lightweight opacity + subtle y shift (no blur for performance)
 const pageVariants: Variants = {
@@ -19,8 +20,15 @@ const pageVariants: Variants = {
   },
 };
 
+// Reduced motion variants - instant opacity only, no transitions
+const reducedMotionVariants: Variants = {
+  initial: { opacity: 0 },
+  in: { opacity: 1 },
+  out: { opacity: 0 },
+};
+
 const pageTransition: Transition = {
-  type: 'tween',
+  type: "tween",
   ease: [0.25, 0.1, 0.25, 1],
   duration: 0.25,
 };
@@ -54,8 +62,8 @@ export const childVariants: Variants = {
     opacity: 1,
     y: 0,
     transition: {
-      type: 'tween',
-      ease: 'easeOut',
+      type: "tween",
+      ease: "easeOut",
       duration: 0.25,
     },
   },
@@ -67,42 +75,75 @@ export const childVariants: Variants = {
 
 const PageWrapper = ({ children }: { children: React.ReactNode }) => {
   const { isScopedCustomer, session, scopedCustomerId, customers } = useData();
-  const [toast, setToast] = React.useState<{ show: boolean; message: string; type?: 'success' | 'error' | 'info' }>({ show: false, message: '', type: 'info' });
+  const [toast, setToast] = React.useState<{
+    show: boolean;
+    message: string;
+    type: "success" | "error" | "info";
+  }>({ show: false, message: "", type: "info" });
+  const prefersReducedMotion = useReducedMotion();
 
   React.useEffect(() => {
-    const handler = (e: any) => {
+    type BackgroundUserCreateDetail = {
+      status?: string;
+      message?: string;
+    };
+
+    type BackgroundUserCreateEvent = CustomEvent<BackgroundUserCreateDetail>;
+
+    const handler = (e: Event) => {
       try {
-        const d = e?.detail || {};
-        const type = d.status === 'success' ? 'success' : 'error';
-        const msg = d.message || (type === 'success' ? 'User created successfully' : 'Failed to create user');
+        const detail = (e as BackgroundUserCreateEvent).detail || {};
+        const type = detail.status === "success" ? "success" : "error";
+        const msg =
+          detail.message ||
+          (type === "success"
+            ? "User created successfully"
+            : "Failed to create user");
         setToast({ show: true, message: msg, type });
       } catch (err) {
-        // ignore
+        if (import.meta.env.DEV) {
+          console.error("Error handling background-user-create event:", err);
+        }
       }
     };
-    if (typeof window !== 'undefined') {
-      window.addEventListener('background-user-create', handler as EventListener);
+    if (typeof window !== "undefined") {
+      window.addEventListener(
+        "background-user-create",
+        handler as EventListener,
+      );
     }
     return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('background-user-create', handler as EventListener);
+      if (typeof window !== "undefined") {
+        window.removeEventListener(
+          "background-user-create",
+          handler as EventListener,
+        );
       }
     };
   }, []);
+
+  const currentVariants = prefersReducedMotion
+    ? reducedMotionVariants
+    : pageVariants;
 
   return (
     <motion.div
       initial="initial"
       animate="in"
       exit="out"
-      variants={pageVariants}
-      transition={pageTransition}
+      variants={currentVariants}
+      transition={prefersReducedMotion ? { duration: 0 } : pageTransition}
       className="w-full min-h-full p-4 pb-24 sm:p-8 landscape:pb-16"
       style={{
-        paddingTop: 'max(1rem, env(safe-area-inset-top))',
+        paddingTop: "max(1rem, env(safe-area-inset-top))",
       }}
     >
-      <Toast show={toast.show} message={toast.message} onClose={() => setToast({ show: false, message: '', type: 'info' })} type={toast.type as any} />
+      <Toast
+        show={toast.show}
+        message={toast.message}
+        onClose={() => setToast({ show: false, message: "", type: "info" })}
+        type={toast.type}
+      />
 
       {children}
     </motion.div>

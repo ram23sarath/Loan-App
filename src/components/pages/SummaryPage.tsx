@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { motion, useSpring, useTransform } from "framer-motion";
 // NOTE: xlsx is dynamically imported in export functions to reduce initial bundle size (~500KB)
 
@@ -17,19 +17,7 @@ import {
 } from "../../utils/summaryCalculations";
 import { supabase } from "../../lib/supabase";
 
-import type {
-  LoanWithCustomer,
-  SubscriptionWithCustomer,
-  Installment,
-  DataEntry,
-  Customer,
-  Loan,
-  Subscription,
-} from "../../types";
-import type {
-  PostgrestFilterBuilder,
-  PostgrestQueryBuilder,
-} from "@supabase/postgrest-js";
+import type { Customer, Installment, Loan, Subscription } from "../../types";
 
 const getButtonCenter = (button: HTMLElement) => {
   const rect = button.getBoundingClientRect();
@@ -57,13 +45,14 @@ const SummaryPage = () => {
   const signalRouteReady = useRouteReady();
 
   const {
-    loans: contextLoans = [],
-    installments: contextInstallments = [],
-    subscriptions: contextSubscriptions = [],
-    dataEntries: contextDataEntries = [],
     customers: contextCustomers = [],
     seniorityList = [],
     isScopedCustomer = false,
+    summaryLoans: loans = [],
+    summarySubscriptions: subscriptions = [],
+    summaryInstallments: installments = [],
+    summaryDataEntries: dataEntries = [],
+    fetchSummaryData,
   } = useData();
 
   // Export menu state
@@ -79,104 +68,25 @@ const SummaryPage = () => {
     signalRouteReady();
   }, [signalRouteReady]);
 
-  // For scoped customers, fetch unfiltered data for summary calculations
-  const [loansForSummary, setLoansForSummary] = useState<LoanWithCustomer[]>(
-    [],
-  );
-  const [installmentsForSummary, setInstallmentsForSummary] = useState<
-    Installment[]
-  >([]);
-  const [subscriptionsForSummary, setSubscriptionsForSummary] = useState<
-    SubscriptionWithCustomer[]
-  >([]);
-  const [dataEntriesForSummary, setDataEntriesForSummary] = useState<
-    DataEntry[]
-  >([]);
-
+  // Fetch unfiltered summary data on mount
   useEffect(() => {
-    const fetchUnfilteredData = async () => {
-      if (isScopedCustomer) {
-        try {
-          type TableName =
-            | "loans"
-            | "subscriptions"
-            | "data_entries"
-            | "installments";
-
-          const fetchAll = async <T,>(
-            table: TableName,
-            queryModifier?: (
-              q:
-                | PostgrestFilterBuilder<any, any, any, any>
-                | PostgrestQueryBuilder<any, any, any>,
-            ) =>
-              | PostgrestFilterBuilder<any, any, any, any>
-              | PostgrestQueryBuilder<any, any, any>,
-          ): Promise<T[]> => {
-            let allData: T[] = [];
-            let from = 0;
-            const batchSize = 1000;
-            let hasMore = true;
-            while (hasMore) {
-              let query: any = supabase
-                .from(table)
-                .select(
-                  table === "loans" || table === "subscriptions"
-                    ? "*, customers(name, phone)"
-                    : "*",
-                );
-              if (queryModifier) query = queryModifier(query);
-
-              const { data, error } = await query.range(
-                from,
-                from + batchSize - 1,
-              );
-              if (error) throw error;
-
-              if (data && data.length > 0) {
-                allData = [...allData, ...(data as T[])];
-                from += batchSize;
-                hasMore = data.length === batchSize;
-              } else {
-                hasMore = false;
-              }
-            }
-            return allData;
-          };
-
-          const [loansData, subsData, entriesData, installmentsData] =
-            await Promise.all([
-              fetchAll<LoanWithCustomer>("loans"),
-              fetchAll<SubscriptionWithCustomer>("subscriptions"),
-              fetchAll<DataEntry>("data_entries"),
-              fetchAll<Installment>("installments"),
-            ]);
-
-          setLoansForSummary(loansData);
-          setSubscriptionsForSummary(subsData);
-          setDataEntriesForSummary(entriesData);
-          setInstallmentsForSummary(installmentsData);
-        } catch (error) {
-          console.error("Error fetching unfiltered data for summary:", error);
-        }
-      }
-    };
-
-    fetchUnfilteredData();
-  }, [isScopedCustomer]);
+    fetchSummaryData();
+  }, [fetchSummaryData]);
 
   // Interest deduction for all customers (Global Quarterly Interest)
   const [interestDeduction, setInterestDeduction] = useState(0);
 
   // Fetch total interest collected from all customers
   useEffect(() => {
+    let isMounted = true;
+
     const fetchTotalInterest = async () => {
       try {
         const { data, error } = await supabase
           .from("customer_interest")
           .select("total_interest_charged");
 
-        if (!error && data) {
+        if (!error && data && isMounted) {
           const total = data.reduce(
             (sum, row) => sum + (row.total_interest_charged || 0),
             0,
@@ -184,24 +94,18 @@ const SummaryPage = () => {
           setInterestDeduction(total);
         }
       } catch (err) {
-        console.error("Error fetching total interest deduction:", err);
+        if (isMounted) {
+          console.error("Error fetching total interest deduction:", err);
+        }
       }
     };
 
     fetchTotalInterest();
-  }, []);
 
-  // Use unfiltered data for scoped customers, context data for admins
-  const loans = isScopedCustomer ? loansForSummary : contextLoans;
-  const installments = isScopedCustomer
-    ? installmentsForSummary
-    : contextInstallments;
-  const subscriptions = isScopedCustomer
-    ? subscriptionsForSummary
-    : contextSubscriptions;
-  const dataEntries = isScopedCustomer
-    ? dataEntriesForSummary
-    : contextDataEntries;
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Lookup map for O(1) installment access by loan_id
   const localInstallmentsByLoanId = useMemo(() => {
@@ -230,7 +134,7 @@ const SummaryPage = () => {
     useState<number>(defaultFYStart);
   const [showAllFYOptions, setShowAllFYOptions] = useState(false);
   const [fyDropdownOpen, setFyDropdownOpen] = useState(false);
-  const fyDropdownRef = React.useRef<HTMLDivElement>(null);
+  const fyDropdownRef = useRef<HTMLDivElement>(null);
 
   // Build FY options from earliest date in data to latest
   const fyOptions = useMemo(() => {
@@ -438,16 +342,16 @@ const SummaryPage = () => {
   }, 0);
 
   // Modal state for breakdown details
-  const [breakdownOpen, setBreakdownOpen] = React.useState(false);
-  const [breakdownTitle, setBreakdownTitle] = React.useState("");
-  const [breakdownItems, setBreakdownItems] = React.useState<any[]>([]);
-  const [breakdownSummary, setBreakdownSummary] = React.useState<
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
+  const [breakdownTitle, setBreakdownTitle] = useState("");
+  const [breakdownItems, setBreakdownItems] = useState<any[]>([]);
+  const [breakdownSummary, setBreakdownSummary] = useState<
     { label: string; value: number }[]
   >([]);
-  const [breakdownType, setBreakdownType] = React.useState<
+  const [breakdownType, setBreakdownType] = useState<
     "subscriptions" | "interest" | "latefees" | "principal" | "total" | null
   >(null);
-  const [breakdownPage, setBreakdownPage] = React.useState(1);
+  const [breakdownPage, setBreakdownPage] = useState(1);
   const BREAKDOWN_PAGE_SIZE = 10;
 
   const openBreakdown = (
@@ -608,10 +512,7 @@ const SummaryPage = () => {
 
       setBreakdownItems(items);
 
-      // compute FY Total Loans Given: loans disbursed within the FY
-      const fyLoansGiven = loans
-        .filter((l) => within(l.payment_date))
-        .reduce((acc, l) => acc + (l.original_amount || 0), 0);
+      // Use outer fyLoansGiven (computed at component level)
       const fyPrincipal = fyPrincipalRecovered;
       const fyBalance = fyLoansGiven - fyPrincipal;
       setBreakdownSummary([
@@ -669,7 +570,7 @@ const SummaryPage = () => {
     breakdownType === "principal" ||
     breakdownType === "total";
 
-  const paginatedBreakdownItems = React.useMemo(() => {
+  const paginatedBreakdownItems = useMemo(() => {
     if (isPaginatedBreakdown && breakdownItems.length > BREAKDOWN_PAGE_SIZE) {
       const start = (breakdownPage - 1) * BREAKDOWN_PAGE_SIZE;
       return breakdownItems.slice(start, start + BREAKDOWN_PAGE_SIZE);
@@ -677,7 +578,7 @@ const SummaryPage = () => {
     return breakdownItems;
   }, [breakdownItems, breakdownPage, isPaginatedBreakdown]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isPaginatedBreakdown) return;
     const maxPage = Math.max(
       1,
@@ -715,6 +616,28 @@ const SummaryPage = () => {
   ];
 
   const leftCards = collectedBreakdownCards;
+
+  // Color class mappings for income breakdown cards
+  const cardColorClasses: Record<
+    string,
+    { bg: string; text: string; textBold: string }
+  > = {
+    cyan: {
+      bg: "bg-cyan-50 dark:bg-cyan-900/20 border-cyan-200 dark:border-cyan-800",
+      text: "text-cyan-700 dark:text-cyan-300",
+      textBold: "text-cyan-800 dark:text-cyan-200",
+    },
+    green: {
+      bg: "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800",
+      text: "text-green-700 dark:text-green-300",
+      textBold: "text-green-800 dark:text-green-200",
+    },
+    orange: {
+      bg: "bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800",
+      text: "text-orange-700 dark:text-orange-300",
+      textBold: "text-orange-800 dark:text-orange-200",
+    },
+  };
 
   // --- Export Functions (xlsx loaded dynamically to reduce bundle size) ---
   const handleExportSubscriptions = async () => {
@@ -1052,21 +975,21 @@ const SummaryPage = () => {
                       <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 py-2">
                         <button
                           onClick={handleExportLoans}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
+                          className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm flex items-center gap-2 dark:text-gray-200"
                         >
                           <FileDownIcon className="w-4 h-4 text-blue-600" />
                           Export Loans
                         </button>
                         <button
                           onClick={handleExportSubscriptions}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
+                          className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm flex items-center gap-2 dark:text-gray-200"
                         >
                           <FileDownIcon className="w-4 h-4 text-cyan-600" />
                           Export Subscriptions
                         </button>
                         <button
                           onClick={handleExportSeniority}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
+                          className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm flex items-center gap-2 dark:text-gray-200"
                         >
                           <FileDownIcon className="w-4 h-4 text-purple-600" />
                           Export Loan Seniority
@@ -1074,7 +997,7 @@ const SummaryPage = () => {
                         <div className="border-t border-gray-100 my-1" />
                         <button
                           onClick={handleExportComprehensive}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
+                          className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm flex items-center gap-2 dark:text-gray-200"
                         >
                           <FileDownIcon className="w-4 h-4 text-indigo-600" />
                           Export Comprehensive Report
@@ -1161,20 +1084,20 @@ const SummaryPage = () => {
                   {leftCards.map((card) => (
                     <div
                       key={card.label}
-                      className={`flex items-center justify-between px-4 py-3 rounded-lg bg-${card.color}-50 dark:bg-${card.color}-900/20 border border-${card.color}-200 dark:border-${card.color}-800`}
+                      className={`flex items-center justify-between px-4 py-3 rounded-lg border ${cardColorClasses[card.color].bg}`}
                     >
                       <span
-                        className={`text-sm font-medium text-${card.color}-700 dark:text-${card.color}-300`}
+                        className={`text-sm font-medium ${cardColorClasses[card.color].text}`}
                       >
                         {card.label}
                       </span>
                       <span
-                        className={`text-lg font-bold text-${card.color}-800 dark:text-${card.color}-200`}
+                        className={`text-lg font-bold ${cardColorClasses[card.color].textBold}`}
                       >
                         <AnimatedNumber value={card.value} />
                       </span>
                     </div>
-                  ))}
+                  ))}{" "}
                 </div>
               </div>
 
@@ -1629,7 +1552,7 @@ const SummaryPage = () => {
           )}
 
           <div className="text-center text-xs text-gray-400 mt-2">
-            Updated as of {formatDate(new Date().toISOString().slice(0, 10))}
+            Updated as of {formatDate(new Date().toISOString().split("T")[0])}
           </div>
 
           <FYBreakdownModal

@@ -2,6 +2,7 @@ import React, {
   createContext,
   useState,
   useContext,
+  useRef,
   ReactNode,
   useEffect,
   useCallback,
@@ -146,6 +147,12 @@ interface DataContextType {
   fetchDeletedCustomers: () => Promise<void>;
   restoreCustomer: (id: string) => Promise<void>;
   permanentDeleteCustomer: (id: string) => Promise<void>;
+  // Summary data (unfiltered for all users)
+  summaryLoans: LoanWithCustomer[];
+  summarySubscriptions: SubscriptionWithCustomer[];
+  summaryInstallments: Installment[];
+  summaryDataEntries: DataEntry[];
+  fetchSummaryData: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -276,6 +283,79 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [dataEntries, setDataEntries] = useState<DataEntry[]>([]);
   const [isScopedCustomer, setIsScopedCustomer] = useState(false);
   const [scopedCustomerId, setScopedCustomerId] = useState<string | null>(null);
+
+  // Summary data (unfiltered global data for summary page)
+  const [summaryLoans, setSummaryLoans] = useState<LoanWithCustomer[]>([]);
+  const [summarySubscriptions, setSummarySubscriptions] = useState<
+    SubscriptionWithCustomer[]
+  >([]);
+  const [summaryInstallments, setSummaryInstallments] = useState<Installment[]>(
+    [],
+  );
+  const [summaryDataEntries, setSummaryDataEntries] = useState<DataEntry[]>([]);
+  const summaryDataLoadedRef = useRef(false);
+
+  // Lazily fetch unfiltered summary data — for admins reuses context data, for scoped users fetches all records
+  const fetchSummaryData = useCallback(async () => {
+    try {
+      if (!isScopedCustomer) {
+        // Admin: always sync from context data (cheap copy, stays up to date)
+        setSummaryLoans(loans);
+        setSummarySubscriptions(subscriptions);
+        setSummaryInstallments(installments);
+        setSummaryDataEntries(dataEntries);
+      } else {
+        // Scoped user: fetch all records (unfiltered) from Supabase — only once
+        if (summaryDataLoadedRef.current) return;
+        const [allLoans, allSubs, allInstallments, allEntries] =
+          await Promise.all([
+            fetchAllRecords<LoanWithCustomer>(
+              () =>
+                supabase
+                  .from("loans")
+                  .select("*, customers(name, phone)")
+                  .is("deleted_at", null)
+                  .order("created_at", { ascending: false }),
+              "loans",
+            ),
+            fetchAllRecords<SubscriptionWithCustomer>(
+              () =>
+                supabase
+                  .from("subscriptions")
+                  .select("*, customers(name, phone)")
+                  .is("deleted_at", null)
+                  .order("created_at", { ascending: false }),
+              "subscriptions",
+            ),
+            fetchAllRecords<Installment>(
+              () =>
+                supabase
+                  .from("installments")
+                  .select("*")
+                  .is("deleted_at", null)
+                  .order("created_at", { ascending: false }),
+              "installments",
+            ),
+            fetchAllRecords<DataEntry>(
+              () =>
+                supabase
+                  .from("data_entries")
+                  .select("*")
+                  .is("deleted_at", null)
+                  .order("date", { ascending: false }),
+              "data_entries",
+            ),
+          ]);
+        setSummaryLoans(allLoans);
+        setSummarySubscriptions(allSubs);
+        setSummaryInstallments(allInstallments);
+        setSummaryDataEntries(allEntries);
+        summaryDataLoadedRef.current = true;
+      }
+    } catch (error) {
+      console.error("Error fetching summary data:", error);
+    }
+  }, [isScopedCustomer, loans, subscriptions, installments, dataEntries]);
 
   // Lookup maps for O(1) access - improves performance from O(n) to O(1)
   const customerMap = useMemo(() => {
@@ -1079,6 +1159,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const clearClientCache = async () => {
     try {
       clearData();
+      // Reset summary data loaded flag so fresh summary data can be fetched on new session
+      summaryDataLoadedRef.current = false;
       if (typeof window === "undefined") return;
       try {
         window.sessionStorage.clear();
@@ -2172,6 +2254,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [session?.user?.id]);
 
+  // Reset summary data loaded flag when session changes or scoped customer status changes
+  useEffect(() => {
+    if (!session) {
+      // Session cleared (logout) - reset flag for fresh summary fetch on next login
+      summaryDataLoadedRef.current = false;
+    }
+  }, [session]);
+
+  useEffect(() => {
+    // When isScopedCustomer changes, reset summary data so it's fetched with correct scope
+    summaryDataLoadedRef.current = false;
+  }, [isScopedCustomer]);
+
   const signInWithPassword = async (email: string, pass: string) => {
     try {
       // Clear any stale session state before login to prevent race conditions
@@ -2991,6 +3086,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         fetchDeletedCustomers,
         restoreCustomer,
         permanentDeleteCustomer,
+        summaryLoans,
+        summarySubscriptions,
+        summaryInstallments,
+        summaryDataEntries,
+        fetchSummaryData,
       }}
     >
       {children}

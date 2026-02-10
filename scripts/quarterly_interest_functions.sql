@@ -17,10 +17,23 @@ DECLARE
     v_quarter_end date;
     v_existing uuid;
     v_prev_total numeric;
+    v_month int := EXTRACT(MONTH FROM CURRENT_DATE)::int;
+    v_year  int := EXTRACT(YEAR  FROM CURRENT_DATE)::int;
 BEGIN
-    -- Determine current quarter boundaries
-    v_quarter_start := DATE_TRUNC('quarter', CURRENT_DATE)::date;
-    v_quarter_end := (v_quarter_start + INTERVAL '3 months' - INTERVAL '1 day')::date;
+    -- Determine current FY quarter boundaries (Apr-Jun, Jul-Sep, Oct-Dec, Jan-Mar)
+    IF v_month >= 4 AND v_month <= 6 THEN
+        v_quarter_start := make_date(v_year, 4, 1);
+        v_quarter_end   := make_date(v_year, 6, 30);
+    ELSIF v_month >= 7 AND v_month <= 9 THEN
+        v_quarter_start := make_date(v_year, 7, 1);
+        v_quarter_end   := make_date(v_year, 9, 30);
+    ELSIF v_month >= 10 AND v_month <= 12 THEN
+        v_quarter_start := make_date(v_year, 10, 1);
+        v_quarter_end   := make_date(v_year, 12, 31);
+    ELSE -- Jan-Mar
+        v_quarter_start := make_date(v_year, 1, 1);
+        v_quarter_end   := make_date(v_year, 3, 31);
+    END IF;
     
     -- Verify customer exists
     SELECT name INTO v_customer_name
@@ -74,7 +87,8 @@ BEGIN
         RETURN jsonb_build_object(
             'status', 'error',
             'error', 'Interest exceeds sanity cap',
-            'calculated_interest', v_interest
+            'calculated_interest', v_interest,
+            'customer_id', p_customer_id
         );
     END IF;
     
@@ -172,15 +186,21 @@ BEGIN
             'customer_id', p_customer_id
         );
     END IF;
-    
     -- Subtract from customer_interest
     UPDATE public.customer_interest
     SET total_interest_charged = GREATEST(0, total_interest_charged - v_ledger.interest_amount),
+        last_applied_quarter = (
+            SELECT period_start 
+            FROM public.interest_ledger 
+            WHERE customer_id = p_customer_id AND id != v_ledger.id
+            ORDER BY applied_at DESC 
+            LIMIT 1
+        ),
         updated_at = now()
     WHERE customer_id = p_customer_id;
     
     -- Delete ledger entry
-    DELETE FROM public.interest_ledger WHERE id = v_ledger.id;
+    DELETE FROM public.interest_ledger WHERE id = v_ledger.id;    DELETE FROM public.interest_ledger WHERE id = v_ledger.id;
     
     RETURN jsonb_build_object(
         'status', 'rolled_back',

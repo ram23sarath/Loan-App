@@ -1,7 +1,8 @@
 import { supabase } from '../lib/supabase';
+import { formatCurrencyIN } from './numberFormatter';
 import type { Installment, Loan, Customer } from '../types';
 
-export type NotificationType = 'backup' | 'user_created' | 'seniority_request' | 'installment_default' | 'system';
+export type NotificationType = 'backup' | 'user_created' | 'seniority_request' | 'installment_default' | 'quarterly_interest' | 'system';
 
 export interface SystemNotification {
   type: NotificationType;
@@ -94,12 +95,14 @@ export const formatInstallmentDefaultMessage = (
   amount: number,
   daysOverdue: number
 ): string => {
+  const formattedAmount = formatCurrencyIN(amount);
+  
   if (daysOverdue > 30) {
-    return `⚠️ URGENT: ${customer.name} - Installment #${installmentNumber} (${amount}) is ${daysOverdue} days overdue`;
+    return `⚠️ URGENT: ${customer.name} - Installment #${installmentNumber} (${formattedAmount}) is ${daysOverdue} days overdue`;
   } else if (daysOverdue > 7) {
-    return `⚠️ ${customer.name} - Installment #${installmentNumber} (${amount}) is ${daysOverdue} days overdue`;
+    return `⚠️ ${customer.name} - Installment #${installmentNumber} (${formattedAmount}) is ${daysOverdue} days overdue`;
   }
-  return `📋 ${customer.name} - Installment #${installmentNumber} (${amount}) is ${daysOverdue} days overdue`;
+  return `📋 ${customer.name} - Installment #${installmentNumber} (${formattedAmount}) is ${daysOverdue} days overdue`;
 };
 
 /**
@@ -118,20 +121,34 @@ export const checkAndNotifyOverdueInstallments = async (
       return 0;
     }
 
-    let notificationCount = 0;
+    // Fetch existing notifications for these installments in last 24 hours
+    // Only select installmentId from metadata to minimize data transfer
+    // A future optimization could use PostgreSQL JSONB operators if Supabase RLS supports it
+    const { data: existingNotifications } = await supabase
+      .from('system_notifications')
+      .select('metadata')
+      .eq('type', 'installment_default')
+      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+      .limit(1000);
+
+    // Build a Set of already-notified installment IDs for O(1) lookup
+    const notifiedInstallmentIds = new Set(
+      (existingNotifications || [])
+        .map((notif: any) => notif.metadata?.installmentId)
+        .filter((id): id is string => !!id)
+    );
+
+    // Prepare notification objects for batch insert (only for missing IDs)
+    const notificationsToInsert: Array<{
+      type: NotificationType;
+      status: SystemNotification['status'];
+      message: string;
+      metadata: Record<string, any>;
+    }> = [];
 
     for (const { installment, loan, customer, daysOverdue } of overdueInstallments) {
-      // Check if we already have a recent notification for this installment
-      const { data: existingNotifications } = await supabase
-        .from('system_notifications')
-        .select('id')
-        .eq('type', 'installment_default')
-        .contains('metadata', { installmentId: installment.id })
-        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Last 24 hours
-        .limit(1);
-
       // Only create if no recent notification exists for this installment
-      if (!existingNotifications || existingNotifications.length === 0) {
+      if (!notifiedInstallmentIds.has(installment.id)) {
         const statusValue: SystemNotification['status'] = daysOverdue > 30 ? 'error' : daysOverdue > 7 ? 'warning' : 'pending';
         const message = formatInstallmentDefaultMessage(
           customer,
@@ -140,7 +157,7 @@ export const checkAndNotifyOverdueInstallments = async (
           daysOverdue
         );
 
-        await createSystemNotification({
+        notificationsToInsert.push({
           type: 'installment_default',
           status: statusValue,
           message,
@@ -154,12 +171,22 @@ export const checkAndNotifyOverdueInstallments = async (
             dueDate: installment.date,
           },
         });
-
-        notificationCount++;
       }
     }
 
-    return notificationCount;
+    // Perform single batch insert if there are notifications to add
+    if (notificationsToInsert.length > 0) {
+      const { error } = await supabase
+        .from('system_notifications')
+        .insert(notificationsToInsert);
+
+      if (error) {
+        console.error('Failed to batch insert notifications:', error);
+        return 0;
+      }
+    }
+
+    return notificationsToInsert.length;
   } catch (err) {
     console.error('Failed to check overdue installments:', err);
     return 0;

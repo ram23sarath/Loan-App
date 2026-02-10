@@ -30,3 +30,9 @@ DROP POLICY IF EXISTS "Allow read access for all users" ON public.data_entries;
 DROP POLICY IF EXISTS "Allow read access for admins only" ON public.data_entries;
 CREATE POLICY "Allow read access for all users" ON public.data_entries
 FOR SELECT USING (auth.role() = 'authenticated');
+
+-- 6. CUSTOMER_INTEREST (Needed for Subscription Interest in Summary Dashboard)
+DROP POLICY IF EXISTS "Admin read access" ON public.customer_interest;
+DROP POLICY IF EXISTS "Allow read access for all users" ON public.customer_interest;
+CREATE POLICY "Allow read access for all users" ON public.customer_interest
+FOR SELECT USING (auth.role() = 'authenticated');

@@ -1,7 +1,6 @@
 -- ============================================================
 -- Migration: Quarterly Interest Schema
 -- Creates tables for tracking interest per customer
--- Target Customer: 6ccb0a6d-8df7-43db-8506-6e4e91157d45
 -- ============================================================
 
 -- 1. customer_interest: Track accumulated interest per customer
@@ -21,12 +20,9 @@ CREATE INDEX IF NOT EXISTS idx_customer_interest_customer ON public.customer_int
 
 ALTER TABLE public.customer_interest ENABLE ROW LEVEL SECURITY;
 
--- RLS: Admin-only access
-CREATE POLICY "Admin read access" ON public.customer_interest
-FOR SELECT USING (
-  auth.role() = 'authenticated' AND
-  NOT EXISTS (SELECT 1 FROM public.customers WHERE user_id = auth.uid())
-);
+-- RLS: All authenticated users can read (needed for Summary Dashboard)
+CREATE POLICY "Allow read access for all users" ON public.customer_interest
+FOR SELECT USING (auth.role() = 'authenticated');
 
 CREATE POLICY "Service role full access" ON public.customer_interest
 FOR ALL USING (auth.role() = 'service_role');

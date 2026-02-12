@@ -321,18 +321,48 @@ export type Database = {
           type: string
           message: string
           status: string
+          metadata?: Json | null
         }
         Insert: {
           type: string
           message: string
           status: string
+          metadata?: Json | null
         }
         Update: {
           type?: string
           message?: string
           status?: string
+          metadata?: Json | null
         }
         Relationships: []
+      }
+      notification_reads: {
+        Row: {
+          id: string
+          user_id: string
+          notification_id: string
+          read_at: string
+        }
+        Insert: {
+          user_id: string
+          notification_id: string
+          read_at?: string
+        }
+        Update: {
+          user_id?: string
+          notification_id?: string
+          read_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_reads_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "system_notifications"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       customer_interest: {
         Row: {

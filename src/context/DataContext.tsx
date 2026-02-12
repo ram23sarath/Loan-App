@@ -25,6 +25,8 @@ import type {
   NewDataEntry,
 } from "../types";
 import { checkAndNotifyOverdueInstallments } from "../utils/notificationHelpers";
+import { getLoanStatus } from "../utils/loanStatus";
+import { NOTIFICATION_TYPES, NOTIFICATION_STATUSES } from "../../shared/notificationSchema.js";
 
 // ... [parseSupabaseError function remains unchanged] ...
 const parseSupabaseError = (error: any, context: string): string => {
@@ -802,8 +804,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           const customer = customerMap.get(customerId);
           const name = customer?.name || "A customer";
           await supabase.from("system_notifications").insert({
-            type: "seniority_request",
-            status: "processing", // Using 'processing' makes it blue/info
+            type: NOTIFICATION_TYPES.SENIORITY_REQUEST,
+            status: NOTIFICATION_STATUSES.PENDING,
             message: `${name} requested For Loan Seniority: ${
               details?.loan_type || "General"
             }`,
@@ -2454,6 +2456,51 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       throw new Error(
         "Read-only access: scoped customers cannot add installments",
       );
+
+    let loanForStatus = loans.find(
+      (loan) => loan.id === installmentData.loan_id,
+    );
+    let fetchedInstallments: Installment[] | null = null;
+    if (!loanForStatus) {
+      const { data: fetchedLoan, error: fetchLoanError } = await supabase
+        .from("loans")
+        .select("*, customers(name, phone)")
+        .eq("id", installmentData.loan_id)
+        .is("deleted_at", null)
+        .single();
+      if (fetchLoanError)
+        throw new Error(parseSupabaseError(fetchLoanError, "finding loan"));
+      loanForStatus = fetchedLoan as LoanWithCustomer;
+
+      const { data: fetchedInstData, error: fetchInstError } = await supabase
+        .from("installments")
+        .select()
+        .eq("loan_id", installmentData.loan_id)
+        .is("deleted_at", null);
+      if (fetchInstError)
+        throw new Error(
+          parseSupabaseError(fetchInstError, "finding installments"),
+        );
+      fetchedInstallments = (fetchedInstData as Installment[]) ?? null;
+    }
+
+    if (!loanForStatus) {
+      throw new Error("Loan not found");
+    }
+
+    const existingInstallments =
+      fetchedInstallments && fetchedInstallments.length > 0
+        ? fetchedInstallments
+        : installments.filter(
+            (installment) =>
+              installment.loan_id === installmentData.loan_id &&
+              !installment.deleted_at,
+          );
+    const loanStatus = getLoanStatus(loanForStatus, existingInstallments);
+    if (loanStatus.status !== "In Progress") {
+      throw new Error("Installments can only be added to In Progress loans");
+    }
+
     try {
       const { data, error } = await supabase
         .from("installments")

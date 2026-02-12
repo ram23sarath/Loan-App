@@ -1,13 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
+import { NOTIFICATION_TYPES, NOTIFICATION_STATUSES } from '../../shared/notificationSchema.js';
 
 /**
  * Netlify Scheduled Function: Quarterly Interest Calculation
  * 
- * Runs on the 1st of every FY quarter start month:
- *   - April 1   (Q1: Apr–Jun)
- *   - July 1    (Q2: Jul–Sep)
- *   - October 1 (Q3: Oct–Dec)
- *   - January 1 (Q4: Jan–Mar)
+ * Runs at 00:00 IST on the 2nd of each FY quarter start month (equivalent to 18:30 UTC on the 1st):
+ *   - April 2   (Q1: Apr–Jun)
+ *   - July 2    (Q2: Jul–Sep)
+ *   - October 2 (Q3: Oct–Dec)
+ *   - January 2 (Q4: Jan–Mar)
  * 
  * Applies 3% interest on each customer's subscription total.
  * Idempotent — safe to re-run; the DB function skips already-processed quarters.
@@ -15,6 +16,12 @@ import { createClient } from '@supabase/supabase-js';
  * Environment variables required:
  *   - SUPABASE_URL
  *   - SUPABASE_SERVICE_ROLE_KEY
+  *   - CRON_SECRET
+  *     - Purpose: Secret used to validate incoming cron requests. When set,
+  *       the function expects an `Authorization: Bearer <CRON_SECRET>` header
+  *       on incoming requests and will reject requests without a matching
+  *       bearer token. Provide a strong secret string (e.g. a long random
+  *       token). Required in production to prevent unauthorized executions.
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -44,7 +51,18 @@ function getFYQuarter(date) {
 export default async (req) => {
   console.log('🕐 Quarterly Interest Cron triggered at', new Date().toISOString());
 
-  // Authenticate cron request using secret header
+  // Authenticate cron request using secret header.
+  // Require a CRON_SECRET in non-development environments so the function fails fast.
+  if (process.env.NODE_ENV !== 'development' && !CRON_SECRET) {
+    console.error('❌ Unauthorized: Missing CRON_SECRET in non-development environment');
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // If a secret is provided, validate the Authorization header.
+  // In development, missing CRON_SECRET is allowed (warn and continue).
   if (CRON_SECRET) {
     const authHeader = req.headers.authorization || '';
     const expectedAuth = `Bearer ${CRON_SECRET}`;
@@ -55,6 +73,8 @@ export default async (req) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
+  } else {
+    console.warn('⚠️ CRON_SECRET not set; running in development mode, skipping auth check');
   }
 
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
@@ -145,20 +165,52 @@ export default async (req) => {
         ? `${now.getFullYear() - 1}-${String(now.getFullYear()).slice(2)}`
         : `${now.getFullYear()}-${String(now.getFullYear() + 1).slice(2)}`;
 
+      const successfulCustomers = results.details
+        .filter((d) => d.status === 'success')
+        .map((d) => ({
+          id: d.id,
+          name: d.name,
+          interest_charged: d.interest_charged || 0,
+          subscription_total: d.subscription_total || 0,
+        }));
+
+      const skippedCustomers = results.details
+        .filter((d) => d.status === 'skipped')
+        .map((d) => ({
+          id: d.id,
+          name: d.name,
+          reason: d.reason || 'Skipped',
+        }));
+
+      const errorCustomers = results.details
+        .filter((d) => d.status === 'error')
+        .map((d) => ({
+          id: d.id,
+          name: d.name,
+          error: d.error || 'Unknown error',
+        }));
+
+      const sampleSize = 5;
+      const sampledCustomers = {
+        success: successfulCustomers.slice(0, sampleSize),
+        skipped: skippedCustomers.slice(0, sampleSize),
+        errors: errorCustomers.slice(0, sampleSize),
+      };
+
       let message, status;
       if (results.errors > 0) {
-        status = 'warning';
+        status = NOTIFICATION_STATUSES.WARNING;
         message = `⚠️ Quarterly Interest (${quarter.label} FY ${fyYear}): ${results.success} customers charged ₹${totalInterest.toLocaleString('en-IN')}, ${results.skipped} skipped, ${results.errors} errors`;
       } else if (results.success === 0) {
-        status = 'pending';
+        status = NOTIFICATION_STATUSES.PENDING;
         message = `ℹ️ Quarterly Interest (${quarter.label} FY ${fyYear}): No new interest applied — ${results.skipped} customers skipped (already processed or no subscriptions)`;
       } else {
-        status = 'success';
+        status = NOTIFICATION_STATUSES.SUCCESS;
         message = `✅ Quarterly Interest (${quarter.label} FY ${fyYear}): ₹${totalInterest.toLocaleString('en-IN')} charged across ${results.success} customers (${results.skipped} skipped)`;
       }
 
       await supabase.from('system_notifications').insert([{
-        type: 'system',
+        type: NOTIFICATION_TYPES.QUARTERLY_INTEREST,
         status,
         message,
         metadata: {
@@ -171,6 +223,9 @@ export default async (req) => {
           success_count: results.success,
           skipped_count: results.skipped,
           error_count: results.errors,
+          total_customers_processed: results.details.length,
+          sampled_customers: sampledCustomers,
+          top_errors: errorCustomers.slice(0, sampleSize).map((c) => c.error),
         },
       }]);
       console.log('🔔 Notification created in system_notifications');
@@ -198,8 +253,8 @@ export default async (req) => {
         auth: { autoRefreshToken: false, persistSession: false },
       });
       await supabaseForNotif.from('system_notifications').insert([{
-        type: 'system',
-        status: 'error',
+        type: NOTIFICATION_TYPES.QUARTERLY_INTEREST,
+        status: NOTIFICATION_STATUSES.ERROR,
         message: `❌ Quarterly Interest Cron Failed: ${err.message}`,
         metadata: { source: 'quarterly-interest-cron', error: err.message },
       }]);

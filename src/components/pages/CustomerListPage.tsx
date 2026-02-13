@@ -18,6 +18,7 @@ import DeleteConfirmationModal from "../modals/DeleteConfirmationModal";
 import type { Customer } from "../../types";
 import { useDeferredSearch } from "../../utils/useDebounce";
 import { openWhatsApp } from "../../utils/whatsapp";
+import { useModalBackHandler } from "../../utils/useModalBackHandler";
 
 // --- Icon Component ---
 const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -89,6 +90,14 @@ const CustomerListPage = () => {
     data: any;
   } | null>(null);
 
+  // Handle back button for modals
+  useModalBackHandler(!!editModal, () => setEditModal(null));
+  useModalBackHandler(!!deleteCustomerTarget, () => {
+    setDeleteCustomerTarget(null);
+    setDeleteCounts(null);
+  });
+  // Close CustomerDetailModal when back button pressed
+  useModalBackHandler(!!selectedCustomer, () => setSelectedCustomer(null));
   const [expandedSections, setExpandedSections] = useState({
     both: true,
     loans: false,
@@ -102,8 +111,6 @@ const CustomerListPage = () => {
     subs: 1,
     neither: 1,
   });
-
-
 
   const itemsPerPage = 25;
 
@@ -1822,20 +1829,20 @@ const CustomerListPage = () => {
                                       key={customer.id}
                                       className="relative overflow-hidden rounded-lg"
                                     >
-                                        <motion.div
-                                          className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
-                                          onClick={() =>
-                                            navigate(`/customers/${customer.id}`)
-                                          }
-                                          initial={{ opacity: 0 }}
-                                          animate={{ opacity: 1 }}
-                                          exit={{ opacity: 0 }}
-                                          transition={{
-                                            duration: 0.3,
-                                            delay: idx * 0.03,
-                                          }}
-                                          // Swipe actions removed as requested
-                                        >
+                                      <motion.div
+                                        className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
+                                        onClick={() =>
+                                          navigate(`/customers/${customer.id}`)
+                                        }
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        transition={{
+                                          duration: 0.3,
+                                          delay: idx * 0.03,
+                                        }}
+                                        // Swipe actions removed as requested
+                                      >
                                         <div className="flex items-center gap-1">
                                           <span className="text-xs text-gray-400 dark:text-dark-muted">
                                             Sr.No {rowNumber}

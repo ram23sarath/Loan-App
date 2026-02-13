@@ -25,6 +25,7 @@ import {
 import { formatDate } from "../../utils/dateFormatter";
 import { formatNumberIndian } from "../../utils/numberFormatter";
 import DeleteConfirmationModal from "./DeleteConfirmationModal";
+import { useModalBackHandler } from "../../utils/useModalBackHandler";
 
 interface CustomerDetailModalProps {
   customer: Customer;
@@ -326,6 +327,56 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     null,
   );
 
+  // Consolidated back handler for internal modal stack
+  // Avoid pushing multiple history entries by registering a single handler
+  // that closes the top-most internal modal in priority order.
+  const anyInternalModalOpen =
+    !!deleteLoanTarget ||
+    !!deleteSubTarget ||
+    !!deleteInstTarget ||
+    !!deleteDataEntryTarget ||
+    showRecordLoan ||
+    showRecordSubscription ||
+    showRecordDataEntry ||
+    !!editingDataEntry;
+
+  const closeTopInternalModal = () => {
+    if (editingDataEntry) {
+      setEditingDataEntry(null);
+      return;
+    }
+    if (showRecordDataEntry) {
+      setShowRecordDataEntry(false);
+      return;
+    }
+    if (showRecordSubscription) {
+      setShowRecordSubscription(false);
+      return;
+    }
+    if (showRecordLoan) {
+      setShowRecordLoan(false);
+      return;
+    }
+    if (deleteDataEntryTarget) {
+      setDeleteDataEntryTarget(null);
+      return;
+    }
+    if (deleteInstTarget) {
+      setDeleteInstTarget(null);
+      return;
+    }
+    if (deleteSubTarget) {
+      setDeleteSubTarget(null);
+      return;
+    }
+    if (deleteLoanTarget) {
+      setDeleteLoanTarget(null);
+      return;
+    }
+  };
+
+  useModalBackHandler(anyInternalModalOpen, closeTopInternalModal);
+
   const deleteLoanRef = useRef<HTMLDivElement | null>(null);
   const deleteSubRef = useRef<HTMLDivElement | null>(null);
   const deleteInstRef = useRef<HTMLDivElement | null>(null);
@@ -341,7 +392,6 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   };
 
   // Calculate summary totals
-
 
   // Get details of ongoing loan for tooltip
   // Reuse calculatePaymentPercentage helper to avoid duplicate computation

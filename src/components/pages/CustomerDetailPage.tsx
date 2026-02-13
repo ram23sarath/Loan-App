@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useRouteReady } from "../RouteReadySignal";
 import { useData } from "../../context/DataContext";
+import { useModalBackHandler } from "../../utils/useModalBackHandler";
 import CustomerDetailModal from "../modals/CustomerDetailModal";
 import EditModal from "../modals/EditModal";
 import PageWrapper from "../ui/PageWrapper";
@@ -46,6 +47,10 @@ const CustomerDetailPage: React.FC = () => {
     | { type: "installment"; data: Installment }
     | null
   >(null);
+
+  // Handle back button for EditModal
+  const clearEditModal = useCallback(() => setEditModal(null), []);
+  useModalBackHandler(!!editModal, clearEditModal);
 
   useEffect(() => {
     signalRouteReady();

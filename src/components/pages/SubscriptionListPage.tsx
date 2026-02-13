@@ -7,6 +7,7 @@ import { HistoryIcon, SpinnerIcon } from "../../constants";
 import type { SubscriptionWithCustomer } from "../../types";
 import { formatDate } from "../../utils/dateFormatter";
 import DeleteConfirmationModal from "../modals/DeleteConfirmationModal";
+import { useModalBackHandler } from "../../utils/useModalBackHandler";
 
 const SubscriptionListPage = () => {
   const signalRouteReady = useRouteReady();
@@ -16,6 +17,9 @@ const SubscriptionListPage = () => {
   const [pendingDelete, setPendingDelete] =
     React.useState<SubscriptionWithCustomer | null>(null);
   const [deleting, setDeleting] = React.useState(false);
+
+  // Handle back button for delete modal
+  useModalBackHandler(!!pendingDelete, () => setPendingDelete(null));
 
   useEffect(() => {
     signalRouteReady();

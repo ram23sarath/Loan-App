@@ -33,7 +33,7 @@ const LoginPage = () => {
   const cardRef = useRef<HTMLDivElement | null>(null);
   const [showLoginOnMobile, setShowLoginOnMobile] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const defaultLandingPath = "/";
+  const defaultLandingPath = "/home";
   const heroWords = [
     { text: "Welcome", accent: false },
     { text: "to", accent: false },

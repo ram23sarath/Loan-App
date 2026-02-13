@@ -18,6 +18,7 @@ import { Trash2Icon } from "../../constants";
 import { formatDate } from "../../utils/dateFormatter";
 import { useDebounce } from "../../utils/useDebounce";
 import { useEscapeKey } from "../hooks/useEscapeKey";
+import { useModalBackHandler } from "../../utils/useModalBackHandler";
 import AlertPopup from "../ui/AlertPopup";
 
 // Animation variants
@@ -482,6 +483,10 @@ const LoanSeniorityPage = () => {
 
   useEscapeKey(!!modalCustomer, closeModal);
   useEscapeKey(!!deleteTarget, () => setDeleteTarget(null));
+
+  // Handle back button for modals
+  useModalBackHandler(!!modalCustomer, closeModal);
+  useModalBackHandler(!!deleteTarget, () => setDeleteTarget(null));
 
   // Close modal on click outside
   useEffect(() => {

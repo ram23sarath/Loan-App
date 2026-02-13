@@ -111,6 +111,7 @@ const profileButtonVariants: Variants = {
 };
 
 const allNavItems = [
+  { path: "/home", label: "Home", icon: HomeIcon },
   { path: "/", label: "Add Customer", icon: UserPlusIcon, adminOnly: true },
   { path: "/add-record", label: "Add Record", icon: FilePlusIcon, adminOnly: true },
   { path: "/customers", label: "Customers", icon: UsersIcon, adminOnly: true },
@@ -142,7 +143,7 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
 
   // For scoped customers, add a Home link that navigates to the customer dashboard above Loans
   if (isScopedCustomer) {
-    const homeItem = { path: '/', label: 'Home', icon: HomeIcon };
+    const homeItem = { path: '/', label: 'Dashboard', icon: HomeIcon };
     const loansIndex = navItems.findIndex((it) => it.path === '/loans');
     if (loansIndex >= 0) {
       navItems.splice(loansIndex, 0, homeItem);

@@ -102,7 +102,7 @@ const CustomerListPage = () => {
     neither: 1,
   });
 
-  const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
+
 
   const itemsPerPage = 25;
 
@@ -904,25 +904,6 @@ const CustomerListPage = () => {
                                     key={customer.id}
                                     className="relative overflow-hidden rounded-lg"
                                   >
-                                    {/* Swipe background indicators */}
-                                    {draggingCardId === customer.id && (
-                                      <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
-                                        <div
-                                          className={`${
-                                            isScopedCustomer
-                                              ? "w-full"
-                                              : "w-1/2"
-                                          } bg-green-500 flex items-center justify-start pl-4`}
-                                        >
-                                          <WhatsAppIcon className="w-6 h-6 text-white" />
-                                        </div>
-                                        {!isScopedCustomer && (
-                                          <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
-                                            <Trash2Icon className="w-6 h-6 text-white" />
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
                                     <motion.div
                                       className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
                                       onClick={() =>
@@ -932,34 +913,7 @@ const CustomerListPage = () => {
                                       animate={{ opacity: 1 }}
                                       exit={{ opacity: 0 }}
                                       transition={{ duration: 0.1 }}
-                                      drag="x"
-                                      dragConstraints={{ left: 0, right: 0 }}
-                                      dragElastic={0}
-                                      dragMomentum={false}
-                                      dragDirectionLock={true}
-                                      style={{ touchAction: "pan-y" }}
-                                      onDragStart={() =>
-                                        setDraggingCardId(customer.id)
-                                      }
-                                      onDragEnd={(_, info) => {
-                                        setDraggingCardId(null);
-                                        const threshold = 100;
-                                        if (
-                                          !isScopedCustomer &&
-                                          info.offset.x < -threshold
-                                        ) {
-                                          handleDeleteCustomer(customer);
-                                        } else if (
-                                          info.offset.x > threshold &&
-                                          isValidPhone
-                                        ) {
-                                          openWhatsApp(
-                                            customer.phone,
-                                            message,
-                                            { cooldownMs: 1200 },
-                                          );
-                                        }
-                                      }}
+                                      // Swipe actions removed as requested
                                     >
                                       <div className="flex items-center gap-1">
                                         <span className="text-xs text-gray-400 dark:text-dark-muted">
@@ -1269,25 +1223,6 @@ const CustomerListPage = () => {
                                     key={customer.id}
                                     className="relative overflow-hidden rounded-lg"
                                   >
-                                    {/* Swipe background indicators */}
-                                    {draggingCardId === customer.id && (
-                                      <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
-                                        <div
-                                          className={`${
-                                            isScopedCustomer
-                                              ? "w-full"
-                                              : "w-1/2"
-                                          } bg-green-500 flex items-center justify-start pl-4`}
-                                        >
-                                          <WhatsAppIcon className="w-6 h-6 text-white" />
-                                        </div>
-                                        {!isScopedCustomer && (
-                                          <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
-                                            <Trash2Icon className="w-6 h-6 text-white" />
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
                                     <motion.div
                                       className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
                                       onClick={() =>
@@ -1300,34 +1235,7 @@ const CustomerListPage = () => {
                                         duration: 0.3,
                                         delay: idx * 0.03,
                                       }}
-                                      drag="x"
-                                      dragConstraints={{ left: 0, right: 0 }}
-                                      dragElastic={0}
-                                      dragMomentum={false}
-                                      dragDirectionLock={true}
-                                      style={{ touchAction: "pan-y" }}
-                                      onDragStart={() =>
-                                        setDraggingCardId(customer.id)
-                                      }
-                                      onDragEnd={(_, info) => {
-                                        setDraggingCardId(null);
-                                        const threshold = 100;
-                                        if (
-                                          !isScopedCustomer &&
-                                          info.offset.x < -threshold
-                                        ) {
-                                          handleDeleteCustomer(customer);
-                                        } else if (
-                                          info.offset.x > threshold &&
-                                          isValidPhone
-                                        ) {
-                                          openWhatsApp(
-                                            customer.phone,
-                                            message,
-                                            { cooldownMs: 1200 },
-                                          );
-                                        }
-                                      }}
+                                      // Swipe actions removed as requested
                                     >
                                       <div className="flex items-center gap-1">
                                         <span className="text-xs text-gray-400 dark:text-dark-muted">
@@ -1631,25 +1539,6 @@ const CustomerListPage = () => {
                                     key={customer.id}
                                     className="relative overflow-hidden rounded-lg"
                                   >
-                                    {/* Swipe background indicators */}
-                                    {draggingCardId === customer.id && (
-                                      <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
-                                        <div
-                                          className={`${
-                                            isScopedCustomer
-                                              ? "w-full"
-                                              : "w-1/2"
-                                          } bg-green-500 flex items-center justify-start pl-4`}
-                                        >
-                                          <WhatsAppIcon className="w-6 h-6 text-white" />
-                                        </div>
-                                        {!isScopedCustomer && (
-                                          <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
-                                            <Trash2Icon className="w-6 h-6 text-white" />
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
                                     <motion.div
                                       className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
                                       onClick={() =>
@@ -1662,34 +1551,7 @@ const CustomerListPage = () => {
                                         duration: 0.3,
                                         delay: idx * 0.03,
                                       }}
-                                      drag="x"
-                                      dragConstraints={{ left: 0, right: 0 }}
-                                      dragElastic={0}
-                                      dragMomentum={false}
-                                      dragDirectionLock={true}
-                                      style={{ touchAction: "pan-y" }}
-                                      onDragStart={() =>
-                                        setDraggingCardId(customer.id)
-                                      }
-                                      onDragEnd={(_, info) => {
-                                        setDraggingCardId(null);
-                                        const threshold = 100;
-                                        if (
-                                          !isScopedCustomer &&
-                                          info.offset.x < -threshold
-                                        ) {
-                                          handleDeleteCustomer(customer);
-                                        } else if (
-                                          info.offset.x > threshold &&
-                                          isValidPhone
-                                        ) {
-                                          openWhatsApp(
-                                            customer.phone,
-                                            message,
-                                            { cooldownMs: 1200 },
-                                          );
-                                        }
-                                      }}
+                                      // Swipe actions removed as requested
                                     >
                                       <div className="flex items-center gap-1">
                                         <span className="text-xs text-gray-400 dark:text-dark-muted">
@@ -1959,66 +1821,20 @@ const CustomerListPage = () => {
                                       key={customer.id}
                                       className="relative overflow-hidden rounded-lg"
                                     >
-                                      {/* Swipe background indicators */}
-                                      {draggingCardId === customer.id && (
-                                        <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
-                                          <div
-                                            className={`${
-                                              isScopedCustomer
-                                                ? "w-full"
-                                                : "w-1/2"
-                                            } bg-green-500 flex items-center justify-start pl-4`}
-                                          >
-                                            <WhatsAppIcon className="w-6 h-6 text-white" />
-                                          </div>
-                                          {!isScopedCustomer && (
-                                            <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
-                                              <Trash2Icon className="w-6 h-6 text-white" />
-                                            </div>
-                                          )}
-                                        </div>
-                                      )}
-                                      <motion.div
-                                        className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
-                                        onClick={() =>
-                                          setSelectedCustomer(customer)
-                                        }
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        transition={{
-                                          duration: 0.3,
-                                          delay: idx * 0.03,
-                                        }}
-                                        drag="x"
-                                        dragConstraints={{ left: 0, right: 0 }}
-                                        dragElastic={0}
-                                        dragMomentum={false}
-                                        dragDirectionLock={true}
-                                        style={{ touchAction: "pan-y" }}
-                                        onDragStart={() =>
-                                          setDraggingCardId(customer.id)
-                                        }
-                                        onDragEnd={(_, info) => {
-                                          setDraggingCardId(null);
-                                          const threshold = 100;
-                                          if (
-                                            !isScopedCustomer &&
-                                            info.offset.x < -threshold
-                                          ) {
-                                            handleDeleteCustomer(customer);
-                                          } else if (
-                                            info.offset.x > threshold &&
-                                            isValidPhone
-                                          ) {
-                                            openWhatsApp(
-                                              customer.phone,
-                                              message,
-                                              { cooldownMs: 1200 },
-                                            );
+                                        <motion.div
+                                          className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
+                                          onClick={() =>
+                                            setSelectedCustomer(customer)
                                           }
-                                        }}
-                                      >
+                                          initial={{ opacity: 0 }}
+                                          animate={{ opacity: 1 }}
+                                          exit={{ opacity: 0 }}
+                                          transition={{
+                                            duration: 0.3,
+                                            delay: idx * 0.03,
+                                          }}
+                                          // Swipe actions removed as requested
+                                        >
                                         <div className="flex items-center gap-1">
                                           <span className="text-xs text-gray-400 dark:text-dark-muted">
                                             Sr.No {rowNumber}

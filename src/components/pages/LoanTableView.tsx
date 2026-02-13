@@ -18,6 +18,7 @@ import {
   cardVariants,
   layoutTransition,
 } from "../../utils/useRowDeleteAnimation";
+import { useModalBackHandler } from "../../utils/useModalBackHandler";
 
 // Performance Note: Removed unused staggerChildren animation variants
 // The table already uses pagination (25 items) which is sufficient for performance.
@@ -258,9 +259,7 @@ const LoanTableView: React.FC = () => {
   }, [debouncedFilter, statusFilter, sortField, sortDirection]);
 
   const [expandedRow, setExpandedRow] = React.useState<string | null>(null);
-  const [draggingCardId, setDraggingCardId] = React.useState<string | null>(
-    null,
-  );
+
   const [deleteTarget, setDeleteTarget] = React.useState<{
     id: string;
     number: number;
@@ -300,6 +299,10 @@ const LoanTableView: React.FC = () => {
       setSortDirection("asc");
     }
   }
+
+  // Handle back button for modals
+  useModalBackHandler(!!editTarget, () => setEditTarget(null));
+  useModalBackHandler(!!editLoanTarget, () => setEditLoanTarget(null));
 
   // Close actions dropdown with Escape key
   React.useEffect(() => {
@@ -918,54 +921,9 @@ const LoanTableView: React.FC = () => {
                 className={`relative ${isDeleting ? "pointer-events-none" : ""}`}
                 style={{ overflow: "hidden" }}
               >
-                {/* Swipe background indicators - only visible when dragging this card */}
-                {draggingCardId === loan.id && !isDeleting && (
-                  <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
-                    <div
-                      className={`${
-                        isScopedCustomer ? "w-full" : "w-1/2"
-                      } bg-green-500 flex items-center justify-start pl-4`}
-                    >
-                      <WhatsAppIcon className="w-6 h-6 text-white" />
-                    </div>
-                    {!isScopedCustomer && (
-                      <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
-                        <Trash2Icon className="w-6 h-6 text-white" />
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 <motion.div
                   className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
-                  drag={isDeleting ? false : "x"}
-                  dragConstraints={{ left: 0, right: 0 }}
-                  dragElastic={0.3}
-                  dragMomentum={false}
-                  dragDirectionLock={true}
-                  style={{ touchAction: "pan-y" }}
-                  onDragStart={() => {
-                    setDraggingCardId(loan.id);
-                    if (expandedRow === loan.id) {
-                      setExpandedRow(null);
-                    }
-                  }}
-                  onDragEnd={(_, info) => {
-                    setDraggingCardId(null);
-                    const threshold = 100;
-                    if (info.offset.x < -threshold && !isScopedCustomer) {
-                      // Swipe left - Delete
-                      setDeleteLoanTarget({
-                        id: loan.id,
-                        customer: customer?.name ?? null,
-                      });
-                    } else if (info.offset.x > threshold && isValidPhone) {
-                      // Swipe right - WhatsApp
-                      openWhatsApp(customer?.phone, loanMessage, {
-                        cooldownMs: 1200,
-                      });
-                    }
-                  }}
+                  // Swipe actions removed as requested
                 >
                   {/* Row 1: Sr.No Name and Total Repayable */}
                   <div className="flex justify-between items-start">

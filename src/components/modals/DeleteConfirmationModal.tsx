@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import { Trash2Icon } from "../../constants";
+import { useModalBackHandler } from "../../utils/useModalBackHandler";
 
 interface DeleteConfirmationModalProps {
   isOpen: boolean;
@@ -42,6 +43,8 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
   cancelText = "Cancel",
   variant = "danger",
 }) => {
+  useModalBackHandler(isOpen, onClose);
+
   // Handle Escape key to close modal
   React.useEffect(() => {
     if (!isOpen) return;

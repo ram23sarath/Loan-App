@@ -9,6 +9,7 @@ import { openWhatsApp } from "../../utils/whatsapp";
 import { formatCurrencyIN } from "../../utils/numberFormatter";
 import EditModal from "../modals/EditModal";
 import { useDebounce } from "../../utils/useDebounce";
+import { useModalBackHandler } from "../../utils/useModalBackHandler";
 import {
   rowVariants,
   cardVariants,
@@ -62,6 +63,9 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
   const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">(
     "asc",
   );
+
+  // Handle back button for EditModal
+  useModalBackHandler(!!editSubscriptionTarget, () => setEditSubscriptionTarget(null));
 
   // Memoize scoped and filtered subscriptions to prevent recalculation on every render
   const scopedSubscriptions = React.useMemo(() => {
@@ -407,44 +411,9 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
                 className={`relative ${isDeleting ? "pointer-events-none" : ""}`}
                 style={{ overflow: "hidden" }}
               >
-                {/* Swipe background indicators - only visible when dragging this card */}
-                {draggingCardId === sub.id && !isDeleting && (
-                  <div className="absolute inset-0 flex rounded-lg overflow-hidden z-0">
-                    <div
-                      className={`${isScopedCustomer ? "w-full" : "w-1/2"} bg-green-500 flex items-center justify-start pl-4`}
-                    >
-                      <WhatsAppIcon className="w-6 h-6 text-white" />
-                    </div>
-                    {!isScopedCustomer && (
-                      <div className="w-1/2 bg-red-500 flex items-center justify-end pr-4">
-                        <Trash2Icon className="w-6 h-6 text-white" />
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 <motion.div
                   className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
-                  drag={isDeleting ? false : "x"}
-                  dragConstraints={{ left: 0, right: 0 }}
-                  dragElastic={0.3}
-                  dragMomentum={false}
-                  dragDirectionLock={true}
-                  style={{ touchAction: "pan-y" }}
-                  onDragStart={() => setDraggingCardId(sub.id)}
-                  onDragEnd={(_, info) => {
-                    setDraggingCardId(null);
-                    const threshold = 100;
-                    if (info.offset.x < -threshold && !isScopedCustomer) {
-                      // Swipe left - Delete
-                      onDelete(sub);
-                    } else if (info.offset.x > threshold && isValidPhone) {
-                      // Swipe right - WhatsApp
-                      openWhatsApp(customer?.phone, message, {
-                        cooldownMs: 1200,
-                      });
-                    }
-                  }}
+                  // Swipe actions removed as requested
                 >
                   {/* Row 1: # Name and Amount */}
                   <div className="flex justify-between items-start">

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { useData } from '../../context/DataContext';
 import { formatCurrencyIN } from '../../utils/numberFormatter';
+import { useModalBackHandler } from '../../utils/useModalBackHandler';
 import Toast from '../ui/Toast';
 import type { LoanWithCustomer, NewInstallment } from '../../types';
 
@@ -47,6 +48,7 @@ const modalVariants = {
 };
 
 const RecordInstallmentModal: React.FC<Props> = ({ loan, onClose, onSuccess }) => {
+  useModalBackHandler(true, onClose);
   const { addInstallment, installmentsByLoanId } = useData();
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
     show: false,

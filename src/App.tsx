@@ -50,6 +50,7 @@ const CustomerDashboard = React.lazy(
   () => import("./components/pages/CustomerDashboard"),
 );
 const TrashPage = React.lazy(() => import("./components/pages/TrashPage"));
+const HomePage = React.lazy(() => import("./components/pages/HomePage"));
 
 // Wrapper to handle lazy loading timeouts
 const LazyPageWrapper: React.FC<{
@@ -166,6 +167,7 @@ const AnimatedRoutes = () => {
               )
             }
           />
+          <Route path="/home" element={<HomePage />} />
           <Route
             path="/add-record"
             element={

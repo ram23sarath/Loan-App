@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import ReactDOM from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useData } from "../../context/DataContext";
 import { useRouteReady } from "../RouteReadySignal";
 import GlassCard from "../ui/GlassCard";
@@ -37,6 +37,7 @@ const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 const CustomerListPage = () => {
+  const navigate = useNavigate();
   const signalRouteReady = useRouteReady();
   const {
     customers,
@@ -907,7 +908,7 @@ const CustomerListPage = () => {
                                     <motion.div
                                       className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
                                       onClick={() =>
-                                        setSelectedCustomer(customer)
+                                        navigate(`/customers/${customer.id}`)
                                       }
                                       initial={false}
                                       animate={{ opacity: 1 }}
@@ -1226,7 +1227,7 @@ const CustomerListPage = () => {
                                     <motion.div
                                       className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
                                       onClick={() =>
-                                        setSelectedCustomer(customer)
+                                        navigate(`/customers/${customer.id}`)
                                       }
                                       initial={{ opacity: 0 }}
                                       animate={{ opacity: 1 }}
@@ -1542,7 +1543,7 @@ const CustomerListPage = () => {
                                     <motion.div
                                       className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
                                       onClick={() =>
-                                        setSelectedCustomer(customer)
+                                        navigate(`/customers/${customer.id}`)
                                       }
                                       initial={{ opacity: 0 }}
                                       animate={{ opacity: 1 }}
@@ -1824,7 +1825,7 @@ const CustomerListPage = () => {
                                         <motion.div
                                           className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
                                           onClick={() =>
-                                            setSelectedCustomer(customer)
+                                            navigate(`/customers/${customer.id}`)
                                           }
                                           initial={{ opacity: 0 }}
                                           animate={{ opacity: 1 }}

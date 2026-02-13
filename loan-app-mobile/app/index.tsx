@@ -79,13 +79,10 @@ export default function WebViewScreen() {
   const previousIsOfflineRef = useRef<boolean>(false);
   const hasInitiallyLoadedRef = useRef(false);
   const overlayOpacity = useRef(new Animated.Value(1)).current;
-  // Track whether to suppress loading screen for the next navigation
-  const suppressLoadingRef = useRef(false);
 
   // State
   const [isLoading, setIsLoading] = useState(true);
   const [showOverlay, setShowOverlay] = useState(true);
-  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [canGoBack, setCanGoBack] = useState(false);
@@ -95,7 +92,6 @@ export default function WebViewScreen() {
   const markInitiallyLoaded = useCallback(() => {
     if (!hasInitiallyLoadedRef.current) {
       hasInitiallyLoadedRef.current = true;
-      setHasInitiallyLoaded(true);
     }
   }, []);
 
@@ -445,26 +441,6 @@ export default function WebViewScreen() {
         }),
       );
 
-
-      handlerUnsubscribersRef.current.push(
-        bridgeRef.current.on("SUPPRESS_LOADING_SCREEN", () => {
-          console.log(
-            "[WebView] SUPPRESS_LOADING_SCREEN - next navigation will not show loading overlay",
-          );
-          suppressLoadingRef.current = true;
-        }),
-      );
-
-      handlerUnsubscribersRef.current.push(
-        bridgeRef.current.on("SHOW_LOADING_SCREEN", () => {
-          console.log(
-            "[WebView] SHOW_LOADING_SCREEN - explicitly showing loading overlay",
-          );
-          suppressLoadingRef.current = false;
-          setIsLoading(true);
-        }),
-      );
-
       // Cleanup function: unsubscribe all handlers when component unmounts or bridge is recreated
       return () => {
         handlerUnsubscribersRef.current.forEach((unsubscribe) => unsubscribe());
@@ -684,22 +660,18 @@ export default function WebViewScreen() {
   );
 
   const handleLoadStart = useCallback(() => {
-    console.log("[WebView] Load started");
-
-    // Check if loading screen should be suppressed for this navigation
-    if (suppressLoadingRef.current) {
-      console.log(
-        "[WebView] Loading screen suppressed for this navigation (in-page action)",
-      );
-      // Reset the flag after consuming it
-      suppressLoadingRef.current = false;
+    // After the initial load, never show skeleton again.
+    // SPA navigations use History API (pushState/replaceState) which don't fire
+    // onLoadStart anyway. This callback only fires for full page loads (cold start,
+    // pull-to-refresh, error recovery). After initial load, those reloads use the
+    // native pull-to-refresh spinner instead of the skeleton overlay.
+    if (hasInitiallyLoadedRef.current) {
+      console.log("[WebView] Load started (post-initial — skipping skeleton)");
       setError(null);
       return;
     }
 
-    // Show loading overlay for actual page navigations
-    // React Native WebView `onLoadStart` only fires for actual network loads (navigation),
-    // not for History API pushState/replaceState, so this generally indicates a full load.
+    console.log("[WebView] Load started (initial load — showing skeleton)");
     setIsLoading(true);
     setError(null);
   }, []);

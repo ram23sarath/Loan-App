@@ -824,3 +824,22 @@ input[type="date"]::-moz-calendar-picker-indicator:hover {
 .delay-400 {
   animation-delay: 0.4s;
 }
+
+/* ===== NATIVE WEBVIEW ANIMATION OPTIMIZATIONS ===== */
+/* These overrides only apply when running inside the Expo native wrapper.
+   The body gets class "native-app" from LoginPage.tsx when isNativeApp() is true.
+   Desktop web keeps the full premium filter-based animations. */
+
+/* Disable expensive filter: drop-shadow pulse for native */
+body.native-app .premium-pulse-glow {
+  animation: none !important;
+  filter: none !important;
+}
+
+/* Replace drop-shadow with lightweight text-shadow for glow text on native */
+body.native-app .premium-glow-text {
+  filter: none !important;
+  text-shadow:
+    0 0 20px rgba(102, 126, 234, 0.5),
+    0 0 40px rgba(118, 75, 162, 0.3);
+}

@@ -1,4 +1,11 @@
-import React, { useState, useRef, useEffect, Suspense, lazy } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  Suspense,
+  lazy,
+  useMemo,
+} from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { useNavigate, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -8,7 +15,12 @@ import GlassCard from "../ui/GlassCard";
 import Toast from "../ui/Toast";
 import LoadingSpinner from "../ui/LoadingSpinner";
 // Lazy load the heavy animation component
-const FireTruckAnimation = lazy(() => import(/* webpackChunkName: "firetruck-animation" */ '../ui/FireTruckAnimation'));
+const FireTruckAnimation = lazy(
+  () =>
+    import(
+      /* webpackChunkName: "firetruck-animation" */ "../ui/FireTruckAnimation"
+    ),
+);
 import { EyeIcon, EyeOffIcon } from "../../constants";
 
 type FormInputs = {
@@ -34,6 +46,8 @@ const LoginPage = () => {
   const [showLoginOnMobile, setShowLoginOnMobile] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const defaultLandingPath = "/home";
+  const isNative = typeof window !== "undefined" && window.isNativeApp?.();
+
   const heroWords = [
     { text: "Welcome", accent: false },
     { text: "to", accent: false },
@@ -49,14 +63,14 @@ const LoginPage = () => {
       opacity: 0,
       y: mobile ? 180 : 16,
       scale: mobile ? 0.94 : 1,
-      filter: "blur(6px)",
+      ...(isNative ? {} : { filter: "blur(6px)" }),
       pointerEvents: "none",
     }),
     visible: {
       opacity: 1,
       y: 0,
       scale: 1,
-      filter: "blur(0px)",
+      ...(isNative ? {} : { filter: "blur(0px)" }),
       pointerEvents: "auto",
       transition: {
         type: "spring",
@@ -93,11 +107,21 @@ const LoginPage = () => {
       img.src = src;
     });
 
+    // Add native-app CSS class for CSS-level animation optimizations
+    if (isNative) {
+      document.body.classList.add("native-app");
+    }
+
     // Signal to native wrapper that this page is ready
     signalRouteReady();
 
-    return () => window.removeEventListener("resize", checkMobile);
-  }, [signalRouteReady]);
+    return () => {
+      window.removeEventListener("resize", checkMobile);
+      if (isNative) {
+        document.body.classList.remove("native-app");
+      }
+    };
+  }, [signalRouteReady, isNative]);
 
   const handleScrollToLogin = () => {
     if (!showLoginOnMobile) setShowLoginOnMobile(true);
@@ -172,15 +196,47 @@ const LoginPage = () => {
       },
     },
   };
-  const wordVariants = {
-    hidden: { opacity: 0, y: 22, filter: "blur(8px)" },
-    visible: {
-      opacity: 1,
-      y: 0,
-      filter: "blur(0px)",
-      transition: { duration: 0.6, ease: "easeOut" },
-    },
-  };
+  const wordVariants = useMemo(
+    () =>
+      isNative
+        ? {
+            hidden: { opacity: 0, y: 22, scale: 0.92 },
+            visible: {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              transition: { duration: 0.5, ease: "easeOut" },
+            },
+          }
+        : {
+            hidden: { opacity: 0, y: 22, filter: "blur(8px)" },
+            visible: {
+              opacity: 1,
+              y: 0,
+              filter: "blur(0px)",
+              transition: { duration: 0.6, ease: "easeOut" },
+            },
+          },
+    [isNative],
+  );
+
+  const logoAnimate = useMemo(
+    () =>
+      isNative
+        ? {
+            y: [0, -6, 0],
+            opacity: [0.85, 1, 0.85],
+          }
+        : {
+            y: [0, -6, 0],
+            filter: [
+              "drop-shadow(0 0 20px rgba(102, 126, 234, 0.5))",
+              "drop-shadow(0 0 35px rgba(192, 132, 252, 0.6))",
+              "drop-shadow(0 0 20px rgba(102, 126, 234, 0.5))",
+            ],
+          },
+    [isNative],
+  );
 
   // If user is already logged in and we are not showing animation, redirect
   if (session && !showAnimation) {
@@ -273,14 +329,7 @@ const LoginPage = () => {
             >
               <motion.p
                 className="text-2xl sm:text-3xl lg:text-4xl font-black premium-glow-text leading-tight"
-                animate={{
-                  y: [0, -6, 0],
-                  filter: [
-                    "drop-shadow(0 0 20px rgba(102, 126, 234, 0.5))",
-                    "drop-shadow(0 0 35px rgba(192, 132, 252, 0.6))",
-                    "drop-shadow(0 0 20px rgba(102, 126, 234, 0.5))",
-                  ],
-                }}
+                animate={logoAnimate}
                 transition={{
                   duration: 4,
                   repeat: Infinity,

@@ -17,7 +17,16 @@ import type { RefObject } from 'react';
 // MESSAGE TYPES - Web → Native Commands
 // ============================================================================
 
-/** Commands sent from Web to Native */
+/**
+ * Commands sent from Web to Native
+ *
+ * NOTE: The `'NAVIGATION_READY'` variant is retained here for
+ * backward-compatibility / as a reserved symbol so older web builds that
+ * reference it remain type-safe. The injected bridge script no longer emits
+ * this signal (see the commented-out `window.sendToNative('NAVIGATION_READY')`
+ * near the end of this file), so it is intentionally unused by runtime but
+ * kept in the union to avoid breaking older integrations.
+ */
 export type WebToNativeCommand =
   | { type: 'AUTH_REQUEST' }
   | { type: 'AUTH_LOGOUT' }
@@ -33,21 +42,7 @@ export type WebToNativeCommand =
   | { type: 'ERROR_REPORT'; payload: { message: string; stack?: string; componentStack?: string } }
   | { type: 'THEME_DETECTED'; payload: { mode: 'light' | 'dark' } }
   | { type: 'DEEP_LINK_ACK'; payload: { path: string; requestId?: string } }
-  /**
-   * Signal that the web app is visually ready (fonts loaded, critical content rendered).
-   * Sent after initial load and route changes to dismiss the native loading overlay.
-   */
-  | { type: 'APP_READY' }
-  /**
-   * Suppress the loading screen for the next navigation.
-   * Used for in-page actions like opening modals, clicking buttons, etc.
-   */
-  | { type: 'SUPPRESS_LOADING_SCREEN' }
-  /**
-   * Explicitly show the loading screen.
-   * Used when the web app wants to show loading for a specific action.
-   */
-  | { type: 'SHOW_LOADING_SCREEN' };
+  | { type: 'APP_READY' };
 
 // ============================================================================
 // MESSAGE TYPES - Native → Web Responses
@@ -266,11 +261,8 @@ export const BRIDGE_INJECTION_SCRIPT = `
     if (newUrl !== lastUrl) {
       lastUrl = newUrl;
       console.log('[NativeBridge] URL changed to:', lastUrl);
-      
-      // Signal page loaded - web app will send APP_READY when stable if needed
-      if (window.sendToNative) {
-        window.sendToNative('PAGE_LOADED', { route: window.location.pathname });
-      }
+      // RouteReadySignal component handles PAGE_LOADED/APP_READY signals
+      // per-page after visual stability is confirmed.
     }
   };
   
@@ -398,14 +390,6 @@ export const BRIDGE_INJECTION_SCRIPT = `
     
     reportAppReady: function() {
       window.sendToNative('APP_READY');
-    },
-    
-    suppressLoadingScreen: function() {
-      window.sendToNative('SUPPRESS_LOADING_SCREEN');
-    },
-    
-    showLoadingScreen: function() {
-      window.sendToNative('SHOW_LOADING_SCREEN');
     }
   };
   

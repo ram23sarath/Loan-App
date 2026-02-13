@@ -37,7 +37,17 @@ export type WebToNativeCommand =
    * Signal that the web app is visually ready (fonts loaded, critical content rendered).
    * Sent after initial load and route changes to dismiss the native loading overlay.
    */
-  | { type: 'APP_READY' };
+  | { type: 'APP_READY' }
+  /**
+   * Suppress the loading screen for the next navigation.
+   * Used for in-page actions like opening modals, clicking buttons, etc.
+   */
+  | { type: 'SUPPRESS_LOADING_SCREEN' }
+  /**
+   * Explicitly show the loading screen.
+   * Used when the web app wants to show loading for a specific action.
+   */
+  | { type: 'SHOW_LOADING_SCREEN' };
 
 // ============================================================================
 // MESSAGE TYPES - Native → Web Responses
@@ -388,6 +398,14 @@ export const BRIDGE_INJECTION_SCRIPT = `
     
     reportAppReady: function() {
       window.sendToNative('APP_READY');
+    },
+    
+    suppressLoadingScreen: function() {
+      window.sendToNative('SUPPRESS_LOADING_SCREEN');
+    },
+    
+    showLoadingScreen: function() {
+      window.sendToNative('SHOW_LOADING_SCREEN');
     }
   };
   

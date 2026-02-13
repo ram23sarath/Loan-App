@@ -154,7 +154,8 @@ const AnimatedRoutes = () => {
   return (
     <Suspense fallback={suspenseFallback}>
       <AnimatePresence mode="wait">
-        <Routes location={location}>
+        {/* @ts-expect-error - Routes accepts `key` for reconciliation even if types don't show it */}
+        <Routes location={location} key={location.key}>
           <Route
             path="/"
             element={

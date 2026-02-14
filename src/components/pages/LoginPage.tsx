@@ -43,6 +43,8 @@ const LoginPage = () => {
   const [isWiggling, setIsWiggling] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const cardRef = useRef<HTMLDivElement | null>(null);
+  const emailInputRef = useRef<HTMLInputElement | null>(null);
+  const hasRevealedLoginRef = useRef(false);
   const [showLoginOnMobile, setShowLoginOnMobile] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const defaultLandingPath = "/home";
@@ -61,23 +63,17 @@ const LoginPage = () => {
   const formVariants = {
     hidden: (mobile: boolean) => ({
       opacity: 0,
-      y: mobile ? 180 : 16,
-      scale: mobile ? 0.94 : 1,
+      y: mobile ? 8 : 16,
       ...(isNative ? {} : { filter: "blur(6px)" }),
       pointerEvents: "none",
     }),
     visible: {
       opacity: 1,
       y: 0,
-      scale: 1,
       ...(isNative ? {} : { filter: "blur(0px)" }),
       pointerEvents: "auto",
       transition: {
-        type: "spring",
-        stiffness: 220,
-        damping: 26,
-        mass: 0.9,
-        duration: 0.7,
+        duration: 0.3,
         delay: 0.05,
       },
     },
@@ -124,14 +120,23 @@ const LoginPage = () => {
   }, [signalRouteReady, isNative]);
 
   const handleScrollToLogin = () => {
-    if (!showLoginOnMobile) setShowLoginOnMobile(true);
-    // wait for the card to render on mobile then scroll
-    setTimeout(() => {
-      if (cardRef.current) {
-        cardRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }, 60);
+    if (!showLoginOnMobile) {
+      setShowLoginOnMobile(true);
+      return;
+    }
+
+    emailInputRef.current?.focus();
   };
+
+  useEffect(() => {
+    if (!isMobile || !showLoginOnMobile || hasRevealedLoginRef.current) return;
+
+    hasRevealedLoginRef.current = true;
+    requestAnimationFrame(() => {
+      cardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      emailInputRef.current?.focus();
+    });
+  }, [isMobile, showLoginOnMobile]);
 
   const normalizeLoginIdentifier = (value: string) => {
     const v = value.trim();
@@ -169,6 +174,10 @@ const LoginPage = () => {
   const handleAnimationComplete = () => {
     navigate(defaultLandingPath, { replace: true });
   };
+
+  const emailRegistration = register("email", {
+    required: "Email, username, or phone is required",
+  });
 
   // Wiggle animation variants
   const wiggleVariants = {
@@ -261,13 +270,16 @@ const LoginPage = () => {
         type="error"
       />
 
-      {(!isMobile || !showLoginOnMobile) && (
-        <motion.div
-          className="w-full flex flex-col items-center md:items-start md:justify-center md:w-1/2 md:pr-8 mb-6 md:mb-0"
+      <motion.div
+        className={`w-full flex flex-col items-center md:items-start md:justify-center md:w-1/2 md:pr-8 mb-6 md:mb-0 transition-all duration-300 ${
+          isMobile && showLoginOnMobile
+            ? "opacity-0 pointer-events-none -translate-y-2 max-h-0 mb-0 overflow-hidden"
+            : "opacity-100 translate-y-0"
+        }`}
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-        >
+      >
           <motion.h1
             className="text-4xl sm:text-5xl lg:text-6xl font-black mb-8 leading-[1.1] tracking-tight text-center md:text-left"
             variants={wordContainerVariants}
@@ -377,18 +389,20 @@ const LoginPage = () => {
               />
             </svg>
           </motion.button>
-        </motion.div>
-      )}
+      </motion.div>
 
-      {(!isMobile || showLoginOnMobile) && (
-        <motion.div
-          ref={cardRef}
-          className="w-full max-w-md"
+      <motion.div
+        ref={cardRef}
+        className={`w-full max-w-md transition-all duration-300 ${
+          isMobile && !showLoginOnMobile
+            ? "opacity-0 pointer-events-none translate-y-2 max-h-0 overflow-hidden"
+            : "opacity-100 pointer-events-auto translate-y-0"
+        }`}
           variants={formVariants}
           custom={isMobile}
           initial="hidden"
           animate="visible"
-        >
+      >
           <GlassCard
             className="w-full"
             initial={{ opacity: 0, scale: 0.9 }}
@@ -409,9 +423,11 @@ const LoginPage = () => {
                 <input
                   id="email"
                   type="text"
-                  {...register("email", {
-                    required: "Email, username, or phone is required",
-                  })}
+                  {...emailRegistration}
+                  ref={(el) => {
+                    emailRegistration.ref(el);
+                    emailInputRef.current = el;
+                  }}
                   className="w-full bg-gray-50 border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted"
                   placeholder="Enter Phone Number"
                   disabled={isSubmitting || showAnimation}
@@ -476,8 +492,7 @@ const LoginPage = () => {
               </motion.button>
             </form>
           </GlassCard>
-        </motion.div>
-      )}
+      </motion.div>
     </div>
   );
 };

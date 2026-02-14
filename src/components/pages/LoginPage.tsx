@@ -47,6 +47,7 @@ const LoginPage = () => {
   const hasRevealedLoginRef = useRef(false);
   const [showLoginOnMobile, setShowLoginOnMobile] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const shouldShowHeroSection = !isMobile || !showLoginOnMobile;
   const defaultLandingPath = "/home";
   const isNative = typeof window !== "undefined" && window.isNativeApp?.();
 
@@ -270,16 +271,13 @@ const LoginPage = () => {
         type="error"
       />
 
-      <motion.div
-        className={`w-full flex flex-col items-center md:items-start md:justify-center md:w-1/2 md:pr-8 mb-6 md:mb-0 transition-all duration-300 ${
-          isMobile && showLoginOnMobile
-            ? "opacity-0 pointer-events-none -translate-y-2 max-h-0 mb-0 overflow-hidden"
-            : "opacity-100 translate-y-0"
-        }`}
+      {shouldShowHeroSection && (
+        <motion.div
+          className="w-full flex flex-col items-center md:items-start md:justify-center md:w-1/2 md:pr-8 mb-6 md:mb-0"
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-      >
+        >
           <motion.h1
             className="text-4xl sm:text-5xl lg:text-6xl font-black mb-8 leading-[1.1] tracking-tight text-center md:text-left"
             variants={wordContainerVariants}
@@ -389,7 +387,8 @@ const LoginPage = () => {
               />
             </svg>
           </motion.button>
-      </motion.div>
+        </motion.div>
+      )}
 
       <motion.div
         ref={cardRef}

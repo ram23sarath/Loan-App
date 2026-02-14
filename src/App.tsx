@@ -118,9 +118,20 @@ const AnimatedRoutes = () => {
   const location = useLocation();
   const { isScopedCustomer } = useData();
 
-  // Show minimal spinner during lazy loading - required for native wrapper to avoid blank screens
-  // Native has its own loading screen for initial load, but Suspense fallback is needed for navigation
-  const suspenseFallback = isInNativeWrapper() ? (
+  // Show route-level Suspense fallback only for the initial route load.
+  // After the first navigation within the SPA, suppress fallback UI to avoid
+  // spinner/skeleton flashes during route transitions.
+  const initialLocationKeyRef = React.useRef(location.key);
+  const [isInitialRouteLoad, setIsInitialRouteLoad] = React.useState(true);
+
+  React.useEffect(() => {
+    if (location.key !== initialLocationKeyRef.current && isInitialRouteLoad) {
+      setIsInitialRouteLoad(false);
+    }
+  }, [isInitialRouteLoad, location.key]);
+
+  // Keep fallback only for first/full page load; do not show during in-app navigations.
+  const suspenseFallback = !isInitialRouteLoad ? null : isInNativeWrapper() ? (
     // Minimal inline spinner for native wrapper - shows during lazy route transitions
     <div
       style={{

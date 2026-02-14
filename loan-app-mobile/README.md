@@ -84,6 +84,7 @@ loan-app-mobile/
 ├── config/
 │   └── env.ts                # Environment configuration
 ├── components/
+│   ├── LandingScreen.tsx     # Android startup landing screen
 │   ├── LoadingScreen.tsx     # Loading state
 │   ├── OfflineScreen.tsx     # Offline detection
 │   └── ErrorScreen.tsx       # Error display
@@ -138,6 +139,13 @@ npx expo run:android
 # Build iOS locally
 npx expo run:ios
 ```
+
+---
+
+## ▶️ Startup Flow by Platform
+
+- **Android**: Starts on a native `LandingScreen`. WebView mounts only after the user taps **Continue**. The native landing stays visible until the web app sends `APP_READY` (or a fallback timeout triggers), then handoff completes.
+- **iOS/Web**: Existing behavior is unchanged; WebView loads immediately with the current loading overlay flow.
 
 ---
 
@@ -218,6 +226,7 @@ bridgeRef.current.on('NAVIGATE_NATIVE_SCREEN', (payload) => {
 | `COPY_TO_CLIPBOARD` | `{ text: string }` | Copy text |
 | `REQUEST_PUSH_PERMISSION` | - | Request push notifications |
 | `PAGE_LOADED` | `{ route, title? }` | Report page navigation |
+| `APP_READY` | - | Web app is visually ready for native handoff |
 | `ERROR_REPORT` | `{ message, stack? }` | Report error to native |
 
 ### Native → Web Responses

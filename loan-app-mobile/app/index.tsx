@@ -24,6 +24,11 @@ import {
   useColorScheme,
   Animated,
   Easing,
+  View,
+  Text,
+  Pressable,
+  Modal,
+  ScrollView,
 } from "react-native";
 import {
   WebView,
@@ -37,6 +42,7 @@ import * as Haptics from "expo-haptics";
 import * as Linking2 from "expo-linking";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
+import { Ionicons } from "@expo/vector-icons";
 
 import { WEB_APP_URL, TRUSTED_ORIGINS } from "@/config/env";
 import {
@@ -59,6 +65,76 @@ import SkeletonLoading from "@/components/SkeletonLoading";
 import OfflineScreen from "@/components/OfflineScreen";
 import ErrorScreen from "@/components/ErrorScreen";
 import LandingScreen from "@/components/LandingScreen";
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+/** Height of the native Android menu bar in pixels (React Native numeric value) */
+const MENU_BAR_HEIGHT = 72;
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+type NativeMenuItem = {
+  path: string;
+  label: string;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  iconFilled?: React.ComponentProps<typeof Ionicons>["name"];
+};
+
+const NATIVE_MENU_ITEMS: NativeMenuItem[] = [
+  { path: "/home", label: "Home", icon: "home-outline", iconFilled: "home" },
+  {
+    path: "/",
+    label: "Add Customer",
+    icon: "person-add-outline",
+    iconFilled: "person-add",
+  },
+  {
+    path: "/add-record",
+    label: "Add Record",
+    icon: "document-text-outline",
+    iconFilled: "document-text",
+  },
+  {
+    path: "/customers",
+    label: "Customers",
+    icon: "people-outline",
+    iconFilled: "people",
+  },
+  {
+    path: "/loans",
+    label: "Loans",
+    icon: "business-outline",
+    iconFilled: "business",
+  },
+  {
+    path: "/loan-seniority",
+    label: "Loan Seniority",
+    icon: "star-outline",
+    iconFilled: "star",
+  },
+  {
+    path: "/subscriptions",
+    label: "Subscriptions",
+    icon: "time-outline",
+    iconFilled: "time",
+  },
+  {
+    path: "/data",
+    label: "Expenditure",
+    icon: "server-outline",
+    iconFilled: "server",
+  },
+  {
+    path: "/summary",
+    label: "Summary",
+    icon: "book-outline",
+    iconFilled: "book",
+  },
+];
 
 // ============================================================================
 // MAIN COMPONENT
@@ -88,6 +164,7 @@ export default function WebViewScreen() {
   const [error, setError] = useState<string | null>(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [currentUrl, setCurrentUrl] = useState(WEB_APP_URL);
+  const [currentPath, setCurrentPath] = useState("/");
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
   const [allowWebViewMount, setAllowWebViewMount] = useState(
     Platform.OS !== "android",
@@ -95,6 +172,37 @@ export default function WebViewScreen() {
   const [showNativeLanding, setShowNativeLanding] = useState(
     Platform.OS === "android",
   );
+  const [showNativeMenu, setShowNativeMenu] = useState(false);
+
+  const nativePrimaryMenuItems = React.useMemo(
+    () => NATIVE_MENU_ITEMS.slice(0, 3),
+    [],
+  );
+
+  const getPathFromUrl = useCallback((url: string) => {
+    try {
+      const parsed = new URL(url);
+      return parsed.pathname || "/";
+    } catch {
+      return "/";
+    }
+  }, []);
+
+  const isPathActive = useCallback(
+    (path: string) => {
+      if (path === "/") return currentPath === "/";
+      return currentPath === path || currentPath.startsWith(`${path}/`);
+    },
+    [currentPath],
+  );
+
+  const navigateToPath = useCallback((path: string) => {
+    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+    setCurrentPath(normalizedPath);
+    const targetUrl = `${WEB_APP_URL}${normalizedPath}`;
+    setCurrentUrl(targetUrl);
+    setShowNativeMenu(false);
+  }, []);
 
   const markInitiallyLoaded = useCallback(() => {
     if (!hasInitiallyLoadedRef.current) {
@@ -502,6 +610,10 @@ export default function WebViewScreen() {
     const backHandler = BackHandler.addEventListener(
       "hardwareBackPress",
       () => {
+        if (showNativeMenu) {
+          setShowNativeMenu(false);
+          return true;
+        }
         if (canGoBack && webViewRef.current) {
           webViewRef.current.goBack();
           return true; // Prevent default behavior
@@ -511,7 +623,7 @@ export default function WebViewScreen() {
     );
 
     return () => backHandler.remove();
-  }, [canGoBack]);
+  }, [canGoBack, showNativeMenu]);
 
   // ============================================================================
   // DEEP LINKING
@@ -621,8 +733,11 @@ export default function WebViewScreen() {
   const handleNavigationStateChange = useCallback(
     (navState: WebViewNavigation) => {
       setCanGoBack(navState.canGoBack);
+      if (navState.url) {
+        setCurrentPath(getPathFromUrl(navState.url));
+      }
     },
-    [],
+    [getPathFromUrl],
   );
 
   const handleShouldStartLoadWithRequest = useCallback(
@@ -857,6 +972,154 @@ export default function WebViewScreen() {
           <SkeletonLoading />
         </Animated.View>
       )}
+
+      {Platform.OS === "android" && allowWebViewMount && !showNativeLanding && (
+        <>
+          <View
+            style={[styles.nativeMenuBar, isDark && styles.nativeMenuBarDark]}
+          >
+            {nativePrimaryMenuItems.map((item) => {
+              const active = isPathActive(item.path);
+              return (
+                <Pressable
+                  key={item.path}
+                  style={styles.nativeMenuButton}
+                  onPress={() => navigateToPath(item.path)}
+                  accessibilityRole="button"
+                  accessibilityLabel={item.label}
+                >
+                  <Ionicons
+                    name={active ? (item.iconFilled ?? item.icon) : item.icon}
+                    size={22}
+                    color={active ? "#4F46E5" : isDark ? "#94A3B8" : "#64748B"}
+                  />
+                  <Text
+                    style={[
+                      styles.nativeMenuLabel,
+                      {
+                        color: active
+                          ? "#4F46E5"
+                          : isDark
+                            ? "#94A3B8"
+                            : "#64748B",
+                      },
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+
+            <Pressable
+              style={styles.nativeMenuButton}
+              onPress={() => setShowNativeMenu(true)}
+            >
+              <Ionicons
+                name="chevron-up"
+                size={22}
+                color={
+                  showNativeMenu ? "#4F46E5" : isDark ? "#94A3B8" : "#64748B"
+                }
+              />
+              <Text
+                style={[
+                  styles.nativeMenuLabel,
+                  {
+                    color: showNativeMenu
+                      ? "#4F46E5"
+                      : isDark
+                        ? "#94A3B8"
+                        : "#64748B",
+                  },
+                ]}
+              >
+                More
+              </Text>
+            </Pressable>
+          </View>
+          <Modal
+            visible={showNativeMenu}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setShowNativeMenu(false)}
+          >
+            <View style={styles.nativeMenuBackdrop}>
+              <Pressable
+                style={StyleSheet.absoluteFillObject}
+                onPress={() => setShowNativeMenu(false)}
+              />
+              <View
+                style={[
+                  styles.nativeMenuSheet,
+                  isDark && styles.nativeMenuSheetDark,
+                ]}
+              >
+                <View style={styles.nativeSheetHeader}>
+                  <View style={styles.nativeSheetHandle} />
+                  <Pressable
+                    style={styles.nativeSheetCloseButton}
+                    onPress={() => setShowNativeMenu(false)}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close menu"
+                    accessibilityHint="Closes the modal menu"
+                    accessibilityState={{ disabled: false }}
+                  >
+                    <Ionicons
+                      name="close"
+                      size={24}
+                      color={isDark ? "#E2E8F0" : "#1E293B"}
+                    />
+                  </Pressable>
+                </View>
+                <ScrollView
+                  contentContainerStyle={styles.nativeSheetScroll}
+                  showsVerticalScrollIndicator={true}
+                >
+                  {NATIVE_MENU_ITEMS.map((item) => {
+                    const active = isPathActive(item.path);
+                    return (
+                      <Pressable
+                        key={item.path}
+                        style={[
+                          styles.nativeSheetItem,
+                          active && styles.nativeSheetItemActive,
+                        ]}
+                        onPress={() => navigateToPath(item.path)}
+                      >
+                        <Ionicons
+                          name={
+                            active ? (item.iconFilled ?? item.icon) : item.icon
+                          }
+                          size={20}
+                          color={
+                            active ? "#4F46E5" : isDark ? "#CBD5E1" : "#334155"
+                          }
+                        />{" "}
+                        <Text
+                          style={[
+                            styles.nativeSheetItemText,
+                            {
+                              color: active
+                                ? "#4F46E5"
+                                : isDark
+                                  ? "#E2E8F0"
+                                  : "#0F172A",
+                            },
+                          ]}
+                        >
+                          {item.label}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            </View>
+          </Modal>
+        </>
+      )}
     </SafeAreaView>
   );
 }
@@ -875,6 +1138,8 @@ const styles = StyleSheet.create({
   },
   webView: {
     flex: 1,
+    // On Android with native menu bar, add bottom padding to prevent content from being hidden
+    paddingBottom: Platform.OS === "android" ? MENU_BAR_HEIGHT : 0,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -883,5 +1148,94 @@ const styles = StyleSheet.create({
   landingOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 200,
+  },
+  nativeMenuBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    minHeight: MENU_BAR_HEIGHT,
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
+    backgroundColor: "#FFFFFF",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    paddingVertical: 8,
+    zIndex: 60,
+  },
+  nativeMenuBarDark: {
+    backgroundColor: "#111827",
+    borderTopColor: "#334155",
+  },
+  nativeMenuButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+  },
+  nativeMenuLabel: {
+    fontSize: 11,
+    fontWeight: "500",
+  },
+  nativeMenuBackdrop: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(15, 23, 42, 0.35)",
+  },
+  nativeMenuSheet: {
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 18,
+    borderTopWidth: 1,
+    borderTopColor: "#E2E8F0",
+    maxHeight: "82%",
+  },
+  nativeMenuSheetDark: {
+    backgroundColor: "#111827",
+    borderTopColor: "#334155",
+  },
+  nativeSheetHandle: {
+    width: 56,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: "#94A3B8",
+    alignSelf: "center",
+    marginBottom: 12,
+  },
+  nativeSheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 0,
+    marginBottom: 12,
+  },
+  nativeSheetCloseButton: {
+    padding: 8,
+    marginRight: -8,
+  },
+  nativeSheetItem: {
+    minHeight: 46,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 6,
+  },
+  nativeSheetItemActive: {
+    backgroundColor: "rgba(79, 70, 229, 0.12)",
+  },
+  nativeSheetItemText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  nativeSheetScroll: {
+    paddingVertical: 4,
+    // Allow the scroll area to expand/contract based on content
+    // while respecting the maxHeight on the parent container
   },
 });

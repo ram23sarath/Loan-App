@@ -14,6 +14,13 @@ import { WebView } from 'react-native-webview';
 import type { RefObject } from 'react';
 
 // ============================================================================
+// CONSTANTS
+// ============================================================================
+
+/** Height of the native Android menu bar in pixels */
+export const MENU_BAR_HEIGHT = '72px';
+
+// ============================================================================
 // MESSAGE TYPES - Web → Native Commands
 // ============================================================================
 
@@ -393,6 +400,35 @@ export const BRIDGE_INJECTION_SCRIPT = `
     }
   };
   
+  // =========================================================================
+  // CSS INJECTION FOR ANDROID NATIVE MENU BAR
+  // =========================================================================
+  
+  // On Android, inject CSS to add bottom padding to the body and main content areas
+  // to account for the native menu bar that sits absolutely positioned at the bottom
+  if (typeof navigator !== 'undefined' && /Android/.test(navigator.userAgent)) {
+    var styleEl = document.createElement('style');
+    styleEl.textContent = 
+      '/* Define menu bar height as CSS custom property */' +
+      ':root { --menu-bar-height: 72px; }' +
+      '/* Add bottom padding to account for native menu bar on Android */' +
+      'html, body { padding-bottom: var(--menu-bar-height) !important; box-sizing: border-box; }' +
+      '/* Ensure scrollable content can scroll past the menu bar */' +
+      'main, [role="main"], .main-content { min-height: calc(100% - var(--menu-bar-height)); box-sizing: border-box; }';
+    
+    // Insert style as early as possible
+    if (document.head) {
+      document.head.insertBefore(styleEl, document.head.firstChild);
+    } else {
+      document.addEventListener('DOMContentLoaded', function() {
+        if (document.head) {
+          document.head.insertBefore(styleEl, document.head.firstChild);
+        }
+      });
+    }
+    
+    console.log('[NativeBridge] Injected Android menu bar CSS');
+  }  
   // Notify native that bridge is ready
   // window.sendToNative('NAVIGATION_READY'); // Removed: Prevents premature loading screen dismissal
   

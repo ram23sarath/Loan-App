@@ -1,5 +1,5 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { motion, AnimatePresence, Variants } from "framer-motion";
 import {
   FilePlusIcon,
@@ -31,6 +31,35 @@ const DatabaseIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+const ChevronUpIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.8}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <path d="m18 15-6-6-6 6" />
+  </svg>
+);
+
+const CloseIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    {...props}
+  >
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
 // Animation variants
 const menuDropdownVariants: Variants = {
   hidden: {
@@ -43,7 +72,7 @@ const menuDropdownVariants: Variants = {
     x: 0,
     scale: 1,
     transition: {
-      type: 'spring',
+      type: "spring",
       stiffness: 300,
       damping: 25,
       staggerChildren: 0.05,
@@ -63,7 +92,7 @@ const menuItemVariants: Variants = {
     opacity: 1,
     x: 0,
     transition: {
-      type: 'spring',
+      type: "spring",
       stiffness: 300,
       damping: 24,
     },
@@ -76,7 +105,7 @@ const navItemVariants: Variants = {
     scale: 1.02,
     x: 4,
     transition: {
-      type: 'spring',
+      type: "spring",
       stiffness: 400,
       damping: 20,
     },
@@ -90,30 +119,39 @@ const iconVariants: Variants = {
     scale: 1.1,
     rotate: [0, -5, 5, 0],
     transition: {
-      scale: { type: 'spring', stiffness: 400, damping: 20 },
+      scale: { type: "spring", stiffness: 400, damping: 20 },
       rotate: { duration: 0.3 },
     },
   },
 };
 
-const profileButtonVariants: Variants = {
-  idle: { scale: 1 },
-  hover: {
-    scale: 1.1,
-    boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
-    transition: {
-      type: 'spring',
-      stiffness: 400,
-      damping: 20,
-    },
-  },
-  tap: { scale: 0.95 },
-};
+interface NavItem {
+  path: string;
+  label: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  adminOnly?: boolean;
+  mobilePrimary?: boolean;
+}
 
-const allNavItems = [
-  { path: "/home", label: "Home", icon: HomeIcon },
-  { path: "/", label: "Add Customer", icon: UserPlusIcon, adminOnly: true },
-  { path: "/add-record", label: "Add Record", icon: FilePlusIcon, adminOnly: true },
+const allNavItems: NavItem[] = [
+  // Home is mobile primary for all users
+  { path: "/home", label: "Home", icon: HomeIcon, mobilePrimary: true },
+  // Add Customer is mobile primary for admins
+  {
+    path: "/",
+    label: "Add Customer",
+    icon: UserPlusIcon,
+    adminOnly: true,
+    mobilePrimary: true,
+  },
+  // Add Record is mobile primary for admins
+  {
+    path: "/add-record",
+    label: "Add Record",
+    icon: FilePlusIcon,
+    adminOnly: true,
+    mobilePrimary: true,
+  },
   { path: "/customers", label: "Customers", icon: UsersIcon, adminOnly: true },
   { path: "/loans", label: "Loans", icon: LandmarkIcon },
   { path: "/loan-seniority", label: "Loan Seniority", icon: StarIcon },
@@ -127,6 +165,7 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
+  const location = useLocation();
   const {
     session,
     signOut,
@@ -137,22 +176,42 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
   } = useData();
 
   const [showLandscapeMenu, setShowLandscapeMenu] = React.useState(false);
+  const [showMobileMenu, setShowMobileMenu] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
+  const isInNativeWrapper =
+    typeof window !== "undefined" &&
+    (typeof (window as any).ReactNativeWebView !== "undefined" ||
+      navigator.userAgent.includes("LoanAppMobile"));
 
-  let navItems = allNavItems.filter((item) => !item.adminOnly || !isScopedCustomer);
+  let navItems = allNavItems.filter(
+    (item) => !item.adminOnly || !isScopedCustomer,
+  );
 
   // For scoped customers, add a Home link that navigates to the customer dashboard above Loans
   if (isScopedCustomer) {
-    const homeItem = { path: '/', label: 'Dashboard', icon: HomeIcon };
-    const loansIndex = navItems.findIndex((it) => it.path === '/loans');
+    const homeItem: NavItem = {
+      path: "/",
+      label: "Dashboard",
+      icon: HomeIcon,
+      mobilePrimary: true,
+    };
+    const loansIndex = navItems.findIndex((it) => it.path === "/loans");
     if (loansIndex >= 0) {
       navItems.splice(loansIndex, 0, homeItem);
     } else {
       navItems.unshift(homeItem);
     }
   }
-  const activeLinkClass = "bg-indigo-50 text-indigo-600 font-semibold dark:bg-indigo-900/30 dark:text-indigo-400";
-  const inactiveLinkClass = "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-dark-muted dark:hover:bg-slate-700 dark:hover:text-dark-text";
+  // Mobile primary items are explicitly marked with mobilePrimary flag:
+  // - Home is included for all users
+  // - Add Customer and Add Record are included for admins (filtered out for scoped users)
+  // - Dashboard is included for scoped users (injected above)
+  // This approach is resilient to reordering of nav items and makes selection intent explicit.
+  const mobilePrimaryNavItems = navItems.filter((item) => item.mobilePrimary);
+  const activeLinkClass =
+    "bg-indigo-50 text-indigo-600 font-semibold dark:bg-indigo-900/30 dark:text-indigo-400";
+  const inactiveLinkClass =
+    "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-dark-muted dark:hover:bg-slate-700 dark:hover:text-dark-text";
 
   const [collapsed, setCollapsed] = React.useState(true);
 
@@ -177,8 +236,12 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
       if (typeof window === "undefined") return;
 
       const isLargeDesktop = window.matchMedia("(min-width: 1024px)").matches;
-      const isTabletPortrait = window.matchMedia("(min-width: 640px) and (orientation: portrait)").matches;
-      const isMobileLandscape = window.matchMedia("(max-width: 1023px) and (orientation: landscape)").matches;
+      const isTabletPortrait = window.matchMedia(
+        "(min-width: 640px) and (orientation: portrait)",
+      ).matches;
+      const isMobileLandscape = window.matchMedia(
+        "(max-width: 1023px) and (orientation: landscape)",
+      ).matches;
 
       // Common visual constants
       const leftOffset = 16;
@@ -198,7 +261,7 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
 
       try {
         document.documentElement.style.setProperty("--sidebar-offset", total);
-      } catch (e) { }
+      } catch (e) {}
     };
 
     applyVar();
@@ -209,7 +272,7 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
       window.removeEventListener("orientationchange", applyVar);
       try {
         document.documentElement.style.setProperty("--sidebar-offset", "0px");
-      } catch (e) { }
+      } catch (e) {}
     };
   }, [collapsed]);
 
@@ -231,17 +294,26 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
     return () => clearCollapseTimer();
   }, []);
 
+  React.useEffect(() => {
+    setShowMobileMenu(false);
+  }, [location.pathname]);
+
   const handleProfileClick = () => {
     profileRef.current?.openMenu();
   };
 
   // Calculate user initials for profile button (same logic as ProfileHeader)
-  const userEmail = session?.user?.email || 'User';
-  const customerDetails = isScopedCustomer && scopedCustomerId
-    ? customerMap.get(scopedCustomerId)
-    : null;
-  const displayName = isScopedCustomer && customerDetails?.name ? customerDetails.name : userEmail;
-  const initials = (displayName && displayName.trim().charAt(0).toUpperCase()) || 'U';
+  const userEmail = session?.user?.email || "User";
+  const customerDetails =
+    isScopedCustomer && scopedCustomerId
+      ? customerMap.get(scopedCustomerId)
+      : null;
+  const displayName =
+    isScopedCustomer && customerDetails?.name
+      ? customerDetails.name
+      : userEmail;
+  const initials =
+    (displayName && displayName.trim().charAt(0).toUpperCase()) || "U";
 
   return (
     <>
@@ -249,64 +321,154 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
       <div className="h-28 sm:hidden landscape:hidden" aria-hidden="true" />
 
       {/* 1. PORTRAIT MOBILE NAV (Bottom Bar) */}
-      <motion.nav
-        className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 sm:hidden landscape:hidden dark:bg-dark-card dark:border-dark-border"
-        initial={{ y: 100 }}
-        animate={{ y: 0 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      >
-        <div className="flex justify-around items-center py-2 overflow-x-auto w-full gap-1">
-          {navItems.map((item, idx) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `flex flex-col items-center justify-center px-2 py-1.5 min-w-[60px] max-w-[80px] flex-shrink-0 transition-colors duration-200 text-[10px] ${isActive ? "text-indigo-600 dark:text-indigo-400" : "text-gray-500 hover:text-gray-700 dark:text-dark-muted dark:hover:text-dark-text"
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <motion.div
-                  className="flex flex-col items-center"
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: idx * 0.05, type: 'spring', stiffness: 300, damping: 20 }}
-                  whileTap={{ scale: 0.9 }}
-                >
+      {!isInNativeWrapper && (
+        <motion.nav
+          className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 sm:hidden landscape:hidden dark:bg-dark-card dark:border-dark-border"
+          initial={{ y: 100 }}
+          animate={{ y: 0 }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        >
+          <div className="flex justify-around items-center py-2 overflow-x-auto w-full gap-1">
+            {mobilePrimaryNavItems.map((item, idx) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  `flex flex-col items-center justify-center px-2 py-1.5 min-w-[60px] max-w-[80px] flex-shrink-0 transition-colors duration-200 text-[10px] ${
+                    isActive
+                      ? "text-indigo-600 dark:text-indigo-400"
+                      : "text-gray-500 hover:text-gray-700 dark:text-dark-muted dark:hover:text-dark-text"
+                  }`
+                }
+              >
+                {({ isActive }) => (
                   <motion.div
-                    animate={{
-                      scale: isActive ? 1.1 : 1,
-                      y: isActive ? -2 : 0,
+                    className="flex flex-col items-center"
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{
+                      delay: idx * 0.05,
+                      type: "spring",
+                      stiffness: 300,
+                      damping: 20,
                     }}
-                    transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                    whileTap={{ scale: 0.9 }}
                   >
-                    <item.icon className="w-6 h-6 flex-shrink-0" />
+                    <motion.div
+                      animate={{
+                        scale: isActive ? 1.1 : 1,
+                        y: isActive ? -2 : 0,
+                      }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 400,
+                        damping: 20,
+                      }}
+                    >
+                      <item.icon className="w-6 h-6 flex-shrink-0" />
+                    </motion.div>
+                    <span className="mt-1 text-center leading-tight">
+                      {item.label}
+                    </span>
                   </motion.div>
-                  <span className="mt-1 text-center leading-tight">{item.label}</span>
-                </motion.div>
-              )}
-            </NavLink>
-          ))}
-          {/* Profile Icon Button with Initials */}
-          <motion.button
-            onClick={handleProfileClick}
-            className="flex flex-col items-center justify-center px-2 py-1.5 min-w-[60px] max-w-[80px] flex-shrink-0 transition-colors duration-200 text-[10px] text-gray-500 hover:text-gray-700 dark:text-dark-muted dark:hover:text-dark-text"
-            variants={profileButtonVariants}
-            initial="idle"
-            whileHover="hover"
-            whileTap="tap"
+                )}
+              </NavLink>
+            ))}
+
+            <motion.button
+              onClick={() => setShowMobileMenu(true)}
+              className={`flex flex-col items-center justify-center px-2 py-1.5 min-w-[60px] max-w-[80px] flex-shrink-0 transition-colors duration-200 text-[10px] ${showMobileMenu ? "text-indigo-600 dark:text-indigo-400" : "text-gray-500 hover:text-gray-700 dark:text-dark-muted dark:hover:text-dark-text"}`}
+              aria-label="Open full menu"
+              whileTap={{ scale: 0.95 }}
+            >
+              <motion.div
+                className="w-6 h-6 flex-shrink-0 flex items-center justify-center"
+                animate={{ y: showMobileMenu ? -1 : 0 }}
+                transition={{ type: "spring", stiffness: 350, damping: 24 }}
+              >
+                <ChevronUpIcon className="w-6 h-6" />
+              </motion.div>
+              <span className="mt-1 text-center leading-tight">More</span>
+            </motion.button>
+          </div>
+        </motion.nav>
+      )}
+
+      <AnimatePresence>
+        {!isInNativeWrapper && showMobileMenu && (
+          <motion.div
+            className="fixed inset-0 z-40 sm:hidden landscape:hidden bg-black/30"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowMobileMenu(false)}
           >
             <motion.div
-              className="w-6 h-6 flex-shrink-0 rounded-full bg-indigo-600 text-white font-semibold flex items-center justify-center text-xs"
-              whileHover={{ rotate: [0, -10, 10, 0] }}
-              transition={{ duration: 0.3 }}
+              className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl border-t border-gray-200 dark:bg-dark-card dark:border-dark-border"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 320, damping: 30 }}
+              onClick={(e) => e.stopPropagation()}
             >
-              {initials}
+              <div className="flex items-center justify-between px-4 pt-3 pb-2">
+                <div className="h-1.5 w-14 rounded-full bg-gray-300 dark:bg-slate-600" />
+                <motion.button
+                  onClick={() => setShowMobileMenu(false)}
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                  whileTap={{ scale: 0.95 }}
+                  aria-label="Close menu"
+                >
+                  <CloseIcon className="w-5 h-5 text-gray-600 dark:text-dark-muted" />
+                </motion.button>
+              </div>
+              <div className="px-4 pb-4 max-h-[82vh] overflow-y-auto">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-dark-muted mb-3">
+                  Menu
+                </p>
+                <div className="space-y-2">
+                  {navItems.map((item) => {
+                    const isActive =
+                      item.path === "/"
+                        ? location.pathname === item.path
+                        : location.pathname.startsWith(item.path);
+                    return (
+                      <NavLink
+                        key={item.path}
+                        to={item.path}
+                        className={`flex items-center gap-3 px-3 py-3 rounded-lg border transition-colors ${
+                          isActive
+                            ? "bg-indigo-50 border-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-400"
+                            : "border-transparent text-gray-700 hover:bg-gray-100 dark:text-dark-text dark:hover:bg-slate-700"
+                        }`}
+                        onClick={() => setShowMobileMenu(false)}
+                      >
+                        <item.icon className="w-5 h-5 shrink-0" />
+                        <span className="text-sm font-medium">
+                          {item.label}
+                        </span>
+                      </NavLink>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMobileMenu(false);
+                      handleProfileClick();
+                    }}
+                    className="w-full flex items-center gap-3 px-3 py-3 rounded-lg border border-transparent text-gray-700 hover:bg-gray-100 transition-colors dark:text-dark-text dark:hover:bg-slate-700"
+                  >
+                    <div className="w-5 h-5 rounded-full bg-indigo-600 text-white font-semibold flex items-center justify-center text-[10px] shrink-0">
+                      {initials}
+                    </div>
+                    <span className="text-sm font-medium">Profile</span>
+                  </button>
+                </div>
+              </div>
             </motion.div>
-            <span className="mt-1 text-center leading-tight">Profile</span>
-          </motion.button>
-        </div>
-      </motion.nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* 2. MOBILE LANDSCAPE SIDEBAR (Left Side Floating) */}
       <motion.div
@@ -314,17 +476,17 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
         className="fixed top-4 bottom-4 left-4 z-50 w-[96px] bg-white rounded-2xl border border-gray-200 shadow-sm hidden landscape:flex lg:landscape:hidden flex-col justify-between items-center py-4 dark:bg-dark-card dark:border-dark-border"
         initial={{ x: -100, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
         {/* Top: Hamburger */}
         <div className="relative flex justify-center w-full">
           <motion.button
             onClick={() => setShowLandscapeMenu(!showLandscapeMenu)}
-            className={`p-4 rounded-xl transition-colors ${showLandscapeMenu ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' : 'text-gray-600 hover:bg-gray-100 dark:text-dark-muted dark:hover:bg-slate-700'}`}
+            className={`p-4 rounded-xl transition-colors ${showLandscapeMenu ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400" : "text-gray-600 hover:bg-gray-100 dark:text-dark-muted dark:hover:bg-slate-700"}`}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
             animate={{ rotate: showLandscapeMenu ? 90 : 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
           >
             <HamburgerIcon className="w-7 h-7" />
           </motion.button>
@@ -340,7 +502,9 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
                 exit="exit"
               >
                 <div className="px-3 py-2 border-b border-gray-100 bg-gray-50/50 dark:border-dark-border dark:bg-slate-800/50">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-dark-muted">Navigate</span>
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider dark:text-dark-muted">
+                    Navigate
+                  </span>
                 </div>
 
                 {/* 2 Column Grid Layout */}
@@ -355,9 +519,10 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
                         to={item.path}
                         onClick={() => setShowLandscapeMenu(false)}
                         className={({ isActive }) =>
-                          `flex items-center px-3 py-2 rounded-lg text-sm transition-colors border ${isActive
-                            ? "bg-indigo-50 border-indigo-100 text-indigo-700 font-medium dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-400"
-                            : "border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-dark-muted dark:hover:bg-slate-700 dark:hover:text-dark-text"
+                          `flex items-center px-3 py-2 rounded-lg text-sm transition-colors border ${
+                            isActive
+                              ? "bg-indigo-50 border-indigo-100 text-indigo-700 font-medium dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-400"
+                              : "border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-dark-muted dark:hover:bg-slate-700 dark:hover:text-dark-text"
                           }`
                         }
                       >
@@ -389,15 +554,16 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
           width: collapsed ? 80 : 256,
         }}
         transition={{
-          x: { type: 'spring', stiffness: 300, damping: 30 },
+          x: { type: "spring", stiffness: 300, damping: 30 },
           opacity: { duration: 0.2 },
-          width: { type: 'spring', stiffness: 300, damping: 30 },
+          width: { type: "spring", stiffness: 300, damping: 30 },
         }}
         className="fixed left-4 top-4 bottom-4 z-40 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col hidden sm:flex landscape:hidden lg:landscape:flex dark:bg-dark-card dark:border-dark-border"
       >
         <div
-          className={`p-4 border-b border-gray-200 flex items-center dark:border-dark-border ${collapsed ? "justify-center" : "justify-between"
-            }`}
+          className={`p-4 border-b border-gray-200 flex items-center dark:border-dark-border ${
+            collapsed ? "justify-center" : "justify-between"
+          }`}
         >
           <AnimatePresence>
             {!collapsed && (
@@ -406,7 +572,7 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
               >
                 <span className="hidden lg:inline">Loan Management</span>
                 <span className="lg:hidden">Loans</span>
@@ -421,7 +587,7 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
             className="p-2 rounded-md hover:bg-gray-100 shrink-0 dark:hover:bg-slate-700"
             whileHover={{ scale: 1.1, rotate: 180 }}
             whileTap={{ scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+            transition={{ type: "spring", stiffness: 400, damping: 20 }}
           >
             <HamburgerIcon className="w-5 h-5 text-gray-700 dark:text-dark-muted" />
           </motion.button>
@@ -434,7 +600,8 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
                 key={item.path}
                 to={item.path}
                 className={({ isActive }) =>
-                  `group flex items-center p-3 rounded-lg transition-colors duration-200 ${isActive ? activeLinkClass : inactiveLinkClass
+                  `group flex items-center p-3 rounded-lg transition-colors duration-200 ${
+                    isActive ? activeLinkClass : inactiveLinkClass
                   }`
                 }
               >
@@ -461,9 +628,13 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
                         <motion.span
                           className="inline-block overflow-hidden whitespace-nowrap ml-3"
                           initial={{ opacity: 0, width: 0, x: -10 }}
-                          animate={{ opacity: 1, width: 'auto', x: 0 }}
+                          animate={{ opacity: 1, width: "auto", x: 0 }}
                           exit={{ opacity: 0, width: 0, x: -10 }}
-                          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 25,
+                          }}
                         >
                           {item.label}
                         </motion.span>
@@ -495,7 +666,7 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
                 >
                   <p>&copy; {new Date().getFullYear()} I J Reddy Loan App</p>
                 </motion.div>

@@ -47,6 +47,7 @@ const LoginPage = () => {
   const [isMobile, setIsMobile] = useState(false);
   const defaultLandingPath = "/home";
   const isNative = typeof window !== "undefined" && window.isNativeApp?.();
+  const isNativeMobile = isNative && isMobile;
 
   const heroWords = [
     { text: "Welcome", accent: false },
@@ -268,35 +269,62 @@ const LoginPage = () => {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
         >
-          <motion.h1
-            className="text-4xl sm:text-5xl lg:text-6xl font-black mb-8 leading-[1.1] tracking-tight text-center md:text-left"
-            variants={wordContainerVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            {heroWords.map((word, index) => (
-              <motion.span
-                key={index}
-                variants={wordVariants}
-                className="inline-block px-1 py-0.5"
-              >
+          {isNativeMobile ? (
+            <motion.h1
+              className="text-4xl sm:text-5xl lg:text-6xl font-black mb-8 leading-[1.1] tracking-tight text-center md:text-left"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            >
+              {heroWords.map((word, index) => (
                 <span
-                  className={`${
+                  key={index}
+                  className={`inline-block px-1 py-0.5 ${
                     word.accent
-                      ? "premium-shimmer-text premium-pulse-glow font-black"
+                      ? "premium-shimmer-text font-black"
                       : "premium-gradient-text"
                   } drop-shadow-[0_8px_32px_rgba(99,102,241,0.35)]`}
                   style={{
                     textShadow: word.accent
                       ? "0 4px 30px rgba(192, 132, 252, 0.4), 0 8px 40px rgba(129, 140, 248, 0.25)"
-                      : "none",
+                      : "0 4px 20px rgba(129, 140, 248, 0.25)",
                   }}
                 >
                   {word.text}
                 </span>
-              </motion.span>
-            ))}
-          </motion.h1>
+              ))}
+            </motion.h1>
+          ) : (
+            <motion.h1
+              className="text-4xl sm:text-5xl lg:text-6xl font-black mb-8 leading-[1.1] tracking-tight text-center md:text-left"
+              variants={wordContainerVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              {heroWords.map((word, index) => (
+                <motion.span
+                  key={index}
+                  variants={wordVariants}
+                  className="inline-block px-1 py-0.5"
+                >
+                  <span
+                    className={`${
+                      word.accent
+                        ? "premium-shimmer-text premium-pulse-glow font-black"
+                        : "premium-gradient-text"
+                    } drop-shadow-[0_8px_32px_rgba(99,102,241,0.35)]`}
+                    style={{
+                      textShadow: word.accent
+                        ? "0 4px 30px rgba(192, 132, 252, 0.4), 0 8px 40px rgba(129, 140, 248, 0.25)"
+                        : "none",
+                    }}
+                  >
+                    {word.text}
+                  </span>
+                </motion.span>
+              ))}
+            </motion.h1>
+          )}
           <motion.div
             className="flex flex-col gap-4 mt-8 text-center md:text-left"
             initial={{ opacity: 0, y: 20 }}
@@ -306,8 +334,8 @@ const LoginPage = () => {
             {/* Decorative divider */}
             <motion.div
               className="h-1 w-24 mx-auto md:mx-0 rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
-              initial={{ scaleX: 0 }}
-              animate={{ scaleX: 1 }}
+              initial={isNativeMobile ? { opacity: 0 } : { scaleX: 0 }}
+              animate={isNativeMobile ? { opacity: 1 } : { scaleX: 1 }}
               transition={{ duration: 0.8, delay: 0.8, ease: "easeOut" }}
               style={{ transformOrigin: "left" }}
             />
@@ -323,18 +351,22 @@ const LoginPage = () => {
 
             <motion.div
               className="relative"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
+              initial={isNativeMobile ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
+              animate={isNativeMobile ? { opacity: 1 } : { opacity: 1, scale: 1 }}
               transition={{ duration: 0.8, delay: 1.1 }}
             >
               <motion.p
                 className="text-2xl sm:text-3xl lg:text-4xl font-black premium-glow-text leading-tight"
-                animate={logoAnimate}
-                transition={{
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
+                animate={isNativeMobile ? { opacity: 1 } : logoAnimate}
+                transition={
+                  isNativeMobile
+                    ? { duration: 0.4, delay: 0.1 }
+                    : {
+                        duration: 4,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }
+                }
               >
                 I J Reddy
               </motion.p>

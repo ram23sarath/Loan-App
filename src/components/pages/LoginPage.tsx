@@ -49,6 +49,7 @@ const LoginPage = () => {
   const [isMobile, setIsMobile] = useState(false);
   const defaultLandingPath = "/home";
   const isNative = typeof window !== "undefined" && window.isNativeApp?.();
+  const isLoginFormHiddenOnMobile = isMobile && !showLoginOnMobile;
 
   const heroWords = [
     { text: "Welcome", accent: false },
@@ -394,25 +395,32 @@ const LoginPage = () => {
       <motion.div
         ref={cardRef}
         className={`w-full max-w-md transition-all duration-300 ${
-          isMobile && !showLoginOnMobile
+          isLoginFormHiddenOnMobile
             ? "opacity-0 pointer-events-none translate-y-2 max-h-0 overflow-hidden"
             : "opacity-100 pointer-events-auto translate-y-0"
         }`}
-          variants={formVariants}
-          custom={isMobile}
-          initial="hidden"
-          animate="visible"
+        aria-hidden={isLoginFormHiddenOnMobile}
+        variants={formVariants}
+        custom={isMobile}
+        initial="hidden"
+        animate="visible"
       >
-          <GlassCard
-            className="w-full"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            <h2 className="text-3xl font-bold text-center mb-6 text-gray-800 dark:text-dark-text">
-              Loan Management Login
-            </h2>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <GlassCard
+          className="w-full"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h2 className="text-3xl font-bold text-center mb-6 text-gray-800 dark:text-dark-text">
+            Loan Management Login
+          </h2>
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <fieldset
+              className="space-y-6"
+              disabled={
+                isSubmitting || showAnimation || isLoginFormHiddenOnMobile
+              }
+            >
               <div>
                 <label
                   htmlFor="email"
@@ -490,8 +498,9 @@ const LoginPage = () => {
               >
                 {isSubmitting ? "Logging in..." : "Login"}
               </motion.button>
-            </form>
-          </GlassCard>
+            </fieldset>
+          </form>
+        </GlassCard>
       </motion.div>
     </div>
   );

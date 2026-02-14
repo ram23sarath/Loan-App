@@ -19,6 +19,17 @@ interface Message {
 }
 ```
 
+### Android startup handoff
+
+On Android, the app now starts on a native `LandingScreen` instead of mounting the WebView immediately.
+
+1. User lands on native branding screen and taps **Continue**.
+2. Native mounts the WebView behind the landing screen.
+3. Web app emits `APP_READY` when the first route is visually stable.
+4. Native dismisses the landing screen and loading overlay, handing off to WebView.
+
+If `APP_READY` is delayed, existing native fallback timers still dismiss startup loading to avoid deadlock.
+
 ---
 
 ## Web → Native Commands

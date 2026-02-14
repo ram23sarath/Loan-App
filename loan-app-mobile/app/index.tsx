@@ -58,6 +58,7 @@ import {
 import SkeletonLoading from "@/components/SkeletonLoading";
 import OfflineScreen from "@/components/OfflineScreen";
 import ErrorScreen from "@/components/ErrorScreen";
+import LandingScreen from "@/components/LandingScreen";
 
 // ============================================================================
 // MAIN COMPONENT
@@ -88,12 +89,36 @@ export default function WebViewScreen() {
   const [canGoBack, setCanGoBack] = useState(false);
   const [currentUrl, setCurrentUrl] = useState(WEB_APP_URL);
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
+  const [allowWebViewMount, setAllowWebViewMount] = useState(
+    Platform.OS !== "android",
+  );
+  const [showNativeLanding, setShowNativeLanding] = useState(
+    Platform.OS === "android",
+  );
 
   const markInitiallyLoaded = useCallback(() => {
     if (!hasInitiallyLoadedRef.current) {
       hasInitiallyLoadedRef.current = true;
     }
   }, []);
+
+  const completeStartupTransition = useCallback(
+    (source: string) => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
+
+      console.log(`[WebView] ${source} - dismissing loading state`);
+      setIsLoading(false);
+      markInitiallyLoaded();
+
+      if (Platform.OS === "android") {
+        setShowNativeLanding(false);
+      }
+    },
+    [markInitiallyLoaded],
+  );
 
   // ============================================================================
   // CLEANUP PENDING TIMEOUTS ON UNMOUNT
@@ -334,13 +359,6 @@ export default function WebViewScreen() {
           // Web is ready, send native ready signal back
           bridgeRef.current?.sendToWeb({ type: "NATIVE_READY" });
 
-          // Clear timeout and dismiss loading - web app confirmed ready
-          if (loadingTimeoutRef.current) {
-            clearTimeout(loadingTimeoutRef.current);
-            loadingTimeoutRef.current = null;
-          }
-          setIsLoading(false);
-
           // Send push token if available
           getExpoPushToken()
             .then((result) => {
@@ -367,36 +385,14 @@ export default function WebViewScreen() {
       handlerUnsubscribersRef.current.push(
         bridgeRef.current.on("PAGE_LOADED", (payload) => {
           const { route } = payload as { route: string; title?: string };
-
-          // Clear fallback timeout - page confirmed ready
-          // Loading screen dismissed immediately when this signal arrives
-          if (loadingTimeoutRef.current) {
-            clearTimeout(loadingTimeoutRef.current);
-            loadingTimeoutRef.current = null;
-          }
-
           console.log("[WebView] PAGE_LOADED signal received. Route:", route);
-          setIsLoading(false);
-
-          // Mark that initial load is complete
-          markInitiallyLoaded();
+          completeStartupTransition("PAGE_LOADED signal received");
         }),
       );
 
       handlerUnsubscribersRef.current.push(
         bridgeRef.current.on("APP_READY", () => {
-          // Explicit signal that app is visually ready
-          if (loadingTimeoutRef.current) {
-            clearTimeout(loadingTimeoutRef.current);
-            loadingTimeoutRef.current = null;
-          }
-
-          console.log(
-            "[WebView] APP_READY signal received - dismissing loading screen",
-          );
-          setIsLoading(false);
-
-          markInitiallyLoaded();
+          completeStartupTransition("APP_READY signal received");
         }),
       );
 
@@ -448,7 +444,7 @@ export default function WebViewScreen() {
         bridgeRef.current = null;
       };
     }
-  }, [markInitiallyLoaded]);
+  }, [completeStartupTransition]);
 
   // ============================================================================
   // NETWORK STATUS
@@ -699,11 +695,11 @@ export default function WebViewScreen() {
       console.log(
         `[WebView] Dismissing loading screen (handleLoadEnd fallback: ${timeoutDuration}ms)`,
       );
-      setIsLoading(false);
-      markInitiallyLoaded();
-      loadingTimeoutRef.current = null;
+      completeStartupTransition(
+        `handleLoadEnd fallback reached (${timeoutDuration}ms)`,
+      );
     }, timeoutDuration);
-  }, [markInitiallyLoaded]);
+  }, [completeStartupTransition]);
 
   const handleError = useCallback((syntheticEvent: any) => {
     const { nativeEvent } = syntheticEvent;
@@ -722,6 +718,11 @@ export default function WebViewScreen() {
     setError(null);
     setIsLoading(true);
     webViewRef.current?.reload();
+  }, []);
+
+  const handleLandingContinue = useCallback(() => {
+    setAllowWebViewMount(true);
+    setIsLoading(true);
   }, []);
 
   // ============================================================================
@@ -771,66 +772,82 @@ export default function WebViewScreen() {
     );
   }
 
+  if (Platform.OS === "android" && showNativeLanding && !allowWebViewMount) {
+    return (
+      <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
+        <LandingScreen onContinue={handleLandingContinue} />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView
       style={[styles.container, isDark && styles.containerDark]}
       edges={["top", "left", "right"]} // Don't add bottom padding for web's bottom nav
     >
-      <WebView
-        ref={webViewRef}
-        source={{ uri: currentUrl }}
-        style={styles.webView}
-        // JavaScript & Injection
-        javaScriptEnabled={true}
-        injectedJavaScriptBeforeContentLoaded={BRIDGE_INJECTION_SCRIPT}
-        // Improved loading reliability
-        startInLoadingState={false} // renderLoading handled manually via isLoading overlay
-        // User Agent (helps web detect native wrapper)
-        applicationNameForUserAgent="LoanAppMobile/1.0"
-        // Allow inline media playback (iOS)
-        allowsInlineMediaPlayback={true}
-        mediaPlaybackRequiresUserAction={false}
-        // Performance
-        cacheEnabled={true}
-        cacheMode="LOAD_DEFAULT"
-        // Android: enable hardware acceleration
-        androidLayerType="hardware"
-        // Prevent stale content
-        incognito={false}
-        // Security: restrict WebView to trusted origins only
-        originWhitelist={TRUSTED_ORIGINS}
-        mixedContentMode="compatibility"
-        // Events
-        onMessage={handleMessage}
-        onNavigationStateChange={handleNavigationStateChange}
-        onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
-        onLoadStart={handleLoadStart}
-        onLoadEnd={handleLoadEnd}
-        onError={handleError}
-        onHttpError={handleHttpError}
-        // Android specific
-        domStorageEnabled={true}
-        thirdPartyCookiesEnabled={true}
-        // iOS specific
-        allowsBackForwardNavigationGestures={Platform.OS === "ios"}
-        decelerationRate={Platform.OS === "ios" ? "normal" : undefined}
-        contentInsetAdjustmentBehavior={
-          Platform.OS === "ios" ? "automatic" : undefined
-        }
-        // Pull to refresh (Android)
-        pullToRefreshEnabled={true}
-        // Render process handling
-        onRenderProcessGone={(syntheticEvent) => {
-          const { didCrash } = syntheticEvent.nativeEvent;
-          console.error("[WebView] Render process gone, crashed:", didCrash);
-          setError("The app encountered an issue. Please reload.");
-        }}
-        // Content process termination (iOS)
-        onContentProcessDidTerminate={() => {
-          console.error("[WebView] Content process terminated");
-          webViewRef.current?.reload();
-        }}
-      />
+      {allowWebViewMount && (
+        <WebView
+          ref={webViewRef}
+          source={{ uri: currentUrl }}
+          style={styles.webView}
+          // JavaScript & Injection
+          javaScriptEnabled={true}
+          injectedJavaScriptBeforeContentLoaded={BRIDGE_INJECTION_SCRIPT}
+          // Improved loading reliability
+          startInLoadingState={false} // renderLoading handled manually via isLoading overlay
+          // User Agent (helps web detect native wrapper)
+          applicationNameForUserAgent="LoanAppMobile/1.0"
+          // Allow inline media playback (iOS)
+          allowsInlineMediaPlayback={true}
+          mediaPlaybackRequiresUserAction={false}
+          // Performance
+          cacheEnabled={true}
+          cacheMode="LOAD_DEFAULT"
+          // Android: enable hardware acceleration
+          androidLayerType="hardware"
+          // Prevent stale content
+          incognito={false}
+          // Security: restrict WebView to trusted origins only
+          originWhitelist={TRUSTED_ORIGINS}
+          mixedContentMode="compatibility"
+          // Events
+          onMessage={handleMessage}
+          onNavigationStateChange={handleNavigationStateChange}
+          onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
+          onLoadStart={handleLoadStart}
+          onLoadEnd={handleLoadEnd}
+          onError={handleError}
+          onHttpError={handleHttpError}
+          // Android specific
+          domStorageEnabled={true}
+          thirdPartyCookiesEnabled={true}
+          // iOS specific
+          allowsBackForwardNavigationGestures={Platform.OS === "ios"}
+          decelerationRate={Platform.OS === "ios" ? "normal" : undefined}
+          contentInsetAdjustmentBehavior={
+            Platform.OS === "ios" ? "automatic" : undefined
+          }
+          // Pull to refresh (Android)
+          pullToRefreshEnabled={true}
+          // Render process handling
+          onRenderProcessGone={(syntheticEvent) => {
+            const { didCrash } = syntheticEvent.nativeEvent;
+            console.error("[WebView] Render process gone, crashed:", didCrash);
+            setError("The app encountered an issue. Please reload.");
+          }}
+          // Content process termination (iOS)
+          onContentProcessDidTerminate={() => {
+            console.error("[WebView] Content process terminated");
+            webViewRef.current?.reload();
+          }}
+        />
+      )}
+
+      {Platform.OS === "android" && showNativeLanding && allowWebViewMount && (
+        <Animated.View style={styles.landingOverlay}>
+          <LandingScreen onContinue={handleLandingContinue} />
+        </Animated.View>
+      )}
 
       {/* Loading overlay — animated fade-out for smooth transition */}
       {showOverlay && (
@@ -862,5 +879,9 @@ const styles = StyleSheet.create({
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 100,
+  },
+  landingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 200,
   },
 });

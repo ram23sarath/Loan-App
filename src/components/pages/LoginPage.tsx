@@ -199,10 +199,10 @@ const LoginPage = () => {
       opacity: 1,
       y: 0,
       transition: {
-        duration: 0.7,
+        duration: isNative ? 0.45 : 0.7,
         ease: "easeOut",
-        staggerChildren: 0.08,
-        delayChildren: 0.15,
+        staggerChildren: isNative ? 0.04 : 0.08,
+        delayChildren: isNative ? 0.05 : 0.15,
       },
     },
   };
@@ -296,7 +296,9 @@ const LoginPage = () => {
                 <span
                   className={`${
                     word.accent
-                      ? "premium-shimmer-text premium-pulse-glow font-black"
+                      ? isNative
+                        ? "premium-gradient-text font-black"
+                        : "premium-shimmer-text premium-pulse-glow font-black"
                       : "premium-gradient-text"
                   } drop-shadow-[0_8px_32px_rgba(99,102,241,0.35)]`}
                   style={{
@@ -327,9 +329,9 @@ const LoginPage = () => {
 
             <motion.p
               className="text-sm uppercase tracking-[0.25em] text-gray-500 dark:text-gray-400 font-semibold premium-breathe"
-              initial={{ opacity: 0, letterSpacing: "0.1em" }}
-              animate={{ opacity: 1, letterSpacing: "0.25em" }}
-              transition={{ duration: 1, delay: 0.9 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: isNative ? 0.7 : 1, delay: 0.9 }}
             >
               Developed & Maintained By
             </motion.p>
@@ -344,8 +346,8 @@ const LoginPage = () => {
                 className="text-2xl sm:text-3xl lg:text-4xl font-black premium-glow-text leading-tight"
                 animate={logoAnimate}
                 transition={{
-                  duration: 4,
-                  repeat: Infinity,
+                  duration: isNative ? 2.8 : 4,
+                  repeat: isNative ? 0 : Infinity,
                   ease: "easeInOut",
                 }}
               >

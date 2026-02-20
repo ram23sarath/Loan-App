@@ -331,7 +331,7 @@ const LoginPage = () => {
               className="text-sm uppercase tracking-[0.25em] text-gray-500 dark:text-gray-400 font-semibold premium-breathe"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.7, delay: 0.9 }}
+              transition={{ duration: isNative ? 0.7 : 1, delay: 0.9 }}
             >
               Developed & Maintained By
             </motion.p>

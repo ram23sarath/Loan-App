@@ -298,6 +298,7 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
     setShowMobileMenu(false);
   }, [location.pathname]);
 
+
   const handleProfileClick = () => {
     profileRef.current?.openMenu();
   };
@@ -558,7 +559,7 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
           opacity: { duration: 0.2 },
           width: { type: "spring", stiffness: 300, damping: 30 },
         }}
-        className="fixed left-4 top-4 bottom-4 z-40 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col hidden sm:flex landscape:hidden lg:landscape:flex dark:bg-dark-card dark:border-dark-border"
+        className="fixed left-4 top-4 bottom-4 z-40 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col hidden sm:flex landscape:hidden lg:landscape:flex overflow-hidden dark:bg-dark-card dark:border-dark-border"
       >
         <div
           className={`p-4 border-b border-gray-200 flex items-center dark:border-dark-border ${
@@ -594,7 +595,7 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
         </div>
 
         <div className="flex-1 flex flex-col min-h-0">
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto min-h-0">
+          <nav className="flex-1 p-4 space-y-2 min-h-0 overflow-y-auto scrollbar-hide">
             {navItems.map((item, idx) => (
               <NavLink
                 key={item.path}
@@ -658,21 +659,19 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
             ))}
           </nav>
 
-          <div className="shrink-0">
-            <AnimatePresence>
-              {!collapsed && (
-                <motion.div
-                  className="p-4 border-t border-gray-200 text-center text-xs text-gray-400 dark:border-dark-border dark:text-dark-muted"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                >
-                  <p>&copy; {new Date().getFullYear()} I J Reddy Loan App</p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          <AnimatePresence>
+            {!collapsed && (
+              <motion.div
+                className="shrink-0 border-t border-gray-200 text-center text-xs text-gray-400 overflow-hidden dark:border-dark-border dark:text-dark-muted"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              >
+                <p className="p-4">&copy; {new Date().getFullYear()} I J Reddy Loan App</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </motion.aside>
     </>

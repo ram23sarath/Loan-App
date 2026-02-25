@@ -244,21 +244,21 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                   initial="hidden"
                   animate="visible"
                   exit="exit"
-                  className="absolute z-[120] bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden left-4 right-4 bottom-20 w-auto sm:w-60 sm:left-auto sm:right-6 sm:top-16 sm:bottom-auto landscape:w-60 landscape:left-auto landscape:right-6 landscape:top-16 landscape:bottom-auto dark:bg-dark-card dark:border-dark-border"
+                  className="absolute z-[120] bg-white border border-gray-200 rounded-2xl shadow-2xl overflow-hidden left-4 right-4 bottom-6 w-auto max-w-sm mx-auto sm:mx-0 sm:w-60 sm:left-auto sm:right-6 sm:top-16 sm:bottom-auto sm:rounded-xl landscape:w-60 landscape:left-auto landscape:right-6 landscape:top-16 landscape:bottom-auto dark:bg-dark-card dark:border-dark-border"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {/* User info header */}
                   <motion.div
-                    className="px-3 md:px-4 py-2 md:py-3 border-b border-gray-100 dark:border-dark-border bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20"
+                    className="px-4 py-3 border-b border-gray-100 dark:border-dark-border bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.1 }}
                   >
-                    <p className="text-xs text-gray-500 dark:text-dark-muted">
+                    <p className="text-sm sm:text-xs text-gray-500 dark:text-dark-muted">
                       Logged in as
                     </p>
-                    <div className="flex items-center justify-between gap-1 md:gap-2 mt-1">
-                      <p className="text-xs md:text-sm font-semibold text-gray-800 truncate dark:text-dark-text">
+                    <div className="flex items-center justify-between gap-2 mt-1">
+                      <p className="text-sm font-semibold text-gray-800 truncate dark:text-dark-text">
                         {isScopedCustomer && customerDetails
                           ? customerDetails.name
                           : userEmail}
@@ -296,11 +296,11 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                   </motion.div>
 
                   {/* Menu items */}
-                  <div className="py-1">
+                  <div className="py-2">
                     <motion.button
                       variants={menuItemVariants}
                       onClick={handleViewProfile}
-                      className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2 dark:text-dark-text dark:hover:bg-slate-700 dark:active:bg-slate-600"
+                      className="w-full px-4 py-3 sm:py-2 text-left text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2 dark:text-dark-text dark:hover:bg-slate-700 dark:active:bg-slate-600"
                       whileHover={{
                         x: 4,
                         backgroundColor: "rgba(99, 102, 241, 0.05)",
@@ -314,7 +314,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                       <motion.button
                         variants={menuItemVariants}
                         onClick={handleNotificationClick}
-                        className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2 dark:text-dark-text dark:hover:bg-slate-700 dark:active:bg-slate-600"
+                        className="w-full px-4 py-3 sm:py-2 text-left text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2 dark:text-dark-text dark:hover:bg-slate-700 dark:active:bg-slate-600"
                         whileHover={{
                           x: 4,
                           backgroundColor: "rgba(99, 102, 241, 0.05)",
@@ -328,7 +328,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                     <motion.button
                       variants={menuItemVariants}
                       onClick={() => window.location.reload()}
-                      className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-green-600 hover:bg-green-50 active:bg-green-100 transition-colors font-medium flex items-center gap-2 dark:text-green-400 dark:hover:bg-green-900/20 dark:active:bg-green-900/30"
+                      className="w-full px-4 py-3 sm:py-2 text-left text-sm text-green-600 hover:bg-green-50 active:bg-green-100 transition-colors font-medium flex items-center gap-2 dark:text-green-400 dark:hover:bg-green-900/20 dark:active:bg-green-900/30"
                       whileHover={{ x: 4 }}
                       whileTap={{ scale: 0.98 }}
                     >
@@ -339,7 +339,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                       <motion.button
                         variants={menuItemVariants}
                         onClick={handleOpenTools}
-                        className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2 dark:text-dark-text dark:hover:bg-slate-700 dark:active:bg-slate-600"
+                        className="w-full px-4 py-3 sm:py-2 text-left text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2 dark:text-dark-text dark:hover:bg-slate-700 dark:active:bg-slate-600"
                         whileHover={{
                           x: 4,
                           backgroundColor: "rgba(99, 102, 241, 0.05)",
@@ -353,7 +353,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                     <motion.button
                       variants={menuItemVariants}
                       onClick={handleChangePassword}
-                      className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2 dark:text-dark-text dark:hover:bg-slate-700 dark:active:bg-slate-600"
+                      className="w-full px-4 py-3 sm:py-2 text-left text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100 transition-colors font-medium flex items-center gap-2 dark:text-dark-text dark:hover:bg-slate-700 dark:active:bg-slate-600"
                       whileHover={{
                         x: 4,
                         backgroundColor: "rgba(99, 102, 241, 0.05)",
@@ -368,7 +368,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
                     <motion.button
                       variants={menuItemVariants}
                       onClick={handleSignOut}
-                      className="w-full px-3 md:px-4 py-1.5 md:py-2 text-left text-xs md:text-sm text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors font-medium flex items-center gap-2 dark:text-red-400 dark:hover:bg-red-900/20 dark:active:bg-red-900/30"
+                      className="w-full px-4 py-3 sm:py-2 text-left text-sm text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors font-medium flex items-center gap-2 dark:text-red-400 dark:hover:bg-red-900/20 dark:active:bg-red-900/30"
                       whileHover={{ x: 4 }}
                       whileTap={{ scale: 0.98 }}
                     >

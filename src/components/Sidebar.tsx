@@ -318,13 +318,11 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
 
   return (
     <>
-      {/* Spacer for Portrait Mobile Bottom Nav only */}
-      <div className="h-28 sm:hidden landscape:hidden" aria-hidden="true" />
-
       {/* 1. PORTRAIT MOBILE NAV (Bottom Bar) */}
       {!isInNativeWrapper && (
         <motion.nav
           className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 sm:hidden landscape:hidden dark:bg-dark-card dark:border-dark-border"
+          style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
           initial={{ y: 100 }}
           animate={{ y: 0 }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}

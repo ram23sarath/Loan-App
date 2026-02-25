@@ -51,6 +51,7 @@ const LoanDetailPage: React.FC = () => {
     );
   }
   return (
+    <div className="pb-28 sm:pb-0">
     <GlassCard className="max-w-2xl mx-auto mt-8 smooth-center">
       <h2 className="text-2xl font-bold mb-4 dark:text-dark-text">
         Loan Details
@@ -291,6 +292,7 @@ const LoanDetailPage: React.FC = () => {
         </p>
       )}
     </GlassCard>
+    </div>
   );
 };
 

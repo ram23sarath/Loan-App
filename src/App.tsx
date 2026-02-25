@@ -52,6 +52,35 @@ const CustomerDashboard = React.lazy(
 const TrashPage = React.lazy(() => import("./components/pages/TrashPage"));
 const HomePage = React.lazy(() => import("./components/pages/HomePage"));
 
+// Prefetch all lazy route chunks after initial load to eliminate blank flashes
+// during in-app navigation. Once cached by the bundler, React.lazy resolves
+// synchronously and Suspense never shows a fallback.
+const prefetchRouteChunks = () => {
+  const chunks = [
+    () => import("./components/pages/AddCustomerPage"),
+    () => import("./components/pages/AddRecordPage"),
+    () => import("./components/pages/CustomerListPage"),
+    () => import("./components/pages/CustomerDetailPage"),
+    () => import("./components/pages/LoanListPage"),
+    () => import("./components/pages/LoanDetailPage"),
+    () => import("./components/pages/LoanSeniorityPage"),
+    () => import("./components/pages/SubscriptionListPage"),
+    () => import("./components/pages/SummaryPage"),
+    () => import("./components/pages/DataPage"),
+    () => import("./components/pages/CustomerDashboard"),
+    () => import("./components/pages/TrashPage"),
+    () => import("./components/pages/HomePage"),
+  ];
+  // Use requestIdleCallback where available to avoid blocking the main thread
+  const schedule =
+    typeof requestIdleCallback === "function"
+      ? requestIdleCallback
+      : (cb: () => void) => setTimeout(cb, 200);
+  schedule(() => {
+    chunks.forEach((load) => load().catch(() => {}));
+  });
+};
+
 // Wrapper to handle lazy loading timeouts
 const LazyPageWrapper: React.FC<{
   children: React.ReactNode;
@@ -127,6 +156,9 @@ const AnimatedRoutes = () => {
   React.useEffect(() => {
     if (location.key !== initialLocationKeyRef.current && isInitialRouteLoad) {
       setIsInitialRouteLoad(false);
+      // Once the app is interactive, prefetch all route chunks in the background
+      // so subsequent navigations resolve synchronously (no blank flash).
+      prefetchRouteChunks();
     }
   }, [isInitialRouteLoad, location.key]);
 
@@ -165,8 +197,9 @@ const AnimatedRoutes = () => {
   return (
     <Suspense fallback={suspenseFallback}>
       <AnimatePresence mode="wait">
+        {/* Use pathname as key so same-route navigations don't trigger full remounts */}
         {/* @ts-expect-error - Routes accepts `key` for reconciliation even if types don't show it */}
-        <Routes location={location} key={location.key}>
+        <Routes location={location} key={location.pathname}>
           <Route
             path="/"
             element={

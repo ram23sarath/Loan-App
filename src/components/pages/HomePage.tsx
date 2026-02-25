@@ -113,7 +113,7 @@ const HomePage: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full w-full max-w-6xl mx-auto px-4 py-8">
+    <div className="flex flex-col h-full w-full max-w-6xl mx-auto px-4 py-8 pb-28 sm:pb-8">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-gray-800 dark:text-dark-text tracking-tight">
           Welfare Loan App

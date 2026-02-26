@@ -409,6 +409,14 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
               exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 320, damping: 30 }}
               onClick={(e) => e.stopPropagation()}
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0, bottom: 0.4 }}
+              onDragEnd={(_e, info) => {
+                if (info.offset.y > 100 || info.velocity.y > 300) {
+                  setShowMobileMenu(false);
+                }
+              }}
             >
               <div className="flex items-center justify-between px-4 pt-3 pb-2">
                 <div className="h-1.5 w-14 rounded-full bg-gray-300 dark:bg-slate-600" />

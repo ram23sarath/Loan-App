@@ -29,6 +29,7 @@ import {
   Pressable,
   Modal,
   ScrollView,
+  PanResponder,
 } from "react-native";
 import {
   WebView,
@@ -64,7 +65,6 @@ import {
 import SkeletonLoading from "@/components/SkeletonLoading";
 import OfflineScreen from "@/components/OfflineScreen";
 import ErrorScreen from "@/components/ErrorScreen";
-import LandingScreen from "@/components/LandingScreen";
 
 // ============================================================================
 // CONSTANTS
@@ -166,13 +166,37 @@ export default function WebViewScreen() {
   const [currentUrl, setCurrentUrl] = useState(WEB_APP_URL);
   const [currentPath, setCurrentPath] = useState("/");
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
-  const [allowWebViewMount, setAllowWebViewMount] = useState(
-    Platform.OS !== "android",
-  );
-  const [showNativeLanding, setShowNativeLanding] = useState(
-    Platform.OS === "android",
-  );
   const [showNativeMenu, setShowNativeMenu] = useState(false);
+
+  // Animated value for swipe-to-dismiss on native menu sheet
+  const menuTranslateY = useRef(new Animated.Value(0)).current;
+  const menuPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gs) =>
+        gs.dy > 8 && Math.abs(gs.dy) > Math.abs(gs.dx),
+      onPanResponderMove: (_, gs) => {
+        if (gs.dy > 0) menuTranslateY.setValue(gs.dy);
+      },
+      onPanResponderRelease: (_, gs) => {
+        if (gs.dy > 80 || gs.vy > 0.5) {
+          Animated.timing(menuTranslateY, {
+            toValue: 500,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => {
+            setShowNativeMenu(false);
+            menuTranslateY.setValue(0);
+          });
+        } else {
+          Animated.spring(menuTranslateY, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
 
   const nativePrimaryMenuItems = React.useMemo(
     () => NATIVE_MENU_ITEMS.slice(0, 3),
@@ -220,10 +244,6 @@ export default function WebViewScreen() {
       console.log(`[WebView] ${source} - dismissing loading state`);
       setIsLoading(false);
       markInitiallyLoaded();
-
-      if (Platform.OS === "android") {
-        setShowNativeLanding(false);
-      }
     },
     [markInitiallyLoaded],
   );
@@ -250,6 +270,15 @@ export default function WebViewScreen() {
   // Keep ref in sync with state for use in closures without re-running effect
   useEffect(() => {
     authSessionRef.current = authSession;
+  }, [authSession]);
+
+  // Toggle web CSS --menu-bar-height based on auth state (Android only)
+  useEffect(() => {
+    if (Platform.OS !== "android" || !webViewRef.current) return;
+    const height = authSession ? "72px" : "0px";
+    webViewRef.current.injectJavaScript(
+      `(function(){ document.documentElement.style.setProperty('--menu-bar-height', '${height}'); })(); true;`
+    );
   }, [authSession]);
 
   // Animate loading overlay fade-in/fade-out
@@ -835,11 +864,6 @@ export default function WebViewScreen() {
     webViewRef.current?.reload();
   }, []);
 
-  const handleLandingContinue = useCallback(() => {
-    setAllowWebViewMount(true);
-    setIsLoading(true);
-  }, []);
-
   // ============================================================================
   // RENDER
   // ============================================================================
@@ -887,82 +911,66 @@ export default function WebViewScreen() {
     );
   }
 
-  if (Platform.OS === "android" && showNativeLanding && !allowWebViewMount) {
-    return (
-      <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
-        <LandingScreen onContinue={handleLandingContinue} />
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView
       style={[styles.container, isDark && styles.containerDark]}
       edges={["top", "left", "right"]} // Don't add bottom padding for web's bottom nav
     >
-      {allowWebViewMount && (
-        <WebView
-          ref={webViewRef}
-          source={{ uri: currentUrl }}
-          style={styles.webView}
-          // JavaScript & Injection
-          javaScriptEnabled={true}
-          injectedJavaScriptBeforeContentLoaded={BRIDGE_INJECTION_SCRIPT}
-          // Improved loading reliability
-          startInLoadingState={false} // renderLoading handled manually via isLoading overlay
-          // User Agent (helps web detect native wrapper)
-          applicationNameForUserAgent="LoanAppMobile/1.0"
-          // Allow inline media playback (iOS)
-          allowsInlineMediaPlayback={true}
-          mediaPlaybackRequiresUserAction={false}
-          // Performance
-          cacheEnabled={true}
-          cacheMode="LOAD_DEFAULT"
-          // Android: enable hardware acceleration
-          androidLayerType="hardware"
-          // Prevent stale content
-          incognito={false}
-          // Security: restrict WebView to trusted origins only
-          originWhitelist={TRUSTED_ORIGINS}
-          mixedContentMode="compatibility"
-          // Events
-          onMessage={handleMessage}
-          onNavigationStateChange={handleNavigationStateChange}
-          onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
-          onLoadStart={handleLoadStart}
-          onLoadEnd={handleLoadEnd}
-          onError={handleError}
-          onHttpError={handleHttpError}
-          // Android specific
-          domStorageEnabled={true}
-          thirdPartyCookiesEnabled={true}
-          // iOS specific
-          allowsBackForwardNavigationGestures={Platform.OS === "ios"}
-          decelerationRate={Platform.OS === "ios" ? "normal" : undefined}
-          contentInsetAdjustmentBehavior={
-            Platform.OS === "ios" ? "automatic" : undefined
-          }
-          // Pull to refresh (Android)
-          pullToRefreshEnabled={true}
-          // Render process handling
-          onRenderProcessGone={(syntheticEvent) => {
-            const { didCrash } = syntheticEvent.nativeEvent;
-            console.error("[WebView] Render process gone, crashed:", didCrash);
-            setError("The app encountered an issue. Please reload.");
-          }}
-          // Content process termination (iOS)
-          onContentProcessDidTerminate={() => {
-            console.error("[WebView] Content process terminated");
-            webViewRef.current?.reload();
-          }}
-        />
-      )}
-
-      {Platform.OS === "android" && showNativeLanding && allowWebViewMount && (
-        <Animated.View style={styles.landingOverlay}>
-          <LandingScreen onContinue={handleLandingContinue} />
-        </Animated.View>
-      )}
+      <WebView
+        ref={webViewRef}
+        source={{ uri: currentUrl }}
+        style={[styles.webView, Platform.OS === "android" && authSession ? { paddingBottom: MENU_BAR_HEIGHT } : undefined]}
+        // JavaScript & Injection
+        javaScriptEnabled={true}
+        injectedJavaScriptBeforeContentLoaded={BRIDGE_INJECTION_SCRIPT}
+        // Improved loading reliability
+        startInLoadingState={false} // renderLoading handled manually via isLoading overlay
+        // User Agent (helps web detect native wrapper)
+        applicationNameForUserAgent="LoanAppMobile/1.0"
+        // Allow inline media playback (iOS)
+        allowsInlineMediaPlayback={true}
+        mediaPlaybackRequiresUserAction={false}
+        // Performance
+        cacheEnabled={true}
+        cacheMode="LOAD_DEFAULT"
+        // Android: enable hardware acceleration
+        androidLayerType="hardware"
+        // Prevent stale content
+        incognito={false}
+        // Security: restrict WebView to trusted origins only
+        originWhitelist={TRUSTED_ORIGINS}
+        mixedContentMode="compatibility"
+        // Events
+        onMessage={handleMessage}
+        onNavigationStateChange={handleNavigationStateChange}
+        onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
+        onLoadStart={handleLoadStart}
+        onLoadEnd={handleLoadEnd}
+        onError={handleError}
+        onHttpError={handleHttpError}
+        // Android specific
+        domStorageEnabled={true}
+        thirdPartyCookiesEnabled={true}
+        // iOS specific
+        allowsBackForwardNavigationGestures={Platform.OS === "ios"}
+        decelerationRate={Platform.OS === "ios" ? "normal" : undefined}
+        contentInsetAdjustmentBehavior={
+          Platform.OS === "ios" ? "automatic" : undefined
+        }
+        // Pull to refresh (Android)
+        pullToRefreshEnabled={true}
+        // Render process handling
+        onRenderProcessGone={(syntheticEvent) => {
+          const { didCrash } = syntheticEvent.nativeEvent;
+          console.error("[WebView] Render process gone, crashed:", didCrash);
+          setError("The app encountered an issue. Please reload.");
+        }}
+        // Content process termination (iOS)
+        onContentProcessDidTerminate={() => {
+          console.error("[WebView] Content process terminated");
+          webViewRef.current?.reload();
+        }}
+      />
 
       {/* Loading overlay — animated fade-out for smooth transition */}
       {showOverlay && (
@@ -973,7 +981,7 @@ export default function WebViewScreen() {
         </Animated.View>
       )}
 
-      {Platform.OS === "android" && allowWebViewMount && !showNativeLanding && (
+      {Platform.OS === "android" && authSession && (
         <>
           <View
             style={[styles.nativeMenuBar, isDark && styles.nativeMenuBarDark]}
@@ -1043,19 +1051,21 @@ export default function WebViewScreen() {
             transparent
             animationType="fade"
             onRequestClose={() => setShowNativeMenu(false)}
+            onShow={() => menuTranslateY.setValue(0)}
           >
             <View style={styles.nativeMenuBackdrop}>
               <Pressable
                 style={StyleSheet.absoluteFillObject}
                 onPress={() => setShowNativeMenu(false)}
               />
-              <View
+              <Animated.View
                 style={[
                   styles.nativeMenuSheet,
                   isDark && styles.nativeMenuSheetDark,
+                  { transform: [{ translateY: menuTranslateY }] },
                 ]}
               >
-                <View style={styles.nativeSheetHeader}>
+                <View style={styles.nativeSheetHeader} {...menuPanResponder.panHandlers}>
                   <View style={styles.nativeSheetHandle} />
                   <Pressable
                     style={styles.nativeSheetCloseButton}
@@ -1114,8 +1124,32 @@ export default function WebViewScreen() {
                       </Pressable>
                     );
                   })}
+                  <View style={{ height: 1, backgroundColor: isDark ? "#334155" : "#E2E8F0", marginVertical: 6, marginHorizontal: 12 }} />
+                  <Pressable
+                    style={styles.nativeSheetItem}
+                    onPress={() => {
+                      setShowNativeMenu(false);
+                      webViewRef.current?.injectJavaScript(
+                        `window.dispatchEvent(new CustomEvent('native:open-profile')); true;`
+                      );
+                    }}
+                  >
+                    <Ionicons
+                      name="person-circle-outline"
+                      size={20}
+                      color={isDark ? "#CBD5E1" : "#334155"}
+                    />
+                    <Text
+                      style={[
+                        styles.nativeSheetItemText,
+                        { color: isDark ? "#E2E8F0" : "#0F172A" },
+                      ]}
+                    >
+                      Profile
+                    </Text>
+                  </Pressable>
                 </ScrollView>
-              </View>
+              </Animated.View>
             </View>
           </Modal>
         </>
@@ -1138,16 +1172,10 @@ const styles = StyleSheet.create({
   },
   webView: {
     flex: 1,
-    // On Android with native menu bar, add bottom padding to prevent content from being hidden
-    paddingBottom: Platform.OS === "android" ? MENU_BAR_HEIGHT : 0,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 100,
-  },
-  landingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 200,
   },
   nativeMenuBar: {
     position: "absolute",

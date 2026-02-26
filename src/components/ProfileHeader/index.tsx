@@ -127,6 +127,14 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
     backup,
   ]);
 
+  // Listen for native app requesting profile menu open
+  useEffect(() => {
+    const handleNativeOpenProfile = () => setShowMenu(true);
+    window.addEventListener("native:open-profile", handleNativeOpenProfile);
+    return () =>
+      window.removeEventListener("native:open-profile", handleNativeOpenProfile);
+  }, []);
+
   if (!session || !session.user) return null;
 
   // Prefer the customer's name for display when scoped; use metadata name for admins; fall back to email

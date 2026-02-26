@@ -409,8 +409,8 @@ export const BRIDGE_INJECTION_SCRIPT = `
   if (typeof navigator !== 'undefined' && /Android/.test(navigator.userAgent)) {
     var styleEl = document.createElement('style');
     styleEl.textContent = 
-      '/* Define menu bar height as CSS custom property */' +
-      ':root { --menu-bar-height: 72px; }' +
+      '/* Define menu bar height as CSS custom property - starts at 0, toggled by native on login */' +
+      ':root { --menu-bar-height: 0px; }' +
       '/* Add bottom padding to account for native menu bar on Android */' +
       'html, body { padding-bottom: var(--menu-bar-height) !important; box-sizing: border-box; }' +
       '/* Ensure scrollable content can scroll past the menu bar */' +

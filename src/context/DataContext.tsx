@@ -28,28 +28,224 @@ import { checkAndNotifyOverdueInstallments } from "../utils/notificationHelpers"
 import { getLoanStatus } from "../utils/loanStatus";
 import { NOTIFICATION_TYPES, NOTIFICATION_STATUSES } from "../../shared/notificationSchema.js";
 
-// ... [parseSupabaseError function remains unchanged] ...
+// ============================================================================
+// ERROR CLASSIFICATION & STRUCTURED LOGGING
+// ============================================================================
+
+const ERROR_CATEGORY = {
+  NETWORK:     "NETWORK",
+  RATE_LIMIT:  "RATE_LIMIT",
+  TIMEOUT:     "TIMEOUT",
+  AUTH:        "AUTH",
+  SESSION:     "SESSION",
+  RLS:         "RLS",
+  VALIDATION:  "VALIDATION",
+  SERVER:      "SERVER",
+  UNKNOWN:     "UNKNOWN",
+} as const;
+
+type ErrorCategory = typeof ERROR_CATEGORY[keyof typeof ERROR_CATEGORY];
+
+const classifyError = (error: any): ErrorCategory => {
+  if (!error) return ERROR_CATEGORY.UNKNOWN;
+
+  const msg  = (error?.message  ?? "").toLowerCase();
+  const code = String(error?.code ?? "").toLowerCase();
+  const status: number = error?.status ?? error?.statusCode ?? 0;
+
+  // Offline / network unreachable
+  if (
+    typeof navigator !== "undefined" && !navigator.onLine
+  ) return ERROR_CATEGORY.NETWORK;
+
+  // Browser-level fetch failures (covers Chrome, Firefox, Safari, Edge)
+  if (
+    msg === "failed to fetch"           ||  // Chrome / Firefox / Edge
+    msg === "load failed"               ||  // Safari / WebKit
+    msg.includes("networkerror")        ||  // Firefox legacy
+    msg.includes("network request failed") || // react-native / older browsers
+    msg.includes("fetch is aborted")    ||
+    msg.includes("net::err_")           ||  // Chrome DevTools error strings
+    msg.includes("err_internet_disconnected") ||
+    msg.includes("err_name_not_resolved") ||
+    msg.includes("err_connection_refused")
+  ) return ERROR_CATEGORY.NETWORK;
+
+  // Timeout
+  if (
+    error?.name === "AbortError" ||
+    msg.includes("timeout")     ||
+    msg.includes("timed out")
+  ) return ERROR_CATEGORY.TIMEOUT;
+
+  // Rate limiting (Supabase returns 429 with these codes/messages)
+  if (
+    status === 429                              ||
+    code === "over_email_send_rate_limit"       ||
+    code === "too_many_requests"               ||
+    msg.includes("rate limit")                 ||
+    msg.includes("too many requests")          ||
+    msg.includes("email rate limit exceeded")
+  ) return ERROR_CATEGORY.RATE_LIMIT;
+
+  // Server / service unavailable
+  if (status >= 500 && status < 600) return ERROR_CATEGORY.SERVER;
+
+  // Auth credential errors
+  if (
+    msg.includes("invalid login credentials")  ||
+    msg.includes("email not confirmed")         ||
+    msg.includes("user not found")             ||
+    code === "invalid_credentials"             ||
+    code === "user_not_found"                  ||
+    code === "email_not_confirmed"
+  ) return ERROR_CATEGORY.AUTH;
+
+  // Session / token errors
+  if (
+    msg.includes("refresh_token_not_found")    ||
+    msg.includes("jwt expired")                ||
+    msg.includes("invalid jwt")               ||
+    code === "refresh_token_not_found"         ||
+    code === "session_not_found"
+  ) return ERROR_CATEGORY.SESSION;
+
+  // Row Level Security / permission denied
+  if (
+    msg.includes("permission denied")          ||
+    msg.includes("row-level security")         ||
+    code === "42501"                           // PostgreSQL RLS violation
+  ) return ERROR_CATEGORY.RLS;
+
+  // Database constraint / validation errors
+  if (
+    code === "23505" || // unique_violation
+    code === "23503" || // foreign_key_violation
+    code === "23502" || // not_null_violation
+    code === "22p02"    // invalid_text_representation
+  ) return ERROR_CATEGORY.VALIDATION;
+
+  return ERROR_CATEGORY.UNKNOWN;
+};
+
+const logStructuredError = (
+  error: any,
+  context: string,
+  category: ErrorCategory,
+): void => {
+  const isOnline   = typeof navigator !== "undefined" ? navigator.onLine : "unknown";
+  const timestamp  = new Date().toISOString();
+
+  const logPayload: Record<string, any> = {
+    timestamp,
+    category,
+    context,
+    online:  isOnline,
+    message: error?.message  ?? String(error),
+    code:    error?.code     ?? null,
+    status:  error?.status   ?? error?.statusCode ?? null,
+    hint:    error?.hint     ?? null,
+    details: error?.details  ?? null,
+    name:    error?.name     ?? null,
+  };
+
+  // Only attach raw error in dev builds to avoid leaking internals in production
+  if (import.meta.env?.DEV) {
+    logPayload.rawError = error;
+  }
+
+  console.error(`[AppError][${category}] ${context}`, logPayload);
+
+  // Category-specific diagnostic hints in the console to aid debugging
+  switch (category) {
+    case ERROR_CATEGORY.NETWORK:
+      console.warn(
+        `[AppError] Network diagnostic — online: ${isOnline}\n` +
+        `  1. Can the user reach https://lhffcmefliaptsijuyay.supabase.co directly?\n` +
+        `  2. Is supabase.co blocked by a firewall, VPN, or corporate proxy?\n` +
+        `  3. Is the Supabase project paused? (Check Supabase dashboard)\n` +
+        `  4. Check Network tab in DevTools for the exact browser-level error code.`
+      );
+      break;
+    case ERROR_CATEGORY.RATE_LIMIT:
+      console.warn(
+        `[AppError] Rate limit hit.\n` +
+        `  • Supabase free tier: ~60 auth requests/hour per IP.\n` +
+        `  • Check Supabase Dashboard → Auth → Logs for 429 responses.\n` +
+        `  • Affected IP may need to wait up to 1 hour before retrying.`
+      );
+      break;
+    case ERROR_CATEGORY.SESSION:
+      console.warn(
+        `[AppError] Session/token invalid or expired.\n` +
+        `  • Stored refresh token may have been rotated or revoked.\n` +
+        `  • User must log in again to obtain a fresh session.`
+      );
+      break;
+    case ERROR_CATEGORY.SERVER:
+      console.warn(
+        `[AppError] Supabase server error (${logPayload.status}).\n` +
+        `  • Check https://status.supabase.com for ongoing incidents.\n` +
+        `  • This is transient — retry after a short delay.`
+      );
+      break;
+    case ERROR_CATEGORY.RLS:
+      console.warn(
+        `[AppError] Row Level Security policy blocked the request.\n` +
+        `  • Check Supabase Dashboard → Table Editor → Policies for the affected table.\n` +
+        `  • Ensure the authenticated user has the required SELECT/INSERT/UPDATE/DELETE policy.`
+      );
+      break;
+  }
+};
+
 const parseSupabaseError = (error: any, context: string): string => {
-  console.error(`Error ${context}:`, error);
+  const category = classifyError(error);
+  logStructuredError(error, context, category);
+
   if (error && typeof error === "object" && "message" in error) {
     const supabaseError = error as {
       message: string;
       details?: string;
       hint?: string;
       code?: string;
+      status?: number;
     };
-    if (supabaseError.message.includes("Invalid login credentials")) {
-      return "Invalid email or password. Please try again.";
+
+    switch (category) {
+      case ERROR_CATEGORY.NETWORK: {
+        const isOnline = typeof navigator !== "undefined" ? navigator.onLine : true;
+        if (!isOnline) {
+          return `You appear to be offline. Please check your internet connection and try again.`;
+        }
+        return `Network Error: Cannot reach the server. Please check your internet connection. If the issue persists on multiple networks, your ISP or firewall may be blocking access.`;
+      }
+      case ERROR_CATEGORY.RATE_LIMIT:
+        return `Too many login attempts. You have been temporarily rate-limited. Please wait a few minutes before trying again.`;
+      case ERROR_CATEGORY.TIMEOUT:
+        return `Request timed out. The server is taking too long to respond. Please try again.`;
+      case ERROR_CATEGORY.SERVER:
+        return `Server Error (${supabaseError.status ?? "5xx"}): The server encountered an issue. Please try again in a moment.`;
+      case ERROR_CATEGORY.SESSION:
+        return `Your session has expired or is no longer valid. Please log in again.`;
+      case ERROR_CATEGORY.AUTH:
+        if (supabaseError.message.toLowerCase().includes("email not confirmed")) {
+          return `Your email has not been confirmed. Please check your inbox and verify your email before logging in.`;
+        }
+        return `Invalid email or password. Please try again.`;
+      case ERROR_CATEGORY.RLS:
+        return `Database Connection Successful, but Permission Denied.\n\nThis is likely a Row Level Security (RLS) issue. Please check your Supabase dashboard to ensure RLS policies allow the current user to perform this action.`;
+      case ERROR_CATEGORY.VALIDATION:
+        if (supabaseError.code === "23505") {
+          return `Failed to add record: A record with a similar unique value (e.g., phone number or receipt) already exists.`;
+        }
+        return `Validation Error: ${supabaseError.message}`;
+      default:
+        return `Error: ${supabaseError.message}`;
     }
-    if (supabaseError.code === "23505") {
-      return `Failed to add record: A record with a similar unique value (e.g., phone number or receipt) already exists.`;
-    }
-    if (supabaseError.message.includes("permission denied")) {
-      return `Database Connection Successful, but Permission Denied.\n\nThis is likely a Row Level Security (RLS) issue. Please check your Supabase dashboard to ensure RLS policies allow the current user to perform this action.`;
-    }
-    return `Database Error: ${supabaseError.message}`;
   }
-  return `An unknown database error occurred while ${context}. The operation may not have completed successfully.`;
+
+  return `An unexpected error occurred while ${context}. Please try again.`;
 };
 
 // ... [DataContextType interface remains unchanged] ...

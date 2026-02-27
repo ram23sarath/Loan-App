@@ -8,9 +8,9 @@ on:
         required: true
         type: choice
         options:
-          - debug
           - release
-        default: debug
+          - debug
+        default: release
   push:
     branches:
       - main
@@ -47,7 +47,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: Cache npm dependencies
         uses: actions/cache@v4
@@ -61,24 +61,24 @@ jobs:
 
       - name: Install npm dependencies
         working-directory: loan-app-mobile
-        run: npm install
+        run: npm ci
 
       - name: Prebuild native Android project
         working-directory: loan-app-mobile
-        run: npm run prebuild -- --clean
+        run: npx expo prebuild --platform android --clean
 
       - name: Build Debug APK
-        if: ${{ github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == '' }}
+        if: ${{ github.event.inputs.build_type == 'debug' }}
         working-directory: loan-app-mobile/android
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a
 
       - name: Build Release APK
-        if: ${{ github.event.inputs.build_type == 'release' }}
+        if: ${{ github.event.inputs.build_type == 'release' || github.event.inputs.build_type == '' }}
         working-directory: loan-app-mobile/android
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
 
       - name: Upload Debug APK
-        if: ${{ github.event.inputs.build_type == 'debug' || github.event.inputs.build_type == '' }}
+        if: ${{ github.event.inputs.build_type == 'debug' }}
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
@@ -87,7 +87,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload Release APK
-        if: ${{ github.event.inputs.build_type == 'release' }}
+        if: ${{ github.event.inputs.build_type == 'release' || github.event.inputs.build_type == '' }}
         uses: actions/upload-artifact@v4
         with:
           name: app-release
@@ -101,12 +101,12 @@ jobs:
           echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **Repository:** ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Build Type:** ${{ github.event.inputs.build_type || 'debug' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Type:** ${{ github.event.inputs.build_type || 'release' }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Build Artifacts" >> $GITHUB_STEP_SUMMARY
           
-          BUILD_TYPE="${{ github.event.inputs.build_type || 'debug' }}"
+          BUILD_TYPE="${{ github.event.inputs.build_type || 'release' }}"
           
           if [ -f "loan-app-mobile/android/app/build/outputs/apk/debug/app-debug.apk" ]; then
             echo "✅ Debug APK: Built successfully" >> $GITHUB_STEP_SUMMARY

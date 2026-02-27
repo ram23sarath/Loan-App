@@ -1889,6 +1889,24 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           setIsScopedCustomer(currentIsScoped);
           setScopedCustomerId(currentScopedId);
 
+          // Tell native the correct isScopedCustomer value now that scope detection is complete.
+          // The SIGNED_IN handler fires before this async query runs, so isScopedCustomer was
+          // stale (false) when that message was sent. Send a corrected update here.
+          const isNative = typeof window !== 'undefined' && window.isNativeApp?.();
+          if (isNative) {
+            window.NativeBridge?.updateSession({
+              accessToken: session.access_token,
+              refreshToken: session.refresh_token,
+              expiresAt: session.expires_at ?? 0,
+              user: {
+                id: session.user.id,
+                email: session.user.email,
+                isScopedCustomer: currentIsScoped,
+                scopedCustomerId: currentScopedId,
+              },
+            });
+          }
+
           // Load cached data immediately if available (for smooth UX)
           const cacheKey = currentIsScoped
             ? `data_scoped_${currentScopedId}`

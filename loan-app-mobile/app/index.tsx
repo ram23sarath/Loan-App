@@ -139,6 +139,8 @@ const NATIVE_MENU_ITEMS: NativeMenuItem[] = [
   },
 ];
 
+const ADMIN_ONLY_PATHS = new Set(['/', '/add-record', '/customers']);
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -203,9 +205,17 @@ export default function WebViewScreen() {
     })
   ).current;
 
+  const visibleMenuItems = React.useMemo(
+    () =>
+      authSession?.user?.isScopedCustomer
+        ? NATIVE_MENU_ITEMS.filter((item) => !ADMIN_ONLY_PATHS.has(item.path))
+        : NATIVE_MENU_ITEMS,
+    [authSession],
+  );
+
   const nativePrimaryMenuItems = React.useMemo(
-    () => NATIVE_MENU_ITEMS.slice(0, 3),
-    [],
+    () => visibleMenuItems.slice(0, 3),
+    [visibleMenuItems],
   );
 
   const getPathFromUrl = useCallback((url: string) => {
@@ -1172,7 +1182,7 @@ export default function WebViewScreen() {
                   contentContainerStyle={styles.nativeSheetScroll}
                   showsVerticalScrollIndicator={true}
                 >
-                  {NATIVE_MENU_ITEMS.map((item) => {
+                  {visibleMenuItems.map((item) => {
                     const active = isPathActive(item.path);
                     return (
                       <Pressable

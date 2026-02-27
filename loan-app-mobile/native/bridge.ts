@@ -262,7 +262,7 @@ export const BRIDGE_INJECTION_SCRIPT = `
   
   // Track page navigation using History API interception (more efficient than polling)
   // This intercepts pushState/replaceState and listens to popstate
-  var lastUrl = window.location.href;
+  var lastUrl = window.location.pathname;
 
   var reportCurrentRouteToNative = function() {
     try {
@@ -276,9 +276,9 @@ export const BRIDGE_INJECTION_SCRIPT = `
       // Silently fail if route reporting fails
     }
   };
-  
+
   var notifyUrlChange = function() {
-    var newUrl = window.location.href;
+    var newUrl = window.location.pathname;
     if (newUrl !== lastUrl) {
       lastUrl = newUrl;
       console.log('[NativeBridge] URL changed to:', lastUrl);

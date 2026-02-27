@@ -46,9 +46,6 @@ const SubscriptionListPage = React.lazy(
 const SummaryPage = React.lazy(() => import("./components/pages/SummaryPage"));
 const DataPage = React.lazy(() => import("./components/pages/DataPage"));
 const LoginPage = React.lazy(() => import("./components/pages/LoginPage"));
-const CustomerDashboard = React.lazy(
-  () => import("./components/pages/CustomerDashboard"),
-);
 const TrashPage = React.lazy(() => import("./components/pages/TrashPage"));
 const HomePage = React.lazy(() => import("./components/pages/HomePage"));
 
@@ -67,7 +64,6 @@ const prefetchRouteChunks = () => {
     () => import("./components/pages/SubscriptionListPage"),
     () => import("./components/pages/SummaryPage"),
     () => import("./components/pages/DataPage"),
-    () => import("./components/pages/CustomerDashboard"),
     () => import("./components/pages/TrashPage"),
     () => import("./components/pages/HomePage"),
   ];
@@ -204,7 +200,7 @@ const AnimatedRoutes = () => {
             path="/"
             element={
               isScopedCustomer ? (
-                <CustomerDashboard />
+                <Navigate to="/home" replace />
               ) : (
                 <AdminOnlyRoute>
                   <AddCustomerPage />

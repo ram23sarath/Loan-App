@@ -187,25 +187,9 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
     (item) => !item.adminOnly || !isScopedCustomer,
   );
 
-  // For scoped customers, add a Home link that navigates to the customer dashboard above Loans
-  if (isScopedCustomer) {
-    const homeItem: NavItem = {
-      path: "/",
-      label: "Dashboard",
-      icon: HomeIcon,
-      mobilePrimary: true,
-    };
-    const loansIndex = navItems.findIndex((it) => it.path === "/loans");
-    if (loansIndex >= 0) {
-      navItems.splice(loansIndex, 0, homeItem);
-    } else {
-      navItems.unshift(homeItem);
-    }
-  }
   // Mobile primary items are explicitly marked with mobilePrimary flag:
   // - Home is included for all users
   // - Add Customer and Add Record are included for admins (filtered out for scoped users)
-  // - Dashboard is included for scoped users (injected above)
   // This approach is resilient to reordering of nav items and makes selection intent explicit.
   const mobilePrimaryNavItems = navItems.filter((item) => item.mobilePrimary);
   const activeLinkClass =

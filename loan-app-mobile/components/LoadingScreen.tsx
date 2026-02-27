@@ -57,7 +57,7 @@ export default function LoadingScreen({ message = 'Loading...' }: LoadingScreenP
            // Original was: 1 -> 1.1 -> 1. Loop.
            // So sequence 1.1 then 1 is correct. withRepeat -1 loops it.
     );
-  }, []);
+  }, [pulseValue, spinValue]);
 
   const spinAnimatedStyle = useAnimatedStyle(() => {
     return {

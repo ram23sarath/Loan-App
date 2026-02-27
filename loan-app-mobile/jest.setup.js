@@ -4,7 +4,7 @@
 // Import Testing Library matchers for React Native (guarded)
 try {
   require('@testing-library/jest-native/extend-expect');
-} catch (err) {
+} catch {
   // If the package isn't installed in this environment, skip extending matchers.
 }
 

@@ -35,7 +35,7 @@ export default function SkeletonLoading() {
       ),
       -1,
     );
-  }, []);
+  }, [opacity]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {

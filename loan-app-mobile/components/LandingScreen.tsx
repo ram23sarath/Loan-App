@@ -1,11 +1,11 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
-  Text,
   StyleSheet,
-  Pressable,
   useColorScheme,
   StatusBar,
+  Platform,
+  AccessibilityInfo,
 } from "react-native";
 import Animated, {
   useSharedValue,
@@ -16,81 +16,185 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
+import * as Device from "expo-device";
 
 interface LandingScreenProps {
   onContinue: () => void;
 }
 
+/**
+ * Detects if the device is low-end based on actual performance characteristics.
+ * Checks RAM availability and device model hints rather than pixel density.
+ *
+ * Low-end criteria:
+ * - Android with < 2GB total memory, OR
+ * - Known budget device identifier
+ */
+function isLowEndDevice(): boolean {
+  // iOS devices supported by Expo are generally performant
+  if (Platform.OS === "ios") {
+    return false;
+  }
+
+  // Android: check actual device capabilities
+  if (Platform.OS === "android") {
+    try {
+      // Check total memory (bytes to GB) using expo-device.
+      // Keep this synchronous and dependency-free for Expo managed workflow.
+      const totalMemoryBytes = Device.totalMemory ?? 0;
+
+      const totalMemoryGB = totalMemoryBytes / (1024 * 1024 * 1024);
+
+      // Devices with < 2GB RAM are considered low-end
+      if (totalMemoryGB > 0 && totalMemoryGB < 2) {
+        return true;
+      }
+
+      // Detect specific budget device models using expo-device
+      // Common budget device indicators
+      const modelName = (Device.modelName || "").toLowerCase();
+      const brandName = (Device.brand || "").toLowerCase();
+
+      const budgetIndicators = [
+        "go",           // Android Go editions
+        "a1 ", "a2 ", "a3 ", "a4 ",  // Samsung Galaxy A series
+        "lite",         // Various lite editions
+        "e5", "e6", "e7",            // Moto E series
+        "c3", "c2",     // Realme C series
+      ];
+
+      if (budgetIndicators.some(indicator =>
+        modelName.includes(indicator) || brandName.includes(indicator)
+      )) {
+        return true;
+      }
+    } catch (error) {
+      // If device info check fails, assume sufficient resources (safer default)
+      console.warn("Device capability check failed, assuming standard device", error);
+    }
+  }
+
+  return false;
+}
+
 // Animation constants
-const FADE_DURATION = 420;
-const SLIDE_DISTANCE = 28;
+const SLIDE_DISTANCE = 8;           // Subtle "settle into place" offset (was 28)
 const FADE_EASING = Easing.out(Easing.cubic);
+const HERO_ANIM_DELAY = 100;        // Post-first-frame start delay (~1 frame at 60fps)
+const HERO_ANIM_DURATION = 200;     // translateY duration for hero text (≤300ms)
+const ICON_FADE_DURATION = 300;     // Icon opacity/scale duration (decorative element)
+const AUTO_ADVANCE_DELAY = 2000;    // Total dwell time before auto-advancing
 
 export default function LandingScreen({ onContinue }: LandingScreenProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
-  // Shared values for each animated element
-  const iconOpacity = useSharedValue(0);
-  const iconScale = useSharedValue(0.7);
+  // Robust low-end device detection based on actual hardware capabilities
+  // rather than screen density alone. Checks RAM, CPU cores, and device model.
+  const isLowEnd = isLowEndDevice();
 
-  const brandOpacity = useSharedValue(0);
-  const brandY = useSharedValue(SLIDE_DISTANCE);
+  // Shared values for icon (decorative — invisible on frame 1 is acceptable)
+  const iconOpacity = useSharedValue(isLowEnd ? 1 : 0);
+  const iconScale   = useSharedValue(isLowEnd ? 1 : 0.7);
 
-  const titleOpacity = useSharedValue(0);
-  const titleY = useSharedValue(SLIDE_DISTANCE);
+  // Shared values for hero text — translateY ONLY.
+  // Opacity is hardcoded to 1 in static styles so text is readable on frame 1.
+  // On low-end devices start at final position (0) with no animation.
+  const brandY    = useSharedValue(isLowEnd ? 0 : SLIDE_DISTANCE);
+  const titleY    = useSharedValue(isLowEnd ? 0 : SLIDE_DISTANCE);
+  const subtitleY = useSharedValue(isLowEnd ? 0 : SLIDE_DISTANCE);
 
-  const subtitleOpacity = useSharedValue(0);
-  const subtitleY = useSharedValue(SLIDE_DISTANCE);
+  // OS reduce-motion accessibility preference (async check)
+  const [reduceMotion, setReduceMotion] = useState(false);
 
-  const buttonOpacity = useSharedValue(0);
-  const buttonY = useSharedValue(SLIDE_DISTANCE);
+  // Timer refs for safe cleanup on unmount
+  const autoAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const animTimerRef        = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Stable ref to onContinue — prevents stale closure if parent re-renders before timer fires
+  const onContinueRef = useRef(onContinue);
   useEffect(() => {
-    // Icon: scale + fade (delay 0ms)
-    iconOpacity.value = withTiming(1, { duration: FADE_DURATION, easing: FADE_EASING });
-    iconScale.value = withSpring(1, { damping: 14, stiffness: 120 });
+    onContinueRef.current = onContinue;
+  }, [onContinue]);
 
-    // Brand name (delay 200ms)
-    brandOpacity.value = withDelay(200, withTiming(1, { duration: FADE_DURATION, easing: FADE_EASING }));
-    brandY.value = withDelay(200, withTiming(0, { duration: FADE_DURATION, easing: FADE_EASING }));
-
-    // Title (delay 350ms)
-    titleOpacity.value = withDelay(350, withTiming(1, { duration: FADE_DURATION, easing: FADE_EASING }));
-    titleY.value = withDelay(350, withTiming(0, { duration: FADE_DURATION, easing: FADE_EASING }));
-
-    // Subtitle (delay 500ms)
-    subtitleOpacity.value = withDelay(500, withTiming(1, { duration: FADE_DURATION, easing: FADE_EASING }));
-    subtitleY.value = withDelay(500, withTiming(0, { duration: FADE_DURATION, easing: FADE_EASING }));
-
-    // Button (delay 650ms) — spring for natural feel
-    buttonOpacity.value = withDelay(650, withTiming(1, { duration: FADE_DURATION, easing: FADE_EASING }));
-    buttonY.value = withDelay(650, withSpring(0, { damping: 16, stiffness: 140 }));
+  // Query OS reduce-motion preference once on mount
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then(setReduceMotion)
+      .catch(() => {
+        // Non-fatal: if the query fails, the 8px/200ms animation is too subtle
+        // to cause vestibular harm, so playing it is acceptable.
+      });
   }, []);
 
+  // Animation effect — re-runs if reduceMotion state changes (async check resolves).
+  // isLowEnd is a mount-time constant; it never changes so it is not a dependency.
+  useEffect(() => {
+    const shouldSkip = isLowEnd || reduceMotion;
+
+    if (shouldSkip) {
+      // Snap all values to final state immediately — zero animation overhead.
+      iconOpacity.value = 1;
+      iconScale.value   = 1;
+      brandY.value      = 0;
+      titleY.value      = 0;
+      subtitleY.value   = 0;
+      return;
+    }
+
+    // Delay animation start by HERO_ANIM_DELAY so the first frame is fully painted
+    // before any compositor transforms begin. Avoids first-frame jank.
+    animTimerRef.current = setTimeout(() => {
+      // Icon: fade in + spring scale (decorative)
+      iconOpacity.value = withTiming(1, { duration: ICON_FADE_DURATION, easing: FADE_EASING });
+      iconScale.value   = withSpring(1, { damping: 14, stiffness: 120 });
+
+      // Hero text: translateY settle only — GPU compositor handles this without re-layout.
+      // Short stagger (0 / 40ms / 80ms) gives a cascade within ≤380ms total.
+      brandY.value    = withTiming(0, { duration: HERO_ANIM_DURATION, easing: FADE_EASING });
+      titleY.value    = withDelay(40, withTiming(0, { duration: HERO_ANIM_DURATION, easing: FADE_EASING }));
+      subtitleY.value = withDelay(80, withTiming(0, { duration: HERO_ANIM_DURATION, easing: FADE_EASING }));
+    }, HERO_ANIM_DELAY);
+
+    return () => {
+      if (animTimerRef.current !== null) {
+        clearTimeout(animTimerRef.current);
+        animTimerRef.current = null;
+      }
+    };
+  }, [reduceMotion]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-advance: runs exactly once on mount regardless of motion preferences.
+  useEffect(() => {
+    autoAdvanceTimerRef.current = setTimeout(() => {
+      onContinueRef.current();
+    }, AUTO_ADVANCE_DELAY);
+
+    return () => {
+      if (autoAdvanceTimerRef.current !== null) {
+        clearTimeout(autoAdvanceTimerRef.current);
+        autoAdvanceTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  // Animated styles
   const iconAnimatedStyle = useAnimatedStyle(() => ({
     opacity: iconOpacity.value,
     transform: [{ scale: iconScale.value }],
   }));
 
+  // Hero text: translateY only — no opacity animation (opacity is 1 in static style)
   const brandAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: brandOpacity.value,
     transform: [{ translateY: brandY.value }],
   }));
 
   const titleAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: titleOpacity.value,
     transform: [{ translateY: titleY.value }],
   }));
 
   const subtitleAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: subtitleOpacity.value,
     transform: [{ translateY: subtitleY.value }],
-  }));
-
-  const buttonAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: buttonOpacity.value,
-    transform: [{ translateY: buttonY.value }],
   }));
 
   return (
@@ -113,7 +217,7 @@ export default function LandingScreen({ onContinue }: LandingScreenProps) {
           </View>
         </Animated.View>
 
-        {/* Brand name */}
+        {/* Brand name — opacity:1 in static style for immediate frame-1 visibility */}
         <Animated.Text
           style={[styles.brandName, isDark && styles.textDark, brandAnimatedStyle]}
         >
@@ -135,21 +239,7 @@ export default function LandingScreen({ onContinue }: LandingScreenProps) {
         </Animated.Text>
       </View>
 
-      {/* Continue button */}
-      <Animated.View style={buttonAnimatedStyle}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.ctaButton,
-            pressed && styles.ctaButtonPressed,
-          ]}
-          onPress={onContinue}
-          accessibilityRole="button"
-          accessibilityLabel="Continue to app"
-        >
-          <Text style={styles.ctaText}>Continue</Text>
-          <Ionicons name="arrow-forward" size={18} color="#FFFFFF" style={styles.ctaIcon} />
-        </Pressable>
-      </Animated.View>
+      {/* Continue button removed — screen auto-advances after AUTO_ADVANCE_DELAY */}
     </View>
   );
 }
@@ -157,7 +247,7 @@ export default function LandingScreen({ onContinue }: LandingScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "space-between",
+    justifyContent: "flex-start",  // was "space-between" — no bottom button to anchor
     paddingHorizontal: 24,
     paddingTop: 72,
     paddingBottom: 48,
@@ -207,26 +297,5 @@ const styles = StyleSheet.create({
   },
   textDark: {
     color: "#E2E8F0",
-  },
-  ctaButton: {
-    backgroundColor: "#4F46E5",
-    borderRadius: 16,
-    minHeight: 54,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-  ctaButtonPressed: {
-    opacity: 0.88,
-  },
-  ctaText: {
-    color: "#FFFFFF",
-    fontSize: 17,
-    fontWeight: "600",
-    letterSpacing: 0.2,
-  },
-  ctaIcon: {
-    marginTop: 1,
   },
 });

@@ -155,7 +155,7 @@ export default function WebViewScreen() {
   const pendingDeepLinkPathRef = useRef<string | null>(null);
   const pendingDeepLinkIdRef = useRef<string | null>(null);
   const authSessionRef = useRef<AuthSession | null>(null);
-  const handlerUnsubscribersRef = useRef<Array<() => void>>([]);
+  const handlerUnsubscribersRef = useRef<(() => void)[]>([]);
   const previousIsOfflineRef = useRef<boolean>(false);
   const hasInitiallyLoadedRef = useRef(false);
   const overlayOpacity = useRef(new Animated.Value(1)).current;
@@ -478,7 +478,7 @@ export default function WebViewScreen() {
                 await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
                 break;
             }
-          } catch (err) {
+          } catch {
             // Haptics not available on all devices
           }
         }),

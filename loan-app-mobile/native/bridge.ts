@@ -263,14 +263,27 @@ export const BRIDGE_INJECTION_SCRIPT = `
   // Track page navigation using History API interception (more efficient than polling)
   // This intercepts pushState/replaceState and listens to popstate
   var lastUrl = window.location.href;
+
+  var reportCurrentRouteToNative = function() {
+    try {
+      if (window.sendToNative) {
+        window.sendToNative('PAGE_LOADED', {
+          route: window.location.pathname || '/',
+          title: document.title || ''
+        });
+      }
+    } catch (e) {
+      // Silently fail if route reporting fails
+    }
+  };
   
   var notifyUrlChange = function() {
     var newUrl = window.location.href;
     if (newUrl !== lastUrl) {
       lastUrl = newUrl;
       console.log('[NativeBridge] URL changed to:', lastUrl);
-      // RouteReadySignal component handles PAGE_LOADED/APP_READY signals
-      // per-page after visual stability is confirmed.
+      // Keep native route state in sync for Android menu visibility/navigation.
+      reportCurrentRouteToNative();
     }
   };
   
@@ -317,6 +330,10 @@ export const BRIDGE_INJECTION_SCRIPT = `
       console.warn('[NativeBridge] ReactNativeWebView not available');
     }
   };
+
+  // Send initial route as soon as bridge is available so native state
+  // does not remain stale (e.g. stuck on /login after auth redirect).
+  reportCurrentRouteToNative();
   
   /**
    * Check if running inside native app

@@ -295,9 +295,9 @@ export default function WebViewScreen() {
     authSessionRef.current = authSession;
   }, [authSession]);
 
-  // Toggle web CSS --menu-bar-height based on auth state (Android only)
+  // Toggle web CSS --menu-bar-height based on auth state (native platforms)
   useEffect(() => {
-    if (Platform.OS !== "android" || !webViewRef.current) return;
+    if ((Platform.OS !== "android" && Platform.OS !== "ios") || !webViewRef.current) return;
     const height = authSession ? "72px" : "0px";
     webViewRef.current.injectJavaScript(
       `(function(){ document.documentElement.style.setProperty('--menu-bar-height', '${height}'); })(); true;`
@@ -642,7 +642,7 @@ export default function WebViewScreen() {
         bridgeRef.current = null;
       };
     }
-  }, [completeStartupTransition, getPathFromUrl]);
+  }, [completeStartupTransition, getPathFromUrl, showLanding]);
 
   // ============================================================================
   // NETWORK STATUS
@@ -1000,7 +1000,7 @@ export default function WebViewScreen() {
       <WebView
         ref={webViewRef}
         source={{ uri: currentUrl }}
-        style={[styles.webView, Platform.OS === "android" && authSession ? { paddingBottom: MENU_BAR_HEIGHT } : undefined]}
+        style={[styles.webView, (Platform.OS === "android" || Platform.OS === "ios") && authSession ? { paddingBottom: MENU_BAR_HEIGHT } : undefined]}
         // JavaScript & Injection
         javaScriptEnabled={true}
         injectedJavaScriptBeforeContentLoaded={BRIDGE_INJECTION_SCRIPT}
@@ -1062,7 +1062,7 @@ export default function WebViewScreen() {
         </Animated.View>
       )}
 
-      {Platform.OS === "android" && authSession && !isLoginPath(currentPath) && !showOverlay && (
+      {(Platform.OS === "android" || Platform.OS === "ios") && authSession && !isLoginPath(currentPath) && !showOverlay && (
         <>
           {!isProfileMenuOpen && (
           <View

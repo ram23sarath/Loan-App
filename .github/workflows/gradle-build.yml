@@ -67,15 +67,23 @@ jobs:
         working-directory: loan-app-mobile
         run: npx expo prebuild --platform android --clean
 
+      - name: Configure Gradle JVM memory
+        working-directory: loan-app-mobile/android
+        run: |
+          echo "" >> gradle.properties
+          echo "# CI memory configuration — added by workflow" >> gradle.properties
+          echo "org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8" >> gradle.properties
+          echo "org.gradle.daemon=false" >> gradle.properties
+
       - name: Build Debug APK
         if: ${{ github.event.inputs.build_type == 'debug' }}
         working-directory: loan-app-mobile/android
-        run: ./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a
+        run: ./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a --no-daemon
 
       - name: Build Release APK
         if: ${{ github.event.inputs.build_type == 'release' || github.event.inputs.build_type == '' }}
         working-directory: loan-app-mobile/android
-        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
 
       - name: Upload Debug APK
         if: ${{ github.event.inputs.build_type == 'debug' }}

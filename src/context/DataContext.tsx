@@ -385,17 +385,9 @@ const fetchAllRecords = async <T,>(
 };
 
 // Cache helper functions
-// NOTE: On mobile WebView, localStorage may be unreliable or isolated per process.
-// We disable caching entirely on native to avoid silent failures and stale data.
+// Uses localStorage which is available in both web and Android WebView
+// (domStorageEnabled is set to true on the WebView component).
 const getCachedData = (key: string) => {
-  // Skip caching on mobile - WebView storage is unreliable
-  // Forces fresh fetches from Supabase instead
-  const isNative = typeof window !== "undefined" && window.isNativeApp?.();
-  if (isNative) {
-    console.log(`[Cache] Skipping cached data on mobile for key: ${key}`);
-    return null;
-  }
-
   try {
     const cached = localStorage.getItem(`loan_app_cache_${key}`);
     if (cached) {
@@ -412,13 +404,6 @@ const getCachedData = (key: string) => {
 };
 
 const setCachedData = (key: string, data: any) => {
-  // Skip caching on mobile - WebView storage is unreliable
-  const isNative = typeof window !== "undefined" && window.isNativeApp?.();
-  if (isNative) {
-    console.log(`[Cache] Skipping cache write on mobile for key: ${key}`);
-    return;
-  }
-
   try {
     localStorage.setItem(
       `loan_app_cache_${key}`,
@@ -433,12 +418,6 @@ const setCachedData = (key: string, data: any) => {
 };
 
 const clearCache = (key?: string) => {
-  // Skip cache clearing on mobile (nothing to clear since we don't cache)
-  const isNative = typeof window !== "undefined" && window.isNativeApp?.();
-  if (isNative) {
-    return;
-  }
-
   try {
     if (key) {
       localStorage.removeItem(`loan_app_cache_${key}`);
@@ -1915,6 +1894,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             ? `data_scoped_${currentScopedId}`
             : "data_admin";
           const cachedData = getCachedData(cacheKey);
+          // Keep reference to what was served so we can skip re-renders when
+          // the background fetch returns the same data.
+          const dataServedFromCache = cachedData;
           if (cachedData) {
             setCustomers(cachedData.customers || []);
             setLoans(cachedData.loans || []);
@@ -1975,11 +1957,6 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
               const dataEntriesData =
                 (dataEntriesRes.data as DataEntry[]) || [];
 
-              setCustomers(customersData);
-              setLoans(loansArr);
-              setSubscriptions(subscriptionsData);
-              setDataEntries(dataEntriesData);
-
               // Fetch installments for loans
               let installmentsData: Installment[] = [];
               const loanIds = loansArr.map((l) => l.id);
@@ -1991,18 +1968,41 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     .in("loan_id", loanIds);
                 if (installmentsError) throw installmentsError;
                 installmentsData = (fetchedInstallments as Installment[]) || [];
-                if (isMounted) setInstallments(installmentsData);
-              } else if (isMounted) {
-                setInstallments([]);
               }
 
-              // Cache the fetched data
-              setCachedData(`data_scoped_${currentScopedId}`, {
+              // Only update state when data has actually changed vs what was
+              // served from cache. This prevents blank re-renders on navigation.
+              const freshScoped = {
                 customers: customersData,
                 loans: loansArr,
                 subscriptions: subscriptionsData,
                 installments: installmentsData,
                 dataEntries: dataEntriesData,
+              };
+              const cachedScoped = dataServedFromCache
+                ? {
+                    customers: dataServedFromCache.customers || [],
+                    loans: dataServedFromCache.loans || [],
+                    subscriptions: dataServedFromCache.subscriptions || [],
+                    installments: dataServedFromCache.installments || [],
+                    dataEntries: dataServedFromCache.dataEntries || [],
+                  }
+                : null;
+              const scopedDataChanged =
+                !cachedScoped ||
+                JSON.stringify(freshScoped) !== JSON.stringify(cachedScoped);
+
+              if (scopedDataChanged && isMounted) {
+                setCustomers(customersData);
+                setLoans(loansArr);
+                setSubscriptions(subscriptionsData);
+                setDataEntries(dataEntriesData);
+                setInstallments(installmentsData);
+              }
+
+              // Always update cache (refreshes TTL so next visit stays fast)
+              setCachedData(`data_scoped_${currentScopedId}`, {
+                ...freshScoped,
                 seniorityList: [], // Will be set below
               });
             } else {
@@ -2064,11 +2064,35 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
               if (!isMounted) return;
 
-              setCustomers(customersData);
-              setLoans(loansData);
-              setSubscriptions(subscriptionsData);
-              setInstallments(installmentsData);
-              setDataEntries(dataEntriesData);
+              // Only update state when data has actually changed vs what was
+              // served from cache. This prevents unnecessary re-renders.
+              const freshAdmin = {
+                customers: customersData,
+                loans: loansData,
+                subscriptions: subscriptionsData,
+                installments: installmentsData,
+                dataEntries: dataEntriesData,
+              };
+              const cachedAdmin = dataServedFromCache
+                ? {
+                    customers: dataServedFromCache.customers || [],
+                    loans: dataServedFromCache.loans || [],
+                    subscriptions: dataServedFromCache.subscriptions || [],
+                    installments: dataServedFromCache.installments || [],
+                    dataEntries: dataServedFromCache.dataEntries || [],
+                  }
+                : null;
+              const adminDataChanged =
+                !cachedAdmin ||
+                JSON.stringify(freshAdmin) !== JSON.stringify(cachedAdmin);
+
+              if (adminDataChanged && isMounted) {
+                setCustomers(customersData);
+                setLoans(loansData);
+                setSubscriptions(subscriptionsData);
+                setInstallments(installmentsData);
+                setDataEntries(dataEntriesData);
+              }
 
               // Check for overdue installments (admin only) - run in background, don't block
               if (!currentIsScoped) {
@@ -2084,13 +2108,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 });
               }
 
-              // Cache the fetched data
+              // Always update cache (refreshes TTL so next visit stays fast)
               setCachedData("data_admin", {
-                customers: customersData,
-                loans: loansData,
-                subscriptions: subscriptionsData,
-                installments: installmentsData,
-                dataEntries: dataEntriesData,
+                ...freshAdmin,
                 seniorityList: [], // Will be set below
               });
             }
@@ -2122,7 +2142,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             const { data, error } = await query;
             if (error) throw error;
             const seniorityData = (data as any[]) || [];
-            if (isMounted) setSeniorityList(seniorityData);
+            // Only update seniority state if it changed vs what was served
+            if (
+              !cachedSeniority ||
+              JSON.stringify(seniorityData) !== JSON.stringify(cachedSeniority)
+            ) {
+              if (isMounted) setSeniorityList(seniorityData);
+            }
             setCachedData(seniorityKey, seniorityData);
           } catch (err) {
             console.error(
@@ -2239,7 +2265,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         // Fetch all data
         if (currentIsScoped && currentScopedId) {
           // Load from cache first for instant display
-          const cacheKey = `loan_app_cache_data_scoped_${currentScopedId}`;
+          const cacheKey = `data_scoped_${currentScopedId}`;
           const cachedData = getCachedData(cacheKey);
           if (cachedData && isMounted) {
             setCustomers(cachedData.customers || []);
@@ -2315,7 +2341,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           });
         } else {
           // Load from cache first for instant display
-          const cacheKey = "loan_app_cache_data_admin";
+          const cacheKey = "data_admin";
           const cachedData = getCachedData(cacheKey);
           if (cachedData && isMounted) {
             setCustomers(cachedData.customers || []);
@@ -2403,7 +2429,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           }
 
           // Cache admin data
-          setCachedData("loan_app_cache_data_admin", {
+          setCachedData("data_admin", {
             customers: customersData,
             loans: loansData,
             subscriptions: subscriptionsData,

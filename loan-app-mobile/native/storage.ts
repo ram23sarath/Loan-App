@@ -9,6 +9,7 @@ import * as SecureStore from 'expo-secure-store';
 import type { AuthSession } from './bridge';
 
 const AUTH_SESSION_KEY = 'loan_app_auth_session';
+const LANDING_SCREEN_SEEN_KEY = 'loan_app_landing_screen_seen';
 
 /**
  * Save auth session to secure storage
@@ -75,6 +76,33 @@ export async function hasAuthSession(): Promise<boolean> {
     return !!serialized;
   } catch (error) {
     console.error('[Storage] Failed to check auth session:', error);
+    return false;
+  }
+}
+
+/**
+ * Mark landing screen as seen (user has dismissed it at least once)
+ */
+export async function saveLandingScreenSeen(): Promise<void> {
+  try {
+    await SecureStore.setItemAsync(LANDING_SCREEN_SEEN_KEY, 'true');
+    console.log('[Storage] Landing screen marked as seen');
+  } catch (error) {
+    console.error('[Storage] Failed to save landing screen state:', error);
+    // Non-critical: don't throw, just log the error
+  }
+}
+
+/**
+ * Check if landing screen has been seen before
+ */
+export async function hasSeenLandingScreen(): Promise<boolean> {
+  try {
+    const value = await SecureStore.getItemAsync(LANDING_SCREEN_SEEN_KEY);
+    return value === 'true';
+  } catch (error) {
+    console.error('[Storage] Failed to check landing screen state:', error);
+    // Default to false (show landing) if there's an error
     return false;
   }
 }

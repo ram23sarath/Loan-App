@@ -60,8 +60,11 @@ import {
   loadAuthSession,
   saveAuthSession,
   clearAuthSession,
+  hasSeenLandingScreen,
+  saveLandingScreenSeen,
 } from "@/native/storage";
 
+import LandingScreen from "@/components/LandingScreen";
 import SkeletonLoading from "@/components/SkeletonLoading";
 import OfflineScreen from "@/components/OfflineScreen";
 import ErrorScreen from "@/components/ErrorScreen";
@@ -158,6 +161,7 @@ export default function WebViewScreen() {
   const overlayOpacity = useRef(new Animated.Value(1)).current;
 
   // State
+  const [showLanding, setShowLanding] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showOverlay, setShowOverlay] = useState(true);
   const [isOffline, setIsOffline] = useState(false);
@@ -228,9 +232,23 @@ export default function WebViewScreen() {
   const navigateToPath = useCallback((path: string) => {
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
     setCurrentPath(normalizedPath);
-    const targetUrl = `${WEB_APP_URL}${normalizedPath}`;
-    setCurrentUrl(targetUrl);
     setShowNativeMenu(false);
+
+    if (hasInitiallyLoadedRef.current && webViewRef.current) {
+      // SPA client-side navigation — React Router responds to pushState + popstate.
+      // Keeps the WebView session alive (no reload), so DataContext in-memory data
+      // is preserved. Screen never goes blank and no re-fetch is triggered.
+      const safePathJSON = JSON.stringify(normalizedPath);
+      webViewRef.current.injectJavaScript(
+        `(function(){` +
+          `window.history.pushState(null,'',${safePathJSON});` +
+          `window.dispatchEvent(new PopStateEvent('popstate',{state:{}}));` +
+        `})();true;`
+      );
+    } else {
+      // App not yet loaded — fall back to full URL navigation
+      setCurrentUrl(`${WEB_APP_URL}${normalizedPath}`);
+    }
   }, []);
 
   const markInitiallyLoaded = useCallback(() => {
@@ -326,6 +344,23 @@ export default function WebViewScreen() {
       })
       .catch((error) => {
         console.error("[Storage] Failed to load persisted session:", error);
+      });
+  }, []);
+
+  // ============================================================================
+  // LOAD LANDING SCREEN STATE ON MOUNT
+  // ============================================================================
+
+  useEffect(() => {
+    hasSeenLandingScreen()
+      .then((hasSeen) => {
+        // If user has seen it before, skip landing screen. Otherwise show it.
+        setShowLanding(!hasSeen);
+      })
+      .catch((error) => {
+        console.error("[Storage] Failed to check landing screen state:", error);
+        // On error, default to showing landing screen
+        setShowLanding(true);
       });
   }, []);
 
@@ -893,6 +928,26 @@ export default function WebViewScreen() {
   // ============================================================================
   // RENDER
   // ============================================================================
+
+  // While loading landing screen state, render nothing (brief invisible load)
+  if (showLanding === null) {
+    return null;
+  }
+
+  // Show native landing screen on first launch
+  if (showLanding) {
+    return (
+      <SafeAreaView style={[styles.container, isDark && styles.containerDark]}>
+        <LandingScreen
+          onContinue={async () => {
+            // Mark landing as seen and dismiss
+            await saveLandingScreenSeen();
+            setShowLanding(false);
+          }}
+        />
+      </SafeAreaView>
+    );
+  }
 
   // Show offline screen
   if (isOffline) {

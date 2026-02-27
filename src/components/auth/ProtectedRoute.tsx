@@ -71,7 +71,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   return (
     <>
       {children}
-      {isRefreshing && (
+      {isRefreshing && !isInNativeWrapper() && (
         <div
           style={{
             position: "fixed",

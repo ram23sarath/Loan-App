@@ -221,6 +221,10 @@ export default function WebViewScreen() {
     [currentPath],
   );
 
+  const isLoginPath = useCallback((path: string) => {
+    return path === "/login" || path.startsWith("/login/");
+  }, []);
+
   const navigateToPath = useCallback((path: string) => {
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
     setCurrentPath(normalizedPath);
@@ -524,6 +528,14 @@ export default function WebViewScreen() {
         bridgeRef.current.on("PAGE_LOADED", (payload) => {
           const { route } = payload as { route: string; title?: string };
           console.log("[WebView] PAGE_LOADED signal received. Route:", route);
+          if (typeof route === "string" && route.length > 0) {
+            const normalizedPath = route.startsWith("http")
+              ? getPathFromUrl(route)
+              : route.startsWith("/")
+                ? route
+                : `/${route}`;
+            setCurrentPath(normalizedPath);
+          }
           completeStartupTransition("PAGE_LOADED signal received");
         }),
       );
@@ -595,7 +607,7 @@ export default function WebViewScreen() {
         bridgeRef.current = null;
       };
     }
-  }, [completeStartupTransition]);
+  }, [completeStartupTransition, getPathFromUrl]);
 
   // ============================================================================
   // NETWORK STATUS
@@ -995,8 +1007,7 @@ export default function WebViewScreen() {
         </Animated.View>
       )}
 
-      {Platform.OS === "android" && authSession &&
-        currentPath !== "/" && !currentPath.startsWith("/login") && (
+      {Platform.OS === "android" && authSession && !isLoginPath(currentPath) && !showOverlay && (
         <>
           {!isProfileMenuOpen && (
           <View

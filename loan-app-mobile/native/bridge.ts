@@ -49,6 +49,7 @@ export type WebToNativeCommand =
   | { type: 'ERROR_REPORT'; payload: { message: string; stack?: string; componentStack?: string } }
   | { type: 'THEME_DETECTED'; payload: { mode: 'light' | 'dark' } }
   | { type: 'DEEP_LINK_ACK'; payload: { path: string; requestId?: string } }
+  | { type: 'PROFILE_DROPDOWN_OPEN'; payload: { isOpen: boolean } }
   | { type: 'APP_READY' };
 
 // ============================================================================

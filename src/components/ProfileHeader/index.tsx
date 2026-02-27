@@ -135,6 +135,20 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
       window.removeEventListener("native:open-profile", handleNativeOpenProfile);
   }, []);
 
+  // Notify native app when profile dropdown opens/closes so it can hide the
+  // native bottom bar (which otherwise renders above WebView content)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const rnWebView = (
+      window as unknown as { ReactNativeWebView?: { postMessage: (msg: string) => void } }
+    ).ReactNativeWebView;
+
+    rnWebView?.postMessage(
+      JSON.stringify({ type: "PROFILE_DROPDOWN_OPEN", payload: { isOpen: showMenu } })
+    );
+  }, [showMenu]);
+
   if (!session || !session.user) return null;
 
   // Prefer the customer's name for display when scoped; use metadata name for admins; fall back to email

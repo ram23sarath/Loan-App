@@ -167,12 +167,13 @@ export default function WebViewScreen() {
   const [currentPath, setCurrentPath] = useState("/");
   const [authSession, setAuthSession] = useState<AuthSession | null>(null);
   const [showNativeMenu, setShowNativeMenu] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   // Animated value for swipe-to-dismiss on native menu sheet
   const menuTranslateY = useRef(new Animated.Value(0)).current;
   const menuPanResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, gs) =>
         gs.dy > 8 && Math.abs(gs.dy) > Math.abs(gs.dx),
       onPanResponderMove: (_, gs) => {
@@ -530,6 +531,19 @@ export default function WebViewScreen() {
       handlerUnsubscribersRef.current.push(
         bridgeRef.current.on("APP_READY", () => {
           completeStartupTransition("APP_READY signal received");
+        }),
+      );
+
+      handlerUnsubscribersRef.current.push(
+        bridgeRef.current.on("PROFILE_DROPDOWN_OPEN", (payload) => {
+          const { isOpen } = payload as { isOpen: boolean };
+          setIsProfileMenuOpen(isOpen);
+          // Adjust the CSS menu-bar-height variable so the web layout
+          // removes bottom padding while the profile dropdown is visible
+          const height = isOpen ? "0px" : authSessionRef.current ? "72px" : "0px";
+          webViewRef.current?.injectJavaScript(
+            `(function(){ document.documentElement.style.setProperty('--menu-bar-height', '${height}'); })(); true;`
+          );
         }),
       );
 
@@ -981,8 +995,10 @@ export default function WebViewScreen() {
         </Animated.View>
       )}
 
-      {Platform.OS === "android" && authSession && (
+      {Platform.OS === "android" && authSession &&
+        currentPath !== "/" && !currentPath.startsWith("/login") && (
         <>
+          {!isProfileMenuOpen && (
           <View
             style={[styles.nativeMenuBar, isDark && styles.nativeMenuBarDark]}
           >
@@ -1046,6 +1062,7 @@ export default function WebViewScreen() {
               </Text>
             </Pressable>
           </View>
+          )}
           <Modal
             visible={showNativeMenu}
             transparent
@@ -1065,8 +1082,10 @@ export default function WebViewScreen() {
                   { transform: [{ translateY: menuTranslateY }] },
                 ]}
               >
-                <View style={styles.nativeSheetHeader} {...menuPanResponder.panHandlers}>
-                  <View style={styles.nativeSheetHandle} />
+                <View style={styles.nativeSheetHeader}>
+                  <View style={styles.nativeSheetHandleArea} {...menuPanResponder.panHandlers}>
+                    <View style={styles.nativeSheetHandle} />
+                  </View>
                   <Pressable
                     style={styles.nativeSheetCloseButton}
                     onPress={() => setShowNativeMenu(false)}
@@ -1134,11 +1153,11 @@ export default function WebViewScreen() {
                       );
                     }}
                   >
-                    <Ionicons
-                      name="person-circle-outline"
-                      size={20}
-                      color={isDark ? "#CBD5E1" : "#334155"}
-                    />
+                    <View style={styles.profileInitialCircle}>
+                      <Text style={styles.profileInitialText}>
+                        {(authSession?.user?.email?.charAt(0) || "U").toUpperCase()}
+                      </Text>
+                    </View>
                     <Text
                       style={[
                         styles.nativeSheetItemText,
@@ -1226,13 +1245,17 @@ const styles = StyleSheet.create({
     backgroundColor: "#111827",
     borderTopColor: "#334155",
   },
+  nativeSheetHandleArea: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 10,
+  },
   nativeSheetHandle: {
     width: 56,
     height: 5,
     borderRadius: 999,
     backgroundColor: "#94A3B8",
     alignSelf: "center",
-    marginBottom: 12,
   },
   nativeSheetHeader: {
     flexDirection: "row",
@@ -1265,5 +1288,18 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     // Allow the scroll area to expand/contract based on content
     // while respecting the maxHeight on the parent container
+  },
+  profileInitialCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#4F46E5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  profileInitialText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "700",
   },
 });

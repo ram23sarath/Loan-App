@@ -49,21 +49,51 @@ export default async (req) => {
   try {
     const requestUrl = new URL(req.url);
     const pathSuffix = resolveSplat(requestUrl.pathname, requestUrl);
-    const targetUrl = `${SUPABASE_URL}/auth/v1/${pathSuffix}${requestUrl.search}`;
+    const forwardQuery = buildForwardQuery(requestUrl);
+    const targetUrl = `${SUPABASE_URL}/auth/v1/${pathSuffix}${forwardQuery}`;
 
     const headers = copyHeaders(req.headers);
     if (!headers.has('apikey') && SUPABASE_ANON_KEY) {
       headers.set('apikey', SUPABASE_ANON_KEY);
     }
 
+    const debug = process.env.SUPABASE_PROXY_DEBUG === '1' || process.env.SUPABASE_PROXY_DEBUG === 'true';
+    const verbose = debug && (process.env.SUPABASE_PROXY_DEBUG === '2' || process.env.SUPABASE_PROXY_DEBUG_VERBOSE === '1');
+    if (debug) {
+      // Log safe request metadata (do not log sensitive request bodies)
+      const safeReqHeaders = {};
+      ['accept', 'content-type', 'referer', 'user-agent'].forEach((h) => {
+        const v = req.headers.get?.(h) || req.headers[h];
+        if (v) safeReqHeaders[h] = v;
+      });
+      console.log('[supabase-auth-proxy] forwarding', { method: req.method, path: requestUrl.pathname, targetUrl, headers: safeReqHeaders });
+    }
+
+    const start = Date.now();
     const response = await fetch(targetUrl, {
       method: req.method,
       headers,
       body: req.method === 'GET' || req.method === 'HEAD' ? undefined : await req.arrayBuffer(),
     });
+    const elapsed = Date.now() - start;
 
     const responseHeaders = copyHeaders(response.headers);
     responseHeaders.set('Cache-Control', 'no-store');
+
+    if (debug) {
+      const respType = response.headers.get('content-type') || '';
+      console.log(`[supabase-auth-proxy] response status=${response.status} statusText=${response.statusText} content-type=${respType} elapsed=${elapsed}ms`);
+      if (verbose) {
+        try {
+          const cloned = response.clone();
+          const text = await cloned.text();
+          const snippet = text.length > 1024 ? text.slice(0, 1024) + '...<truncated>' : text;
+          console.log('[supabase-auth-proxy] response body snippet:\n' + snippet);
+        } catch (e) {
+          console.log('[supabase-auth-proxy] failed to read response body for debug:', e?.message || e);
+        }
+      }
+    }
 
     return new Response(response.body, {
       status: response.status,

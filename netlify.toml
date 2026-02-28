@@ -6,3 +6,23 @@
 [build.environment]
   VITE_SUPABASE_URL = "https://lhffcmefliaptsijuyay.supabase.co"
   VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxoZmZjbWVmbGlhcHRzaWp1eWF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4NjAxOTMsImV4cCI6MjA2OTQzNjE5M30.HKGrEokNOl6EJnClwTZ-oITGLkZhoIzpQ4sda2JeCxw"
+
+[[redirects]]
+  from = "/supabase-auth/*"
+  to = "/.netlify/functions/supabase-auth/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/supabase-rest/*"
+  to = "/.netlify/functions/supabase-rest/:splat"
+  status = 200
+
+[[headers]]
+  for = "/supabase-auth/*"
+  [headers.values]
+    Cache-Control = "no-store"
+
+[[headers]]
+  for = "/supabase-rest/*"
+  [headers.values]
+    Cache-Control = "no-store"

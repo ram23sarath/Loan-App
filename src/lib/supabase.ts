@@ -3,6 +3,50 @@ import { createClient } from '@supabase/supabase-js';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './env';
 import type { Database } from '../types';
 
+const SUPABASE_HOST = new URL(SUPABASE_URL).host;
+const shouldProxySupabase = import.meta.env.PROD;
+
+const getProxyPath = (url: URL): string | null => {
+  if (url.host !== SUPABASE_HOST) {
+    return null;
+  }
+
+  if (url.pathname.startsWith('/auth/v1/')) {
+    return `/supabase-auth/${url.pathname.replace('/auth/v1/', '')}${url.search}`;
+  }
+
+  if (url.pathname.startsWith('/rest/v1/')) {
+    return `/supabase-rest/${url.pathname.replace('/rest/v1/', '')}${url.search}`;
+  }
+
+  return null;
+};
+
+const supabaseFetch: typeof fetch = async (input, init) => {
+  if (!shouldProxySupabase) {
+    return fetch(input, init);
+  }
+
+  const inputUrl =
+    typeof input === 'string'
+      ? new URL(input)
+      : input instanceof URL
+      ? input
+      : new URL(input.url);
+
+  const proxyPath = getProxyPath(inputUrl);
+
+  if (!proxyPath) {
+    return fetch(input, init);
+  }
+
+  if (input instanceof Request) {
+    return fetch(new Request(proxyPath, input), init);
+  }
+
+  return fetch(proxyPath, init);
+};
+
 // Create a single supabase client for interacting with your database
 // NOTE: Token persistence and refresh behavior:
 // - On web: Uses browser localStorage for session persistence
@@ -15,9 +59,16 @@ export const supabase = createClient<Database>(
   SUPABASE_URL,
   SUPABASE_ANON_KEY,
   {
+    global: {
+      fetch: supabaseFetch,
+    },
     auth: {
       persistSession: true,
       autoRefreshToken: true,
+    },
+    realtime: {
+      heartbeatIntervalMs: 30000,
+      timeout: 15000,
     },
   }
 );

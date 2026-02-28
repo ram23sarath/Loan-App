@@ -248,6 +248,74 @@ const parseSupabaseError = (error: any, context: string): string => {
   return `An unexpected error occurred while ${context}. Please try again.`;
 };
 
+const AUTH_REQUEST_TIMEOUT_MS = 12000;
+const AUTH_MAX_RETRIES = 2;
+
+const wait = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+const withAuthTimeout = async <T,>(
+  operation: () => Promise<T>,
+  timeoutMs: number,
+  context: string,
+): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  try {
+    const timeoutPromise = new Promise<T>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        const timeoutError = new Error(
+          `Auth request timed out after ${timeoutMs}ms while ${context}`,
+        ) as Error & { name: string };
+        timeoutError.name = "AbortError";
+        reject(timeoutError);
+      }, timeoutMs);
+    });
+
+    return await Promise.race([operation(), timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+};
+
+const runAuthWithRetry = async <T,>(
+  operation: () => Promise<T>,
+  context: string,
+  options?: {
+    timeoutMs?: number;
+    maxRetries?: number;
+  },
+): Promise<T> => {
+  const timeoutMs = options?.timeoutMs ?? AUTH_REQUEST_TIMEOUT_MS;
+  const maxRetries = options?.maxRetries ?? AUTH_MAX_RETRIES;
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    try {
+      return await withAuthTimeout(operation, timeoutMs, context);
+    } catch (error) {
+      lastError = error;
+      const category = classifyError(error);
+      const retryable =
+        category === ERROR_CATEGORY.NETWORK ||
+        category === ERROR_CATEGORY.TIMEOUT ||
+        category === ERROR_CATEGORY.SERVER;
+
+      if (!retryable || attempt === maxRetries) {
+        break;
+      }
+
+      const delayMs = Math.min(4000, 700 * 2 ** attempt);
+      console.warn(
+        `[AuthRetry] ${context} failed (attempt ${attempt + 1}/${maxRetries + 1}, category: ${category}). Retrying in ${delayMs}ms...`,
+      );
+      await wait(delayMs);
+    }
+  }
+
+  throw lastError;
+};
+
 // ... [DataContextType interface remains unchanged] ...
 interface DataContextType {
   session: Session | null;
@@ -1824,7 +1892,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
         let sessionResult;
         try {
-          sessionResult = await supabase.auth.getSession();
+          sessionResult = await runAuthWithRetry(
+            () => supabase.auth.getSession(),
+            "retrieving auth session",
+            { maxRetries: 1 },
+          );
         } catch (sessionError: any) {
           // Handle refresh_token_not_found error
           if (
@@ -2518,10 +2590,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       lastSessionTokenRef.current = null;
       lastUserIdRef.current = null;
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password: pass,
-      });
+      const { data, error } = await runAuthWithRetry(
+        () =>
+          supabase.auth.signInWithPassword({
+            email,
+            password: pass,
+          }),
+        "signing in",
+      );
       if (error) throw error;
 
       // Set session immediately from the response to prevent race condition
@@ -2540,7 +2616,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await runAuthWithRetry(
+        () => supabase.auth.signOut(),
+        "signing out",
+        { maxRetries: 1 },
+      );
       if (error) throw error;
       clearClientCache();
     } catch (error) {

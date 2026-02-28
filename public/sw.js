@@ -8,6 +8,17 @@ const urlsToCache = [
     '/manifest.json'
 ];
 
+const shouldBypassCache = (request) => {
+    const url = new URL(request.url);
+    return (
+        request.method !== 'GET' ||
+        url.pathname.startsWith('/supabase-auth/') ||
+        url.pathname.startsWith('/supabase-rest/') ||
+        url.pathname.startsWith('/.netlify/functions/') ||
+        url.hostname.endsWith('.supabase.co')
+    );
+};
+
 // Install event - cache assets
 self.addEventListener('install', (event) => {
     event.waitUntil(
@@ -23,6 +34,11 @@ self.addEventListener('install', (event) => {
 
 // Fetch event - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
+    if (shouldBypassCache(event.request)) {
+        event.respondWith(fetch(event.request));
+        return;
+    }
+
     event.respondWith(
         caches.match(event.request)
             .then((response) => {

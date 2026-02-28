@@ -12,11 +12,17 @@ const getProxyPath = (url: URL): string | null => {
   }
 
   if (url.pathname.startsWith('/auth/v1/')) {
-    return `/supabase-auth/${url.pathname.replace('/auth/v1/', '')}${url.search}`;
+    const path = url.pathname.replace('/auth/v1/', '');
+    const query = new URLSearchParams(url.search);
+    query.set('path', path);
+    return `/.netlify/functions/supabase-auth?${query.toString()}`;
   }
 
   if (url.pathname.startsWith('/rest/v1/')) {
-    return `/supabase-rest/${url.pathname.replace('/rest/v1/', '')}${url.search}`;
+    const path = url.pathname.replace('/rest/v1/', '');
+    const query = new URLSearchParams(url.search);
+    query.set('path', path);
+    return `/.netlify/functions/supabase-rest?${query.toString()}`;
   }
 
   return null;

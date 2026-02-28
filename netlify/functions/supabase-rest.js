@@ -100,9 +100,11 @@ export default async (req) => {
       headers: responseHeaders,
     });
   } catch (error) {
-    return new Response(
-      JSON.stringify({ error: 'Supabase rest proxy request failed', details: error.message }),
-      { status: 502, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } }
-    );
+    console.error('[supabase-rest-proxy] unexpected error', error);
+    const debug = process.env.SUPABASE_PROXY_DEBUG === '1' || process.env.SUPABASE_PROXY_DEBUG === 'true';
+    const body = debug
+      ? JSON.stringify({ error: 'Supabase rest proxy request failed', message: error?.message, stack: error?.stack })
+      : JSON.stringify({ error: 'Supabase rest proxy request failed' });
+    return new Response(body, { status: 502, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
   }
 };

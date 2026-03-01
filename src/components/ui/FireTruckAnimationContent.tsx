@@ -146,6 +146,9 @@ const FireTruckAnimationContent: React.FC<FireTruckAnimationContentProps> = ({
                   src="/ap_govt_emblem.png"
                   alt="AP Government Emblem"
                   className="w-[4.5rem] md:w-24 h-auto object-contain rounded-lg"
+                  decoding="async"
+                  fetchPriority="auto"
+                  onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
                 />
               </div>
             </div>
@@ -174,6 +177,9 @@ const FireTruckAnimationContent: React.FC<FireTruckAnimationContentProps> = ({
                   src="/police_officer.png"
                   alt="Officer"
                   className="w-[7.5rem] md:w-[9.75rem] h-auto object-contain rounded-lg"
+                  decoding="async"
+                  fetchPriority="high"
+                  onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
                 />
               </div>
             </div>
@@ -202,6 +208,9 @@ const FireTruckAnimationContent: React.FC<FireTruckAnimationContentProps> = ({
                   src="/ap_firetruck_truck.png"
                   alt="AP Fire Services"
                   className="w-[5.5rem] md:w-28 h-auto object-contain rounded-lg"
+                  decoding="async"
+                  fetchPriority="auto"
+                  onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
                 />
               </div>
             </div>
@@ -287,6 +296,9 @@ const FireTruckAnimationContent: React.FC<FireTruckAnimationContentProps> = ({
                   src="/firetruck.png"
                   alt="Fire Truck"
                   className="w-28 md:w-36 h-auto object-contain drop-shadow-2xl relative z-10"
+                  decoding="async"
+                  fetchPriority="auto"
+                  onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }}
                 />
               </div>
             </div>

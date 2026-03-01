@@ -34,6 +34,13 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="/firetruck.png" />
 
+  <!-- Preload login animation images so they are ready before JS runs -->
+  <!-- High priority: the two most prominent above-the-fold images -->
+  <link rel="preload" as="image" href="/ap_govt_emblem.png" fetchpriority="high" />
+  <link rel="preload" as="image" href="/ap_firetruck_truck.png" fetchpriority="high" />
+  <!-- Low priority: less prominent; /firetruck.png omitted (already fetched as favicon) -->
+  <link rel="preload" as="image" href="/police_officer.png" fetchpriority="low" />
+
   <style>
     body {
       background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);

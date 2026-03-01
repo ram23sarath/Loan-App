@@ -82,6 +82,11 @@ const LoginPage = () => {
 
   // Detect if screen is mobile size and preload animation images
   const signalRouteReady = useRouteReady();
+
+  // Resolves to true when all animation images load, false if any time out (8 s) or fail.
+  // Using a ref so the same promise is awaited in onSubmit regardless of re-renders.
+  const imagePreloadPromiseRef = useRef<Promise<boolean>>(Promise.resolve(false));
+
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -89,9 +94,8 @@ const LoginPage = () => {
     checkMobile();
     window.addEventListener("resize", checkMobile);
 
-    // Preload images specifically for the FireTruckAnimation
-    // This ensures they are cached and ready to display instantly
-    // when the user logs in, preventing pop-in/loading delays.
+    // Preload images for FireTruckAnimation with an 8-second per-image timeout.
+    // On slow/failing networks this prevents the splash from showing broken images.
     const imagesToPreload = [
       "/ap_govt_emblem.png",
       "/police_officer.png",
@@ -99,10 +103,18 @@ const LoginPage = () => {
       "/firetruck.png",
     ];
 
-    imagesToPreload.forEach((src) => {
-      const img = new Image();
-      img.src = src;
-    });
+    const preloadWithTimeout = (src: string, timeout: number) =>
+      new Promise<boolean>((resolve) => {
+        const timer = setTimeout(() => resolve(false), timeout);
+        const img = new Image();
+        img.onload = () => { clearTimeout(timer); resolve(true); };
+        img.onerror = () => { clearTimeout(timer); resolve(false); };
+        img.src = src;
+      });
+
+    imagePreloadPromiseRef.current = Promise.all(
+      imagesToPreload.map((src) => preloadWithTimeout(src, 8000))
+    ).then((results) => results.every(Boolean));
 
     // Add native-app CSS class for CSS-level animation optimizations
     if (isNative) {
@@ -161,8 +173,15 @@ const LoginPage = () => {
     try {
       const identifier = normalizeLoginIdentifier(email);
       await signInWithPassword(identifier, password);
-      // On success, show animation instead of immediate navigation
-      setShowAnimation(true);
+      // Only show the splash animation if all images loaded successfully.
+      // On slow networks where images timed out, navigate directly to avoid
+      // a broken / empty animation screen.
+      const imagesLoaded = await imagePreloadPromiseRef.current;
+      if (imagesLoaded) {
+        setShowAnimation(true);
+      } else {
+        navigate(defaultLandingPath, { replace: true });
+      }
     } catch (error: any) {
       setToastMessage(error.message);
       setShowToast(true);

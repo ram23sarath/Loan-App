@@ -12,6 +12,11 @@ const HOP_BY_HOP_HEADERS = new Set([
   'upgrade',
   'host',
   'content-length',
+  // Encoding headers: Node fetch auto-decompresses responses, so forwarding
+  // Content-Encoding causes ERR_CONTENT_DECODING_FAILED in the browser.
+  // Strip Accept-Encoding on requests so Supabase sends plain responses.
+  'content-encoding',
+  'accept-encoding',
 ]);
 
 const copyHeaders = (sourceHeaders) => {

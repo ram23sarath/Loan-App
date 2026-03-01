@@ -1,5 +1,5 @@
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
 const HOP_BY_HOP_HEADERS = new Set([
   'connection',
@@ -24,6 +24,13 @@ const copyHeaders = (sourceHeaders) => {
   });
 
   return headers;
+};
+
+const buildForwardQuery = (requestUrl) => {
+  const params = new URLSearchParams(requestUrl.searchParams);
+  params.delete('path');
+  const qs = params.toString();
+  return qs ? `?${qs}` : '';
 };
 
 const resolveSplat = (pathname, requestUrl) => {

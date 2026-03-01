@@ -1,5 +1,5 @@
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
 const HOP_BY_HOP_HEADERS = new Set([
   'connection',
@@ -24,6 +24,13 @@ const copyHeaders = (sourceHeaders) => {
   });
 
   return headers;
+};
+
+const buildForwardQuery = (requestUrl) => {
+  const params = new URLSearchParams(requestUrl.searchParams);
+  params.delete('path');
+  const qs = params.toString();
+  return qs ? `?${qs}` : '';
 };
 
 const resolveSplat = (pathname, requestUrl) => {
@@ -58,7 +65,7 @@ export default async (req) => {
     }
 
     const debug = process.env.SUPABASE_PROXY_DEBUG === '1' || process.env.SUPABASE_PROXY_DEBUG === 'true';
-    const verbose = debug && (process.env.SUPABASE_PROXY_DEBUG === '2' || process.env.SUPABASE_PROXY_DEBUG_VERBOSE === '1');
+    const verbose = debug && process.env.SUPABASE_PROXY_DEBUG_VERBOSE === '1';
     if (debug) {
       const safeReqHeaders = {};
       ['accept', 'content-type', 'referer', 'user-agent'].forEach((h) => {

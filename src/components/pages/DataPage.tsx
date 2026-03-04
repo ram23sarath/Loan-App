@@ -45,6 +45,7 @@ const DataPage = () => {
     notes: "",
   });
   const [editEntryLoading, setEditEntryLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Open the edit modal for a full data entry
   const openEditEntry = (entry: DataEntry) => {
@@ -451,6 +452,7 @@ const DataPage = () => {
       setShowToast(true);
       return;
     }
+    setIsSubmitting(true);
     try {
       await addDataEntry({
         customer_id: form.customerId,
@@ -475,6 +477,8 @@ const DataPage = () => {
     } catch (err: any) {
       setToastMsg(err.message || "Failed to add data entry.");
       setShowToast(true);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1392,9 +1396,36 @@ const DataPage = () => {
                       </div>
                       <button
                         type="submit"
-                        className="w-full mt-2 bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition-colors duration-300 focus:outline-none focus:ring-4 focus:ring-indigo-300"
+                        disabled={isSubmitting}
+                        className="w-full mt-2 bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition-colors duration-300 focus:outline-none focus:ring-4 focus:ring-indigo-300 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
-                        Submit Entry
+                        {isSubmitting ? (
+                          <>
+                            <svg
+                              className="animate-spin h-4 w-4 text-white"
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              />
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                              />
+                            </svg>
+                            Submitting...
+                          </>
+                        ) : (
+                          "Submit Entry"
+                        )}
                       </button>
                     </form>
                   )}

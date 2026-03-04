@@ -315,6 +315,10 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   );
   const [deleteDataEntryTarget, setDeleteDataEntryTarget] =
     useState<DataEntry | null>(null);
+  const [isDeletingDataEntry, setIsDeletingDataEntry] = useState(false);
+  const [isDeletingLoan, setIsDeletingLoan] = useState(false);
+  const [isDeletingSubscription, setIsDeletingSubscription] = useState(false);
+  const [isDeletingInstallment, setIsDeletingInstallment] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportSuccess, setExportSuccess] = useState<string | null>(null);
@@ -494,6 +498,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   const confirmDeleteLoan = async () => {
     if (!deleteLoanTarget) return;
     setDeleteError(null);
+    setIsDeletingLoan(true);
     try {
       await deleteLoan(deleteLoanTarget.id);
       setDeleteLoanTarget(null);
@@ -501,12 +506,15 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
       const msg = error instanceof Error ? error.message : String(error);
       setDeleteError(msg);
       setDeleteLoanTarget(null);
+    } finally {
+      setIsDeletingLoan(false);
     }
   };
 
   const confirmDeleteSubscription = async () => {
     if (!deleteSubTarget) return;
     setDeleteError(null);
+    setIsDeletingSubscription(true);
     try {
       await deleteSubscription(deleteSubTarget.id);
       setDeleteSubTarget(null);
@@ -514,12 +522,15 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
       const msg = error instanceof Error ? error.message : String(error);
       setDeleteError(msg);
       setDeleteSubTarget(null);
+    } finally {
+      setIsDeletingSubscription(false);
     }
   };
 
   const confirmDeleteInstallment = async () => {
     if (!deleteInstTarget) return;
     setDeleteError(null);
+    setIsDeletingInstallment(true);
     try {
       await deleteInstallment(deleteInstTarget.id);
       setDeleteInstTarget(null);
@@ -527,12 +538,15 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
       const msg = error instanceof Error ? error.message : String(error);
       setDeleteError(msg);
       setDeleteInstTarget(null);
+    } finally {
+      setIsDeletingInstallment(false);
     }
   };
 
   const confirmDeleteDataEntry = async () => {
     if (!deleteDataEntryTarget || !deleteDataEntry) return;
     setDeleteError(null);
+    setIsDeletingDataEntry(true);
     try {
       await deleteDataEntry(deleteDataEntryTarget.id);
       setDeleteDataEntryTarget(null);
@@ -540,6 +554,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
       const msg = error instanceof Error ? error.message : String(error);
       setDeleteError(msg);
       setDeleteDataEntryTarget(null);
+    } finally {
+      setIsDeletingDataEntry(false);
     }
   };
   const handleIndividualExport = async () => {
@@ -1897,7 +1913,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               to trash? You can restore it later from the Trash page.
             </>
           }
-          isDeleting={false}
+          isDeleting={isDeletingLoan}
           confirmText="Move to Trash"
         />
 
@@ -1919,7 +1935,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               ?
             </>
           }
-          isDeleting={false}
+          isDeleting={isDeletingSubscription}
           confirmText="Delete"
         />
 
@@ -1941,7 +1957,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               ?
             </>
           }
-          isDeleting={false}
+          isDeleting={isDeletingInstallment}
           confirmText="Delete"
         />
 
@@ -1965,7 +1981,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               ?
             </>
           }
-          isDeleting={false}
+          isDeleting={isDeletingDataEntry}
           confirmText="Delete"
         />
       </motion.div>

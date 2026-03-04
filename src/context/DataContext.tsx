@@ -1280,7 +1280,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
-      await fetchData();
+      // Optimistically update local state
+      setLoans((prev) =>
+        prev.map((loan) =>
+          loan.id === loanId
+            ? ({ ...loan, ...data } as LoanWithCustomer)
+            : loan,
+        ),
+      );
       return data as Loan;
     } catch (error) {
       throw new Error(parseSupabaseError(error, `updating loan ${loanId}`));
@@ -1303,7 +1310,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
-      await fetchData();
+      // Optimistically update local state
+      setSubscriptions((prev) =>
+        prev.map((sub) =>
+          sub.id === subscriptionId
+            ? ({ ...sub, ...data } as SubscriptionWithCustomer)
+            : sub,
+        ),
+      );
       return data as Subscription;
     } catch (error) {
       throw new Error(
@@ -1383,7 +1397,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
-      await fetchData();
+      // Optimistically update local state
+      setInstallments((prev) =>
+        prev.map((inst) =>
+          inst.id === installmentId ? (data as Installment) : inst,
+        ),
+      );
       return data as Installment;
     } catch (error) {
       throw new Error(
@@ -1451,6 +1470,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
+      // Optimistically update local state — avoids full 5-table refetch
+      setDataEntries((prev) => [data as DataEntry, ...prev]);
       try {
         if ((entry as any).subtype === "Subscription Return") {
           await adjustSubscriptionForMisc(
@@ -1458,11 +1479,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             Number(entry.amount),
             entry.date,
           );
+          // adjustSubscriptionForMisc internally calls fetchData, which refetches
+          // all 5 tables including subscriptions. No need for a redundant refetch here.
         }
       } catch (err) {
         console.error("Failed to adjust subscription for misc entry:", err);
       }
-      await fetchData();
       return data as DataEntry;
     } catch (error) {
       throw new Error(parseSupabaseError(error, "adding data entry"));
@@ -1485,7 +1507,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
-      await fetchData();
+      // Optimistically update local state with the returned data
+      setDataEntries((prev) =>
+        prev.map((entry) => (entry.id === id ? (data as DataEntry) : entry)),
+      );
       return data as DataEntry;
     } catch (error) {
       throw new Error(parseSupabaseError(error, "updating data entry"));
@@ -1507,7 +1532,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", id);
       if (error) throw error;
-      await fetchData();
+      // Optimistically remove from local state
+      setDataEntries((prev) => prev.filter((entry) => entry.id !== id));
+      // Refresh trash view (lightweight compared to full fetchData)
       await fetchDeletedDataEntries();
     } catch (error) {
       throw new Error(parseSupabaseError(error, "deleting data entry"));
@@ -1529,7 +1556,34 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", id);
       if (error) throw error;
-      await fetchData();
+      // Fetch the restored data entry
+      const { data: restoredEntry, error: fetchErr } = await supabase
+        .from("data_entries")
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (fetchErr) throw fetchErr;
+
+      if (restoredEntry) {
+        // Verify parent customer exists and is not soft-deleted
+        const { data: customer, error: customerErr } = await supabase
+          .from("customers")
+          .select("id, deleted_at")
+          .eq("id", (restoredEntry as any).customer_id)
+          .single();
+
+        if (customerErr && customerErr.code !== "PGRST116") throw customerErr;
+
+        if (!customer || (customer as any).deleted_at !== null) {
+          throw new Error(
+            "Cannot restore: The parent customer has been deleted or does not exist. You can only permanently delete this data entry.",
+          );
+        }
+
+        // Parent customer exists and is not deleted - safe to restore data entry
+        setDataEntries((prev) => [restoredEntry as DataEntry, ...prev]);
+      }
+      // Refresh trash view (lightweight compared to full fetchData)
       await fetchDeletedDataEntries();
     } catch (err: any) {
       throw new Error(parseSupabaseError(err, `restoring data entry ${id}`));
@@ -2741,7 +2795,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       } catch (e) {
         console.error("Failed to cleanup loan_seniority after loan create", e);
       }
-      await fetchData();
+      // Optimistically update local state with the returned loan + customer data from state
+      const customer = customerMap.get(data.customer_id);
+      const loanWithCustomer: LoanWithCustomer = {
+        ...(data as any),
+        customers: customer ? { name: customer.name, phone: customer.phone } : null,
+      };
+      setLoans((prev) => [loanWithCustomer, ...prev]);
       return data as Loan;
     } catch (error) {
       throw new Error(parseSupabaseError(error, "adding loan"));
@@ -2762,7 +2822,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
-      await fetchData();
+      // Optimistically update local state with the returned subscription + customer data from state
+      const customer = customerMap.get(data.customer_id);
+      const subWithCustomer: SubscriptionWithCustomer = {
+        ...(data as any),
+        customers: customer ? { name: customer.name, phone: customer.phone } : null,
+      };
+      setSubscriptions((prev) => [subWithCustomer, ...prev]);
       return data as Subscription;
     } catch (error) {
       throw new Error(parseSupabaseError(error, "adding subscription"));
@@ -2828,7 +2894,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
-      await fetchData();
+      // Optimistically update local state
+      setInstallments((prev) => [data as Installment, ...prev]);
       return data as Installment;
     } catch (error) {
       throw new Error(parseSupabaseError(error, "adding installment"));
@@ -2943,7 +3010,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", loanId);
       if (error) throw error;
-      await fetchData();
+      // Optimistically remove from local state
+      setLoans((prev) => prev.filter((loan) => loan.id !== loanId));
+      // Refresh trash view (lightweight compared to full fetchData)
       await fetchDeletedLoans();
     } catch (error) {
       throw new Error(parseSupabaseError(error, `deleting loan ${loanId}`));
@@ -2965,7 +3034,34 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", id);
       if (error) throw error;
-      await fetchData();
+      // Fetch the restored loan with customer relationship
+      const { data: restoredLoan, error: fetchErr } = await supabase
+        .from("loans")
+        .select("*, customers(name, phone)")
+        .eq("id", id)
+        .single();
+      if (fetchErr) throw fetchErr;
+
+      if (restoredLoan) {
+        // Verify parent customer exists and is not soft-deleted
+        const { data: customer, error: customerErr } = await supabase
+          .from("customers")
+          .select("id, deleted_at")
+          .eq("id", (restoredLoan as any).customer_id)
+          .single();
+
+        if (customerErr && customerErr.code !== "PGRST116") throw customerErr;
+
+        if (!customer || (customer as any).deleted_at !== null) {
+          throw new Error(
+            "Cannot restore: The parent customer has been deleted or does not exist. You can only permanently delete this loan.",
+          );
+        }
+
+        // Parent customer exists and is not deleted - safe to restore loan
+        setLoans((prev) => [restoredLoan as LoanWithCustomer, ...prev]);
+      }
+      // Refresh trash view (lightweight compared to full fetchData)
       await fetchDeletedLoans();
     } catch (err: any) {
       throw new Error(parseSupabaseError(err, `restoring loan ${id}`));
@@ -3215,7 +3311,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", subscriptionId);
       if (error) throw error;
-      await fetchData();
+      // Optimistically remove from local state
+      setSubscriptions((prev) =>
+        prev.filter((sub) => sub.id !== subscriptionId),
+      );
+      // Refresh trash view (lightweight compared to full fetchData)
       await fetchDeletedSubscriptions();
     } catch (error) {
       throw new Error(
@@ -3230,7 +3330,35 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         "Read-only access: scoped customers cannot restore subscriptions",
       );
     try {
-      // Restore soft-deleted entry by clearing deleted_at
+      // First, fetch the soft-deleted subscription to verify it exists and get parent ID
+      const { data: deletedSub, error: fetchErr } = await supabase
+        .from("subscriptions")
+        .select("*, customers(name, phone)")
+        .eq("id", id)
+        .not("deleted_at", "is", null)
+        .single();
+      if (fetchErr) throw fetchErr;
+
+      if (!deletedSub) {
+        throw new Error("Subscription not found in trash");
+      }
+
+      // Verify parent customer exists and is not soft-deleted BEFORE restoring
+      const { data: customer, error: customerErr } = await supabase
+        .from("customers")
+        .select("id, deleted_at")
+        .eq("id", (deletedSub as any).customer_id)
+        .single();
+
+      if (customerErr && customerErr.code !== "PGRST116") throw customerErr;
+
+      if (!customer || (customer as any).deleted_at !== null) {
+        throw new Error(
+          "Cannot restore: The parent customer has been deleted or does not exist. You can only permanently delete this subscription.",
+        );
+      }
+
+      // Parent customer exists and is not deleted - now safe to restore subscription in DB
       const { error } = await supabase
         .from("subscriptions")
         .update({
@@ -3239,7 +3367,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", id);
       if (error) throw error;
-      await fetchData();
+
+      // Update UI state with restored subscription
+      setSubscriptions((prev) => [deletedSub as SubscriptionWithCustomer, ...prev]);
+
+      // Refresh trash view (lightweight compared to full fetchData)
       await fetchDeletedSubscriptions();
     } catch (err: any) {
       throw new Error(parseSupabaseError(err, `restoring subscription ${id}`));
@@ -3296,7 +3428,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", installmentId);
       if (error) throw error;
-      await fetchData();
+      // Optimistically remove from local state
+      setInstallments((prev) =>
+        prev.filter((inst) => inst.id !== installmentId),
+      );
+      // Refresh trash view (lightweight compared to full fetchData)
       await fetchDeletedInstallments();
     } catch (error) {
       throw new Error(
@@ -3348,7 +3484,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", id);
       if (error) throw error;
-      await fetchData();
+      // Fetch the restored installment
+      const { data: restoredInst, error: fetchErr } = await supabase
+        .from("installments")
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (!fetchErr && restoredInst) {
+        setInstallments((prev) => [restoredInst as Installment, ...prev]);
+      }
+      // Refresh trash view (lightweight compared to full fetchData)
       await fetchDeletedInstallments();
     } catch (err: any) {
       throw new Error(parseSupabaseError(err, `restoring installment ${id}`));

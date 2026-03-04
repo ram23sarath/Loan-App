@@ -649,14 +649,15 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
             ))}
           </nav>
 
-          <AnimatePresence>
+          <AnimatePresence mode="wait">
             {!collapsed && (
               <motion.div
+                layout
                 className="shrink-0 border-t border-gray-200 text-center text-xs text-gray-400 overflow-hidden dark:border-dark-border dark:text-dark-muted"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
               >
                 <p className="p-4">&copy; {new Date().getFullYear()} I J Reddy Loan App</p>
               </motion.div>

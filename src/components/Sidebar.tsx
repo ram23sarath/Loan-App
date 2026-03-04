@@ -656,7 +656,7 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
               >
                 <p className="p-4">&copy; {new Date().getFullYear()} I J Reddy Loan App</p>
               </motion.div>

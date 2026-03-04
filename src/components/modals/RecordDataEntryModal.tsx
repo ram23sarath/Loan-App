@@ -24,16 +24,17 @@ const today = () => new Date().toISOString().slice(0, 10);
 const RecordDataEntryModal: React.FC<Props> = ({ customer, onClose, dataEntry }) => {
   const { addDataEntry, updateDataEntry } = useData();
   const isEditing = !!dataEntry;
-  const { register, handleSubmit, formState: { errors, isSubmitting }, reset, setValue } = useForm<FormInputs>({ 
-    defaultValues: { 
-      type: 'credit', 
-      date: today(), 
+  const { register, handleSubmit, formState: { errors, isSubmitting }, reset, setValue, watch } = useForm<FormInputs>({
+    defaultValues: {
+      type: 'credit',
+      date: today(),
       subtype: '',
       amount: 0,
       receipt: '',
       notes: ''
-    } 
+    }
   });
+  const watchedType = watch('type');
   const [toast, setToast] = React.useState<{ show: boolean; message: string; type?: 'success' | 'error' }>({ show: false, message: '', type: 'success' });
 
   useEffect(() => {
@@ -126,7 +127,15 @@ const RecordDataEntryModal: React.FC<Props> = ({ customer, onClose, dataEntry })
 
             <div>
               <label className="block text-sm text-gray-600 dark:text-dark-muted">Subtype (optional)</label>
-              <input type="text" {...register('subtype')} className="w-full p-2 border border-gray-300 rounded dark:bg-dark-bg dark:border-dark-border dark:text-dark-text" />
+              <select {...register('subtype')} className="w-full p-2 border border-gray-300 rounded dark:bg-dark-bg dark:border-dark-border dark:text-dark-text">
+                <option value="">None</option>
+                {watchedType !== 'credit' && (
+                  <option value="Subscription Return">Subscription Return</option>
+                )}
+                <option value="Retirement Gift">Retirement Gift</option>
+                <option value="Death Fund">Death Fund</option>
+                <option value="Misc Expense">Misc Expense</option>
+              </select>
             </div>
 
             <div>

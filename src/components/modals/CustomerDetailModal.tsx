@@ -439,12 +439,16 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      // If a delete confirmation is open, let the modal handle it
+      // If any internal modal is open, let it handle the Escape key
       if (
         deleteDataEntryTarget ||
         deleteInstTarget ||
         deleteSubTarget ||
-        deleteLoanTarget
+        deleteLoanTarget ||
+        showRecordDataEntry ||
+        showRecordLoan ||
+        showRecordSubscription ||
+        editingDataEntry
       ) {
         return;
       }
@@ -458,6 +462,10 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     deleteInstTarget,
     deleteSubTarget,
     deleteLoanTarget,
+    showRecordDataEntry,
+    showRecordLoan,
+    showRecordSubscription,
+    editingDataEntry,
     onClose,
   ]);
 

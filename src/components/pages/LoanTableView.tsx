@@ -12,6 +12,7 @@ import { getLoanStatus } from "../../utils/loanStatus";
 import EditModal from "../modals/EditModal";
 import RecordInstallmentModal from "../modals/RecordInstallmentModal";
 import DeleteConfirmationModal from "../modals/DeleteConfirmationModal";
+import LoadingButton from "../ui/LoadingButton";
 import { useDeferredSearch } from "../../utils/useDebounce";
 import {
   rowVariants,
@@ -290,6 +291,8 @@ const LoanTableView: React.FC = () => {
     late_fee: "",
     receipt_number: "",
   });
+  const [isSavingInstallmentEdit, setIsSavingInstallmentEdit] =
+    React.useState(false);
 
   function handleSort(field: string) {
     if (sortField === field) {
@@ -301,7 +304,11 @@ const LoanTableView: React.FC = () => {
   }
 
   // Handle back button for modals
-  useModalBackHandler(!!editTarget, () => setEditTarget(null));
+  useModalBackHandler(!!editTarget, () => {
+    if (!isSavingInstallmentEdit) {
+      setEditTarget(null);
+    }
+  });
   useModalBackHandler(!!editLoanTarget, () => setEditLoanTarget(null));
 
   // Close actions dropdown with Escape key
@@ -345,6 +352,9 @@ const LoanTableView: React.FC = () => {
       if (event.key !== "Escape" && event.key !== "Esc") {
         return;
       }
+      if (isSavingInstallmentEdit) {
+        return;
+      }
       try {
         event.preventDefault();
         event.stopPropagation();
@@ -368,7 +378,7 @@ const LoanTableView: React.FC = () => {
         window.removeEventListener("keydown", handleKeyDown, true);
       }
     };
-  }, [editTarget]);
+  }, [editTarget, isSavingInstallmentEdit]);
 
   if (loans.length === 0) {
     const emptyMessage =
@@ -1557,7 +1567,8 @@ const LoanTableView: React.FC = () => {
                 <form
                   onSubmit={async (e) => {
                     e.preventDefault();
-                    if (editTarget) {
+                    if (editTarget && !isSavingInstallmentEdit) {
+                      setIsSavingInstallmentEdit(true);
                       try {
                         await updateInstallment(editTarget.id, {
                           date: editForm.date,
@@ -1568,6 +1579,8 @@ const LoanTableView: React.FC = () => {
                         setEditTarget(null);
                       } catch (err: any) {
                         alert(err?.message || String(err));
+                      } finally {
+                        setIsSavingInstallmentEdit(false);
                       }
                     }
                   }}
@@ -1639,16 +1652,19 @@ const LoanTableView: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setEditTarget(null)}
+                      disabled={isSavingInstallmentEdit}
                       className="px-3 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
                     >
                       Cancel
                     </button>
-                    <button
+                    <LoadingButton
                       type="submit"
+                      isLoading={isSavingInstallmentEdit}
+                      ariaLabel="Save installment changes"
                       className="px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
                     >
                       Save
-                    </button>
+                    </LoadingButton>
                   </div>
                 </form>
               </motion.div>

@@ -1,0 +1,13 @@
+file,line,snippet,asyncCall,hasLoadingFlag,recommendation,priority
+src/components/pages/TrashPage.tsx,737,"Restore button in restore modal","confirmRestore -> restore* context methods",false,"Add pending state + disable controls",critical
+src/components/pages/TrashPage.tsx,819,"Delete Forever button in permanent delete modal","confirmDelete -> permanentDelete* context methods",false,"Show Updating state and lock modal actions",critical
+src/components/pages/CustomerListPage.tsx,2029,"DeleteConfirmationModal isDeleting hardcoded false","confirmDeleteCustomer -> deleteCustomer",false,"Wire real deleting state",critical
+src/components/pages/LoanSeniorityPage.tsx,982,"Save button in add/edit modal","saveModalEntry -> addToSeniority/updateSeniority",false,"Add isSavingEntry + Updating state",critical
+src/components/pages/LoanSeniorityPage.tsx,1485,"Remove button in delete modal","confirmDelete -> removeFromSeniority",false,"Add isRemovingEntry and disable controls",critical
+src/components/pages/DataPage.tsx,1851,"Delete button in delete modal","confirmDelete -> deleteDataEntry",false,"Add isDeletingEntry and visible Updating state",high
+src/components/modals/EditModal.tsx,430,"Save button customer_loan form","onSave -> parent async updates",false,"Shared EditModal submitting state + LoadingButton",critical
+src/components/modals/EditModal.tsx,482,"Save button customer form","onSave -> parent async updates",false,"Covered by shared EditModal fix",medium
+src/components/modals/EditModal.tsx,577,"Save button loan form","onSave -> parent async updates",false,"Covered by shared EditModal fix",critical
+src/components/modals/EditModal.tsx,655,"Save button subscription form","onSave -> parent async updates",false,"Covered by shared EditModal fix",high
+src/components/modals/EditModal.tsx,767,"Save button installment form","onSave -> parent async updates",false,"Covered by shared EditModal fix",high
+src/components/pages/LoanTableView.tsx,1647,"Save button inline installment edit form","updateInstallment(editTarget.id, payload)",false,"Add local isSavingInstallmentEdit state",high

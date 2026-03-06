@@ -15,6 +15,7 @@ import { useDebounce } from "../../utils/useDebounce";
 import { formatNumberIndian } from "../../utils/numberFormatter";
 import { type DataEntry } from "../../types";
 import PageWrapper from "../ui/PageWrapper";
+import LoadingButton from "../ui/LoadingButton";
 
 const DataPage = () => {
   const signalRouteReady = useRouteReady();
@@ -99,6 +100,7 @@ const DataPage = () => {
   // UI state
   const [showTable, setShowTable] = useState(isScopedCustomer ? true : false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeletingEntry, setIsDeletingEntry] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
@@ -487,7 +489,8 @@ const DataPage = () => {
   };
 
   const confirmDelete = async () => {
-    if (deleteId) {
+    if (deleteId && !isDeletingEntry) {
+      setIsDeletingEntry(true);
       try {
         await deleteDataEntry(deleteId);
         setToastMsg("Entry moved to trash.");
@@ -496,6 +499,7 @@ const DataPage = () => {
         setToastMsg(err.message || "Failed to delete entry.");
         setShowToast(true);
       } finally {
+        setIsDeletingEntry(false);
         setDeleteId(null);
       }
     }
@@ -1815,7 +1819,11 @@ const DataPage = () => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  onClick={() => setDeleteId(null)}
+                  onClick={() => {
+                    if (!isDeletingEntry) {
+                      setDeleteId(null);
+                    }
+                  }}
                 >
                   <motion.div
                     role="dialog"
@@ -1841,17 +1849,20 @@ const DataPage = () => {
                       <button
                         type="button"
                         className="flex-1 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300 transition dark:bg-slate-700 dark:text-dark-text dark:hover:bg-slate-600"
+                        disabled={isDeletingEntry}
                         onClick={() => setDeleteId(null)}
                       >
                         Cancel
                       </button>
-                      <button
+                      <LoadingButton
                         type="button"
+                        isLoading={isDeletingEntry}
+                        ariaLabel="Delete data entry"
                         className="flex-1 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition"
                         onClick={confirmDelete}
                       >
                         Delete
-                      </button>
+                      </LoadingButton>
                     </div>
                   </motion.div>
                 </motion.div>

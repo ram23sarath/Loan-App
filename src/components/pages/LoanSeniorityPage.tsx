@@ -20,6 +20,7 @@ import { useDebounce } from "../../utils/useDebounce";
 import { useEscapeKey } from "../hooks/useEscapeKey";
 import { useModalBackHandler } from "../../utils/useModalBackHandler";
 import AlertPopup from "../ui/AlertPopup";
+import LoadingButton from "../ui/LoadingButton";
 
 // Animation variants
 const listContainerVariants: Variants = {
@@ -402,6 +403,8 @@ const LoanSeniorityPage = () => {
     id: string;
     name: string;
   } | null>(null);
+  const [isSavingEntry, setIsSavingEntry] = useState(false);
+  const [isRemovingEntry, setIsRemovingEntry] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const listSearchInputRef = useRef<HTMLInputElement | null>(null);
@@ -458,9 +461,11 @@ const LoanSeniorityPage = () => {
   }, [addSearchTerm]);
 
   const confirmDelete = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || isRemovingEntry) return;
+    const targetId = deleteTarget.id;
+    setIsRemovingEntry(true);
     try {
-      await removeFromSeniority(deleteTarget.id);
+      await removeFromSeniority(targetId);
       setDeleteTarget(null);
     } catch (err) {
       showAlert(
@@ -469,6 +474,8 @@ const LoanSeniorityPage = () => {
           "Failed to remove customer from seniority list",
         "error",
       );
+    } finally {
+      setIsRemovingEntry(false);
     }
   };
 
@@ -481,12 +488,28 @@ const LoanSeniorityPage = () => {
     setLoanRequestDate("");
   }, []);
 
-  useEscapeKey(!!modalCustomer, closeModal);
-  useEscapeKey(!!deleteTarget, () => setDeleteTarget(null));
+  useEscapeKey(!!modalCustomer, () => {
+    if (!isSavingEntry) {
+      closeModal();
+    }
+  });
+  useEscapeKey(!!deleteTarget, () => {
+    if (!isRemovingEntry) {
+      setDeleteTarget(null);
+    }
+  });
 
   // Handle back button for modals
-  useModalBackHandler(!!modalCustomer, closeModal);
-  useModalBackHandler(!!deleteTarget, () => setDeleteTarget(null));
+  useModalBackHandler(!!modalCustomer, () => {
+    if (!isSavingEntry) {
+      closeModal();
+    }
+  });
+  useModalBackHandler(!!deleteTarget, () => {
+    if (!isRemovingEntry) {
+      setDeleteTarget(null);
+    }
+  });
 
   // Close modal on click outside
   useEffect(() => {
@@ -495,7 +518,8 @@ const LoanSeniorityPage = () => {
       if (
         modalCustomer &&
         modalRef.current &&
-        !modalRef.current.contains(event.target as Node)
+        !modalRef.current.contains(event.target as Node) &&
+        !isSavingEntry
       ) {
         closeModal();
       }
@@ -507,10 +531,11 @@ const LoanSeniorityPage = () => {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [modalCustomer, closeModal]);
+  }, [modalCustomer, closeModal, isSavingEntry]);
 
   const saveModalEntry = async () => {
-    if (!modalCustomer) return;
+    if (!modalCustomer || isSavingEntry) return;
+    setIsSavingEntry(true);
     try {
       const details = {
         station_name: stationName || null,
@@ -536,6 +561,8 @@ const LoanSeniorityPage = () => {
           "error",
         );
       }
+    } finally {
+      setIsSavingEntry(false);
     }
   };
 
@@ -726,7 +753,11 @@ const LoanSeniorityPage = () => {
               initial="hidden"
               animate="visible"
               exit="exit"
-              onClick={closeModal}
+              onClick={() => {
+                if (!isSavingEntry) {
+                  closeModal();
+                }
+              }}
             >
               <motion.div
                 className="bg-white dark:bg-dark-card rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-md"
@@ -746,6 +777,7 @@ const LoanSeniorityPage = () => {
                   </motion.h3>
                   <motion.button
                     onClick={closeModal}
+                    disabled={isSavingEntry}
                     className="text-gray-500 dark:text-dark-muted hover:text-gray-700 dark:hover:text-dark-text"
                     whileHover={{ scale: 1.2, rotate: 90 }}
                     whileTap={{ scale: 0.9 }}
@@ -970,6 +1002,7 @@ const LoanSeniorityPage = () => {
                 >
                   <motion.button
                     onClick={closeModal}
+                    disabled={isSavingEntry}
                     className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-dark-text"
                     variants={buttonVariants}
                     initial="idle"
@@ -978,16 +1011,14 @@ const LoanSeniorityPage = () => {
                   >
                     Cancel
                   </motion.button>
-                  <motion.button
+                  <LoadingButton
                     onClick={saveModalEntry}
-                    className="px-3 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white"
-                    variants={buttonVariants}
-                    initial="idle"
-                    whileHover="hover"
-                    whileTap="tap"
+                    isLoading={isSavingEntry}
+                    ariaLabel="Save seniority entry"
+                    className="px-3 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     Save
-                  </motion.button>
+                  </LoadingButton>
                 </motion.div>
               </motion.div>
             </motion.div>
@@ -1438,7 +1469,11 @@ const LoanSeniorityPage = () => {
               initial="hidden"
               animate="visible"
               exit="exit"
-              onClick={() => setDeleteTarget(null)}
+              onClick={() => {
+                if (!isRemovingEntry) {
+                  setDeleteTarget(null);
+                }
+              }}
             >
               <motion.div
                 className="bg-white dark:bg-dark-card rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md"
@@ -1473,6 +1508,7 @@ const LoanSeniorityPage = () => {
                 >
                   <motion.button
                     onClick={() => setDeleteTarget(null)}
+                    disabled={isRemovingEntry}
                     className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-dark-text"
                     variants={buttonVariants}
                     initial="idle"
@@ -1481,16 +1517,14 @@ const LoanSeniorityPage = () => {
                   >
                     Cancel
                   </motion.button>
-                  <motion.button
+                  <LoadingButton
                     onClick={confirmDelete}
-                    className="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700"
-                    variants={buttonVariants}
-                    initial="idle"
-                    whileHover="hover"
-                    whileTap="tap"
+                    isLoading={isRemovingEntry}
+                    ariaLabel="Remove seniority entry"
+                    className="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     Remove
-                  </motion.button>
+                  </LoadingButton>
                 </motion.div>
               </motion.div>
             </motion.div>

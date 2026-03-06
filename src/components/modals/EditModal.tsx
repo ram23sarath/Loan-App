@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom";
 import { motion, Variants } from "framer-motion";
+import LoadingButton from "../ui/LoadingButton";
 import type {
   Customer,
   LoanWithCustomer,
@@ -10,7 +11,7 @@ import type {
 interface EditModalProps {
   type: "customer" | "loan" | "subscription" | "customer_loan" | "installment";
   data: any;
-  onSave: (updated: any) => void;
+  onSave: (updated: any) => Promise<void> | void;
   onClose: () => void;
 }
 
@@ -37,6 +38,7 @@ const EditModal: React.FC<EditModalProps> = ({
   onClose,
 }) => {
   const [form, setForm] = React.useState<any>(data);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [loanInstallmentError, setLoanInstallmentError] = React.useState<
     string | null
   >(null);
@@ -158,7 +160,7 @@ const EditModal: React.FC<EditModalProps> = ({
   // Handle Escape key to close modal
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !isSubmitting) {
         try {
           e.stopPropagation();
           // stopImmediatePropagation may not exist on all event types in some envs
@@ -172,8 +174,27 @@ const EditModal: React.FC<EditModalProps> = ({
     // Use capture so this listener runs before other bubble-phase listeners
     document.addEventListener("keydown", handleKeyDown, true);
     return () => document.removeEventListener("keydown", handleKeyDown, true);
-  }, [onClose]);
+  }, [isSubmitting, onClose]);
 
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
+
+  const handleFormSubmit = React.useCallback(
+    async (updatedForm: any) => {
+      if (isSubmitting) return;
+      setIsSubmitting(true);
+      setSubmitError(null);
+      try {
+        await Promise.resolve(onSave(updatedForm));
+      } catch (err) {
+        setSubmitError(
+          err instanceof Error ? err.message : "Failed to save. Please try again."
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [isSubmitting, onSave]
+  );
   return ReactDOM.createPortal(
     <motion.div
       className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
@@ -181,7 +202,11 @@ const EditModal: React.FC<EditModalProps> = ({
       initial="hidden"
       animate="visible"
       exit="hidden"
-      onClick={onClose}
+      onClick={() => {
+        if (!isSubmitting) {
+          onClose();
+        }
+      }}
     >
       <motion.div
         className="bg-white dark:bg-slate-800 dark:text-gray-100 rounded-lg shadow-lg p-4 sm:p-6 w-full max-w-md max-h-[90vh] overflow-y-auto relative flex flex-col items-center"
@@ -189,7 +214,12 @@ const EditModal: React.FC<EditModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <button
-          onClick={onClose}
+          onClick={() => {
+            if (!isSubmitting) {
+              onClose();
+            }
+          }}
+          disabled={isSubmitting}
           className="absolute top-3 right-3 text-xl text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100"
         >
           ✕
@@ -200,9 +230,9 @@ const EditModal: React.FC<EditModalProps> = ({
         {type === "customer_loan" && (
           <form
             className="space-y-3 w-full"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              onSave(form);
+              await handleFormSubmit(form);
             }}
           >
             {/* Customer Section */}
@@ -422,26 +452,29 @@ const EditModal: React.FC<EditModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
+                disabled={isSubmitting}
                 className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-gray-100"
               >
                 Cancel
               </button>
-              <button
+              <LoadingButton
                 type="submit"
+                isLoading={isSubmitting}
+                ariaLabel="Save customer and loan changes"
                 disabled={!!loanInstallmentError}
                 className="px-3 py-2 rounded bg-indigo-600 dark:bg-indigo-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Save
-              </button>
+              </LoadingButton>
             </div>
           </form>
         )}
         {type === "customer" && (
           <form
             className="space-y-3 w-full"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              onSave(form);
+              await handleFormSubmit(form);
             }}
           >
             <div>
@@ -474,25 +507,28 @@ const EditModal: React.FC<EditModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
+                disabled={isSubmitting}
                 className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-gray-100"
               >
                 Cancel
               </button>
-              <button
+              <LoadingButton
                 type="submit"
+                isLoading={isSubmitting}
+                ariaLabel="Save customer changes"
                 className="px-3 py-2 rounded bg-indigo-600 dark:bg-indigo-500 text-white"
               >
                 Save
-              </button>
+              </LoadingButton>
             </div>
           </form>
         )}
         {type === "loan" && (
           <form
             className="space-y-3 w-full"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              onSave(form);
+              await handleFormSubmit(form);
             }}
           >
             <div>
@@ -569,26 +605,29 @@ const EditModal: React.FC<EditModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
+                disabled={isSubmitting}
                 className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-gray-100"
               >
                 Cancel
               </button>
-              <button
+              <LoadingButton
                 type="submit"
+                isLoading={isSubmitting}
+                ariaLabel="Save loan changes"
                 disabled={!!loanInstallmentError}
                 className="px-3 py-2 rounded bg-indigo-600 dark:bg-indigo-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Save
-              </button>
+              </LoadingButton>
             </div>
           </form>
         )}
         {type === "subscription" && (
           <form
             className="space-y-3 w-full"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              onSave(form);
+              await handleFormSubmit(form);
             }}
           >
             <div>
@@ -647,25 +686,28 @@ const EditModal: React.FC<EditModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
+                disabled={isSubmitting}
                 className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-gray-100"
               >
                 Cancel
               </button>
-              <button
+              <LoadingButton
                 type="submit"
+                isLoading={isSubmitting}
+                ariaLabel="Save subscription changes"
                 className="px-3 py-2 rounded bg-indigo-600 dark:bg-indigo-500 text-white"
               >
                 Save
-              </button>
+              </LoadingButton>
             </div>
           </form>
         )}
         {type === "installment" && (
           <form
             className="space-y-3 w-full"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              onSave(form);
+              await handleFormSubmit(form);
             }}
           >
             <div>
@@ -759,16 +801,19 @@ const EditModal: React.FC<EditModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
+                disabled={isSubmitting}
                 className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 dark:text-gray-100"
               >
                 Cancel
               </button>
-              <button
+              <LoadingButton
                 type="submit"
+                isLoading={isSubmitting}
+                ariaLabel="Save installment changes"
                 className="px-3 py-2 rounded bg-indigo-600 dark:bg-indigo-500 text-white"
               >
                 Save
-              </button>
+              </LoadingButton>
             </div>
           </form>
         )}

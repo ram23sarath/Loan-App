@@ -70,6 +70,7 @@ const CustomerListPage = () => {
     installments: number;
     subscriptions: number;
   } | null>(null);
+  const [isDeletingCustomer, setIsDeletingCustomer] = React.useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   // Use useDeferredSearch for better React 18 concurrent rendering
   const debouncedSearchTerm = useDeferredSearch(searchTerm);
@@ -172,13 +173,16 @@ const CustomerListPage = () => {
   };
 
   const confirmDeleteCustomer = async () => {
-    if (deleteCustomerTarget) {
+    if (deleteCustomerTarget && !isDeletingCustomer) {
+      setIsDeletingCustomer(true);
       try {
         await deleteCustomer(deleteCustomerTarget.id);
         setDeleteCustomerTarget(null);
         setDeleteCounts(null);
       } catch (error: any) {
         alert(error.message);
+      } finally {
+        setIsDeletingCustomer(false);
       }
     }
   };
@@ -2026,7 +2030,7 @@ const CustomerListPage = () => {
             </p>
           </>
         }
-        isDeleting={false}
+        isDeleting={isDeletingCustomer}
         confirmText="Move to Trash"
         variant="warning"
       />

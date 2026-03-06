@@ -9,6 +9,7 @@ import { Trash2Icon } from "../../constants";
 import { useData } from "../../context/DataContext";
 import { formatDate } from "../../utils/dateFormatter";
 import { formatNumberIndian } from "../../utils/numberFormatter";
+import LoadingButton from "../ui/LoadingButton";
 
 const TrashPage = () => {
   const signalRouteReady = useRouteReady();
@@ -97,18 +98,29 @@ const TrashPage = () => {
       | "customer";
   } | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [isDeletingForever, setIsDeletingForever] = useState(false);
 
   useEscapeKey(!!restoreError, () => setRestoreError(null));
-  useEscapeKey(!!restoreTarget, () => setRestoreTarget(null));
-  useEscapeKey(!!permanentDeleteTarget, () => setPermanentDeleteTarget(null));
+  useEscapeKey(!!restoreTarget, () => {
+    if (!isRestoring) {
+      setRestoreTarget(null);
+    }
+  });
+  useEscapeKey(!!permanentDeleteTarget, () => {
+    if (!isDeletingForever) {
+      setPermanentDeleteTarget(null);
+    }
+  });
 
   const confirmRestore = async () => {
-    if (!restoreTarget) return;
+    if (!restoreTarget || isRestoring) return;
+    const target = restoreTarget;
 
-    if (restoreTarget.type === "seniority") {
+    if (target.type === "seniority") {
       // Check if customer is already in active list
       const entryToRestore = deletedSeniorityList?.find(
-        (e: any) => e.id === restoreTarget.id,
+        (e: any) => e.id === target.id,
       );
       if (entryToRestore) {
         const isAlreadyActive = seniorityList?.some(
@@ -122,100 +134,73 @@ const TrashPage = () => {
           return;
         }
       }
+    }
 
-      try {
-        await restoreSeniorityEntry(restoreTarget.id);
+    setIsRestoring(true);
+    try {
+      if (target.type === "seniority") {
+        await restoreSeniorityEntry(target.id);
         setRestoreTarget(null);
-      } catch (err: any) {
-        alert(err.message || "Failed to restore");
+      } else if (target.type === "expenditure") {
+        await restoreDataEntry(target.id);
+        setRestoreTarget(null);
+      } else if (target.type === "subscription") {
+        await restoreSubscription(target.id);
+        setRestoreTarget(null);
+      } else if (target.type === "loan") {
+        await restoreLoan(target.id);
+        setRestoreTarget(null);
+      } else if (target.type === "customer") {
+        await restoreCustomer(target.id);
+        setRestoreTarget(null);
+      } else if (target.type === "installment") {
+        await restoreInstallment(target.id);
+        setRestoreTarget(null);
       }
-    } else if (restoreTarget.type === "expenditure") {
-      try {
-        await restoreDataEntry(restoreTarget.id);
-        setRestoreTarget(null);
-      } catch (err: any) {
-        alert(err.message || "Failed to restore data entry");
-      }
-    } else if (restoreTarget.type === "subscription") {
-      try {
-        await restoreSubscription(restoreTarget.id);
-        setRestoreTarget(null);
-      } catch (err: any) {
-        alert(err.message || "Failed to restore subscription");
-      }
-    } else if (restoreTarget.type === "loan") {
-      try {
-        await restoreLoan(restoreTarget.id);
-        setRestoreTarget(null);
-      } catch (err: any) {
-        alert(err.message || "Failed to restore loan");
-      }
-    } else if (restoreTarget.type === "customer") {
-      try {
-        await restoreCustomer(restoreTarget.id);
-        setRestoreTarget(null);
-      } catch (err: any) {
-        alert(err.message || "Failed to restore customer");
-      }
-    } else if (restoreTarget.type === "installment") {
-      try {
-        await restoreInstallment(restoreTarget.id);
-        setRestoreTarget(null);
-      } catch (err: any) {
-        // Show error in modal instead of alert for better UX
+    } catch (err: any) {
+      if (target.type === "installment") {
         setRestoreError(err.message || "Failed to restore installment");
         setRestoreTarget(null);
+      } else {
+        alert(err.message || "Failed to restore");
+        setRestoreTarget(null);
       }
-    }
-  };
+    } finally {
+      setIsRestoring(false);
+    }  };
 
   const confirmDelete = async () => {
-    if (!permanentDeleteTarget) return;
+    if (!permanentDeleteTarget || isDeletingForever) return;
+    const target = permanentDeleteTarget;
 
-    if (permanentDeleteTarget.type === "seniority") {
-      try {
-        await permanentDeleteSeniority(permanentDeleteTarget.id);
+    setIsDeletingForever(true);
+    try {
+      if (target.type === "seniority") {
+        await permanentDeleteSeniority(target.id);
         setPermanentDeleteTarget(null);
-      } catch (err: any) {
-        alert(err.message || "Failed to delete");
-      }
-    } else if (permanentDeleteTarget.type === "expenditure") {
-      try {
-        await permanentDeleteDataEntry(permanentDeleteTarget.id);
+      } else if (target.type === "expenditure") {
+        await permanentDeleteDataEntry(target.id);
         setPermanentDeleteTarget(null);
-      } catch (err: any) {
-        alert(err.message || "Failed to delete data entry");
-      }
-    } else if (permanentDeleteTarget.type === "subscription") {
-      try {
-        await permanentDeleteSubscription(permanentDeleteTarget.id);
+      } else if (target.type === "subscription") {
+        await permanentDeleteSubscription(target.id);
         setPermanentDeleteTarget(null);
-      } catch (err: any) {
-        alert(err.message || "Failed to delete subscription");
-      }
-    } else if (permanentDeleteTarget.type === "loan") {
-      try {
-        await permanentDeleteLoan(permanentDeleteTarget.id);
+      } else if (target.type === "loan") {
+        await permanentDeleteLoan(target.id);
         setPermanentDeleteTarget(null);
-      } catch (err: any) {
-        alert(err.message || "Failed to delete loan");
-      }
-    } else if (permanentDeleteTarget.type === "customer") {
-      try {
-        await permanentDeleteCustomer(permanentDeleteTarget.id);
+      } else if (target.type === "customer") {
+        await permanentDeleteCustomer(target.id);
         setPermanentDeleteTarget(null);
-      } catch (err: any) {
-        alert(err.message || "Failed to delete customer");
-      }
-    } else if (permanentDeleteTarget.type === "installment") {
-      try {
-        await permanentDeleteInstallment(permanentDeleteTarget.id);
+      } else if (target.type === "installment") {
+        await permanentDeleteInstallment(target.id);
         setPermanentDeleteTarget(null);
-      } catch (err: any) {
-        alert(err.message || "Failed to delete installment");
       }
-    }
-  };
+    } catch (err: any) {
+      alert(err.message || "Failed to delete");
+      setPermanentDeleteTarget(null);
+    } finally {
+      setIsDeletingForever(false);
+    }  };
+
 
   // Helper function to format deleted info
   const formatDeletedInfo = (item: any) => {
@@ -691,7 +676,11 @@ const TrashPage = () => {
               initial="hidden"
               animate="visible"
               exit="exit"
-              onClick={() => setRestoreTarget(null)}
+              onClick={() => {
+                if (!isRestoring) {
+                  setRestoreTarget(null);
+                }
+              }}
             >
               <motion.div
                 className="bg-white dark:bg-dark-card rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md"
@@ -725,6 +714,7 @@ const TrashPage = () => {
                 >
                   <motion.button
                     onClick={() => setRestoreTarget(null)}
+                    disabled={isRestoring}
                     className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-dark-text"
                     variants={buttonVariants}
                     initial="idle"
@@ -733,16 +723,14 @@ const TrashPage = () => {
                   >
                     Cancel
                   </motion.button>
-                  <motion.button
+                  <LoadingButton
                     onClick={confirmRestore}
-                    className="px-3 py-2 rounded bg-green-600 text-white hover:bg-green-700"
-                    variants={buttonVariants}
-                    initial="idle"
-                    whileHover="hover"
-                    whileTap="tap"
+                    isLoading={isRestoring}
+                    ariaLabel="Restore item"
+                    className="px-3 py-2 rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     Restore
-                  </motion.button>
+                  </LoadingButton>
                 </motion.div>
               </motion.div>
             </motion.div>
@@ -761,7 +749,11 @@ const TrashPage = () => {
               initial="hidden"
               animate="visible"
               exit="exit"
-              onClick={() => setPermanentDeleteTarget(null)}
+              onClick={() => {
+                if (!isDeletingForever) {
+                  setPermanentDeleteTarget(null);
+                }
+              }}
             >
               <motion.div
                 className="bg-white dark:bg-dark-card rounded-lg shadow-lg p-6 md:p-8 w-[90%] max-w-md"
@@ -807,6 +799,7 @@ const TrashPage = () => {
                 >
                   <motion.button
                     onClick={() => setPermanentDeleteTarget(null)}
+                    disabled={isDeletingForever}
                     className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-dark-text"
                     variants={buttonVariants}
                     initial="idle"
@@ -815,16 +808,14 @@ const TrashPage = () => {
                   >
                     Cancel
                   </motion.button>
-                  <motion.button
+                  <LoadingButton
                     onClick={confirmDelete}
-                    className="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700"
-                    variants={buttonVariants}
-                    initial="idle"
-                    whileHover="hover"
-                    whileTap="tap"
+                    isLoading={isDeletingForever}
+                    ariaLabel="Delete item permanently"
+                    className="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     Delete Forever
-                  </motion.button>
+                  </LoadingButton>
                 </motion.div>
               </motion.div>
             </motion.div>

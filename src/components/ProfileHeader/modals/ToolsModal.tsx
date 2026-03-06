@@ -211,6 +211,40 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
         }
     };
 
+    // Sync all customers to auth (calls serverless function)
+    const handleSyncCustomers = async () => {
+        const ok = window.confirm('This will update auth emails/passwords for all customers to the {phone}@gmail.com convention. Proceed?');
+        if (!ok) return;
+        setToolsLoading(true);
+        setToolsMessage(null);
+        try {
+            const response = await fetch('/.netlify/functions/sync-customer-auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ dryRun: false }),
+            });
+
+            const resultText = await response.text();
+            let result: any = {};
+            try {
+                result = JSON.parse(resultText);
+            } catch {
+                // fallthrough
+            }
+
+            if (response.ok && result && result.success) {
+                setToolsMessage({ type: 'success', text: result.message || 'Sync completed successfully' });
+            } else {
+                const err = (result && (result.error || result.message)) || resultText || 'Sync failed';
+                setToolsMessage({ type: 'error', text: String(err) });
+            }
+        } catch (err: any) {
+            setToolsMessage({ type: 'error', text: err.message || 'An error occurred while syncing' });
+        } finally {
+            setToolsLoading(false);
+        }
+    };
+
     // Fetch documents from Supabase
     const fetchDocuments = async () => {
         setDocumentsLoading(true);
@@ -412,6 +446,25 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                                         <div className="text-xs text-cyan-500 dark:text-cyan-400/70">Check customer account sync status</div>
                                     </div>
                                 </motion.button>
+                                    <motion.button
+                                        onClick={() => {
+                                            setToolsMessage(null);
+                                            handleSyncCustomers();
+                                        }}
+                                        disabled={toolsLoading}
+                                        className="w-full px-4 py-4 md:py-3 bg-sky-50 hover:bg-sky-100 active:bg-sky-200 text-sky-700 font-medium rounded-lg transition-colors flex items-center gap-3 dark:bg-sky-900/30 dark:hover:bg-sky-900/50 dark:text-sky-400"
+                                        initial={{ opacity: 0, x: -8 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ type: 'tween', ease: 'easeOut', duration: 0.2, delay: 0.13 }}
+                                        whileHover={{ scale: 1.02, x: 4 }}
+                                        whileTap={{ scale: 0.98 }}
+                                    >
+                                        <span className="text-xl">🔄</span>
+                                        <div className="text-left">
+                                            <div className="font-semibold text-sm md:text-base">Sync Customers to Auth</div>
+                                            <div className="text-xs text-sky-500 dark:text-sky-400/70">Update auth emails/passwords to phone@gmail.com</div>
+                                        </div>
+                                    </motion.button>
                                 <motion.button
                                     onClick={() => {
                                         setToolsView('manageDocuments');

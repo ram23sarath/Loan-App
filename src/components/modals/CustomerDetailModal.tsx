@@ -333,6 +333,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   const [editingDataEntry, setEditingDataEntry] = useState<DataEntry | null>(
     null,
   );
+  const [isExporting, setIsExporting] = useState(false);
 
   // Consolidated back handler for internal modal stack
   // Avoid pushing multiple history entries by registering a single handler
@@ -564,6 +565,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   const handleIndividualExport = async () => {
     setExportError(null);
     setExportSuccess(null);
+    setIsExporting(true);
     try {
       const XLSX = await import("xlsx");
       const customerLoansData = loans.map((loan) => {
@@ -641,6 +643,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
       console.error("Export failed:", error);
       const errorMsg = error instanceof Error ? error.message : String(error);
       setExportError(`Export failed: ${errorMsg}`);
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -737,13 +741,28 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
             <div className="flex items-center gap-2 flex-shrink-0 md:self-start">
               <motion.button
                 onClick={handleIndividualExport}
-                className="flex items-center justify-center gap-2 px-4 h-10 text-xs sm:text-sm font-semibold transition-colors bg-gray-100 rounded-lg hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text whitespace-nowrap leading-none"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                disabled={isExporting}
+                aria-label={isExporting ? "Exporting customer details" : "Export customer details"}
+                aria-busy={isExporting}
+                className={`flex items-center justify-center gap-2 px-4 h-10 text-xs sm:text-sm font-semibold transition-colors bg-gray-100 rounded-lg dark:bg-slate-700 dark:text-dark-text whitespace-nowrap leading-none disabled:opacity-60 disabled:cursor-not-allowed ${isExporting ? "hover:bg-gray-100 dark:hover:bg-slate-700" : "hover:bg-gray-200 dark:hover:bg-slate-600"}`}
+                whileHover={{ scale: isExporting ? 1 : 1.05 }}
+                whileTap={{ scale: isExporting ? 1 : 0.95 }}
               >
-                <FileDownIcon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                <span className="hidden sm:inline">Export Details</span>
-                <span className="sm:hidden">Export</span>
+                {isExporting ? (
+                  <svg
+                    className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 animate-spin"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                  </svg>
+                ) : (
+                  <FileDownIcon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                )}
+                <span className="hidden sm:inline">{isExporting ? "Exporting..." : "Export Details"}</span>
+                <span className="sm:hidden">{isExporting ? "Exporting" : "Export"}</span>
               </motion.button>
               <motion.button
                 onClick={onClose}
@@ -761,6 +780,42 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           className="mt-2 sm:mt-4 space-y-3 sm:space-y-6 flex-1 min-h-0 pb-6 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-slate-600 dark:scrollbar-track-slate-800 px-2 sm:px-0"
           style={{ paddingBottom: "calc(3rem + env(safe-area-inset-bottom))" }}
         >
+          <div className="md:hidden sticky top-0 z-20 -mx-2 px-2 pb-2">
+            <GlassCard
+              className="!p-2 dark:bg-dark-card dark:border-dark-border"
+              disable3D
+            >
+              <div className="grid grid-cols-3 gap-2 text-[11px]">
+                <div className="rounded-md bg-green-50 dark:bg-green-900/20 px-2 py-1.5">
+                  <span className="block text-gray-600 dark:text-dark-muted">
+                    Loan
+                  </span>
+                  <span className="font-semibold text-green-700 dark:text-green-400">
+                    {formatCurrency(summaryTotals.totalLoan)}
+                  </span>
+                </div>
+                <div className="rounded-md bg-cyan-50 dark:bg-cyan-900/20 px-2 py-1.5">
+                  <span className="block text-gray-600 dark:text-dark-muted">
+                    Sub
+                  </span>
+                  <span className="font-semibold text-cyan-700 dark:text-cyan-400">
+                    {formatCurrency(summaryTotals.totalSubscription)}
+                  </span>
+                </div>
+                <div className="rounded-md bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1.5">
+                  <span className="block text-gray-600 dark:text-dark-muted">
+                    Net
+                  </span>
+                  <span
+                    className={`font-semibold ${summaryTotals.netTotal >= 0 ? "text-indigo-700 dark:text-indigo-400" : "text-red-700 dark:text-red-400"}`}
+                  >
+                    {formatCurrency(summaryTotals.netTotal)}
+                  </span>
+                </div>
+              </div>
+            </GlassCard>
+          </div>
+
           {/* Loans Section */}
           <GlassCard
             className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border"
@@ -790,7 +845,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                     e.stopPropagation();
                     setShowRecordLoan(true);
                   }}
-                  className="w-full sm:w-auto px-3 py-2 sm:py-1 rounded text-white text-xs sm:text-sm bg-indigo-600 hover:bg-indigo-700 font-semibold"
+                  className="hidden md:inline-flex px-3 py-2 sm:py-1 rounded text-white text-xs sm:text-sm bg-indigo-600 hover:bg-indigo-700 font-semibold"
                   variants={buttonVariants}
                   initial="idle"
                   whileHover="hover"
@@ -1184,7 +1239,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                                               e.stopPropagation()
                                             }
                                             onPointerDown={stopAllPropagation}
-                                            className="px-2 py-1 rounded bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors text-xs"
+                                            className="min-h-12 px-3 py-3 rounded bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors text-xs"
+                                            aria-label={`Edit installment #${inst.installment_number}`}
                                             whileHover={{ scale: 1.02 }}
                                             whileTap={{ scale: 0.98 }}
                                           >
@@ -1202,7 +1258,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                                             e.stopPropagation()
                                           }
                                           onPointerDown={stopAllPropagation}
-                                          className="px-2 py-1 rounded bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                                          className="w-12 h-12 inline-flex items-center justify-center rounded bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                                          aria-label={`Delete installment #${inst.installment_number}`}
                                           whileHover={{ scale: 1.02 }}
                                           whileTap={{ scale: 0.98 }}
                                         >
@@ -1224,7 +1281,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                               onMouseDown={(e) => e.stopPropagation()}
                               onTouchStart={(e) => e.stopPropagation()}
                               onPointerDown={stopAllPropagation}
-                              className="flex-1 px-3 py-2 rounded bg-blue-600 dark:bg-blue-500 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-400"
+                              className="flex-1 min-h-12 px-4 py-3 rounded bg-blue-600 dark:bg-blue-500 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-400"
+                              aria-label={`Edit loan #${idx + 1}`}
                             >
                               Edit
                             </button>
@@ -1234,7 +1292,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                             onMouseDown={(e) => e.stopPropagation()}
                             onTouchStart={(e) => e.stopPropagation()}
                             onPointerDown={stopAllPropagation}
-                            className="px-3 py-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                            className="w-12 h-12 inline-flex items-center justify-center rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                            aria-label={`Delete loan #${idx + 1}`}
                           >
                             <Trash2Icon className="w-5 h-5" />
                           </button>
@@ -1276,7 +1335,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                     e.stopPropagation();
                     setShowRecordSubscription(true);
                   }}
-                  className="w-full sm:w-auto px-3 py-2 sm:py-1 rounded bg-cyan-600 text-white text-xs sm:text-sm hover:bg-cyan-700 font-semibold"
+                  className="hidden md:inline-flex px-3 py-2 sm:py-1 rounded bg-cyan-600 text-white text-xs sm:text-sm hover:bg-cyan-700 font-semibold"
                 >
                   Record Subscription
                 </button>
@@ -1449,14 +1508,16 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                         {onEditSubscription && (
                           <button
                             onClick={() => onEditSubscription(sub)}
-                            className="flex-1 px-3 py-2 rounded bg-blue-600 dark:bg-blue-500 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-400"
+                            className="flex-1 min-h-12 px-4 py-3 rounded bg-blue-600 dark:bg-blue-500 text-white text-sm hover:bg-blue-700 dark:hover:bg-blue-400"
+                            aria-label={`Edit subscription #${idx + 1}`}
                           >
                             Edit
                           </button>
                         )}
                         <button
                           onClick={() => setDeleteSubTarget(sub)}
-                          className="px-3 py-2 rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                          className="w-12 h-12 inline-flex items-center justify-center rounded-md bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                          aria-label={`Delete subscription #${idx + 1}`}
                         >
                           <Trash2Icon className="w-5 h-5" />
                         </button>
@@ -1486,7 +1547,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                       e.stopPropagation();
                       setShowRecordDataEntry(true);
                     }}
-                    className="w-full sm:w-auto px-3 py-2 sm:py-1 rounded bg-pink-600 text-white text-xs sm:text-sm hover:bg-pink-700 font-semibold"
+                    className="hidden md:inline-flex w-full sm:w-auto px-3 py-2 sm:py-1 rounded bg-pink-600 text-white text-xs sm:text-sm hover:bg-pink-700 font-semibold"
                   >
                     Record Entry
                   </button>
@@ -1665,7 +1726,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                       <div className="flex gap-2 mt-3 pt-3 border-t border-pink-200 dark:border-pink-900/30">
                         <motion.button
                           onClick={() => setEditingDataEntry(entry)}
-                          className="flex-1 px-3 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
+                          className="flex-1 min-h-12 px-4 py-3 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
                           aria-label="Edit"
                           variants={buttonVariants}
                           initial="idle"
@@ -1676,8 +1737,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                         </motion.button>
                         <motion.button
                           onClick={() => setDeleteDataEntryTarget(entry)}
-                          className="p-2 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400"
-                          aria-label="Delete"
+                          className="w-12 h-12 inline-flex items-center justify-center rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                          aria-label="Delete data entry"
                           variants={buttonVariants}
                           initial="idle"
                           whileHover="hover"
@@ -1736,6 +1797,57 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
             />
           )}
         </AnimatePresence>
+
+        <div className="md:hidden sticky bottom-0 z-30 mt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <p id="mobile-touch-guidance" className="sr-only">
+            Mobile actions use minimum 48 by 48 pixel touch targets per
+            Material Design and WCAG 2.5.5 Target Size guidance.
+          </p>
+          <GlassCard
+            className="!p-2 dark:bg-dark-card dark:border-dark-border"
+            disable3D
+          >
+            <div className="grid grid-cols-4 gap-2">
+              <motion.button
+                onClick={handleIndividualExport}
+                disabled={isExporting}
+                aria-label="Export customer details"
+                aria-describedby="mobile-touch-guidance"
+                className="min-h-12 rounded-lg bg-slate-100 dark:bg-slate-700 text-[11px] font-semibold text-slate-700 dark:text-dark-text disabled:opacity-60"
+                whileTap={{ scale: 0.98 }}
+              >
+                {isExporting ? "Exporting" : "Export"}
+              </motion.button>
+              <motion.button
+                onClick={() => setShowRecordLoan(true)}
+                aria-label="Record loan"
+                aria-describedby="mobile-touch-guidance"
+                className="min-h-12 rounded-lg bg-indigo-600 text-[11px] font-semibold text-white"
+                whileTap={{ scale: 0.98 }}
+              >
+                Loan
+              </motion.button>
+              <motion.button
+                onClick={() => setShowRecordSubscription(true)}
+                aria-label="Record subscription"
+                aria-describedby="mobile-touch-guidance"
+                className="min-h-12 rounded-lg bg-cyan-600 text-[11px] font-semibold text-white"
+                whileTap={{ scale: 0.98 }}
+              >
+                Sub
+              </motion.button>
+              <motion.button
+                onClick={() => setShowRecordDataEntry(true)}
+                aria-label="Record expenditure entry"
+                aria-describedby="mobile-touch-guidance"
+                className="min-h-12 rounded-lg bg-pink-600 text-[11px] font-semibold text-white"
+                whileTap={{ scale: 0.98 }}
+              >
+                Entry
+              </motion.button>
+            </div>
+          </GlassCard>
+        </div>
 
         {/* Delete Error Display */}
         <AnimatePresence>

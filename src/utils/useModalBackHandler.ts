@@ -1,5 +1,9 @@
 import { useEffect, useRef } from 'react';
 
+type ModalHistoryState = { modalId?: string; modalOpen?: boolean } | null;
+
+const generateModalId = () => `modal-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+
 /**
  * Hook to handle Android hardware back button (and browser back button) for modals.
  * When the modal opens, it pushes a state to the history stack.
@@ -20,6 +24,8 @@ export const useModalBackHandler = (isOpen: boolean, onClose: () => void) => {
     const closedByBackRef = useRef(false);
     // Ref to track if we've pushed a state for this modal
     const pushedStateRef = useRef(false);
+    const modalIdRef = useRef(generateModalId());
+    const previousHistoryStateRef = useRef<ModalHistoryState>(null);
 
     useEffect(() => {
         if (isOpen) {
@@ -29,10 +35,16 @@ export const useModalBackHandler = (isOpen: boolean, onClose: () => void) => {
                 closedByBackRef.current = false;
 
                 // Push a dummy state to the history stack
-                window.history.pushState({ modalOpen: true }, '', window.location.href);
+                previousHistoryStateRef.current = window.history.state as ModalHistoryState;
+                window.history.pushState({ modalOpen: true, modalId: modalIdRef.current }, '', window.location.href);
 
                 const handlePopState = (event: PopStateEvent) => {
                     // The back button was pressed
+                    const state = event.state as ModalHistoryState;
+                    if (state?.modalId !== modalIdRef.current) {
+                        return;
+                    }
+
                     closedByBackRef.current = true;
                     if (onCloseRef.current) {
                         onCloseRef.current();
@@ -47,7 +59,7 @@ export const useModalBackHandler = (isOpen: boolean, onClose: () => void) => {
                     // If the modal was closed programmatically (not by back button),
                     // we need to go back to clean up the history state we pushed.
                     if (!closedByBackRef.current) {
-                        window.history.back();
+                        window.history.replaceState(previousHistoryStateRef.current, '', window.location.href);
                     }
                     // Reset the flag so if the modal opens again, we push state again
                     pushedStateRef.current = false;

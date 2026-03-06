@@ -46,27 +46,28 @@ interface CustomerDetailModalProps {
 
 const backdropVariants: Variants = {
   hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.3, ease: "easeInOut" } },
+  visible: { opacity: 1, transition: { duration: 0.2, ease: "easeOut" } },
+  exit: { opacity: 0, transition: { duration: 0.2, ease: "easeIn" } },
 };
 
 const modalVariants: Variants = {
-  hidden: { opacity: 0, y: 50, scale: 0.95 },
+  hidden: { opacity: 0, y: 24, scale: 0.97 },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
     transition: {
-      duration: 0.4,
-      ease: "easeOut",
-      staggerChildren: 0.05,
-      delayChildren: 0.1,
+      type: "spring",
+      stiffness: 320,
+      damping: 28,
+      mass: 0.8,
     },
   },
   exit: {
     opacity: 0,
-    y: 50,
-    scale: 0.95,
-    transition: { duration: 0.25, ease: "easeIn" },
+    y: 16,
+    scale: 0.97,
+    transition: { duration: 0.18, ease: "easeIn" },
   },
 };
 
@@ -269,20 +270,30 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     );
     const totalSubscription = rawSubscriptionTotal + interestCharged;
 
+    // Calculate total late fees from subscriptions and this customer's installments only
+    const totalLateFees =
+      subscriptions.reduce((acc, sub) => acc + (sub.late_fee || 0), 0) +
+      installments
+        .filter((inst) => loans.some((l) => l.id === inst.loan_id))
+        .reduce((acc, inst) => acc + (inst.late_fee || 0), 0);
+
     const totalMiscEntries = dataEntries.reduce(
       (acc, entry) => acc + entry.amount,
       0,
     );
-    const netTotal = totalSubscription - totalMiscEntries;
+
+    // Net = (Subscription + Interest + Late Fees) - Expenditures
+    const netTotal = totalSubscription + totalLateFees - totalMiscEntries;
 
     return {
       totalLoan,
       totalSubscription,
+      totalLateFees,
       totalMiscEntries,
       netTotal,
       interestCharged, // Export if needed for UI
     };
-  }, [loans, subscriptions, dataEntries, interestCharged]);
+  }, [loans, subscriptions, dataEntries, interestCharged, installments]);
 
   // Sorted subscriptions
   const sortedSubscriptions = useMemo(() => {
@@ -651,7 +662,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
       variants={backdropVariants}
       initial="hidden"
       animate="visible"
-      exit="hidden"
+      exit="exit"
       onClick={onClose}
     >
       <motion.div
@@ -674,39 +685,57 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               <p className="text-xs sm:text-sm md:text-base text-gray-500 dark:text-dark-muted mb-4">
                 {customer.phone}
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm md:text-base">
-                <div className="p-2 sm:p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
-                  <span className="text-gray-600 dark:text-dark-muted text-xs sm:text-sm block mb-1">
+              <div className="grid grid-cols-5 gap-2 sm:gap-3 text-xs">
+                <div className="p-2 rounded-lg bg-green-50 dark:bg-green-900/20">
+                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-1">
                     Loan:
                   </span>
-                  <p className="font-bold text-green-600 dark:text-green-400 text-sm sm:text-base">
+                  <p className="font-bold text-green-600 dark:text-green-400 text-xs sm:text-sm">
                     {formatCurrency(summaryTotals.totalLoan)}
                   </p>
                 </div>
-                <div className="p-2 sm:p-3 rounded-lg bg-cyan-50 dark:bg-cyan-900/20">
-                  <span className="text-gray-600 dark:text-dark-muted text-xs sm:text-sm block mb-1">
+                <div className="p-2 rounded-lg bg-cyan-50 dark:bg-cyan-900/20">
+                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-1">
                     Subscription:
                   </span>
-                  <p className="font-bold text-cyan-600 dark:text-cyan-400 text-sm sm:text-base">
+                  <p className="font-bold text-cyan-600 dark:text-cyan-400 text-xs sm:text-sm">
                     {formatCurrency(summaryTotals.totalSubscription)}
                   </p>
                 </div>
 
-                <div className="p-2 sm:p-3 rounded-lg bg-orange-50 dark:bg-orange-900/20">
-                  <span className="text-gray-600 dark:text-dark-muted text-xs sm:text-sm block mb-1">
+                <div className="p-2 rounded-lg bg-orange-50 dark:bg-orange-900/20">
+                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-1">
                     Interest:
                   </span>
-                  <p className="font-bold text-orange-600 dark:text-orange-400 text-sm sm:text-base">
+                  <p className="font-bold text-orange-600 dark:text-orange-400 text-xs sm:text-sm">
                     {formatCurrency(interestCharged)}
                   </p>
                 </div>
 
-                <div className="p-2 sm:p-3 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 col-span-2 sm:col-span-1">
-                  <span className="text-gray-600 dark:text-dark-muted text-xs sm:text-sm block mb-1">
+                <div className="p-2 rounded-lg bg-red-50 dark:bg-red-900/20">
+                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-1">
+                    Late Fees:
+                  </span>
+                  <p className="font-bold text-red-600 dark:text-red-400 text-xs sm:text-sm">
+                    {formatCurrency(summaryTotals.totalLateFees)}
+                  </p>
+                </div>
+
+                <div className="p-2 rounded-lg bg-pink-50 dark:bg-pink-900/20">
+                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-1">
+                    Expenditure:
+                  </span>
+                  <p className="font-bold text-pink-600 dark:text-pink-400 text-xs sm:text-sm">
+                    {formatCurrency(summaryTotals.totalMiscEntries)}
+                  </p>
+                </div>
+
+                <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 col-span-5 sm:col-span-1">
+                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-1">
                     Net:
                   </span>
                   <p
-                    className={`font-bold text-sm sm:text-base ${summaryTotals.netTotal >= 0 ? "text-indigo-600 dark:text-indigo-400" : "text-red-600 dark:text-red-400"}`}
+                    className={`font-bold text-xs sm:text-sm ${summaryTotals.netTotal >= 0 ? "text-indigo-600 dark:text-indigo-400" : "text-red-600 dark:text-red-400"}`}
                   >
                     {formatCurrency(summaryTotals.netTotal)}
                   </p>
@@ -1450,13 +1479,6 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               </p>
             )}
           </GlassCard>
-
-          {showRecordSubscription && (
-            <RecordSubscriptionModal
-              customer={customer}
-              onClose={() => setShowRecordSubscription(false)}
-            />
-          )}
 
           {/* Data Entries Section */}
           <GlassCard

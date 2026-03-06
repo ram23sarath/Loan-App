@@ -803,16 +803,13 @@ const CustomerListPage = () => {
                                           {rowNumber}
                                         </td>
                                         <td className="px-4 py-2 font-bold dark:border-dark-border">
-                                          <Link
-                                            to={`/customers/${customer.id}`}
-                                            className="text-indigo-700 dark:text-indigo-400 hover:underline"
-                                            onClick={(e) => e.stopPropagation()}
-                                            onTouchStart={(e) =>
-                                              e.stopPropagation()
-                                            }
+                                          <button
+                                            className="text-indigo-700 dark:text-indigo-400 hover:underline text-left"
+                                            onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); }}
+                                            onTouchStart={(e) => e.stopPropagation()}
                                           >
                                             {customer.name}
-                                          </Link>
+                                          </button>
                                         </td>
                                         <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">
                                           {customer.phone}
@@ -915,7 +912,7 @@ const CustomerListPage = () => {
                                     <motion.div
                                       className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
                                       onClick={() =>
-                                        navigate(`/customers/${customer.id}`)
+                                        setSelectedCustomer(customer)
                                       }
                                       initial={false}
                                       animate={{ opacity: 1 }}
@@ -927,16 +924,13 @@ const CustomerListPage = () => {
                                         <span className="text-xs text-gray-400 dark:text-dark-muted">
                                           Sr.No {rowNumber}
                                         </span>
-                                        <Link
-                                          to={`/customers/${customer.id}`}
-                                          className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate"
-                                          onClick={(e) => e.stopPropagation()}
-                                          onTouchStart={(e) =>
-                                            e.stopPropagation()
-                                          }
+                                        <button
+                                          className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate text-left"
+                                          onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); }}
+                                          onTouchStart={(e) => e.stopPropagation()}
                                         >
                                           {customer.name}
-                                        </Link>
+                                        </button>
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
                                         Phone:{" "}
@@ -1134,16 +1128,13 @@ const CustomerListPage = () => {
                                           {rowNumber}
                                         </td>
                                         <td className="px-4 py-2 font-bold dark:border-dark-border">
-                                          <Link
-                                            to={`/customers/${customer.id}`}
-                                            className="text-indigo-700 dark:text-indigo-400 hover:underline"
-                                            onClick={(e) => e.stopPropagation()}
-                                            onTouchStart={(e) =>
-                                              e.stopPropagation()
-                                            }
+                                          <button
+                                            className="text-indigo-700 dark:text-indigo-400 hover:underline text-left"
+                                            onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); }}
+                                            onTouchStart={(e) => e.stopPropagation()}
                                           >
                                             {customer.name}
-                                          </Link>
+                                          </button>
                                         </td>
                                         <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">
                                           {customer.phone}
@@ -1234,7 +1225,7 @@ const CustomerListPage = () => {
                                     <motion.div
                                       className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
                                       onClick={() =>
-                                        navigate(`/customers/${customer.id}`)
+                                        setSelectedCustomer(customer)
                                       }
                                       initial={{ opacity: 0 }}
                                       animate={{ opacity: 1 }}
@@ -1249,16 +1240,13 @@ const CustomerListPage = () => {
                                         <span className="text-xs text-gray-400 dark:text-dark-muted">
                                           Sr.No {rowNumber}
                                         </span>
-                                        <Link
-                                          to={`/customers/${customer.id}`}
-                                          className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate"
-                                          onClick={(e) => e.stopPropagation()}
-                                          onTouchStart={(e) =>
-                                            e.stopPropagation()
-                                          }
+                                        <button
+                                          className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate text-left"
+                                          onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); }}
+                                          onTouchStart={(e) => e.stopPropagation()}
                                         >
                                           {customer.name}
-                                        </Link>
+                                        </button>
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
                                         Phone:{" "}
@@ -1451,16 +1439,13 @@ const CustomerListPage = () => {
                                           {rowNumber}
                                         </td>
                                         <td className="px-4 py-2 font-bold dark:border-dark-border">
-                                          <Link
-                                            to={`/customers/${customer.id}`}
-                                            className="text-indigo-700 dark:text-indigo-400 hover:underline"
-                                            onClick={(e) => e.stopPropagation()}
-                                            onTouchStart={(e) =>
-                                              e.stopPropagation()
-                                            }
+                                          <button
+                                            className="text-indigo-700 dark:text-indigo-400 hover:underline text-left"
+                                            onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); }}
+                                            onTouchStart={(e) => e.stopPropagation()}
                                           >
                                             {customer.name}
-                                          </Link>
+                                          </button>
                                         </td>
                                         <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">
                                           {customer.phone}
@@ -1550,7 +1535,7 @@ const CustomerListPage = () => {
                                     <motion.div
                                       className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
                                       onClick={() =>
-                                        navigate(`/customers/${customer.id}`)
+                                        setSelectedCustomer(customer)
                                       }
                                       initial={{ opacity: 0 }}
                                       animate={{ opacity: 1 }}
@@ -1565,16 +1550,13 @@ const CustomerListPage = () => {
                                         <span className="text-xs text-gray-400 dark:text-dark-muted">
                                           Sr.No {rowNumber}
                                         </span>
-                                        <Link
-                                          to={`/customers/${customer.id}`}
-                                          className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate"
-                                          onClick={(e) => e.stopPropagation()}
-                                          onTouchStart={(e) =>
-                                            e.stopPropagation()
-                                          }
+                                        <button
+                                          className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 hover:underline truncate text-left"
+                                          onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); }}
+                                          onTouchStart={(e) => e.stopPropagation()}
                                         >
                                           {customer.name}
-                                        </Link>
+                                        </button>
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
                                         Phone:{" "}
@@ -1754,18 +1736,15 @@ const CustomerListPage = () => {
                                             {rowNumber}
                                           </td>
                                           <td className="px-4 py-2 font-bold dark:border-dark-border">
-                                            <Link
-                                              to={`/customers/${customer.id}`}
-                                              className="text-indigo-700 dark:text-indigo-400 hover:underline"
-                                              onClick={(e) =>
-                                                e.stopPropagation()
-                                              }
+                                            <button
+                                              className="text-indigo-700 dark:text-indigo-400 hover:underline text-left"
+                                              onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); }}
                                               onTouchStart={(e) =>
                                                 e.stopPropagation()
                                               }
                                             >
                                               {customer.name}
-                                            </Link>
+                                            </button>
                                           </td>
                                           <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">
                                             {customer.phone}
@@ -1832,7 +1811,7 @@ const CustomerListPage = () => {
                                       <motion.div
                                         className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm relative z-10 dark:bg-dark-card dark:border-dark-border"
                                         onClick={() =>
-                                          navigate(`/customers/${customer.id}`)
+                                          setSelectedCustomer(customer)
                                         }
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
@@ -1925,9 +1904,10 @@ const CustomerListPage = () => {
         </div>
       )}
 
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {selectedCustomer && (
           <CustomerDetailModal
+            key={selectedCustomer.id}
             customer={selectedCustomer}
             loans={loans.filter((l) => l.customer_id === selectedCustomer.id)}
             subscriptions={subscriptions.filter(

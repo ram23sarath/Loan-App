@@ -681,7 +681,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               <p className="text-xs sm:text-sm md:text-base text-gray-500 dark:text-dark-muted mb-4">
                 {customer.phone}
               </p>
-              <div className="grid grid-cols-6 gap-1.5 sm:gap-2 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5 sm:gap-2 text-xs">
                 <div className="p-1.5 rounded-lg bg-green-50 dark:bg-green-900/20">
                   <span className="text-gray-600 dark:text-dark-muted text-xs block mb-0.5">
                     Loan:
@@ -780,41 +780,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           className="mt-2 sm:mt-4 space-y-3 sm:space-y-6 flex-1 min-h-0 pb-6 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-slate-600 dark:scrollbar-track-slate-800 px-2 sm:px-0"
           style={{ paddingBottom: "calc(3rem + env(safe-area-inset-bottom))" }}
         >
-          <div className="md:hidden sticky top-0 z-20 -mx-2 px-2 pb-2">
-            <GlassCard
-              className="!p-2 dark:bg-dark-card dark:border-dark-border"
-              disable3D
-            >
-              <div className="grid grid-cols-3 gap-2 text-[11px]">
-                <div className="rounded-md bg-green-50 dark:bg-green-900/20 px-2 py-1.5">
-                  <span className="block text-gray-600 dark:text-dark-muted">
-                    Loan
-                  </span>
-                  <span className="font-semibold text-green-700 dark:text-green-400">
-                    {formatCurrency(summaryTotals.totalLoan)}
-                  </span>
-                </div>
-                <div className="rounded-md bg-cyan-50 dark:bg-cyan-900/20 px-2 py-1.5">
-                  <span className="block text-gray-600 dark:text-dark-muted">
-                    Sub
-                  </span>
-                  <span className="font-semibold text-cyan-700 dark:text-cyan-400">
-                    {formatCurrency(summaryTotals.totalSubscription)}
-                  </span>
-                </div>
-                <div className="rounded-md bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1.5">
-                  <span className="block text-gray-600 dark:text-dark-muted">
-                    Net
-                  </span>
-                  <span
-                    className={`font-semibold ${summaryTotals.netTotal >= 0 ? "text-indigo-700 dark:text-indigo-400" : "text-red-700 dark:text-red-400"}`}
-                  >
-                    {formatCurrency(summaryTotals.netTotal)}
-                  </span>
-                </div>
-              </div>
-            </GlassCard>
-          </div>
+          
 
           {/* Loans Section */}
           <GlassCard

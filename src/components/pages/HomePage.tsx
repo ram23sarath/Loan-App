@@ -8,6 +8,7 @@ import { useRouteReady } from '../RouteReadySignal';
 import GlassCard from '../ui/GlassCard';
 import PageWrapper from '../ui/PageWrapper';
 import RequestSeniorityModal from '../ui/RequestSeniorityModal';
+import { canRequestNewLoan } from '../../utils/loanStatus';
 
 const HomePage: React.FC = () => {
   // ── Shared data ────────────────────────────────────────────────────────────
@@ -19,6 +20,7 @@ const HomePage: React.FC = () => {
     loans,
     installmentsByLoanId,
     seniorityList,
+    loading,
   } = useData();
   const navigate = useNavigate();
   const signalRouteReady = useRouteReady();
@@ -84,32 +86,22 @@ const HomePage: React.FC = () => {
     return seniorityList.some((entry) => entry.customer_id === customer.id);
   }, [customer, seniorityList]);
 
-  const repaymentProgress = useMemo(() => {
-    if (!customerLoans.length) return 0;
-    let maxProgress = 0;
-    customerLoans.forEach((loan) => {
-      const loanInstallments = installmentsByLoanId.get(loan.id) || [];
-      const paidAmount = loanInstallments.reduce((sum, inst) => sum + (inst.amount || 0), 0);
-      const totalRepayable = (loan.original_amount || 0) + (loan.interest_amount || 0);
-      if (totalRepayable > 0) {
-        const progress = Math.min(paidAmount / totalRepayable, 1);
-        if (progress > maxProgress) maxProgress = progress;
-      }
-    });
-    return maxProgress;
-  }, [customerLoans, installmentsByLoanId]);
+  const loanEligibility = useMemo(
+    () => canRequestNewLoan(customerLoans, installmentsByLoanId, loading),
+    [customerLoans, installmentsByLoanId, loading],
+  );
 
-  const meetsRepaymentThreshold = customerLoans.length === 0 || repaymentProgress >= 0.8;
+  const meetsRepaymentThreshold = loanEligibility.eligible;
   const canRequest = Boolean(
     isScopedCustomer && customer && !hasPendingSeniorityRequest && meetsRepaymentThreshold,
   );
-  const progressPercent = Math.round(repaymentProgress * 100);
+  const progressPercent = loanEligibility.progressPercent;
   const requestDisabledReason = !customer
     ? 'No customer found for this account.'
     : hasPendingSeniorityRequest
       ? 'Request already submitted and pending.'
       : !meetsRepaymentThreshold
-        ? `You need at least 80% repayment (current ${progressPercent}%).`
+        ? loanEligibility.reason
         : undefined;
 
   // ── Scoped user document download ─────────────────────────────────────────

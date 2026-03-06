@@ -8,6 +8,7 @@ import { useData } from '../../context/DataContext';
 import { formatDate } from '../../utils/dateFormatter';
 import Toast from '../ui/Toast';
 import type { Customer, LoanWithCustomer } from '../../types';
+import { isLoanOngoing } from '../../utils/loanStatus';
 
 type Props = {
   customer: Customer;
@@ -45,13 +46,7 @@ const RecordLoanModal: React.FC<Props> = ({ customer, onClose, hasOngoingLoan = 
   // Filter to show only ongoing loans (< 80% paid) when in installment mode
   const availableLoans = useMemo(() => {
     if (mode === 'installment') {
-      return customerLoans.filter(l => {
-        const loanInstallments = installmentsByLoanId.get(l.id) || [];
-        const amountPaid = loanInstallments.reduce((acc: number, inst: any) => acc + inst.amount, 0);
-        const totalRepayable = l.original_amount + l.interest_amount;
-        const paymentPercentage = (amountPaid / totalRepayable) * 100;
-        return paymentPercentage < 80; // Only ongoing loans
-      });
+      return customerLoans.filter(l => isLoanOngoing(l, installmentsByLoanId));
     }
     return customerLoans;
   }, [mode, customerLoans, installmentsByLoanId]);

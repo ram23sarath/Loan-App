@@ -21,6 +21,7 @@ import { useEscapeKey } from "../hooks/useEscapeKey";
 import { useModalBackHandler } from "../../utils/useModalBackHandler";
 import AlertPopup from "../ui/AlertPopup";
 import LoadingButton from "../ui/LoadingButton";
+import { canRequestNewLoan } from "../../utils/loanStatus";
 
 // Animation variants
 const listContainerVariants: Variants = {
@@ -270,43 +271,12 @@ const LoanSeniorityPage = () => {
     );
   }, [seniorityList]);
 
-  // Helper function to calculate repayment progress for a customer
-  const getCustomerRepaymentProgress = (customerId: string): number => {
+  // Shared eligibility helper — wraps canRequestNewLoan from loanStatus.ts
+  const getCustomerEligibility = (customerId: string) => {
     const customerLoans = (loans || []).filter(
       (loan) => loan.customer_id === customerId,
     );
-    if (!customerLoans.length) return 0; // First-time loan eligible
-
-    let maxProgress = 0;
-    customerLoans.forEach((loan) => {
-      const loanInstallments = installmentsByLoanId?.get(loan.id) || [];
-      const paidAmount = loanInstallments.reduce(
-        (sum, inst) => sum + (inst.amount || 0),
-        0,
-      );
-      const totalRepayable =
-        (loan.original_amount || 0) + (loan.interest_amount || 0);
-      if (totalRepayable > 0) {
-        const progress = Math.min(paidAmount / totalRepayable, 1);
-        if (progress > maxProgress) {
-          maxProgress = progress;
-        }
-      }
-    });
-
-    return maxProgress;
-  };
-
-  // Helper function to check if customer meets repayment threshold
-  const meetsRepaymentThreshold = (
-    customerId: string,
-    progress: number,
-  ): boolean => {
-    const customerLoans = (loans || []).filter(
-      (loan) => loan.customer_id === customerId,
-    );
-    // Allow if first-time (no loans) OR 80%+ repayment
-    return customerLoans.length === 0 || progress >= 0.8;
+    return canRequestNewLoan(customerLoans, installmentsByLoanId ?? new Map(), false);
   };
 
   const matchedCustomers = useMemo(() => {
@@ -328,9 +298,9 @@ const LoanSeniorityPage = () => {
     // Map to include eligibility info
     return matching.map((customer: Customer) => {
       const isInSeniority = existingSeniorityCustomerIds.has(customer.id);
-      const progress = getCustomerRepaymentProgress(customer.id);
-      const progressPercent = Math.round(progress * 100);
-      const meetsThreshold = meetsRepaymentThreshold(customer.id, progress);
+      const eligibility = getCustomerEligibility(customer.id);
+      const progressPercent = eligibility.progressPercent;
+      const meetsThreshold = eligibility.eligible;
 
       let isBlocked = false;
       let blockReason = "";

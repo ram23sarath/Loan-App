@@ -26,6 +26,11 @@ import { formatDate } from "../../utils/dateFormatter";
 import { formatNumberIndian } from "../../utils/numberFormatter";
 import DeleteConfirmationModal from "./DeleteConfirmationModal";
 import { useModalBackHandler } from "../../utils/useModalBackHandler";
+import {
+  isLoanOngoing as isLoanOngoingUtil,
+  getLoanRepaymentProgress,
+  ONGOING_PAYMENT_THRESHOLD,
+} from "../../utils/loanStatus";
 
 interface CustomerDetailModalProps {
   customer: Customer;
@@ -73,32 +78,19 @@ const modalVariants: Variants = {
 
 const formatCurrency = (amount: number) => `₹${formatNumberIndian(amount)}`;
 
-// Payment threshold for determining ongoing loans (80% paid = loan in progress)
-const ONGOING_PAYMENT_THRESHOLD = 80;
-
-// Helper function to calculate payment percentage for a loan
+// Re-export shared helpers under local names for use in this file
 const calculatePaymentPercentage = (
   loan: LoanWithCustomer,
   installmentsByLoanId: Map<string, Installment[]>,
 ): number => {
-  const loanInstallments = installmentsByLoanId.get(loan.id) || [];
-  const amountPaid = loanInstallments.reduce(
-    (acc, inst) => acc + inst.amount,
-    0,
-  );
-  const totalRepayable = loan.original_amount + loan.interest_amount;
-  if (totalRepayable === 0) return 100; // Treat zero-value loans as fully paid
-  return (amountPaid / totalRepayable) * 100;
+  const installments = installmentsByLoanId.get(loan.id) || [];
+  return getLoanRepaymentProgress(loan, installments);
 };
-// Helper function to check if a loan is ongoing (less than threshold% paid)
 const isLoanOngoing = (
   loan: LoanWithCustomer,
   installmentsByLoanId: Map<string, Installment[]>,
 ): boolean => {
-  return (
-    calculatePaymentPercentage(loan, installmentsByLoanId) <
-    ONGOING_PAYMENT_THRESHOLD
-  );
+  return isLoanOngoingUtil(loan, installmentsByLoanId);
 };
 
 // Helper function to stop event propagation with proper TypeScript typing
@@ -1714,16 +1706,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               onClose={() => setShowRecordLoan(false)}
               hasOngoingLoan={hasOngoingLoan}
               ongoingLoanId={
-                loans.find((l) => {
-                  const loanInstallments = installmentsByLoanId.get(l.id) || [];
-                  const amountPaid = loanInstallments.reduce(
-                    (acc, inst) => acc + inst.amount,
-                    0,
-                  );
-                  const totalRepayable = l.original_amount + l.interest_amount;
-                  const paymentPercentage = (amountPaid / totalRepayable) * 100;
-                  return paymentPercentage < 80;
-                })?.id || ""
+                loans.find((l) => isLoanOngoing(l, installmentsByLoanId))?.id || ""
               }
             />
           )}

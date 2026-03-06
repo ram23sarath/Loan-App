@@ -70,3 +70,91 @@ export const getLoanStatus = (
     status: isPaidOff ? "Paid Off" : "In Progress",
   };
 };
+
+// ─── Shared eligibility constants & helpers ──────────────────────────────────
+
+/** A loan is considered "ongoing" (not yet sufficiently repaid) when < this % is paid. */
+export const ONGOING_PAYMENT_THRESHOLD = 80;
+
+/**
+ * Calculate repayment percentage for a single loan using Decimal.js.
+ * Returns 0–100 (percentage).  Zero-value loans (totalRepayable ≤ 0) return 100 (fully paid).
+ */
+export const getLoanRepaymentProgress = (
+  loan: LoanWithCustomer,
+  installments: Installment[],
+): number => {
+  const totalRepayable = new Decimal(loan.original_amount ?? 0).plus(
+    new Decimal(loan.interest_amount ?? 0),
+  );
+  if (totalRepayable.lte(0)) return 100; // treat zero-value loans as fully paid
+
+  const paid = installments.reduce(
+    (acc, inst) => acc.plus(new Decimal(inst.amount ?? 0)),
+    new Decimal(0),
+  );
+  // Clamp to [0, 100]
+  return Math.min(paid.div(totalRepayable).times(100).toNumber(), 100);
+};
+
+/**
+ * Returns `true` when a loan still has < ONGOING_PAYMENT_THRESHOLD % repaid
+ * (i.e. the loan is still "in progress" and should block new loan recording).
+ */
+export const isLoanOngoing = (
+  loan: LoanWithCustomer,
+  installmentsByLoanId: Map<string, Installment[]>,
+): boolean => {
+  const installments = installmentsByLoanId.get(loan.id) || [];
+  return getLoanRepaymentProgress(loan, installments) < ONGOING_PAYMENT_THRESHOLD;
+};
+
+/**
+ * Eligibility result returned by `canRequestNewLoan`.
+ */
+export type LoanEligibilityResult = {
+  eligible: boolean;
+  progressPercent: number;
+  reason?: string;
+};
+
+/**
+ * Determine whether a customer may request a **new** loan.
+ *
+ * Rules:
+ *  – While data is still loading → ineligible (prevents race-condition flash).
+ *  – No existing loans → eligible (first-time borrower).
+ *  – At least one loan with ≥ 80 % repaid → eligible (uses max-across-loans).
+ *  – Otherwise → ineligible.
+ */
+export const canRequestNewLoan = (
+  customerLoans: LoanWithCustomer[],
+  installmentsByLoanId: Map<string, Installment[]>,
+  dataLoading: boolean,
+): LoanEligibilityResult => {
+  if (dataLoading) {
+    return { eligible: false, progressPercent: 0, reason: "Loading loan data…" };
+  }
+
+  if (customerLoans.length === 0) {
+    return { eligible: true, progressPercent: 0, reason: "First-time borrower — no existing loans." };
+  }
+
+  let maxProgress = 0;
+  for (const loan of customerLoans) {
+    const installments = installmentsByLoanId.get(loan.id) || [];
+    const progress = getLoanRepaymentProgress(loan, installments);
+    if (progress > maxProgress) maxProgress = progress;
+  }
+
+  const progressPercent = Math.round(maxProgress);
+  const eligible = maxProgress >= ONGOING_PAYMENT_THRESHOLD;
+
+  return {
+    eligible,
+    progressPercent,
+    reason: eligible
+      ? undefined
+      : `You need at least 80% repayment (current ${progressPercent}%).`,
+  };
+};

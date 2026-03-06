@@ -23,6 +23,7 @@ import type {
 import { formatDate } from "../../utils/dateFormatter";
 import { openWhatsApp } from "../../utils/whatsapp";
 import { WhatsAppIcon } from "../../constants";
+import { isLoanOngoing, getLoanRepaymentProgress } from "../../utils/loanStatus";
 
 type LoanInputs = {
   original_amount: number;
@@ -90,42 +91,27 @@ const AddRecordPage = () => {
     return loans.filter((loan) => loan.customer_id === selectedCustomerId);
   }, [selectedCustomerId, loans]);
 
-  // Calculate if customer has an ongoing loan
+  // Calculate if customer has an ongoing loan (shared utility — guards div-by-zero)
   const hasOngoingLoan = useMemo(() => {
-    return customerLoans.some((loan) => {
-      const loanInstallments = installmentsByLoanId.get(loan.id) || [];
-      const amountPaid = loanInstallments.reduce(
-        (acc, inst) => acc + inst.amount,
-        0,
-      );
-      const totalRepayable = loan.original_amount + loan.interest_amount;
-      const paymentPercentage = (amountPaid / totalRepayable) * 100;
-      return paymentPercentage < 80; // Ongoing if less than 80% paid
-    });
+    return customerLoans.some((loan) => isLoanOngoing(loan, installmentsByLoanId));
   }, [customerLoans, installmentsByLoanId]);
 
   // Get details of ongoing loan for tooltip
   const ongoingLoanInfo = useMemo(() => {
-    const ongoing = customerLoans.find((loan) => {
-      const loanInstallments = installmentsByLoanId.get(loan.id) || [];
-      const amountPaid = loanInstallments.reduce(
-        (acc, inst) => acc + inst.amount,
-        0,
-      );
-      const totalRepayable = loan.original_amount + loan.interest_amount;
-      const paymentPercentage = (amountPaid / totalRepayable) * 100;
-      return paymentPercentage < 80;
-    });
-
+    const ongoing = customerLoans.find((loan) =>
+      isLoanOngoing(loan, installmentsByLoanId),
+    );
     if (!ongoing) return null;
 
     const loanInstallments = installmentsByLoanId.get(ongoing.id) || [];
+    const paymentPercentage = Math.round(
+      getLoanRepaymentProgress(ongoing, loanInstallments),
+    );
     const amountPaid = loanInstallments.reduce(
       (acc, inst) => acc + inst.amount,
       0,
     );
     const totalRepayable = ongoing.original_amount + ongoing.interest_amount;
-    const paymentPercentage = Math.round((amountPaid / totalRepayable) * 100);
 
     return {
       paymentPercentage,

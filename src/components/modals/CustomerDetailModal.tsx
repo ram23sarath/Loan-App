@@ -685,17 +685,17 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               <p className="text-xs sm:text-sm md:text-base text-gray-500 dark:text-dark-muted mb-4">
                 {customer.phone}
               </p>
-              <div className="grid grid-cols-5 gap-2 sm:gap-3 text-xs">
-                <div className="p-2 rounded-lg bg-green-50 dark:bg-green-900/20">
-                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-1">
+              <div className="grid grid-cols-6 gap-1.5 sm:gap-2 text-xs">
+                <div className="p-1.5 rounded-lg bg-green-50 dark:bg-green-900/20">
+                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-0.5">
                     Loan:
                   </span>
                   <p className="font-bold text-green-600 dark:text-green-400 text-xs sm:text-sm">
                     {formatCurrency(summaryTotals.totalLoan)}
                   </p>
                 </div>
-                <div className="p-2 rounded-lg bg-cyan-50 dark:bg-cyan-900/20">
-                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-1">
+                <div className="p-1.5 rounded-lg bg-cyan-50 dark:bg-cyan-900/20">
+                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-0.5">
                     Subscription:
                   </span>
                   <p className="font-bold text-cyan-600 dark:text-cyan-400 text-xs sm:text-sm">
@@ -703,8 +703,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   </p>
                 </div>
 
-                <div className="p-2 rounded-lg bg-orange-50 dark:bg-orange-900/20">
-                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-1">
+                <div className="p-1.5 rounded-lg bg-orange-50 dark:bg-orange-900/20">
+                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-0.5">
                     Interest:
                   </span>
                   <p className="font-bold text-orange-600 dark:text-orange-400 text-xs sm:text-sm">
@@ -712,8 +712,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   </p>
                 </div>
 
-                <div className="p-2 rounded-lg bg-red-50 dark:bg-red-900/20">
-                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-1">
+                <div className="p-1.5 rounded-lg bg-red-50 dark:bg-red-900/20">
+                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-0.5">
                     Late Fees:
                   </span>
                   <p className="font-bold text-red-600 dark:text-red-400 text-xs sm:text-sm">
@@ -721,8 +721,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   </p>
                 </div>
 
-                <div className="p-2 rounded-lg bg-pink-50 dark:bg-pink-900/20">
-                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-1">
+                <div className="p-1.5 rounded-lg bg-pink-50 dark:bg-pink-900/20">
+                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-0.5">
                     Expenditure:
                   </span>
                   <p className="font-bold text-pink-600 dark:text-pink-400 text-xs sm:text-sm">
@@ -730,8 +730,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   </p>
                 </div>
 
-                <div className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 col-span-5 sm:col-span-1">
-                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-1">
+                <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/20">
+                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-0.5">
                     Net:
                   </span>
                   <p

@@ -18,36 +18,41 @@ export const useModalBackHandler = (isOpen: boolean, onClose: () => void) => {
 
     // Ref to track if the modal was closed by the back button
     const closedByBackRef = useRef(false);
+    // Ref to track if we've pushed a state for this modal
+    const pushedStateRef = useRef(false);
 
     useEffect(() => {
         if (isOpen) {
-            // Reset the flag
-            closedByBackRef.current = false;
+            // Only push state if we haven't already
+            if (!pushedStateRef.current) {
+                pushedStateRef.current = true;
+                closedByBackRef.current = false;
 
-            // Push a dummy state to the history stack
-            window.history.pushState({ modalOpen: true }, '', window.location.href);
+                // Push a dummy state to the history stack
+                window.history.pushState({ modalOpen: true }, '', window.location.href);
 
-            const handlePopState = (event: PopStateEvent) => {
-                // The back button was pressed
-                closedByBackRef.current = true;
-                if (onCloseRef.current) {
-                    onCloseRef.current();
-                }
-            };
+                const handlePopState = (event: PopStateEvent) => {
+                    // The back button was pressed
+                    closedByBackRef.current = true;
+                    if (onCloseRef.current) {
+                        onCloseRef.current();
+                    }
+                };
 
-            window.addEventListener('popstate', handlePopState);
+                window.addEventListener('popstate', handlePopState);
 
-            return () => {
-                window.removeEventListener('popstate', handlePopState);
+                return () => {
+                    window.removeEventListener('popstate', handlePopState);
 
-                // If closed by back button, the history is already popped.
-                // If closed programmatically (and not by back button), we need to revert the pushState.
-                // WE MUST CHECK IF THE CURRENT STATE IS OURS before going back, although
-                // simply tracking closedByBackRef is usually sufficient for single-layer modals.
-                if (!closedByBackRef.current) {
-                    window.history.back();
-                }
-            };
+                    // If the modal was closed programmatically (not by back button),
+                    // we need to go back to clean up the history state we pushed.
+                    if (!closedByBackRef.current) {
+                        window.history.back();
+                    }
+                    // Reset the flag so if the modal opens again, we push state again
+                    pushedStateRef.current = false;
+                };
+            }
         }
     }, [isOpen]);
 };

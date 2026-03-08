@@ -7,6 +7,7 @@ export type DataEntry = {
   type: "credit" | "debit" | "expense"; // Type of transaction
   notes?: string;
   subtype?: string | null;
+  payment_method?: string | null;
   deleted_at?: string | null;
   deleted_by?: string | null;
 };
@@ -241,6 +242,7 @@ export type Database = {
           type: "credit" | "debit" | "expense";
           notes?: string;
           subtype?: string | null;
+          payment_method?: string | null;
           deleted_at?: string | null;
           deleted_by?: string | null;
         };
@@ -252,6 +254,7 @@ export type Database = {
           type: "credit" | "debit" | "expense";
           notes?: string;
           subtype?: string | null;
+          payment_method?: string | null;
         };
         Update: {
           customer_id?: string;
@@ -261,6 +264,7 @@ export type Database = {
           type?: "credit" | "debit" | "expense";
           notes?: string;
           subtype?: string | null;
+          payment_method?: string | null;
           deleted_at?: string | null;
           deleted_by?: string | null;
         };

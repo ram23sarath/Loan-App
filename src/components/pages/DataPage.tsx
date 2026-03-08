@@ -44,6 +44,7 @@ const DataPage = () => {
     subtype: "",
     receipt: "",
     notes: "",
+    paymentMethod: "",
   });
   const [editEntryLoading, setEditEntryLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,6 +59,7 @@ const DataPage = () => {
       subtype: entry.subtype || "",
       receipt: entry.receipt_number || "",
       notes: entry.notes || "",
+      paymentMethod: entry.payment_method || "",
     });
     setEditEntryId(entry.id);
     // small timeout for focus stability on mobile
@@ -95,6 +97,7 @@ const DataPage = () => {
     subtype: "",
     receipt: "",
     notes: "",
+    paymentMethod: "",
   });
 
   // UI state
@@ -435,9 +438,15 @@ const DataPage = () => {
             newType === "credit" &&
             prevForm.subtype === "Subscription Return"
           ) {
-            return { ...prevForm, type: newType, subtype: "" };
+            return { ...prevForm, type: newType, subtype: "", paymentMethod: "" };
+          }
+          if (newType !== "expenditure") {
+            return { ...prevForm, type: newType, paymentMethod: "" };
           }
           return { ...prevForm, type: newType };
+        }
+        if (name === "subtype" && value !== "Retirement Gift") {
+          return { ...prevForm, subtype: value, paymentMethod: "" };
         }
         return { ...prevForm, [name]: value };
       });
@@ -464,6 +473,7 @@ const DataPage = () => {
         subtype: form.subtype,
         receipt_number: form.receipt,
         notes: form.notes,
+        payment_method: form.paymentMethod || null,
       });
       setForm({
         customerId: "",
@@ -473,6 +483,7 @@ const DataPage = () => {
         subtype: "",
         receipt: "",
         notes: "",
+        paymentMethod: "",
       });
       setToastMsg("Entry added successfully!");
       setShowToast(true);
@@ -518,6 +529,7 @@ const DataPage = () => {
         subtype: editEntryForm.subtype || null,
         receipt_number: editEntryForm.receipt || "",
         notes: editEntryForm.notes || "",
+        payment_method: editEntryForm.paymentMethod || null,
       });
       setEditEntryId(null);
       setToastMsg("Entry updated successfully.");
@@ -1348,6 +1360,24 @@ const DataPage = () => {
                             <option value="Misc Expense">Misc Expense</option>
                           </select>
                         </div>
+                        {form.type === "expenditure" && form.subtype === "Retirement Gift" && (
+                          <div className="md:col-span-2">
+                            <label htmlFor="paymentMethod" className={labelBaseStyle}>
+                              Payment Method
+                            </label>
+                            <select
+                              id="paymentMethod"
+                              name="paymentMethod"
+                              value={form.paymentMethod}
+                              onChange={handleChange}
+                              className={`${inputBaseStyle} bg-white dark:bg-slate-700`}
+                            >
+                              <option value="">Select...</option>
+                              <option value="Cheque">Cheque</option>
+                              <option value="Cash">Cash</option>
+                            </select>
+                          </div>
+                        )}
                         <div className="md:col-span-2">
                           <label htmlFor="amount" className={labelBaseStyle}>
                             Amount
@@ -1668,8 +1698,9 @@ const DataPage = () => {
                           </option>
                         ))}
                       </select>
-                      <label className={labelBaseStyle}>Date</label>
+                      <label htmlFor="edit-date" className={labelBaseStyle}>Date</label>
                       <input
+                        id="edit-date"
                         type="date"
                         name="date"
                         value={editEntryForm.date}
@@ -1703,14 +1734,16 @@ const DataPage = () => {
                         max="2050-12-31"
                       />
 
-                      <label className={labelBaseStyle}>Type</label>
+                      <label htmlFor="edit-type" className={labelBaseStyle}>Type</label>
                       <select
+                        id="edit-type"
                         name="type"
                         value={editEntryForm.type}
                         onChange={(e) =>
                           setEditEntryForm((prev) => ({
                             ...prev,
                             type: e.target.value,
+                            paymentMethod: e.target.value !== "expenditure" ? "" : prev.paymentMethod,
                           }))
                         }
                         className={inputBaseStyle}
@@ -1719,14 +1752,16 @@ const DataPage = () => {
                         <option value="expenditure">Expenditure</option>
                       </select>
 
-                      <label className={labelBaseStyle}>Subtype</label>
+                      <label htmlFor="edit-subtype" className={labelBaseStyle}>Subtype</label>
                       <select
+                        id="edit-subtype"
                         name="subtype"
                         value={editEntryForm.subtype}
                         onChange={(e) =>
                           setEditEntryForm((prev) => ({
                             ...prev,
                             subtype: e.target.value,
+                            paymentMethod: e.target.value !== "Retirement Gift" ? "" : prev.paymentMethod,
                           }))
                         }
                         className={inputBaseStyle}
@@ -1742,7 +1777,29 @@ const DataPage = () => {
                         <option value="Misc Expense">Misc Expense</option>
                       </select>
 
-                      <label className={labelBaseStyle}>Amount</label>
+                      {editEntryForm.type === "expenditure" && editEntryForm.subtype === "Retirement Gift" && (
+                        <>
+                          <label htmlFor="edit-paymentMethod" className={labelBaseStyle}>Payment Method</label>
+                          <select
+                            id="edit-paymentMethod"
+                            name="paymentMethod"
+                            value={editEntryForm.paymentMethod}
+                            onChange={(e) =>
+                              setEditEntryForm((prev) => ({
+                                ...prev,
+                                paymentMethod: e.target.value,
+                              }))
+                            }
+                            className={inputBaseStyle}
+                          >
+                            <option value="">Select...</option>
+                            <option value="Cheque">Cheque</option>
+                            <option value="Cash">Cash</option>
+                          </select>
+                        </>
+                      )}
+
+                      <label htmlFor="edit-amount" className={labelBaseStyle}>Amount</label>
                       <input
                         id="edit-amount"
                         type="number"
@@ -1757,8 +1814,9 @@ const DataPage = () => {
                         className={inputBaseStyle}
                       />
 
-                      <label className={labelBaseStyle}>Receipt Number</label>
+                      <label htmlFor="edit-receipt" className={labelBaseStyle}>Receipt Number</label>
                       <input
+                        id="edit-receipt"
                         type="text"
                         name="receipt"
                         value={editEntryForm.receipt}
@@ -1771,8 +1829,9 @@ const DataPage = () => {
                         className={inputBaseStyle}
                       />
 
-                      <label className={labelBaseStyle}>Notes</label>
+                      <label htmlFor="edit-notes" className={labelBaseStyle}>Notes</label>
                       <textarea
+                        id="edit-notes"
                         name="notes"
                         value={editEntryForm.notes}
                         onChange={(e) =>

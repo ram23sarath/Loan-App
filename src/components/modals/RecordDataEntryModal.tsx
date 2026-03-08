@@ -13,6 +13,7 @@ type Props = { customer: Customer; onClose: () => void; dataEntry?: DataEntry };
 type FormInputs = {
   type: 'credit' | 'expenditure';
   subtype?: string;
+  payment_method?: string;
   amount: number;
   date: string;
   receipt?: string;
@@ -29,24 +30,33 @@ const RecordDataEntryModal: React.FC<Props> = ({ customer, onClose, dataEntry })
       type: 'credit',
       date: today(),
       subtype: '',
+      payment_method: '',
       amount: 0,
       receipt: '',
       notes: ''
     }
   });
   const watchedType = watch('type');
+  const watchedSubtype = watch('subtype');
   const [toast, setToast] = React.useState<{ show: boolean; message: string; type?: 'success' | 'error' }>({ show: false, message: '', type: 'success' });
 
   useEffect(() => {
     if (isEditing && dataEntry) {
       setValue('type', dataEntry.type as any);
       setValue('subtype', dataEntry.subtype || '');
+      setValue('payment_method', dataEntry.payment_method || '');
       setValue('amount', dataEntry.amount);
       setValue('date', dataEntry.date);
       setValue('receipt', dataEntry.receipt_number || '');
       setValue('notes', dataEntry.notes || '');
     }
   }, [isEditing, dataEntry, setValue]);
+
+  useEffect(() => {
+    if (!(watchedType === 'expenditure' && watchedSubtype === 'Retirement Gift')) {
+      setValue('payment_method', '');
+    }
+  }, [watchedType, watchedSubtype, setValue]);
 
   const closeWithSuccess = (msg: string) => {
     // Close immediately; show transient toast locally
@@ -64,6 +74,7 @@ const RecordDataEntryModal: React.FC<Props> = ({ customer, onClose, dataEntry })
           amount: Number(data.amount),
           type: data.type as any,
           subtype: data.subtype || null,
+          payment_method: data.payment_method || null,
           receipt_number: data.receipt || '',
           notes: data.notes || '',
         } as any);
@@ -74,6 +85,7 @@ const RecordDataEntryModal: React.FC<Props> = ({ customer, onClose, dataEntry })
           amount: Number(data.amount),
           type: data.type as any,
           subtype: data.subtype || null,
+          payment_method: data.payment_method || null,
           receipt_number: data.receipt || '',
           notes: data.notes || '',
         } as any);
@@ -137,6 +149,17 @@ const RecordDataEntryModal: React.FC<Props> = ({ customer, onClose, dataEntry })
                 <option value="Misc Expense">Misc Expense</option>
               </select>
             </div>
+
+            {watchedType === 'expenditure' && watchedSubtype === 'Retirement Gift' && (
+              <div>
+                <label className="block text-sm text-gray-600 dark:text-dark-muted">Payment Method</label>
+                <select {...register('payment_method')} className="w-full p-2 border border-gray-300 rounded dark:bg-dark-bg dark:border-dark-border dark:text-dark-text">
+                  <option value="">Select...</option>
+                  <option value="Cheque">Cheque</option>
+                  <option value="Cash">Cash</option>
+                </select>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm text-gray-600 dark:text-dark-muted">Amount</label>

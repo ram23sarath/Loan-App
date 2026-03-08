@@ -16,6 +16,7 @@ export interface SummaryData {
   totalDataCollected: number;
   totalExpenses: number;
   expenseTotalsBySubtype: Record<string, number>;
+  retirementGiftByPaymentMethod: Record<string, number>;
   totalAllCollected: number;
   totalLoansGiven: number;
   totalPrincipalRecovered: number;
@@ -116,6 +117,19 @@ export const calculateSummaryData = (
     0
   );
 
+  // Aggregate any retirement-gift payment_method values dynamically so new methods appear in summaries automatically.
+  const retirementGiftByPaymentMethod: Record<string, number> = {};
+  dataEntries.forEach((entry) => {
+    if (
+      isExpenseType(entry.type) &&
+      entry.subtype === 'Retirement Gift' &&
+      entry.payment_method
+    ) {
+      const key = entry.payment_method;
+      retirementGiftByPaymentMethod[key] = (retirementGiftByPaymentMethod[key] || 0) + (entry.amount || 0);
+    }
+  });
+
   // Calculate Total All Collected
   // Total Collected = Subscriptions + Interest + Late Fees
   const totalAllCollected =
@@ -155,6 +169,7 @@ export const calculateSummaryData = (
     totalDataCollected,
     totalExpenses,
     expenseTotalsBySubtype,
+    retirementGiftByPaymentMethod,
     totalAllCollected,
     totalLoansGiven,
     totalPrincipalRecovered,

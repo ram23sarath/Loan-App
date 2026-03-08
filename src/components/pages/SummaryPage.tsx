@@ -215,6 +215,7 @@ const SummaryPage = () => {
     totalDataCollected,
     totalExpenses,
     expenseTotalsBySubtype,
+    retirementGiftByPaymentMethod,
     totalAllCollected,
     totalLoansGiven,
     totalPrincipalRecovered,
@@ -1246,16 +1247,29 @@ const SummaryPage = () => {
 
                   {Object.entries(expenseTotalsBySubtype).map(
                     ([subtype, amt]) => (
-                      <div
-                        key={subtype}
-                        className="flex items-center justify-between px-3 py-1 rounded-md bg-red-25/30 dark:bg-red-900/30"
-                      >
-                        <div className="text-sm text-gray-700 dark:text-gray-300">
-                          {subtype}
+                      <div key={subtype}>
+                        <div
+                          className="flex items-center justify-between px-3 py-1 rounded-md bg-red-25/30 dark:bg-red-900/30"
+                        >
+                          <div className="text-sm text-gray-700 dark:text-gray-300">
+                            {subtype}
+                          </div>
+                          <div className="text-sm font-medium text-red-700 dark:text-red-300">
+                            <AnimatedNumber value={(amt as number) || 0} />
+                          </div>
                         </div>
-                        <div className="text-sm font-medium text-red-700 dark:text-red-300">
-                          <AnimatedNumber value={(amt as number) || 0} />
-                        </div>
+                        {subtype === 'Retirement Gift' && (
+                          <div className="ml-4 mt-1 space-y-1">
+                            {Object.entries(retirementGiftByPaymentMethod).map(([method, amount]) => (
+                              <div key={method} className="flex items-center justify-between px-3 py-1 rounded-md bg-red-25/20 dark:bg-red-900/20">
+                                <div className="text-xs text-gray-500 dark:text-gray-400">{method}</div>
+                                <div className="text-xs font-medium text-red-600 dark:text-red-400">
+                                  <AnimatedNumber value={(amount as number) || 0} />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ),
                   )}

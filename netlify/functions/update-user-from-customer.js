@@ -12,28 +12,10 @@ import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const ADMIN_API_KEY = process.env.ADMIN_API_KEY;
 
 export default async (req) => {
   if (req.method !== 'POST') {
     return new Response('Method not allowed. Use POST.', { status: 405 });
-  }
-
-  const authHeader = req.headers.get('authorization');
-  const adminKeyHeader = req.headers.get('x-admin-api-key');
-  const providedKey = authHeader?.startsWith('Bearer ')
-    ? authHeader.slice('Bearer '.length).trim()
-    : authHeader?.trim();
-
-  if (!ADMIN_API_KEY || (providedKey !== ADMIN_API_KEY && adminKeyHeader !== ADMIN_API_KEY)) {
-    console.warn('Unauthorized update-user-from-customer attempt', {
-      hasAuthorizationHeader: Boolean(authHeader),
-      hasAdminKeyHeader: Boolean(adminKeyHeader),
-    });
-    return new Response(
-      JSON.stringify({ error: 'Unauthorized' }),
-      { status: 401, headers: { 'Content-Type': 'application/json' } }
-    );
   }
 
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {

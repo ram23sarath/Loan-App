@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../../lib/supabase';
 import type { Document } from '../../../types';
 
-type ToolsView = 'menu' | 'createUser' | 'changeUserPassword' | 'userStatus' | 'manageDocuments';
+type ToolsView = 'menu' | 'createUser' | 'changeUserPassword' | 'userStatus' | 'manageDocuments' | 'syncCustomers';
 
 interface ToolsModalProps {
     isOpen: boolean;
@@ -71,6 +71,36 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
     const [uploadProgress, setUploadProgress] = useState(0);
     const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
 
+    // Sync Customers state
+    interface SyncMismatchEntry {
+        customerName: string;
+        customerPhone: string;
+        currentEmail: string;
+        expectedEmail: string;
+        newPassword?: string;
+        error?: string;
+    }
+    interface SyncResultData {
+        summary: {
+            totalCustomersChecked: number;
+            totalAuthUsers: number;
+            mismatches: number;
+            updated: number;
+            errors: number;
+            skipped: number;
+        };
+        mismatches: SyncMismatchEntry[];
+        updated: SyncMismatchEntry[];
+        errors: SyncMismatchEntry[];
+        message: string;
+    }
+    const [syncProgress, setSyncProgress] = useState(0);
+    const [syncPhase, setSyncPhase] = useState<'confirm' | 'syncing' | 'results'>('confirm');
+    const [syncResult, setSyncResult] = useState<SyncResultData | null>(null);
+    const [syncError, setSyncError] = useState<string | null>(null);
+    const [expandSyncUpdated, setExpandSyncUpdated] = useState(true);
+    const [expandSyncErrors, setExpandSyncErrors] = useState(true);
+
     // Reset state when modal closes
     React.useEffect(() => {
         if (!isOpen) {
@@ -90,6 +120,13 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
             // Document management reset
             setSelectedFile(null);
             setUploadProgress(0);
+            // Sync Customers reset
+            setSyncProgress(0);
+            setSyncPhase('confirm');
+            setSyncResult(null);
+            setSyncError(null);
+            setExpandSyncUpdated(true);
+            setExpandSyncErrors(true);
         }
     }, [isOpen]);
 
@@ -213,16 +250,23 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
 
     // Sync all customers to auth (calls serverless function)
     const handleSyncCustomers = async () => {
-        const ok = window.confirm('This will update auth emails/passwords for all customers to the {phone}@gmail.com convention. Proceed?');
-        if (!ok) return;
-        setToolsLoading(true);
-        setToolsMessage(null);
+        setSyncPhase('syncing');
+        setSyncProgress(10);
+        setSyncError(null);
+        setSyncResult(null);
+
+        let progressTimer1: NodeJS.Timeout | null = null;
+
         try {
+            progressTimer1 = setTimeout(() => setSyncProgress(30), 800);
+
             const response = await fetch('/.netlify/functions/sync-customer-auth', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ dryRun: false }),
             });
+
+            setSyncProgress(70);
 
             const resultText = await response.text();
             let result: any = {};
@@ -232,16 +276,27 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                 // fallthrough
             }
 
+            setSyncProgress(90);
+            await new Promise(resolve => setTimeout(resolve, 300));
+
             if (response.ok && result && result.success) {
-                setToolsMessage({ type: 'success', text: result.message || 'Sync completed successfully' });
+                setSyncProgress(100);
+                setSyncResult(result as SyncResultData);
+                await new Promise(resolve => setTimeout(resolve, 500));
+                setSyncPhase('results');
             } else {
-                const err = (result && (result.error || result.message)) || resultText || 'Sync failed';
-                setToolsMessage({ type: 'error', text: String(err) });
+                const errMsg = (result && (result.error || result.message)) || resultText || 'Sync failed';
+                setSyncError(String(errMsg));
+                setSyncPhase('results');
             }
         } catch (err: any) {
-            setToolsMessage({ type: 'error', text: err.message || 'An error occurred while syncing' });
+            setSyncError(err.message || 'An error occurred while syncing');
+            setSyncPhase('results');
         } finally {
-            setToolsLoading(false);
+            if (progressTimer1 !== null) {
+                clearTimeout(progressTimer1);
+            }
+            setSyncProgress(0);
         }
     };
 
@@ -449,9 +504,11 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                                     <motion.button
                                         onClick={() => {
                                             setToolsMessage(null);
-                                            handleSyncCustomers();
+                                            setSyncPhase('confirm');
+                                            setSyncResult(null);
+                                            setSyncError(null);
+                                            setToolsView('syncCustomers');
                                         }}
-                                        disabled={toolsLoading}
                                         className="w-full px-4 py-4 md:py-3 bg-sky-50 hover:bg-sky-100 active:bg-sky-200 text-sky-700 font-medium rounded-lg transition-colors flex items-center gap-3 dark:bg-sky-900/30 dark:hover:bg-sky-900/50 dark:text-sky-400"
                                         initial={{ opacity: 0, x: -8 }}
                                         animate={{ opacity: 1, x: 0 }}
@@ -1148,6 +1205,301 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                                         </div>
                                     )}
                                 </motion.div>
+                            </motion.div>
+                        )}
+
+                        {/* Sync Customers View */}
+                        {toolsView === 'syncCustomers' && (
+                            <motion.div
+                                key="tools-sync-customers"
+                                initial={{ opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -4 }}
+                                transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
+                            >
+                                {/* Header */}
+                                <motion.div
+                                    className="flex items-center gap-3 mb-4"
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+                                >
+                                    <motion.button
+                                        onClick={() => {
+                                            if (syncPhase === 'syncing') return;
+                                            setToolsView('menu');
+                                        }}
+                                        className={`text-gray-500 hover:text-gray-700 transition-colors p-1 -ml-1 dark:text-dark-muted dark:hover:text-dark-text ${syncPhase === 'syncing' ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                        whileHover={syncPhase !== 'syncing' ? { scale: 1.2, x: -3 } : {}}
+                                        whileTap={syncPhase !== 'syncing' ? { scale: 0.9 } : {}}
+                                    >
+                                        <span className="text-xl">←</span>
+                                    </motion.button>
+                                    <h2 className="text-base md:text-lg font-bold text-gray-800 dark:text-dark-text flex-1">Sync Customers to Auth</h2>
+                                </motion.div>
+
+                                {/* Confirm Phase */}
+                                {syncPhase === 'confirm' && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="space-y-4"
+                                    >
+                                        <div className="p-4 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-lg">
+                                            <p className="text-sm text-sky-800 dark:text-sky-300 font-medium mb-2">
+                                                This will update auth emails and passwords for all customers to follow the {'{phone}@gmail.com'} convention.
+                                            </p>
+                                            <p className="text-xs text-sky-600 dark:text-sky-400">
+                                                Only mismatched accounts will be updated. Accounts already in sync will be skipped.
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <motion.button
+                                                onClick={() => setToolsView('menu')}
+                                                className="flex-1 px-4 py-3 md:py-2.5 text-sm font-semibold rounded-lg border border-gray-300 dark:border-dark-border text-gray-700 dark:text-dark-text hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                                                whileHover={{ scale: 1.02 }}
+                                                whileTap={{ scale: 0.98 }}
+                                            >
+                                                Cancel
+                                            </motion.button>
+                                            <motion.button
+                                                onClick={handleSyncCustomers}
+                                                className="flex-1 px-4 py-3 md:py-2.5 text-sm bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg transition-colors"
+                                                whileHover={{ scale: 1.02, boxShadow: '0 4px 12px rgba(14, 165, 233, 0.3)' }}
+                                                whileTap={{ scale: 0.98 }}
+                                            >
+                                                Start Sync
+                                            </motion.button>
+                                        </div>
+                                    </motion.div>
+                                )}
+
+                                {/* Syncing Phase - Progress Bar */}
+                                {syncPhase === 'syncing' && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="space-y-4 py-6"
+                                    >
+                                        <div className="text-center">
+                                            <motion.div
+                                                className="text-4xl mb-3 inline-block"
+                                                animate={{ rotate: 360 }}
+                                                transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
+                                            >
+                                                🔄
+                                            </motion.div>
+                                            <p className="text-sm font-medium text-gray-700 dark:text-dark-text">
+                                                {syncProgress < 30 ? 'Initiating sync...' :
+                                                 syncProgress < 70 ? 'Checking customer accounts...' :
+                                                 syncProgress < 100 ? 'Processing updates...' :
+                                                 'Sync complete!'}
+                                            </p>
+                                        </div>
+                                        <div className="w-full h-2 bg-sky-200 dark:bg-sky-900 rounded-full overflow-hidden">
+                                            <motion.div
+                                                className="h-full bg-sky-600"
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${syncProgress}%` }}
+                                                transition={{ duration: 0.3 }}
+                                            />
+                                        </div>
+                                        <p className="text-xs text-center text-gray-500 dark:text-dark-muted">
+                                            {syncProgress}%
+                                        </p>
+                                    </motion.div>
+                                )}
+
+                                {/* Results Phase */}
+                                {syncPhase === 'results' && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="space-y-4"
+                                    >
+                                        {/* Error banner */}
+                                        {syncError && (
+                                            <motion.div
+                                                className="p-3 rounded-lg text-sm bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            >
+                                                {syncError}
+                                            </motion.div>
+                                        )}
+
+                                        {/* Success results */}
+                                        {syncResult && (
+                                            <>
+                                                {/* Success message */}
+                                                <motion.div
+                                                    className="p-3 rounded-lg text-sm bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                                                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                >
+                                                    {syncResult.message}
+                                                </motion.div>
+
+                                                {/* Summary cards */}
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    <motion.div
+                                                        className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-3 text-center"
+                                                        initial={{ opacity: 0, scale: 0.9 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        transition={{ delay: 0.1 }}
+                                                    >
+                                                        <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">
+                                                            {syncResult.summary.totalCustomersChecked}
+                                                        </div>
+                                                        <div className="text-xs text-blue-600 dark:text-blue-500">Checked</div>
+                                                    </motion.div>
+                                                    <motion.div
+                                                        className="bg-green-50 dark:bg-green-900/30 rounded-lg p-3 text-center"
+                                                        initial={{ opacity: 0, scale: 0.9 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        transition={{ delay: 0.15 }}
+                                                    >
+                                                        <div className="text-2xl font-bold text-green-700 dark:text-green-400">
+                                                            {syncResult.summary.updated}
+                                                        </div>
+                                                        <div className="text-xs text-green-600 dark:text-green-500">Updated</div>
+                                                    </motion.div>
+                                                    <motion.div
+                                                        className="bg-red-50 dark:bg-red-900/30 rounded-lg p-3 text-center"
+                                                        initial={{ opacity: 0, scale: 0.9 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        transition={{ delay: 0.2 }}
+                                                    >
+                                                        <div className="text-2xl font-bold text-red-700 dark:text-red-400">
+                                                            {syncResult.summary.errors}
+                                                        </div>
+                                                        <div className="text-xs text-red-600 dark:text-red-500">Errors</div>
+                                                    </motion.div>
+                                                </div>
+
+                                                {/* Updated accounts collapsible list */}
+                                                {syncResult.updated.length > 0 && (
+                                                    <motion.div
+                                                        className="border border-green-200 dark:border-green-800 rounded-lg overflow-hidden"
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        transition={{ delay: 0.25 }}
+                                                    >
+                                                        <button
+                                                            onClick={() => setExpandSyncUpdated(!expandSyncUpdated)}
+                                                            className="w-full px-3 py-2 bg-green-50 dark:bg-green-900/30 flex items-center justify-between text-sm font-medium text-green-800 dark:text-green-400"
+                                                        >
+                                                            <span>Updated Accounts ({syncResult.updated.length})</span>
+                                                            <span>{expandSyncUpdated ? '▼' : '▶'}</span>
+                                                        </button>
+                                                        <AnimatePresence>
+                                                            {expandSyncUpdated && (
+                                                                <motion.div
+                                                                    initial={{ height: 0, opacity: 0 }}
+                                                                    animate={{ height: 'auto', opacity: 1 }}
+                                                                    exit={{ height: 0, opacity: 0 }}
+                                                                    className="overflow-hidden"
+                                                                >
+                                                                    <div className="max-h-48 overflow-y-auto">
+                                                                        {syncResult.updated.map((entry, i) => (
+                                                                            <div
+                                                                                key={i}
+                                                                                className="px-3 py-2 border-t border-green-100 dark:border-green-900 text-sm"
+                                                                            >
+                                                                                <div className="font-medium text-gray-800 dark:text-dark-text">
+                                                                                    {entry.customerName}
+                                                                                </div>
+                                                                                <div className="text-xs text-gray-500 dark:text-dark-muted mt-0.5">
+                                                                                    Phone: {entry.customerPhone}
+                                                                                </div>
+                                                                                <div className="text-xs text-gray-500 dark:text-dark-muted">
+                                                                                    <span className="text-red-500 line-through">{entry.currentEmail}</span>
+                                                                                    {' → '}
+                                                                                    <span className="text-green-600 dark:text-green-400 font-medium">{entry.expectedEmail}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </motion.div>
+                                                            )}
+                                                        </AnimatePresence>
+                                                    </motion.div>
+                                                )}
+
+                                                {/* Errors collapsible list */}
+                                                {syncResult.errors.length > 0 && (
+                                                    <motion.div
+                                                        className="border border-red-200 dark:border-red-800 rounded-lg overflow-hidden"
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        transition={{ delay: 0.3 }}
+                                                    >
+                                                        <button
+                                                            onClick={() => setExpandSyncErrors(!expandSyncErrors)}
+                                                            className="w-full px-3 py-2 bg-red-50 dark:bg-red-900/30 flex items-center justify-between text-sm font-medium text-red-800 dark:text-red-400"
+                                                        >
+                                                            <span>Failed Updates ({syncResult.errors.length})</span>
+                                                            <span>{expandSyncErrors ? '▼' : '▶'}</span>
+                                                        </button>
+                                                        <AnimatePresence>
+                                                            {expandSyncErrors && (
+                                                                <motion.div
+                                                                    initial={{ height: 0, opacity: 0 }}
+                                                                    animate={{ height: 'auto', opacity: 1 }}
+                                                                    exit={{ height: 0, opacity: 0 }}
+                                                                    className="overflow-hidden"
+                                                                >
+                                                                    <div className="max-h-40 overflow-y-auto">
+                                                                        {syncResult.errors.map((entry, i) => (
+                                                                            <div
+                                                                                key={i}
+                                                                                className="px-3 py-2 border-t border-red-100 dark:border-red-900 text-sm"
+                                                                            >
+                                                                                <div className="font-medium text-gray-800 dark:text-dark-text">
+                                                                                    {entry.customerName}
+                                                                                </div>
+                                                                                <div className="text-xs text-gray-500 dark:text-dark-muted">
+                                                                                    Phone: {entry.customerPhone}
+                                                                                </div>
+                                                                                <div className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                                                                                    {entry.error}
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </motion.div>
+                                                            )}
+                                                        </AnimatePresence>
+                                                    </motion.div>
+                                                )}
+
+                                                {/* All in sync message */}
+                                                {syncResult.summary.mismatches === 0 && (
+                                                    <motion.div
+                                                        className="text-center py-6"
+                                                        initial={{ opacity: 0, scale: 0.9 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                    >
+                                                        <div className="text-4xl mb-2">✨</div>
+                                                        <div className="text-green-600 dark:text-green-400 font-medium">
+                                                            All accounts are already in sync!
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </>
+                                        )}
+
+                                        {/* Done button */}
+                                        <motion.button
+                                            onClick={() => setToolsView('menu')}
+                                            className="w-full px-4 py-3 md:py-2.5 text-sm bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg transition-colors"
+                                            whileHover={{ scale: 1.02 }}
+                                            whileTap={{ scale: 0.98 }}
+                                        >
+                                            Done
+                                        </motion.button>
+                                    </motion.div>
+                                )}
                             </motion.div>
                         )}
                     </AnimatePresence>

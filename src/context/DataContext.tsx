@@ -452,6 +452,49 @@ const fetchAllRecords = async <T,>(
   return allRecords;
 };
 
+// Fetch unfiltered global records for summary page (used by both fetchSummaryData and background pre-fetch)
+const fetchGlobalSummaryRecords = async () => {
+  const [loans, subscriptions, installments, dataEntries] = await Promise.all([
+    fetchAllRecords<LoanWithCustomer>(
+      () =>
+        supabase
+          .from("loans")
+          .select("*, customers(name, phone)")
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false }),
+      "loans",
+    ),
+    fetchAllRecords<SubscriptionWithCustomer>(
+      () =>
+        supabase
+          .from("subscriptions")
+          .select("*, customers(name, phone)")
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false }),
+      "subscriptions",
+    ),
+    fetchAllRecords<Installment>(
+      () =>
+        supabase
+          .from("installments")
+          .select("*")
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false }),
+      "installments",
+    ),
+    fetchAllRecords<DataEntry>(
+      () =>
+        supabase
+          .from("data_entries")
+          .select("*")
+          .is("deleted_at", null)
+          .order("date", { ascending: false }),
+      "data_entries",
+    ),
+  ]);
+  return { loans, subscriptions, installments, dataEntries };
+};
+
 // Cache helper functions
 // Uses localStorage which is available in both web and Android WebView
 // (domStorageEnabled is set to true on the WebView component).
@@ -472,16 +515,88 @@ const getCachedData = (key: string) => {
 };
 
 const setCachedData = (key: string, data: any) => {
+  const cacheKey = `loan_app_cache_${key}`;
+  const payload = JSON.stringify({ data, timestamp: Date.now() });
+
   try {
-    localStorage.setItem(
-      `loan_app_cache_${key}`,
-      JSON.stringify({
-        data,
-        timestamp: Date.now(),
-      }),
-    );
-  } catch (err) {
-    console.error("Error writing to cache:", err);
+    localStorage.setItem(cacheKey, payload);
+  } catch (err: any) {
+    // Check if this is a quota-exceeded error
+    const isQuotaExceeded =
+      err.code === 22 || // QuotaExceededError code
+      err.name === "QuotaExceededError" ||
+      err.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+      (err.message && err.message.includes("quota"));
+
+    if (isQuotaExceeded) {
+      console.warn("[Cache] localStorage quota exceeded, attempting LRU eviction...");
+
+      try {
+        // Collect all cache entries with their timestamps
+        const cacheEntries: Array<{ key: string; timestamp: number }> = [];
+
+        for (let i = 0; i < localStorage.length; i++) {
+          const storageKey = localStorage.key(i);
+          if (!storageKey || !storageKey.startsWith("loan_app_cache_")) {
+            continue;
+          }
+
+          try {
+            const stored = localStorage.getItem(storageKey);
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              if (parsed.timestamp !== undefined) {
+                cacheEntries.push({
+                  key: storageKey,
+                  timestamp: parsed.timestamp,
+                });
+              }
+            }
+          } catch {
+            // Skip entries that can't be parsed
+          }
+        }
+
+        // Sort by timestamp ascending (oldest first)
+        cacheEntries.sort((a, b) => a.timestamp - b.timestamp);
+
+        // Delete oldest entries until we have space
+        let freed = false;
+        for (const entry of cacheEntries) {
+          if (freed) break;
+          try {
+            localStorage.removeItem(entry.key);
+            console.log(`[Cache] Evicted oldest entry: ${entry.key}`);
+            freed = true;
+          } catch (removeErr) {
+            console.error(`[Cache] Failed to evict ${entry.key}:`, removeErr);
+          }
+        }
+
+        // Retry the original setItem once
+        if (freed) {
+          try {
+            localStorage.setItem(cacheKey, payload);
+            console.log("[Cache] Successfully wrote to cache after eviction");
+            return;
+          } catch (retryErr) {
+            console.error(
+              "[Cache] Failed to write to cache even after eviction:",
+              retryErr,
+            );
+          }
+        } else {
+          console.error(
+            "[Cache] No evictable entries found to free space",
+          );
+        }
+      } catch (evictionErr) {
+        console.error("[Cache] Error during LRU eviction process:", evictionErr);
+      }
+    } else {
+      // Non-quota errors
+      console.error("Error writing to cache:", err);
+    }
   }
 };
 
@@ -539,8 +654,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   );
   const [summaryDataEntries, setSummaryDataEntries] = useState<DataEntry[]>([]);
   const summaryDataLoadedRef = useRef(false);
+  const summaryDataFetchingRef = useRef(false);
 
-  // Lazily fetch unfiltered summary data — for admins reuses context data, for scoped users fetches all records
+  // Lazily fetch unfiltered summary data — for admins reuses context data, for scoped users uses cache-first pattern
   const fetchSummaryData = useCallback(async () => {
     try {
       if (!isScopedCustomer) {
@@ -550,52 +666,50 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         setSummaryInstallments(installments);
         setSummaryDataEntries(dataEntries);
       } else {
-        // Scoped user: fetch all records (unfiltered) from Supabase — only once
+        // Scoped user: serve from cache immediately, then refresh from network
+
+        // Step 1: Serve cached data instantly for fast render
+        const cached = getCachedData("summary_global");
+        if (cached && !summaryDataLoadedRef.current) {
+          setSummaryLoans(cached.loans || []);
+          setSummarySubscriptions(cached.subscriptions || []);
+          setSummaryInstallments(cached.installments || []);
+          setSummaryDataEntries(cached.dataEntries || []);
+        }
+
+        // Step 2: If already loaded from network this session, stop
         if (summaryDataLoadedRef.current) return;
-        const [allLoans, allSubs, allInstallments, allEntries] =
-          await Promise.all([
-            fetchAllRecords<LoanWithCustomer>(
-              () =>
-                supabase
-                  .from("loans")
-                  .select("*, customers(name, phone)")
-                  .is("deleted_at", null)
-                  .order("created_at", { ascending: false }),
-              "loans",
-            ),
-            fetchAllRecords<SubscriptionWithCustomer>(
-              () =>
-                supabase
-                  .from("subscriptions")
-                  .select("*, customers(name, phone)")
-                  .is("deleted_at", null)
-                  .order("created_at", { ascending: false }),
-              "subscriptions",
-            ),
-            fetchAllRecords<Installment>(
-              () =>
-                supabase
-                  .from("installments")
-                  .select("*")
-                  .is("deleted_at", null)
-                  .order("created_at", { ascending: false }),
-              "installments",
-            ),
-            fetchAllRecords<DataEntry>(
-              () =>
-                supabase
-                  .from("data_entries")
-                  .select("*")
-                  .is("deleted_at", null)
-                  .order("date", { ascending: false }),
-              "data_entries",
-            ),
-          ]);
-        setSummaryLoans(allLoans);
-        setSummarySubscriptions(allSubs);
-        setSummaryInstallments(allInstallments);
-        setSummaryDataEntries(allEntries);
-        summaryDataLoadedRef.current = true;
+
+        // Step 3: Guard against concurrent fetches
+        if (summaryDataFetchingRef.current) {
+          console.log("[DataContext] Summary data fetch already in progress, skipping duplicate request");
+          return;
+        }
+
+        // Mark fetch as in progress
+        summaryDataFetchingRef.current = true;
+
+        try {
+          // Fetch fresh data from network (background refresh)
+          const { loans: allLoans, subscriptions: allSubs, installments: allInstallments, dataEntries: allEntries } =
+            await fetchGlobalSummaryRecords();
+          setSummaryLoans(allLoans);
+          setSummarySubscriptions(allSubs);
+          setSummaryInstallments(allInstallments);
+          setSummaryDataEntries(allEntries);
+          summaryDataLoadedRef.current = true;
+
+          // Step 4: Update cache for next time
+          setCachedData("summary_global", {
+            loans: allLoans,
+            subscriptions: allSubs,
+            installments: allInstallments,
+            dataEntries: allEntries,
+          });
+        } finally {
+          // Always reset the fetching flag, even if an error occurred
+          summaryDataFetchingRef.current = false;
+        }
       }
     } catch (error) {
       console.error("Error fetching summary data:", error);
@@ -1417,6 +1531,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setSubscriptions([]);
     setInstallments([]);
     setDataEntries([]);
+    setSummaryLoans([]);
+    setSummarySubscriptions([]);
+    setSummaryInstallments([]);
+    setSummaryDataEntries([]);
   };
 
   // ... [clearClientCache function remains unchanged] ...
@@ -2300,6 +2418,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
               err,
             );
           }
+
+          // Background pre-fetch of global summary data for scoped users.
+          // Non-blocking: populates localStorage cache so SummaryPage renders instantly.
+          if (currentIsScoped && !getCachedData("summary_global")) {
+            fetchGlobalSummaryRecords()
+              .then((summaryRecords) => {
+                setCachedData("summary_global", summaryRecords);
+              })
+              .catch((err) => {
+                console.error("[DataContext] Background summary pre-fetch failed:", err);
+              });
+          }
         }
       } catch (err) {
         console.error("Error initializing session", err);
@@ -2483,6 +2613,17 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             dataEntries: (dataEntriesRes.data as DataEntry[]) || [],
             seniorityList: [],
           });
+
+          // Background pre-fetch of global summary data for scoped users
+          if (!getCachedData("summary_global")) {
+            fetchGlobalSummaryRecords()
+              .then((summaryRecords) => {
+                setCachedData("summary_global", summaryRecords);
+              })
+              .catch((err) => {
+                console.error("[DataContext] Background summary pre-fetch failed:", err);
+              });
+          }
         } else {
           // Load from cache first for instant display
           const cacheKey = "data_admin";

@@ -454,6 +454,25 @@ const DataPage = () => {
     [],
   );
 
+  const resetForm = useCallback(() => {
+    setForm({
+      customerId: "",
+      date: "",
+      amount: "",
+      type: "credit",
+      subtype: "",
+      receipt: "",
+      notes: "",
+      paymentMethod: "",
+    });
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    resetForm();
+    setCustomerFilter("");
+    setShowCustomerDropdown(false);
+  }, [resetForm]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // --- LOGIC FIX ---
@@ -475,16 +494,7 @@ const DataPage = () => {
         notes: form.notes,
         payment_method: form.paymentMethod || null,
       });
-      setForm({
-        customerId: "",
-        date: "",
-        amount: "",
-        type: "credit",
-        subtype: "",
-        receipt: "",
-        notes: "",
-        paymentMethod: "",
-      });
+      resetForm();
       setToastMsg("Entry added successfully!");
       setShowToast(true);
     } catch (err: any) {
@@ -1428,39 +1438,49 @@ const DataPage = () => {
                           placeholder="Enter any notes..."
                         />
                       </div>
-                      <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="w-full mt-2 bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition-colors duration-300 focus:outline-none focus:ring-4 focus:ring-indigo-300 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                      >
-                        {isSubmitting ? (
-                          <>
-                            <svg
-                              className="animate-spin h-4 w-4 text-white"
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                            >
-                              <circle
-                                className="opacity-25"
-                                cx="12"
-                                cy="12"
-                                r="10"
-                                stroke="currentColor"
-                                strokeWidth="4"
-                              />
-                              <path
-                                className="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                              />
-                            </svg>
-                            Submitting...
-                          </>
-                        ) : (
-                          "Submit Entry"
-                        )}
-                      </button>
+                      <div className="flex gap-3 mt-2">
+                        <button
+                          type="button"
+                          disabled={isSubmitting}
+                          onClick={handleCancel}
+                          className="flex-1 bg-gray-200 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-300 transition-colors duration-300 focus:outline-none focus:ring-4 focus:ring-gray-200 disabled:opacity-70 disabled:cursor-not-allowed dark:bg-slate-700 dark:text-dark-text dark:hover:bg-slate-600"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={isSubmitting}
+                          className="flex-1 bg-indigo-600 text-white font-semibold py-3 rounded-lg hover:bg-indigo-700 transition-colors duration-300 focus:outline-none focus:ring-4 focus:ring-indigo-300 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          {isSubmitting ? (
+                            <>
+                              <svg
+                                className="animate-spin h-4 w-4 text-white"
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                              >
+                                <circle
+                                  className="opacity-25"
+                                  cx="12"
+                                  cy="12"
+                                  r="10"
+                                  stroke="currentColor"
+                                  strokeWidth="4"
+                                />
+                                <path
+                                  className="opacity-75"
+                                  fill="currentColor"
+                                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                                />
+                              </svg>
+                              Submitting...
+                            </>
+                          ) : (
+                            "Submit Entry"
+                          )}
+                        </button>
+                      </div>
                     </form>
                   )}
                 </motion.div>

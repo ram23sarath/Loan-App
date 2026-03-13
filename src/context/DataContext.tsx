@@ -618,6 +618,15 @@ const clearCache = (key?: string) => {
   }
 };
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const normalizeAuditUuid = (value: string | null | undefined): string | null => {
+  if (!value) return null;
+  const trimmed = String(value).trim();
+  return UUID_REGEX.test(trimmed) ? trimmed : null;
+};
+
 /** Fire-and-forget audit log insert — records actions for admin users. */
 const logAuditEvent = (
   session: Session | null,
@@ -642,22 +651,45 @@ const logAuditEvent = (
     (session?.user?.app_metadata?.name as string | undefined) ||
     null;
   const actorEmail = session?.user?.email || null;
+  const normalizedAdminUid = normalizeAuditUuid(uid);
+  if (!normalizedAdminUid) return;
+
+  const normalizedEntityId = normalizeAuditUuid(entityId);
+  const hasRawEntityId = typeof entityId === "string" && entityId.trim().length > 0;
 
   supabase
     .from("admin_audit_log")
     .insert({
-      admin_uid: uid,
+      admin_uid: normalizedAdminUid,
       action,
       entity_type: entityType,
-      entity_id: entityId,
+      entity_id: normalizedEntityId,
       metadata: {
         ...(metadata ?? {}),
+        ...(hasRawEntityId && !normalizedEntityId
+          ? { raw_entity_id: String(entityId).trim() }
+          : {}),
         actor_name: actorName,
         actor_email: actorEmail,
       } as import("../types").Json,
     })
     .then(({ error }) => {
-      if (error) console.error("[AuditLog] Failed to record event:", error);
+      if (error) {
+        // Enhanced error logging for debugging
+        console.error("[AuditLog] ❌ Failed to record event", {
+          action,
+          entity_type: entityType,
+          original_entity_id: entityId,
+          normalized_entity_id: normalizedEntityId,
+          has_raw_entity_id: hasRawEntityId,
+          admin_uid: normalizedAdminUid,
+          error_code: error?.code,
+          error_message: error?.message,
+          error_hint: error?.hint,
+          error_details: error?.details,
+          full_error: error,
+        });
+      }
     });
 };
 

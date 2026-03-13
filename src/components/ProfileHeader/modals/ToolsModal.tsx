@@ -43,6 +43,21 @@ interface AuditLogResponse {
   error?: string;
 }
 
+interface AdminUserRecord {
+  uid: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+interface AdminUsersResponse {
+  success: boolean;
+  admins: AdminUserRecord[];
+  is_super_admin?: boolean;
+  super_admin_uid?: string;
+  error?: string;
+}
+
 const toAuditMetadata = (entry: AuditLogEntry): Record<string, unknown> => {
   const value = entry.metadata;
   if (value && typeof value === "object" && !Array.isArray(value)) {
@@ -57,6 +72,50 @@ const toText = (value: unknown): string | null => {
 
 const getEntityKey = (entityType: string, entityId: string) =>
   `${entityType}:${entityId}`;
+
+const toAmount = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return null;
+};
+
+const getExplicitAuditAmount = (entry: AuditLogEntry): number | null => {
+  const metadata = toAuditMetadata(entry);
+  const amountKeys = [
+    "derived_amount",
+    "original_amount",
+    "previous_amount",
+    "amount",
+    "subscription_amount",
+    "installment_amount",
+    "loan_amount",
+    "value",
+    "adjustment_amount",
+    "misc_amount",
+    "new_amount",
+  ];
+
+  for (const key of amountKeys) {
+    const found = toAmount(metadata[key]);
+    if (found !== null) return found;
+  }
+
+  const updates = metadata.updates;
+  if (updates && typeof updates === "object" && !Array.isArray(updates)) {
+    const updatesRecord = updates as Record<string, unknown>;
+    const found = toAmount(updatesRecord.amount);
+    if (found !== null) return found;
+  }
+
+  return null;
+};
 
 const getEntityLabel = (entityType: string) => {
   switch (entityType) {
@@ -100,47 +159,8 @@ const getActionLabel = (action: string) => {
 };
 
 const getAuditAmount = (entry: AuditLogEntry) => {
-  const metadata = toAuditMetadata(entry);
-  const amountKeys = [
-    "amount",
-    "subscription_amount",
-    "installment_amount",
-    "loan_amount",
-    "new_amount",
-    "value",
-    "adjustment_amount",
-    "misc_amount",
-  ];
-
-  for (const key of amountKeys) {
-    const value = metadata[key];
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return value;
-    }
-    if (typeof value === "string" && value.trim()) {
-      const parsed = Number(value);
-      if (Number.isFinite(parsed)) {
-        return parsed;
-      }
-    }
-  }
-
-  const updates = metadata.updates;
-  if (updates && typeof updates === "object" && !Array.isArray(updates)) {
-    const updatesRecord = updates as Record<string, unknown>;
-    const value = updatesRecord.amount;
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return value;
-    }
-    if (typeof value === "string" && value.trim()) {
-      const parsed = Number(value);
-      if (Number.isFinite(parsed)) {
-        return parsed;
-      }
-    }
-  }
-
-  return 0;
+  const explicit = getExplicitAuditAmount(entry);
+  return explicit ?? 0;
 };
 
 const formatAuditAmount = (entry: AuditLogEntry) =>
@@ -274,7 +294,7 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
   // Admins state
   const [adminsLoading, setAdminsLoading] = useState(false);
   const [adminsError, setAdminsError] = useState<string | null>(null);
-  const [adminList, setAdminList] = useState<string[]>([]);
+  const [adminList, setAdminList] = useState<AdminUserRecord[]>([]);
   const [serverIsSuperAdmin, setServerIsSuperAdmin] = useState(false);
   const [auditCustomerNames, setAuditCustomerNames] = useState<
     Record<string, string>
@@ -334,6 +354,137 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
       setAuditAdminDirectory({});
     }
   }, [isOpen]);
+
+  const enrichLegacyAuditAmounts = async (entries: AuditLogEntry[]) => {
+    if (!entries.length) return entries;
+
+    const historicalAmountByEntity = new Map<string, number>();
+
+    entries.forEach((entry) => {
+      if (!entry.entity_id) return;
+      const knownAmount = getExplicitAuditAmount(entry);
+      if (knownAmount === null) return;
+      historicalAmountByEntity.set(
+        getEntityKey(entry.entity_type, entry.entity_id),
+        knownAmount,
+      );
+    });
+
+    const withHistoricalFallback = entries.map((entry) => {
+      if (!entry.entity_id) return entry;
+      if (getExplicitAuditAmount(entry) !== null) return entry;
+
+      const historicalAmount = historicalAmountByEntity.get(
+        getEntityKey(entry.entity_type, entry.entity_id),
+      );
+      if (historicalAmount === undefined) return entry;
+
+      const metadata = toAuditMetadata(entry);
+      return {
+        ...entry,
+        metadata: {
+          ...metadata,
+          derived_amount: historicalAmount,
+        },
+      } as AuditLogEntry;
+    });
+
+    const unresolved = withHistoricalFallback.filter(
+      (entry) => entry.entity_id && getExplicitAuditAmount(entry) === null,
+    );
+
+    if (!unresolved.length) {
+      return withHistoricalFallback;
+    }
+
+    const unresolvedLoanIds = Array.from(
+      new Set(
+        unresolved
+          .filter((entry) => entry.entity_type === "loan")
+          .map((entry) => entry.entity_id as string),
+      ),
+    );
+
+    const unresolvedSubscriptionIds = Array.from(
+      new Set(
+        unresolved
+          .filter((entry) => entry.entity_type === "subscription")
+          .map((entry) => entry.entity_id as string),
+      ),
+    );
+
+    const unresolvedInstallmentIds = Array.from(
+      new Set(
+        unresolved
+          .filter((entry) => entry.entity_type === "installment")
+          .map((entry) => entry.entity_id as string),
+      ),
+    );
+
+    const dbAmountByEntity = new Map<string, number>();
+
+    if (unresolvedLoanIds.length > 0) {
+      const { data: loanRows } = await supabase
+        .from("loans")
+        .select("id, original_amount")
+        .in("id", unresolvedLoanIds);
+
+      (loanRows || []).forEach((row: any) => {
+        const amount = toAmount(row.original_amount);
+        if (row.id && amount !== null) {
+          dbAmountByEntity.set(getEntityKey("loan", row.id), amount);
+        }
+      });
+    }
+
+    if (unresolvedSubscriptionIds.length > 0) {
+      const { data: subscriptionRows } = await supabase
+        .from("subscriptions")
+        .select("id, amount")
+        .in("id", unresolvedSubscriptionIds);
+
+      (subscriptionRows || []).forEach((row: any) => {
+        const amount = toAmount(row.amount);
+        if (row.id && amount !== null) {
+          dbAmountByEntity.set(getEntityKey("subscription", row.id), amount);
+        }
+      });
+    }
+
+    if (unresolvedInstallmentIds.length > 0) {
+      const { data: installmentRows } = await supabase
+        .from("installments")
+        .select("id, amount")
+        .in("id", unresolvedInstallmentIds);
+
+      (installmentRows || []).forEach((row: any) => {
+        const amount = toAmount(row.amount);
+        if (row.id && amount !== null) {
+          dbAmountByEntity.set(getEntityKey("installment", row.id), amount);
+        }
+      });
+    }
+
+    return withHistoricalFallback.map((entry) => {
+      if (!entry.entity_id) return entry;
+      if (getExplicitAuditAmount(entry) !== null) return entry;
+
+      const dbAmount = dbAmountByEntity.get(
+        getEntityKey(entry.entity_type, entry.entity_id),
+      );
+
+      if (dbAmount === undefined) return entry;
+
+      const metadata = toAuditMetadata(entry);
+      return {
+        ...entry,
+        metadata: {
+          ...metadata,
+          derived_amount: dbAmount,
+        },
+      } as AuditLogEntry;
+    });
+  };
 
   const fetchAuditCustomerNames = async (entries: AuditLogEntry[]) => {
     const customerIds = new Set<string>();
@@ -716,7 +867,7 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
 
       if (response.ok && result.success) {
         setServerIsSuperAdmin(Boolean(result.is_super_admin));
-        const entries = result.entries || [];
+        const entries = await enrichLegacyAuditAmounts(result.entries || []);
         setAuditEntries(entries);
         if (result.customer_directory) {
           setAuditCustomerNames(result.customer_directory);
@@ -761,21 +912,14 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
       };
 
       const response = await fetch(
-        `/.netlify/functions/get-audit-logs?page=1&page_size=1`,
+        `/.netlify/functions/get-admin-users`,
         { method: "GET", headers },
       );
-      const result = (await response.json()) as AuditLogResponse;
+      const result = (await response.json()) as AdminUsersResponse;
 
       if (response.ok && result.success) {
         setServerIsSuperAdmin(Boolean(result.is_super_admin));
-        const authoritativeSuperAdminUid = result.super_admin_uid || uiSuperAdminUid;
-        const merged = [
-          ...((authoritativeSuperAdminUid ? [authoritativeSuperAdminUid] : [])),
-          ...((result.admins || []).filter(
-            (uid) => uid !== authoritativeSuperAdminUid,
-          )),
-        ];
-        setAdminList(merged);
+        setAdminList(result.admins || []);
       } else {
         if (response.status === 401 || response.status === 403) {
           setServerIsSuperAdmin(false);
@@ -1960,7 +2104,7 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                 {canAccessAdminTools && (
                   <>
                     <div className="mb-4 p-4 rounded-xl bg-lime-50 dark:bg-lime-500/10 border border-lime-200 dark:border-lime-500/20 text-xs text-lime-800 dark:text-lime-300">
-                      This list combines the fixed allowlist and admin UIDs discovered from audit entries.
+                      This list shows current admins from the database.
                     </div>
 
                     {adminsError && (
@@ -1978,24 +2122,26 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        {(adminList.length > 0
-                          ? adminList
-                          : (uiSuperAdminUid ? [uiSuperAdminUid] : [])).map(
-                          (uid) => (
-                            <div
-                              key={uid}
-                              className="p-3 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl"
-                            >
-                              <div className="text-sm font-semibold text-slate-900 dark:text-white break-all">
-                                {uid}
-                              </div>
-                              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                {uid === uiSuperAdminUid
-                                  ? "Super Admin (allowlisted)"
-                                  : "Discovered from audit logs"}
-                              </div>
+                        {(adminList || []).map((admin) => (
+                          <div
+                            key={admin.uid}
+                            className="p-3 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl"
+                          >
+                            <div className="text-sm font-semibold text-slate-900 dark:text-white break-all">
+                              {admin.name}
                             </div>
-                          ),
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 break-all">
+                              {admin.email}
+                            </div>
+                            <div className="text-[11px] text-lime-700 dark:text-lime-400 mt-1 uppercase tracking-wider font-semibold">
+                              {admin.role}
+                            </div>
+                          </div>
+                        ))}
+                        {adminList.length === 0 && (
+                          <div className="p-4 text-sm text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-700">
+                            No admin users found.
+                          </div>
                         )}
                       </div>
                     )}

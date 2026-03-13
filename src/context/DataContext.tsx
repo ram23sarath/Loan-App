@@ -1435,6 +1435,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         "Read-only access: scoped customers cannot perform updates",
       );
     try {
+      const previousLoan = loans.find((loan) => loan.id === loanId);
       const { data, error } = await supabase
         .from("loans")
         .update(updates)
@@ -1442,7 +1443,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
-      logAuditEvent(session, "update", "loan", loanId, { updates });
+      logAuditEvent(session, "update", "loan", loanId, {
+        updates,
+        customer_id: data.customer_id,
+        original_amount:
+          previousLoan?.original_amount ?? data.original_amount ?? 0,
+        new_amount: data.original_amount ?? 0,
+      });
       // Optimistically update local state
       setLoans((prev) =>
         prev.map((loan) =>
@@ -1466,6 +1473,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         "Read-only access: scoped customers cannot perform updates",
       );
     try {
+      const previousSubscription = subscriptions.find(
+        (subscription) => subscription.id === subscriptionId,
+      );
       const { data, error } = await supabase
         .from("subscriptions")
         .update(updates)
@@ -1473,7 +1483,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
-      logAuditEvent(session, "update", "subscription", subscriptionId, { updates });
+      logAuditEvent(session, "update", "subscription", subscriptionId, {
+        updates,
+        customer_id: data.customer_id,
+        original_amount: previousSubscription?.amount ?? data.amount ?? 0,
+        new_amount: data.amount ?? 0,
+      });
       // Optimistically update local state
       setSubscriptions((prev) =>
         prev.map((sub) =>
@@ -1567,6 +1582,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         "Read-only access: scoped customers cannot perform updates",
       );
     try {
+      const previousInstallment = installments.find(
+        (installment) => installment.id === installmentId,
+      );
       const { data, error } = await supabase
         .from("installments")
         .update(updates)
@@ -1574,7 +1592,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
-      logAuditEvent(session, "update", "installment", installmentId, { updates });
+      logAuditEvent(session, "update", "installment", installmentId, {
+        updates,
+        loan_id: data.loan_id,
+        original_amount: previousInstallment?.amount ?? data.amount ?? 0,
+        new_amount: data.amount ?? 0,
+      });
       // Optimistically update local state
       setInstallments((prev) =>
         prev.map((inst) =>
@@ -3220,6 +3243,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     if (isScopedCustomer)
       throw new Error("Read-only access: scoped customers cannot delete loans");
     try {
+      const targetLoan = loans.find((loan) => loan.id === loanId);
       // Soft delete: set deleted_at timestamp instead of hard delete
       const { error } = await supabase
         .from("loans")
@@ -3229,7 +3253,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", loanId);
       if (error) throw error;
-      logAuditEvent(session, "soft_delete", "loan", loanId);
+      logAuditEvent(session, "soft_delete", "loan", loanId, {
+        customer_id: targetLoan?.customer_id ?? null,
+        original_amount: targetLoan?.original_amount ?? 0,
+      });
       // Optimistically remove from local state
       setLoans((prev) => prev.filter((loan) => loan.id !== loanId));
       // Refresh trash view (lightweight compared to full fetchData)
@@ -3298,7 +3325,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       // Defensive check: verify the loan is soft-deleted before permanent deletion
       const { data: entry, error: fetchError } = await supabase
         .from("loans")
-        .select("id, deleted_at")
+        .select("id, deleted_at, customer_id, original_amount")
         .eq("id", id)
         .single();
 
@@ -3313,7 +3340,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       // Hard delete - permanently remove the loan (installments will cascade delete)
       const { error } = await supabase.from("loans").delete().eq("id", id);
       if (error) throw error;
-      logAuditEvent(session, "permanent_delete", "loan", id);
+      logAuditEvent(session, "permanent_delete", "loan", id, {
+        customer_id: (entry as any)?.customer_id ?? null,
+        original_amount: (entry as any)?.original_amount ?? 0,
+      });
       await fetchDeletedLoans();
     } catch (err: any) {
       throw new Error(
@@ -3532,6 +3562,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         "Read-only access: scoped customers cannot delete subscriptions",
       );
     try {
+      const targetSubscription = subscriptions.find(
+        (subscription) => subscription.id === subscriptionId,
+      );
       // Soft delete: set deleted_at timestamp instead of hard delete
       const { error } = await supabase
         .from("subscriptions")
@@ -3541,7 +3574,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", subscriptionId);
       if (error) throw error;
-      logAuditEvent(session, "soft_delete", "subscription", subscriptionId);
+      logAuditEvent(session, "soft_delete", "subscription", subscriptionId, {
+        customer_id: targetSubscription?.customer_id ?? null,
+        original_amount: targetSubscription?.amount ?? 0,
+      });
       // Optimistically remove from local state
       setSubscriptions((prev) =>
         prev.filter((sub) => sub.id !== subscriptionId),
@@ -3620,7 +3656,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       // Defensive check: verify the entry is soft-deleted before permanent deletion
       const { data: entry, error: fetchError } = await supabase
         .from("subscriptions")
-        .select("id, deleted_at")
+        .select("id, deleted_at, customer_id, amount")
         .eq("id", id)
         .single();
 
@@ -3638,7 +3674,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .delete()
         .eq("id", id);
       if (error) throw error;
-      logAuditEvent(session, "permanent_delete", "subscription", id);
+      logAuditEvent(session, "permanent_delete", "subscription", id, {
+        customer_id: (entry as any)?.customer_id ?? null,
+        original_amount: (entry as any)?.amount ?? 0,
+      });
       await fetchDeletedSubscriptions();
     } catch (err: any) {
       throw new Error(
@@ -3653,6 +3692,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         "Read-only access: scoped customers cannot delete installments",
       );
     try {
+      const targetInstallment = installments.find(
+        (installment) => installment.id === installmentId,
+      );
       // Soft delete: set deleted_at timestamp instead of hard delete
       const { error } = await supabase
         .from("installments")
@@ -3662,7 +3704,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", installmentId);
       if (error) throw error;
-      logAuditEvent(session, "soft_delete", "installment", installmentId);
+      logAuditEvent(session, "soft_delete", "installment", installmentId, {
+        loan_id: targetInstallment?.loan_id ?? null,
+        original_amount: targetInstallment?.amount ?? 0,
+      });
       // Optimistically remove from local state
       setInstallments((prev) =>
         prev.filter((inst) => inst.id !== installmentId),
@@ -3745,7 +3790,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       // Defensive check: verify the installment is soft-deleted before permanent deletion
       const { data: entry, error: fetchError } = await supabase
         .from("installments")
-        .select("id, deleted_at")
+        .select("id, deleted_at, loan_id, amount")
         .eq("id", id)
         .single();
 
@@ -3763,7 +3808,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .delete()
         .eq("id", id);
       if (error) throw error;
-      logAuditEvent(session, "permanent_delete", "installment", id);
+      logAuditEvent(session, "permanent_delete", "installment", id, {
+        loan_id: (entry as any)?.loan_id ?? null,
+        original_amount: (entry as any)?.amount ?? 0,
+      });
       await fetchDeletedInstallments();
     } catch (err: any) {
       throw new Error(

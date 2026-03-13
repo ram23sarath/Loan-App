@@ -26,3 +26,7 @@
   for = "/supabase-rest/*"
   [headers.values]
     Cache-Control = "no-store"
+
+[[scheduled.functions]]
+  name = "cleanup-audit-logs-cron"
+  cron = "0 0 * * *"

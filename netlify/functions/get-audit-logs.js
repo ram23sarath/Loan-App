@@ -12,7 +12,8 @@ const json = (payload, status = 200) =>
 
 const sanitizeForIlike = (input) =>
   input
-    .replace(/[.,%()*:;{}\[\]"'`\\|<>!?]/g, ' ')
+    .replace(/[%]/g, '')
+    .replace(/,/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 80);
@@ -41,10 +42,6 @@ const parseParams = async (req) => {
   return {
     page: url.searchParams.get('page') || '1',
     page_size: url.searchParams.get('page_size') || '20',
-    action: url.searchParams.get('action') || '',
-    entity_type: url.searchParams.get('entity_type') || '',
-    from_date: url.searchParams.get('from_date') || '',
-    to_date: url.searchParams.get('to_date') || '',
     search: url.searchParams.get('search') || '',
   };
 };
@@ -80,11 +77,8 @@ export default async (req) => {
     Math.max(1, Number.parseInt(String(params.page_size || '20'), 10) || 20),
   );
 
-  const action = String(params.action || '').trim();
-  const entityType = String(params.entity_type || '').trim();
-  const fromDate = String(params.from_date || '').trim();
-  const toDate = String(params.to_date || '').trim();
   const safeSearch = sanitizeForIlike(String(params.search || ''));
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
   try {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -124,13 +118,11 @@ export default async (req) => {
       .from('admin_audit_log')
       .select('*', { count: 'exact' });
 
-    if (action) query = query.eq('action', action);
-    if (entityType) query = query.eq('entity_type', entityType);
-    if (fromDate) query = query.gte('created_at', fromDate);
-    if (toDate) query = query.lte('created_at', `${toDate}T23:59:59.999Z`);
+    query = query.gte('created_at', thirtyDaysAgo);
+
     if (safeSearch) {
       query = query.or(
-        `entity_id.ilike.%${safeSearch}%,action.ilike.%${safeSearch}%,entity_type.ilike.%${safeSearch}%`,
+        `metadata->>actor_name.ilike.%${safeSearch}%,metadata->>actor_email.ilike.%${safeSearch}%,admin_uid.ilike.%${safeSearch}%`,
       );
     }
 
@@ -276,6 +268,7 @@ export default async (req) => {
     const { data: adminRows } = await supabase
       .from('admin_audit_log')
       .select('admin_uid')
+      .gte('created_at', thirtyDaysAgo)
       .order('created_at', { ascending: false })
       .limit(2000);
 

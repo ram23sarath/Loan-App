@@ -61,39 +61,100 @@ const getEntityKey = (entityType: string, entityId: string) =>
 const getEntityLabel = (entityType: string) => {
   switch (entityType) {
     case "loan":
-      return "Loan transaction";
+      return "Loan";
     case "subscription":
-      return "Subscription transaction";
+      return "Subscription";
     case "installment":
-      return "Installment transaction";
+      return "Installment";
     case "data_entry":
-      return "Data entry transaction";
+      return "Data Entry";
     case "customer":
       return "Customer";
     default:
-      return entityType.replace(/_/g, " ");
+      return entityType
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
   }
 };
 
 const getActionLabel = (action: string) => {
   switch (action) {
     case "soft_delete":
-      return "deleted";
+      return "Deleted";
     case "permanent_delete":
-      return "permanently deleted";
+      return "Permanently Deleted";
     case "restore":
-      return "restored";
+      return "Restored";
     case "create":
-      return "created";
+      return "Added";
     case "update":
-      return "updated";
+      return "Updated";
     case "adjust_misc":
     case "adjust_misc_create":
-      return "adjusted";
+      return "Adjusted";
     default:
-      return action.replace(/_/g, " ");
+      return action
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
   }
 };
+
+const getAuditAmount = (entry: AuditLogEntry) => {
+  const metadata = toAuditMetadata(entry);
+  const amountKeys = [
+    "amount",
+    "subscription_amount",
+    "installment_amount",
+    "loan_amount",
+    "new_amount",
+    "value",
+    "adjustment_amount",
+    "misc_amount",
+  ];
+
+  for (const key of amountKeys) {
+    const value = metadata[key];
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === "string" && value.trim()) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+  }
+
+  const updates = metadata.updates;
+  if (updates && typeof updates === "object" && !Array.isArray(updates)) {
+    const updatesRecord = updates as Record<string, unknown>;
+    const value = updatesRecord.amount;
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === "string" && value.trim()) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+  }
+
+  return 0;
+};
+
+const formatAuditAmount = (entry: AuditLogEntry) =>
+  getAuditAmount(entry).toLocaleString("en-IN", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+
+const formatAuditTimeIst = (timestamp: string) =>
+  new Intl.DateTimeFormat("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Kolkata",
+  }).format(new Date(timestamp));
 
 export interface UserStatusCustomer {
   id: string;
@@ -208,11 +269,7 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
   const [auditPage, setAuditPage] = useState(1);
   const [auditTotalPages, setAuditTotalPages] = useState(1);
   const [auditTotal, setAuditTotal] = useState(0);
-  const [auditActionFilter, setAuditActionFilter] = useState("");
-  const [auditEntityFilter, setAuditEntityFilter] = useState("");
   const [auditSearch, setAuditSearch] = useState("");
-  const [auditFromDate, setAuditFromDate] = useState("");
-  const [auditToDate, setAuditToDate] = useState("");
 
   // Admins state
   const [adminsLoading, setAdminsLoading] = useState(false);
@@ -267,11 +324,7 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
       setAuditPage(1);
       setAuditTotalPages(1);
       setAuditTotal(0);
-      setAuditActionFilter("");
-      setAuditEntityFilter("");
       setAuditSearch("");
-      setAuditFromDate("");
-      setAuditToDate("");
       setAdminsLoading(false);
       setAdminsError(null);
       setAdminList([]);
@@ -648,11 +701,7 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
         page_size: "20",
       });
 
-      if (auditActionFilter) query.set("action", auditActionFilter);
-      if (auditEntityFilter) query.set("entity_type", auditEntityFilter);
       if (auditSearch) query.set("search", auditSearch);
-      if (auditFromDate) query.set("from_date", auditFromDate);
-      if (auditToDate) query.set("to_date", auditToDate);
 
       const headers: HeadersInit = {
         "Content-Type": "application/json",
@@ -1736,33 +1785,8 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
 
                 {canAccessAdminTools && (
                   <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                      <input
-                        type="text"
-                        value={auditActionFilter}
-                        onChange={(e) => setAuditActionFilter(e.target.value)}
-                        placeholder="Filter by action"
-                        className="w-full px-3 py-2.5 text-sm bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none"
-                      />
-                      <input
-                        type="text"
-                        value={auditEntityFilter}
-                        onChange={(e) => setAuditEntityFilter(e.target.value)}
-                        placeholder="Filter by entity"
-                        className="w-full px-3 py-2.5 text-sm bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none"
-                      />
-                      <input
-                        type="date"
-                        value={auditFromDate}
-                        onChange={(e) => setAuditFromDate(e.target.value)}
-                        className="w-full px-3 py-2.5 text-sm bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none"
-                      />
-                      <input
-                        type="date"
-                        value={auditToDate}
-                        onChange={(e) => setAuditToDate(e.target.value)}
-                        className="w-full px-3 py-2.5 text-sm bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none"
-                      />
+                    <div className="mb-4 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-xs text-emerald-800 dark:text-emerald-300">
+                      Audit transactions are retained for 30 days only.
                     </div>
 
                     <div className="flex gap-2 mb-5">
@@ -1770,7 +1794,7 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                         type="text"
                         value={auditSearch}
                         onChange={(e) => setAuditSearch(e.target.value)}
-                        placeholder="Search entity_id"
+                        placeholder="Search by admin name"
                         className="flex-1 px-3 py-2.5 text-sm bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none"
                       />
                       <button
@@ -1800,63 +1824,65 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                         No audit events found.
                       </div>
                     ) : (
-                      <div className="space-y-3 mb-5 max-h-[360px] overflow-y-auto pr-1">
-                        {auditEntries.map((entry) => {
-                          const metadata = toAuditMetadata(entry);
-                          const actorName =
-                            toText(metadata.actor_name) ||
-                            toText(metadata.actor_email) ||
-                            auditAdminDirectory[entry.admin_uid] ||
-                            "Admin user";
-                          const customerId =
-                            entry.entity_type === "customer"
-                              ? entry.entity_id
-                              : toText(metadata.customer_id);
-                          const customerName =
-                            toText(metadata.customer_name) ||
-                            (customerId ? auditCustomerNames[customerId] : null) ||
-                            null;
+                      <div className="mb-5 max-h-[420px] overflow-auto rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/40">
+                        <table className="min-w-full text-left text-sm">
+                          <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-800/90">
+                            <tr>
+                              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                Transaction
+                              </th>
+                              <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                Recorded At (IST)
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-700/70">
+                            {auditEntries.map((entry) => {
+                              const metadata = toAuditMetadata(entry);
+                              const actorName =
+                                toText(metadata.actor_name) ||
+                                toText(metadata.actor_email) ||
+                                auditAdminDirectory[entry.admin_uid] ||
+                                "Admin user";
 
-                          const actionLabel = getActionLabel(entry.action);
-                          const entityLabel = getEntityLabel(entry.entity_type);
-                          const entityCustomerName =
-                            entry.entity_id
-                              ? auditEntityCustomerNames[
-                                getEntityKey(entry.entity_type, entry.entity_id)
-                              ]
-                              : null;
+                              const customerId =
+                                entry.entity_type === "customer"
+                                  ? entry.entity_id
+                                  : toText(metadata.customer_id);
+                              const customerName =
+                                toText(metadata.customer_name) ||
+                                (customerId ? auditCustomerNames[customerId] : null) ||
+                                null;
 
-                          const sentence =
-                            entry.entity_type === "customer"
-                              ? `Customer ${customerName} was ${actionLabel} by ${actorName}`
-                              : customerName || entityCustomerName
-                                ? `${entityLabel} for customer ${
-                                  customerName || entityCustomerName
-                                } was ${actionLabel} by ${actorName}`
-                                : `${entityLabel} was ${actionLabel} by ${actorName}`;
+                              const entityCustomerName =
+                                entry.entity_id
+                                  ? auditEntityCustomerNames[
+                                    getEntityKey(entry.entity_type, entry.entity_id)
+                                  ]
+                                  : null;
 
-                          return (
-                            <div
-                              key={entry.id}
-                              className="p-3 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl"
-                            >
-                              <div className="flex items-center justify-between gap-3">
-                                <div className="text-sm font-bold text-slate-900 dark:text-white">
-                                  {sentence}
-                                </div>
-                                <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                                  {new Date(entry.created_at).toLocaleString()}
-                                </div>
-                              </div>
-                              <div className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                                {getEntityLabel(entry.entity_type)}
-                              </div>
-                              <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400 break-all">
-                                Admin: {actorName}
-                              </div>
-                            </div>
-                          );
-                        })}
+                              const actionLabel = getActionLabel(entry.action);
+                              const entityLabel = getEntityLabel(entry.entity_type);
+                              const resolvedCustomerName =
+                                customerName || entityCustomerName || "Unknown Customer";
+                              const value = formatAuditAmount(entry);
+                              const recordedAt = formatAuditTimeIst(entry.created_at);
+
+                              const sentence = `Admin (${actorName}) ${actionLabel} ${entityLabel} for (${resolvedCustomerName}) of (${value}) at (${recordedAt})`;
+
+                              return (
+                                <tr key={entry.id} className="align-top">
+                                  <td className="px-4 py-3 text-slate-800 dark:text-slate-100 font-medium">
+                                    {sentence}
+                                  </td>
+                                  <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                    {recordedAt}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
                     )}
 

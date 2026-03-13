@@ -12,6 +12,8 @@ This creates:
 - `ToolsModal` includes two new views: **Audit Log** and **Admins**.
 - UI visibility can use `VITE_SUPER_ADMIN_UID` as a quick toggle.
 - Server authorization is authoritative (Bearer token validation + super-admin check).
+- Audit Log is displayed in a table format with transaction-style rows.
+- Audit Log view keeps a single search bar for admin-name search.
 
 ## DataContext audit events
 - `logAuditEvent()` records mutation activity to `admin_audit_log`.
@@ -29,12 +31,17 @@ Simple server authorization:
 - requires `Authorization: Bearer <supabase_access_token>`
 - validates token server-side and checks super-admin via UID/env/role/lookup
 
-Supported filters:
+Supported query params:
 - `page`, `page_size`
-- `action`
-- `entity_type`
-- `from_date`, `to_date`
-- `search`
+- `search` (admin name / email)
+
+Behavior:
+- Server enforces a rolling 30-day window for returned audit logs.
+
+## Retention cleanup
+- Scheduled function: `cleanup-audit-logs-cron`
+- Schedule: daily (`0 0 * * *`)
+- Effect: permanently deletes `admin_audit_log` records older than 30 days.
 
 ## Optional environment variables
 Server (Netlify):

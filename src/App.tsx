@@ -48,6 +48,9 @@ const DataPage = React.lazy(() => import("./components/pages/DataPage"));
 const LoginPage = React.lazy(() => import("./components/pages/LoginPage"));
 const TrashPage = React.lazy(() => import("./components/pages/TrashPage"));
 const HomePage = React.lazy(() => import("./components/pages/HomePage"));
+const AuditLogPage = React.lazy(
+  () => import("./components/pages/AuditLogPage"),
+);
 
 // Prefetch all lazy route chunks after initial load to eliminate blank flashes
 // during in-app navigation. Once cached by the bundler, React.lazy resolves
@@ -66,6 +69,7 @@ const prefetchRouteChunks = () => {
     () => import("./components/pages/DataPage"),
     () => import("./components/pages/TrashPage"),
     () => import("./components/pages/HomePage"),
+    () => import("./components/pages/AuditLogPage"),
   ];
   // Use requestIdleCallback where available to avoid blocking the main thread
   const schedule =
@@ -252,6 +256,14 @@ const AnimatedRoutes = () => {
             }
           />
           <Route path="/data" element={<DataPage />} />
+          <Route
+            path="/audit-log"
+            element={
+              <AdminOnlyRoute>
+                <AuditLogPage />
+              </AdminOnlyRoute>
+            }
+          />
           <Route path="/trash" element={<TrashPage />} />
         </Routes>
       </AnimatePresence>

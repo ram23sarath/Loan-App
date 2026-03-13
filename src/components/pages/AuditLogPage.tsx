@@ -478,15 +478,15 @@ const AuditLogPage = () => {
                       auditAdminDirectory[entry.admin_uid] ||
                       "Admin user";
 
+                    // Resolve customer ID from entity or metadata
                     const customerId =
                       entry.entity_type === "customer"
                         ? entry.entity_id
                         : toText(metadata.customer_id);
-                    const customerName =
-                      toText(metadata.customer_name) ||
-                      (customerId ? auditCustomerNames[customerId] : null) ||
-                      null;
-
+                    
+                    // Try multiple sources for customer name, in priority order
+                    const customerNameFromMetadata = toText(metadata.customer_name);
+                    const customerNameFromLookup = customerId ? auditCustomerNames[customerId] : null;
                     const entityCustomerName =
                       entry.entity_id
                         ? auditEntityCustomerNames[
@@ -497,11 +497,15 @@ const AuditLogPage = () => {
                     const actionLabel = getActionLabel(entry.action);
                     const entityLabel = getEntityLabel(entry.entity_type);
                     const resolvedCustomerName =
-                      customerName || entityCustomerName || "Unknown Customer";
+                      customerNameFromMetadata ||
+                      customerNameFromLookup ||
+                      entityCustomerName ||
+                      "Unknown Customer";
                     const value = formatAuditAmount(entry);
                     const recordedAt = formatAuditTimeIst(entry.created_at);
 
-                    const sentence = `Admin (${actorName}) ${actionLabel} ${entityLabel} for (${resolvedCustomerName}) of (${value})`;
+                    // Clean sentence format without brackets
+                    const sentence = `Admin ${actorName} ${actionLabel} ${entityLabel} for ${resolvedCustomerName} — ${value}`;
 
                     return (
                       <tr key={entry.id} className="align-top">

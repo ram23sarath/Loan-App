@@ -419,6 +419,31 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_audit_log: {
+        Row: {
+          id: string;
+          admin_uid: string;
+          action: string;
+          entity_type: string;
+          entity_id: string | null;
+          metadata: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          admin_uid: string;
+          action: string;
+          entity_type: string;
+          entity_id?: string | null;
+          metadata?: Json | null;
+        };
+        Update: {
+          action?: string;
+          entity_type?: string;
+          entity_id?: string | null;
+          metadata?: Json | null;
+        };
+        Relationships: [];
+      }
     }
     Views: {
       [_ in never]: never
@@ -446,6 +471,9 @@ export type NewLoanSeniority = Database['public']['Tables']['loan_seniority']['I
 // Document types for PDF management
 export type Document = Database['public']['Tables']['documents']['Row'];
 export type NewDocument = Database['public']['Tables']['documents']['Insert'];
+
+// Audit log types
+export type AuditLogEntry = Database['public']['Tables']['admin_audit_log']['Row'];
 
 // ============================================================================
 // NATIVE BRIDGE TYPES - Mobile WebView Integration

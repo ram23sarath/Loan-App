@@ -33,15 +33,15 @@ import { NOTIFICATION_TYPES, NOTIFICATION_STATUSES } from "../../shared/notifica
 // ============================================================================
 
 const ERROR_CATEGORY = {
-  NETWORK:     "NETWORK",
-  RATE_LIMIT:  "RATE_LIMIT",
-  TIMEOUT:     "TIMEOUT",
-  AUTH:        "AUTH",
-  SESSION:     "SESSION",
-  RLS:         "RLS",
-  VALIDATION:  "VALIDATION",
-  SERVER:      "SERVER",
-  UNKNOWN:     "UNKNOWN",
+  NETWORK: "NETWORK",
+  RATE_LIMIT: "RATE_LIMIT",
+  TIMEOUT: "TIMEOUT",
+  AUTH: "AUTH",
+  SESSION: "SESSION",
+  RLS: "RLS",
+  VALIDATION: "VALIDATION",
+  SERVER: "SERVER",
+  UNKNOWN: "UNKNOWN",
 } as const;
 
 type ErrorCategory = typeof ERROR_CATEGORY[keyof typeof ERROR_CATEGORY];
@@ -49,7 +49,7 @@ type ErrorCategory = typeof ERROR_CATEGORY[keyof typeof ERROR_CATEGORY];
 const classifyError = (error: any): ErrorCategory => {
   if (!error) return ERROR_CATEGORY.UNKNOWN;
 
-  const msg  = (error?.message  ?? "").toLowerCase();
+  const msg = (error?.message ?? "").toLowerCase();
   const code = String(error?.code ?? "").toLowerCase();
   const status: number = error?.status ?? error?.statusCode ?? 0;
 
@@ -60,12 +60,12 @@ const classifyError = (error: any): ErrorCategory => {
 
   // Browser-level fetch failures (covers Chrome, Firefox, Safari, Edge)
   if (
-    msg === "failed to fetch"           ||  // Chrome / Firefox / Edge
-    msg === "load failed"               ||  // Safari / WebKit
-    msg.includes("networkerror")        ||  // Firefox legacy
+    msg === "failed to fetch" ||  // Chrome / Firefox / Edge
+    msg === "load failed" ||  // Safari / WebKit
+    msg.includes("networkerror") ||  // Firefox legacy
     msg.includes("network request failed") || // react-native / older browsers
-    msg.includes("fetch is aborted")    ||
-    msg.includes("net::err_")           ||  // Chrome DevTools error strings
+    msg.includes("fetch is aborted") ||
+    msg.includes("net::err_") ||  // Chrome DevTools error strings
     msg.includes("err_internet_disconnected") ||
     msg.includes("err_name_not_resolved") ||
     msg.includes("err_connection_refused")
@@ -74,17 +74,17 @@ const classifyError = (error: any): ErrorCategory => {
   // Timeout
   if (
     error?.name === "AbortError" ||
-    msg.includes("timeout")     ||
+    msg.includes("timeout") ||
     msg.includes("timed out")
   ) return ERROR_CATEGORY.TIMEOUT;
 
   // Rate limiting (Supabase returns 429 with these codes/messages)
   if (
-    status === 429                              ||
-    code === "over_email_send_rate_limit"       ||
-    code === "too_many_requests"               ||
-    msg.includes("rate limit")                 ||
-    msg.includes("too many requests")          ||
+    status === 429 ||
+    code === "over_email_send_rate_limit" ||
+    code === "too_many_requests" ||
+    msg.includes("rate limit") ||
+    msg.includes("too many requests") ||
     msg.includes("email rate limit exceeded")
   ) return ERROR_CATEGORY.RATE_LIMIT;
 
@@ -93,27 +93,27 @@ const classifyError = (error: any): ErrorCategory => {
 
   // Auth credential errors
   if (
-    msg.includes("invalid login credentials")  ||
-    msg.includes("email not confirmed")         ||
-    msg.includes("user not found")             ||
-    code === "invalid_credentials"             ||
-    code === "user_not_found"                  ||
+    msg.includes("invalid login credentials") ||
+    msg.includes("email not confirmed") ||
+    msg.includes("user not found") ||
+    code === "invalid_credentials" ||
+    code === "user_not_found" ||
     code === "email_not_confirmed"
   ) return ERROR_CATEGORY.AUTH;
 
   // Session / token errors
   if (
-    msg.includes("refresh_token_not_found")    ||
-    msg.includes("jwt expired")                ||
-    msg.includes("invalid jwt")               ||
-    code === "refresh_token_not_found"         ||
+    msg.includes("refresh_token_not_found") ||
+    msg.includes("jwt expired") ||
+    msg.includes("invalid jwt") ||
+    code === "refresh_token_not_found" ||
     code === "session_not_found"
   ) return ERROR_CATEGORY.SESSION;
 
   // Row Level Security / permission denied
   if (
-    msg.includes("permission denied")          ||
-    msg.includes("row-level security")         ||
+    msg.includes("permission denied") ||
+    msg.includes("row-level security") ||
     code === "42501"                           // PostgreSQL RLS violation
   ) return ERROR_CATEGORY.RLS;
 
@@ -133,20 +133,20 @@ const logStructuredError = (
   context: string,
   category: ErrorCategory,
 ): void => {
-  const isOnline   = typeof navigator !== "undefined" ? navigator.onLine : "unknown";
-  const timestamp  = new Date().toISOString();
+  const isOnline = typeof navigator !== "undefined" ? navigator.onLine : "unknown";
+  const timestamp = new Date().toISOString();
 
   const logPayload: Record<string, any> = {
     timestamp,
     category,
     context,
-    online:  isOnline,
-    message: error?.message  ?? String(error),
-    code:    error?.code     ?? null,
-    status:  error?.status   ?? error?.statusCode ?? null,
-    hint:    error?.hint     ?? null,
-    details: error?.details  ?? null,
-    name:    error?.name     ?? null,
+    online: isOnline,
+    message: error?.message ?? String(error),
+    code: error?.code ?? null,
+    status: error?.status ?? error?.statusCode ?? null,
+    hint: error?.hint ?? null,
+    details: error?.details ?? null,
+    name: error?.name ?? null,
   };
 
   // Only attach raw error in dev builds to avoid leaking internals in production
@@ -616,6 +616,38 @@ const clearCache = (key?: string) => {
   } catch (err) {
     console.error("Error clearing cache:", err);
   }
+};
+
+/** Fire-and-forget audit log insert — records actions for admin users. */
+const logAuditEvent = (
+  session: Session | null,
+  action: string,
+  entityType: string,
+  entityId: string | null,
+  metadata?: Record<string, unknown>,
+) => {
+  const uid = session?.user?.id;
+  const role = String(session?.user?.app_metadata?.role || "").toLowerCase();
+  const isAdminFlag = Boolean(
+    session?.user?.app_metadata?.is_admin ?? session?.user?.user_metadata?.is_admin,
+  );
+  const envSuperAdminUid = import.meta.env.VITE_SUPER_ADMIN_UID?.trim() || "";
+  const isEnvOverrideUid = Boolean(envSuperAdminUid && uid === envSuperAdminUid);
+  const isAdminRole = role === "admin" || role === "super_admin";
+
+  if (!uid || (!isAdminRole && !isAdminFlag && !isEnvOverrideUid)) return;
+  supabase
+    .from("admin_audit_log")
+    .insert({
+      admin_uid: uid,
+      action,
+      entity_type: entityType,
+      entity_id: entityId,
+      metadata: (metadata ?? {}) as import("../types").Json,
+    })
+    .then(({ error }) => {
+      if (error) console.error("[AuditLog] Failed to record event:", error);
+    });
 };
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
@@ -1154,6 +1186,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
+      logAuditEvent(session, "create", "seniority", data.id, { customer_id: customerId, ...details });
 
       // Notify admins if this was a scoped request
       if (isScopedCustomer) {
@@ -1163,9 +1196,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           await supabase.from("system_notifications").insert({
             type: NOTIFICATION_TYPES.SENIORITY_REQUEST,
             status: NOTIFICATION_STATUSES.PENDING,
-            message: `${name} requested For Loan Seniority: ${
-              details?.loan_type || "General"
-            }`,
+            message: `${name} requested For Loan Seniority: ${details?.loan_type || "General"
+              }`,
             metadata: { customer_id: customerId, ...details },
           });
         } catch (notifyErr) {
@@ -1205,6 +1237,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", id);
       if (error) throw error;
+      logAuditEvent(session, "soft_delete", "seniority", id);
       await fetchSeniorityList();
       await fetchDeletedSeniorityList();
     } catch (err: any) {
@@ -1227,6 +1260,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", id);
       if (error) throw error;
+      logAuditEvent(session, "restore", "seniority", id);
       await fetchSeniorityList();
       await fetchDeletedSeniorityList();
     } catch (err: any) {
@@ -1263,6 +1297,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .delete()
         .eq("id", id);
       if (error) throw error;
+      logAuditEvent(session, "permanent_delete", "seniority", id);
       await fetchDeletedSeniorityList();
     } catch (err: any) {
       throw new Error(
@@ -1291,6 +1326,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
+      logAuditEvent(session, "update", "seniority", id, { updates });
       await fetchSeniorityList();
     } catch (err: any) {
       throw new Error(parseSupabaseError(err, `updating seniority item ${id}`));
@@ -1326,6 +1362,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
+      logAuditEvent(session, "update", "customer", customerId, { updates });
 
       await fetchData();
 
@@ -1394,6 +1431,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
+      logAuditEvent(session, "update", "loan", loanId, { updates });
       // Optimistically update local state
       setLoans((prev) =>
         prev.map((loan) =>
@@ -1424,6 +1462,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
+      logAuditEvent(session, "update", "subscription", subscriptionId, { updates });
       // Optimistically update local state
       setSubscriptions((prev) =>
         prev.map((sub) =>
@@ -1467,6 +1506,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           .select()
           .single();
         if (error) throw error;
+        logAuditEvent(session, "adjust_misc", "subscription", sub.id, {
+          customer_id: customerId,
+          adjustment_amount: amount,
+          previous_amount: sub.amount,
+          new_amount: newAmount,
+          date: date || null,
+        });
       } else {
         const now = date || new Date().toISOString().slice(0, 10);
         const year = new Date(now).getFullYear();
@@ -1483,6 +1529,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           .select()
           .single();
         if (error) throw error;
+        logAuditEvent(session, "adjust_misc_create", "subscription", data?.id ?? null, {
+          customer_id: customerId,
+          adjustment_amount: amount,
+          created_amount: newSub.amount,
+          date: now,
+        });
       }
       await fetchData();
     } catch (error) {
@@ -1511,6 +1563,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
+      logAuditEvent(session, "update", "installment", installmentId, { updates });
       // Optimistically update local state
       setInstallments((prev) =>
         prev.map((inst) =>
@@ -1546,7 +1599,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (typeof window === "undefined") return;
       try {
         window.sessionStorage.clear();
-      } catch (err) {}
+      } catch (err) { }
       try {
         const keysToRemove: string[] = [];
         for (let i = 0; i < window.localStorage.length; i++) {
@@ -1566,9 +1619,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         for (const k of keysToRemove) {
           try {
             window.localStorage.removeItem(k);
-          } catch (e) {}
+          } catch (e) { }
         }
-      } catch (err) {}
+      } catch (err) { }
       // ... [rest of cache clearing logic] ...
     } catch (err) {
       console.error("Error clearing client cache", err);
@@ -1588,6 +1641,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
+      logAuditEvent(session, "create", "data_entry", data.id, { customer_id: entry.customer_id, type: entry.type, amount: entry.amount });
       // Optimistically update local state — avoids full 5-table refetch
       setDataEntries((prev) => [data as DataEntry, ...prev]);
       try {
@@ -1625,6 +1679,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
+      logAuditEvent(session, "update", "data_entry", id, { updates });
       // Optimistically update local state with the returned data
       setDataEntries((prev) =>
         prev.map((entry) => (entry.id === id ? (data as DataEntry) : entry)),
@@ -1650,6 +1705,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", id);
       if (error) throw error;
+      logAuditEvent(session, "soft_delete", "data_entry", id);
       // Optimistically remove from local state
       setDataEntries((prev) => prev.filter((entry) => entry.id !== id));
       // Refresh trash view (lightweight compared to full fetchData)
@@ -1674,6 +1730,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", id);
       if (error) throw error;
+      logAuditEvent(session, "restore", "data_entry", id);
       // Fetch the restored data entry
       const { data: restoredEntry, error: fetchErr } = await supabase
         .from("data_entries")
@@ -1735,6 +1792,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .delete()
         .eq("id", id);
       if (error) throw error;
+      logAuditEvent(session, "permanent_delete", "data_entry", id);
       await fetchDeletedDataEntries();
     } catch (err: any) {
       throw new Error(
@@ -2243,12 +2301,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
               };
               const cachedScoped = dataServedFromCache
                 ? {
-                    customers: dataServedFromCache.customers || [],
-                    loans: dataServedFromCache.loans || [],
-                    subscriptions: dataServedFromCache.subscriptions || [],
-                    installments: dataServedFromCache.installments || [],
-                    dataEntries: dataServedFromCache.dataEntries || [],
-                  }
+                  customers: dataServedFromCache.customers || [],
+                  loans: dataServedFromCache.loans || [],
+                  subscriptions: dataServedFromCache.subscriptions || [],
+                  installments: dataServedFromCache.installments || [],
+                  dataEntries: dataServedFromCache.dataEntries || [],
+                }
                 : null;
               const scopedDataChanged =
                 !cachedScoped ||
@@ -2337,12 +2395,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
               };
               const cachedAdmin = dataServedFromCache
                 ? {
-                    customers: dataServedFromCache.customers || [],
-                    loans: dataServedFromCache.loans || [],
-                    subscriptions: dataServedFromCache.subscriptions || [],
-                    installments: dataServedFromCache.installments || [],
-                    dataEntries: dataServedFromCache.dataEntries || [],
-                  }
+                  customers: dataServedFromCache.customers || [],
+                  loans: dataServedFromCache.loans || [],
+                  subscriptions: dataServedFromCache.subscriptions || [],
+                  installments: dataServedFromCache.installments || [],
+                  dataEntries: dataServedFromCache.dataEntries || [],
+                }
                 : null;
               const adminDataChanged =
                 !cachedAdmin ||
@@ -2837,6 +2895,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
+      logAuditEvent(session, "create", "customer", data.id, { name: customerData.name, phone: customerData.phone });
 
       // Trigger background user creation without blocking the customer add flow.
       try {
@@ -2875,7 +2934,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     }),
                   );
                 }
-              } catch (e) {}
+              } catch (e) { }
             } else {
               const successData = await resp.json().catch(() => ({}));
               console.log(
@@ -2895,7 +2954,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     }),
                   );
                 }
-              } catch (e) {}
+              } catch (e) { }
             }
           } catch (err) {
             console.warn("⚠️  Error during background user creation:", err);
@@ -2925,6 +2984,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
+      logAuditEvent(session, "create", "loan", data.id, { customer_id: loanData.customer_id, amount: loanData.original_amount });
       try {
         if (data.customer_id) {
           // Remove from seniority list regardless of who requested it
@@ -2963,6 +3023,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
+      logAuditEvent(session, "create", "subscription", data.id, { customer_id: subscriptionData.customer_id, amount: subscriptionData.amount });
       // Optimistically update local state with the returned subscription + customer data from state
       const customer = customerMap.get(data.customer_id);
       const subWithCustomer: SubscriptionWithCustomer = {
@@ -3019,10 +3080,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       fetchedInstallments && fetchedInstallments.length > 0
         ? fetchedInstallments
         : installments.filter(
-            (installment) =>
-              installment.loan_id === installmentData.loan_id &&
-              !installment.deleted_at,
-          );
+          (installment) =>
+            installment.loan_id === installmentData.loan_id &&
+            !installment.deleted_at,
+        );
     const loanStatus = getLoanStatus(loanForStatus, existingInstallments);
     if (loanStatus.status !== "In Progress") {
       throw new Error("Installments can only be added to In Progress loans");
@@ -3035,6 +3096,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
+      logAuditEvent(session, "create", "installment", data.id, { loan_id: installmentData.loan_id, amount: installmentData.amount });
       // Optimistically update local state
       setInstallments((prev) => [data as Installment, ...prev]);
       return data as Installment;
@@ -3071,7 +3133,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         setSeniorityList((prev) =>
           prev.filter((s) => s.customer_id !== customerId),
         );
-      } catch (e) {}
+      } catch (e) { }
 
       // Soft delete the customer
       const { error: custErr } = await supabase
@@ -3127,6 +3189,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .is("deleted_at", null);
       if (seniorityErr) throw seniorityErr;
 
+      logAuditEvent(session, "soft_delete", "customer", customerId);
+
       await fetchData();
       await fetchDeletedCustomers();
     } catch (error) {
@@ -3151,6 +3215,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", loanId);
       if (error) throw error;
+      logAuditEvent(session, "soft_delete", "loan", loanId);
       // Optimistically remove from local state
       setLoans((prev) => prev.filter((loan) => loan.id !== loanId));
       // Refresh trash view (lightweight compared to full fetchData)
@@ -3175,6 +3240,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", id);
       if (error) throw error;
+      logAuditEvent(session, "restore", "loan", id);
       // Fetch the restored loan with customer relationship
       const { data: restoredLoan, error: fetchErr } = await supabase
         .from("loans")
@@ -3233,6 +3299,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       // Hard delete - permanently remove the loan (installments will cascade delete)
       const { error } = await supabase.from("loans").delete().eq("id", id);
       if (error) throw error;
+      logAuditEvent(session, "permanent_delete", "loan", id);
       await fetchDeletedLoans();
     } catch (err: any) {
       throw new Error(
@@ -3317,6 +3384,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .eq("deleted_at", deletedAt);
       if (seniorityErr) throw seniorityErr;
 
+      logAuditEvent(session, "restore", "customer", id);
+
       await fetchData();
       await fetchDeletedCustomers();
     } catch (err: any) {
@@ -3396,6 +3465,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .eq("id", id);
       if (delCustErr) throw delCustErr;
 
+      logAuditEvent(session, "permanent_delete", "customer", id);
+
       // Delete linked auth user if exists
       if (customerUserId) {
         try {
@@ -3452,6 +3523,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", subscriptionId);
       if (error) throw error;
+      logAuditEvent(session, "soft_delete", "subscription", subscriptionId);
       // Optimistically remove from local state
       setSubscriptions((prev) =>
         prev.filter((sub) => sub.id !== subscriptionId),
@@ -3509,6 +3581,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .eq("id", id);
       if (error) throw error;
 
+      logAuditEvent(session, "restore", "subscription", id);
+
       // Update UI state with restored subscription
       setSubscriptions((prev) => [deletedSub as SubscriptionWithCustomer, ...prev]);
 
@@ -3546,6 +3620,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .delete()
         .eq("id", id);
       if (error) throw error;
+      logAuditEvent(session, "permanent_delete", "subscription", id);
       await fetchDeletedSubscriptions();
     } catch (err: any) {
       throw new Error(
@@ -3569,6 +3644,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", installmentId);
       if (error) throw error;
+      logAuditEvent(session, "soft_delete", "installment", installmentId);
       // Optimistically remove from local state
       setInstallments((prev) =>
         prev.filter((inst) => inst.id !== installmentId),
@@ -3625,6 +3701,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", id);
       if (error) throw error;
+      logAuditEvent(session, "restore", "installment", id);
       // Fetch the restored installment
       const { data: restoredInst, error: fetchErr } = await supabase
         .from("installments")
@@ -3668,6 +3745,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .delete()
         .eq("id", id);
       if (error) throw error;
+      logAuditEvent(session, "permanent_delete", "installment", id);
       await fetchDeletedInstallments();
     } catch (err: any) {
       throw new Error(

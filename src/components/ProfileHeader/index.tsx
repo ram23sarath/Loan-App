@@ -443,6 +443,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
 
       {/* Tools Modal */}
       <ToolsModal
+        session={session}
         isOpen={showToolsModal}
         onClose={() => setShowToolsModal(false)}
         onNavigateToTrash={handleNavigateToTrash}

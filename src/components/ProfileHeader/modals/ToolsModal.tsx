@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import ReactDOM from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import type { Session } from "@supabase/supabase-js";
 import { supabase } from "../../../lib/supabase";
-import type { Document } from "../../../types";
+import type { AuditLogEntry, Document } from "../../../types";
 
 type ToolsView =
   | "menu"
@@ -10,14 +11,33 @@ type ToolsView =
   | "changeUserPassword"
   | "userStatus"
   | "manageDocuments"
-  | "syncCustomers";
+  | "syncCustomers"
+  | "auditLog"
+  | "admins";
 
 interface ToolsModalProps {
+  session: Session | null;
   isOpen: boolean;
   onClose: () => void;
   onNavigateToTrash: () => void;
   onStartBackup: () => void;
   backupDisabled: boolean;
+}
+
+interface AuditLogResponse {
+  success: boolean;
+  entries: AuditLogEntry[];
+  admins?: string[];
+  is_super_admin?: boolean;
+  super_admin_uid?: string;
+  pagination?: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
+  error?: string;
 }
 
 export interface UserStatusCustomer {
@@ -67,12 +87,20 @@ export interface SyncResultData {
 }
 
 const ToolsModal: React.FC<ToolsModalProps> = ({
+  session,
   isOpen,
   onClose,
   onNavigateToTrash,
   onStartBackup,
   backupDisabled,
 }) => {
+  const uiSuperAdminUid = import.meta.env.VITE_SUPER_ADMIN_UID?.trim() || "";
+  const uiIsSuperAdmin = Boolean(
+    uiSuperAdminUid && session?.user?.id === uiSuperAdminUid,
+  );
+  const sessionRole = String(session?.user?.app_metadata?.role || "").toLowerCase();
+  const sessionIsSuperAdmin = sessionRole === "super_admin";
+
   const [toolsView, setToolsView] = useState<ToolsView>("menu");
   const [toolsLoading, setToolsLoading] = useState(false);
   const [toolsMessage, setToolsMessage] = useState<{
@@ -118,6 +146,27 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
   const [expandSyncUpdated, setExpandSyncUpdated] = useState(true);
   const [expandSyncErrors, setExpandSyncErrors] = useState(true);
 
+  // Audit log state
+  const [auditEntries, setAuditEntries] = useState<AuditLogEntry[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditError, setAuditError] = useState<string | null>(null);
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditTotalPages, setAuditTotalPages] = useState(1);
+  const [auditTotal, setAuditTotal] = useState(0);
+  const [auditActionFilter, setAuditActionFilter] = useState("");
+  const [auditEntityFilter, setAuditEntityFilter] = useState("");
+  const [auditSearch, setAuditSearch] = useState("");
+  const [auditFromDate, setAuditFromDate] = useState("");
+  const [auditToDate, setAuditToDate] = useState("");
+
+  // Admins state
+  const [adminsLoading, setAdminsLoading] = useState(false);
+  const [adminsError, setAdminsError] = useState<string | null>(null);
+  const [adminList, setAdminList] = useState<string[]>([]);
+  const [serverIsSuperAdmin, setServerIsSuperAdmin] = useState(false);
+
+  const canAccessAdminTools = uiIsSuperAdmin || sessionIsSuperAdmin || serverIsSuperAdmin;
+
   // Reset state when modal closes
   React.useEffect(() => {
     if (!isOpen) {
@@ -148,6 +197,21 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
       setSyncError(null);
       setExpandSyncUpdated(true);
       setExpandSyncErrors(true);
+      setAuditEntries([]);
+      setAuditLoading(false);
+      setAuditError(null);
+      setAuditPage(1);
+      setAuditTotalPages(1);
+      setAuditTotal(0);
+      setAuditActionFilter("");
+      setAuditEntityFilter("");
+      setAuditSearch("");
+      setAuditFromDate("");
+      setAuditToDate("");
+      setAdminsLoading(false);
+      setAdminsError(null);
+      setAdminList([]);
+      setServerIsSuperAdmin(false);
     }
   }, [isOpen]);
 
@@ -345,6 +409,101 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
         clearTimeout(progressTimer1);
       }
       setSyncProgress(0);
+    }
+  };
+
+  const fetchAuditLogs = async (nextPage = 1) => {
+    const accessToken = session?.access_token;
+    if (!accessToken) {
+      setAuditError("Missing session token. Please sign in again.");
+      return;
+    }
+
+    setAuditLoading(true);
+    setAuditError(null);
+    try {
+      const query = new URLSearchParams({
+        page: String(nextPage),
+        page_size: "20",
+      });
+
+      if (auditActionFilter) query.set("action", auditActionFilter);
+      if (auditEntityFilter) query.set("entity_type", auditEntityFilter);
+      if (auditSearch) query.set("search", auditSearch);
+      if (auditFromDate) query.set("from_date", auditFromDate);
+      if (auditToDate) query.set("to_date", auditToDate);
+
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      };
+
+      const response = await fetch(
+        `/.netlify/functions/get-audit-logs?${query.toString()}`,
+        { method: "GET", headers },
+      );
+      const result = (await response.json()) as AuditLogResponse;
+
+      if (response.ok && result.success) {
+        setServerIsSuperAdmin(Boolean(result.is_super_admin));
+        setAuditEntries(result.entries || []);
+        setAuditPage(result.pagination?.page || nextPage);
+        setAuditTotalPages(result.pagination?.totalPages || 1);
+        setAuditTotal(result.pagination?.total || 0);
+      } else {
+        if (response.status === 401 || response.status === 403) {
+          setServerIsSuperAdmin(false);
+        }
+        setAuditError(result.error || "Failed to load audit logs");
+      }
+    } catch (err: any) {
+      setAuditError(err.message || "Failed to load audit logs");
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
+  const fetchAdmins = async () => {
+    const accessToken = session?.access_token;
+    if (!accessToken) {
+      setAdminsError("Missing session token. Please sign in again.");
+      return;
+    }
+
+    setAdminsLoading(true);
+    setAdminsError(null);
+    try {
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      };
+
+      const response = await fetch(
+        `/.netlify/functions/get-audit-logs?page=1&page_size=1`,
+        { method: "GET", headers },
+      );
+      const result = (await response.json()) as AuditLogResponse;
+
+      if (response.ok && result.success) {
+        setServerIsSuperAdmin(Boolean(result.is_super_admin));
+        const authoritativeSuperAdminUid = result.super_admin_uid || uiSuperAdminUid;
+        const merged = [
+          ...((authoritativeSuperAdminUid ? [authoritativeSuperAdminUid] : [])),
+          ...((result.admins || []).filter(
+            (uid) => uid !== authoritativeSuperAdminUid,
+          )),
+        ];
+        setAdminList(merged);
+      } else {
+        if (response.status === 401 || response.status === 403) {
+          setServerIsSuperAdmin(false);
+        }
+        setAdminsError(result.error || "Failed to load admins");
+      }
+    } catch (err: any) {
+      setAdminsError(err.message || "Failed to load admins");
+    } finally {
+      setAdminsLoading(false);
     }
   };
 
@@ -703,6 +862,56 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                       </div>
                     </div>
                   </motion.button>
+
+                  {canAccessAdminTools && (
+                    <>
+                      <motion.button
+                        onClick={() => {
+                          setToolsView("auditLog");
+                          setToolsMessage(null);
+                          fetchAuditLogs(1);
+                        }}
+                        className="group relative w-full p-4 bg-white dark:bg-slate-800/50 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 border border-slate-200 dark:border-slate-700/80 hover:border-emerald-300 dark:hover:border-emerald-500/50 rounded-2xl transition-all duration-300 flex items-start gap-4 shadow-sm hover:shadow-md text-left"
+                        whileHover={{ y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <div className="flex-shrink-0 w-12 h-12 bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 rounded-xl flex items-center justify-center text-xl shadow-inner group-hover:scale-110 transition-transform duration-300">
+                          🧾
+                        </div>
+                        <div>
+                          <div className="font-semibold text-slate-900 dark:text-white tracking-tight">
+                            Audit Log
+                          </div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-snug">
+                            View admin activity with filters
+                          </div>
+                        </div>
+                      </motion.button>
+
+                      <motion.button
+                        onClick={() => {
+                          setToolsView("admins");
+                          setToolsMessage(null);
+                          fetchAdmins();
+                        }}
+                        className="group relative w-full p-4 bg-white dark:bg-slate-800/50 hover:bg-lime-50 dark:hover:bg-lime-500/10 border border-slate-200 dark:border-slate-700/80 hover:border-lime-300 dark:hover:border-lime-500/50 rounded-2xl transition-all duration-300 flex items-start gap-4 shadow-sm hover:shadow-md text-left"
+                        whileHover={{ y: -2 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <div className="flex-shrink-0 w-12 h-12 bg-lime-100 text-lime-600 dark:bg-lime-500/20 dark:text-lime-400 rounded-xl flex items-center justify-center text-xl shadow-inner group-hover:scale-110 transition-transform duration-300">
+                          🛡️
+                        </div>
+                        <div>
+                          <div className="font-semibold text-slate-900 dark:text-white tracking-tight">
+                            Admins
+                          </div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-snug">
+                            Super-admin allowlist and discovered admins
+                          </div>
+                        </div>
+                      </motion.button>
+                    </>
+                  )}
 
                   <div className="col-span-1 sm:col-span-2 h-px bg-slate-200 dark:bg-slate-800 my-2"></div>
 
@@ -1243,6 +1452,261 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                         </div>
                       )}
                   </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Audit Log View */}
+            {toolsView === "auditLog" && (
+              <motion.div
+                key="tools-audit-log"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    {renderBackButton()}
+                    <h2 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                      Audit Log
+                    </h2>
+                  </div>
+                  <motion.button
+                    onClick={() => fetchAuditLogs(auditPage)}
+                    disabled={auditLoading || !canAccessAdminTools}
+                    className="w-10 h-10 flex items-center justify-center bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full transition-colors hover:bg-emerald-100 dark:hover:bg-emerald-500/20 disabled:opacity-50"
+                    whileTap={{ scale: 0.9 }}
+                    title="Refresh"
+                  >
+                    <svg
+                      className={`w-5 h-5 ${auditLoading ? "animate-spin" : ""}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                  </motion.button>
+                </div>
+
+                {!canAccessAdminTools && (
+                  <div className="mb-4 p-4 rounded-xl bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 text-sm font-medium border border-rose-200 dark:border-rose-500/20">
+                    Access denied. This view is available only to the super admin.
+                  </div>
+                )}
+
+                {canAccessAdminTools && (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                      <input
+                        type="text"
+                        value={auditActionFilter}
+                        onChange={(e) => setAuditActionFilter(e.target.value)}
+                        placeholder="Filter by action"
+                        className="w-full px-3 py-2.5 text-sm bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none"
+                      />
+                      <input
+                        type="text"
+                        value={auditEntityFilter}
+                        onChange={(e) => setAuditEntityFilter(e.target.value)}
+                        placeholder="Filter by entity"
+                        className="w-full px-3 py-2.5 text-sm bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none"
+                      />
+                      <input
+                        type="date"
+                        value={auditFromDate}
+                        onChange={(e) => setAuditFromDate(e.target.value)}
+                        className="w-full px-3 py-2.5 text-sm bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none"
+                      />
+                      <input
+                        type="date"
+                        value={auditToDate}
+                        onChange={(e) => setAuditToDate(e.target.value)}
+                        className="w-full px-3 py-2.5 text-sm bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none"
+                      />
+                    </div>
+
+                    <div className="flex gap-2 mb-5">
+                      <input
+                        type="text"
+                        value={auditSearch}
+                        onChange={(e) => setAuditSearch(e.target.value)}
+                        placeholder="Search entity_id"
+                        className="flex-1 px-3 py-2.5 text-sm bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none"
+                      />
+                      <button
+                        onClick={() => fetchAuditLogs(1)}
+                        disabled={auditLoading}
+                        className="px-4 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl transition-colors disabled:opacity-50"
+                      >
+                        Apply
+                      </button>
+                    </div>
+
+                    {auditError && (
+                      <div className="mb-4 p-4 rounded-xl bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 text-sm font-medium border border-rose-200 dark:border-rose-500/20">
+                        {auditError}
+                      </div>
+                    )}
+
+                    {auditLoading && auditEntries.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12">
+                        <div className="w-10 h-10 border-4 border-slate-100 dark:border-slate-800 border-t-emerald-500 rounded-full animate-spin mb-4"></div>
+                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                          Loading audit logs...
+                        </p>
+                      </div>
+                    ) : auditEntries.length === 0 ? (
+                      <div className="p-6 text-center bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-slate-100 dark:border-slate-700/50 text-sm text-slate-500 dark:text-slate-400">
+                        No audit events found.
+                      </div>
+                    ) : (
+                      <div className="space-y-3 mb-5 max-h-[360px] overflow-y-auto pr-1">
+                        {auditEntries.map((entry) => (
+                          <div
+                            key={entry.id}
+                            className="p-3 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="text-sm font-bold text-slate-900 dark:text-white">
+                                {entry.action}
+                              </div>
+                              <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                {new Date(entry.created_at).toLocaleString()}
+                              </div>
+                            </div>
+                            <div className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                              {entry.entity_type}
+                              {entry.entity_id ? ` • ${entry.entity_id}` : ""}
+                            </div>
+                            <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400 break-all">
+                              Admin: {entry.admin_uid}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-xs text-slate-500 dark:text-slate-400">
+                        {auditTotal} total events • page {auditPage} of {auditTotalPages}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => fetchAuditLogs(Math.max(1, auditPage - 1))}
+                          disabled={auditLoading || auditPage <= 1}
+                          className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-50"
+                        >
+                          Prev
+                        </button>
+                        <button
+                          onClick={() => fetchAuditLogs(Math.min(auditTotalPages, auditPage + 1))}
+                          disabled={auditLoading || auditPage >= auditTotalPages}
+                          className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-50"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </motion.div>
+            )}
+
+            {/* Admins View */}
+            {toolsView === "admins" && (
+              <motion.div
+                key="tools-admins"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+              >
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    {renderBackButton()}
+                    <h2 className="text-xl md:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                      Admins
+                    </h2>
+                  </div>
+                  <motion.button
+                    onClick={fetchAdmins}
+                    disabled={adminsLoading || !canAccessAdminTools}
+                    className="w-10 h-10 flex items-center justify-center bg-lime-50 dark:bg-lime-500/10 text-lime-600 dark:text-lime-400 rounded-full transition-colors hover:bg-lime-100 dark:hover:bg-lime-500/20 disabled:opacity-50"
+                    whileTap={{ scale: 0.9 }}
+                    title="Refresh"
+                  >
+                    <svg
+                      className={`w-5 h-5 ${adminsLoading ? "animate-spin" : ""}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                  </motion.button>
+                </div>
+
+                {!canAccessAdminTools && (
+                  <div className="mb-4 p-4 rounded-xl bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 text-sm font-medium border border-rose-200 dark:border-rose-500/20">
+                    Access denied. This view is available only to the super admin.
+                  </div>
+                )}
+
+                {canAccessAdminTools && (
+                  <>
+                    <div className="mb-4 p-4 rounded-xl bg-lime-50 dark:bg-lime-500/10 border border-lime-200 dark:border-lime-500/20 text-xs text-lime-800 dark:text-lime-300">
+                      This list combines the fixed allowlist and admin UIDs discovered from audit entries.
+                    </div>
+
+                    {adminsError && (
+                      <div className="mb-4 p-4 rounded-xl bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 text-sm font-medium border border-rose-200 dark:border-rose-500/20">
+                        {adminsError}
+                      </div>
+                    )}
+
+                    {adminsLoading && adminList.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12">
+                        <div className="w-10 h-10 border-4 border-slate-100 dark:border-slate-800 border-t-lime-500 rounded-full animate-spin mb-4"></div>
+                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                          Loading admins...
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {(adminList.length > 0
+                          ? adminList
+                          : (uiSuperAdminUid ? [uiSuperAdminUid] : [])).map(
+                          (uid) => (
+                            <div
+                              key={uid}
+                              className="p-3 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl"
+                            >
+                              <div className="text-sm font-semibold text-slate-900 dark:text-white break-all">
+                                {uid}
+                              </div>
+                              <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                {uid === uiSuperAdminUid
+                                  ? "Super Admin (allowlisted)"
+                                  : "Discovered from audit logs"}
+                              </div>
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
               </motion.div>
             )}

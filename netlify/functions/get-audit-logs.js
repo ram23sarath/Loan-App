@@ -17,6 +17,16 @@ const sanitizeForIlike = (input) =>
     .trim()
     .slice(0, 80);
 
+const getEntryMetadata = (entry) => {
+  const metadata = entry?.metadata;
+  if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
+    return metadata;
+  }
+  return {};
+};
+
+const getEntityKey = (entityType, entityId) => `${entityType}:${entityId}`;
+
 const parseParams = async (req) => {
   if (req.method === 'POST') {
     try {
@@ -141,6 +151,128 @@ export default async (req) => {
     const total = count || 0;
     const totalPages = total > 0 ? Math.ceil(total / pageSize) : 1;
 
+    const customerIds = new Set();
+    const loanIds = new Set();
+    const subscriptionIds = new Set();
+    const installmentIds = new Set();
+    const dataEntryIds = new Set();
+
+    entries.forEach((entry) => {
+      const metadata = getEntryMetadata(entry);
+      const metadataCustomerId =
+        typeof metadata.customer_id === 'string' ? metadata.customer_id : null;
+
+      if (entry.entity_type === 'customer' && entry.entity_id) {
+        customerIds.add(entry.entity_id);
+      }
+      if (metadataCustomerId) {
+        customerIds.add(metadataCustomerId);
+      }
+
+      if (!entry.entity_id) return;
+      if (entry.entity_type === 'loan') loanIds.add(entry.entity_id);
+      if (entry.entity_type === 'subscription') subscriptionIds.add(entry.entity_id);
+      if (entry.entity_type === 'installment') installmentIds.add(entry.entity_id);
+      if (entry.entity_type === 'data_entry') dataEntryIds.add(entry.entity_id);
+    });
+
+    const entityToCustomerId = new Map();
+
+    if (loanIds.size > 0) {
+      const { data: loanRows } = await supabase
+        .from('loans')
+        .select('id, customer_id')
+        .in('id', Array.from(loanIds));
+      (loanRows || []).forEach((row) => {
+        if (row.id && row.customer_id) {
+          entityToCustomerId.set(getEntityKey('loan', row.id), row.customer_id);
+          customerIds.add(row.customer_id);
+        }
+      });
+    }
+
+    if (subscriptionIds.size > 0) {
+      const { data: subRows } = await supabase
+        .from('subscriptions')
+        .select('id, customer_id')
+        .in('id', Array.from(subscriptionIds));
+      (subRows || []).forEach((row) => {
+        if (row.id && row.customer_id) {
+          entityToCustomerId.set(getEntityKey('subscription', row.id), row.customer_id);
+          customerIds.add(row.customer_id);
+        }
+      });
+    }
+
+    if (dataEntryIds.size > 0) {
+      const { data: dataEntryRows } = await supabase
+        .from('data_entries')
+        .select('id, customer_id')
+        .in('id', Array.from(dataEntryIds));
+      (dataEntryRows || []).forEach((row) => {
+        if (row.id && row.customer_id) {
+          entityToCustomerId.set(getEntityKey('data_entry', row.id), row.customer_id);
+          customerIds.add(row.customer_id);
+        }
+      });
+    }
+
+    if (installmentIds.size > 0) {
+      const { data: installmentRows } = await supabase
+        .from('installments')
+        .select('id, loan_id')
+        .in('id', Array.from(installmentIds));
+
+      const uniqueLoanIds = Array.from(
+        new Set((installmentRows || []).map((row) => row.loan_id).filter(Boolean)),
+      );
+
+      if (uniqueLoanIds.length > 0) {
+        const { data: installmentLoanRows } = await supabase
+          .from('loans')
+          .select('id, customer_id')
+          .in('id', uniqueLoanIds);
+
+        const loanCustomerMap = new Map();
+        (installmentLoanRows || []).forEach((row) => {
+          if (row.id && row.customer_id) {
+            loanCustomerMap.set(row.id, row.customer_id);
+            customerIds.add(row.customer_id);
+          }
+        });
+
+        (installmentRows || []).forEach((row) => {
+          const customerId = loanCustomerMap.get(row.loan_id);
+          if (row.id && customerId) {
+            entityToCustomerId.set(getEntityKey('installment', row.id), customerId);
+          }
+        });
+      }
+    }
+
+    let customerDirectory = {};
+    if (customerIds.size > 0) {
+      const { data: customerRows } = await supabase
+        .from('customers')
+        .select('id, name')
+        .in('id', Array.from(customerIds));
+
+      customerDirectory = (customerRows || []).reduce((acc, row) => {
+        if (row.id && row.name) {
+          acc[row.id] = row.name;
+        }
+        return acc;
+      }, {});
+    }
+
+    const entityCustomerNames = {};
+    entityToCustomerId.forEach((customerId, entityKey) => {
+      const customerName = customerDirectory[customerId];
+      if (customerName) {
+        entityCustomerNames[entityKey] = customerName;
+      }
+    });
+
     const { data: adminRows } = await supabase
       .from('admin_audit_log')
       .select('admin_uid')
@@ -151,12 +283,37 @@ export default async (req) => {
       new Set((adminRows || []).map((item) => item.admin_uid).filter(Boolean)),
     );
 
+    const adminDirectory = {};
+    await Promise.all(
+      adminUids.map(async (uid) => {
+        try {
+          const { data: adminUserData, error: adminUserError } =
+            await supabase.auth.admin.getUserById(uid);
+          if (adminUserError || !adminUserData?.user) {
+            return;
+          }
+          const user = adminUserData.user;
+          const displayName =
+            user.user_metadata?.name ||
+            user.app_metadata?.name ||
+            user.email ||
+            uid;
+          adminDirectory[uid] = String(displayName);
+        } catch (lookupError) {
+          console.warn('[get-audit-logs] Admin lookup failed for uid', uid, lookupError);
+        }
+      }),
+    );
+
     return json({
       success: true,
       is_super_admin: true,
       super_admin_uid: SUPER_ADMIN_UID,
       entries,
       admins: [SUPER_ADMIN_UID, ...adminUids.filter((uid) => uid !== SUPER_ADMIN_UID)],
+      admin_directory: adminDirectory,
+      customer_directory: customerDirectory,
+      entity_customer_names: entityCustomerNames,
       pagination: {
         page,
         pageSize,

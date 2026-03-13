@@ -28,6 +28,9 @@ interface AuditLogResponse {
   success: boolean;
   entries: AuditLogEntry[];
   admins?: string[];
+  admin_directory?: Record<string, string>;
+  customer_directory?: Record<string, string>;
+  entity_customer_names?: Record<string, string>;
   is_super_admin?: boolean;
   super_admin_uid?: string;
   pagination?: {
@@ -222,6 +225,9 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
   const [auditEntityCustomerNames, setAuditEntityCustomerNames] = useState<
     Record<string, string>
   >({});
+  const [auditAdminDirectory, setAuditAdminDirectory] = useState<
+    Record<string, string>
+  >({});
 
   const canAccessAdminTools = uiIsSuperAdmin || sessionIsSuperAdmin || serverIsSuperAdmin;
 
@@ -272,6 +278,7 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
       setServerIsSuperAdmin(false);
       setAuditCustomerNames({});
       setAuditEntityCustomerNames({});
+      setAuditAdminDirectory({});
     }
   }, [isOpen]);
 
@@ -662,7 +669,17 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
         setServerIsSuperAdmin(Boolean(result.is_super_admin));
         const entries = result.entries || [];
         setAuditEntries(entries);
-        await fetchAuditCustomerNames(entries);
+        if (result.customer_directory) {
+          setAuditCustomerNames(result.customer_directory);
+        } else {
+          await fetchAuditCustomerNames(entries);
+        }
+        if (result.entity_customer_names) {
+          setAuditEntityCustomerNames(result.entity_customer_names);
+        }
+        if (result.admin_directory) {
+          setAuditAdminDirectory(result.admin_directory);
+        }
         setAuditPage(result.pagination?.page || nextPage);
         setAuditTotalPages(result.pagination?.totalPages || 1);
         setAuditTotal(result.pagination?.total || 0);
@@ -1789,7 +1806,8 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                           const actorName =
                             toText(metadata.actor_name) ||
                             toText(metadata.actor_email) ||
-                            entry.admin_uid;
+                            auditAdminDirectory[entry.admin_uid] ||
+                            "Admin user";
                           const customerId =
                             entry.entity_type === "customer"
                               ? entry.entity_id
@@ -1797,9 +1815,7 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                           const customerName =
                             toText(metadata.customer_name) ||
                             (customerId ? auditCustomerNames[customerId] : null) ||
-                            customerId ||
-                            entry.entity_id ||
-                            "record";
+                            null;
 
                           const actionLabel = getActionLabel(entry.action);
                           const entityLabel = getEntityLabel(entry.entity_type);
@@ -1817,7 +1833,7 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                                 ? `${entityLabel} for customer ${
                                   customerName || entityCustomerName
                                 } was ${actionLabel} by ${actorName}`
-                                : `${entityLabel} ${entry.entity_id || "record"} was ${actionLabel} by ${actorName}`;
+                                : `${entityLabel} was ${actionLabel} by ${actorName}`;
 
                           return (
                             <div
@@ -1833,8 +1849,7 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                                 </div>
                               </div>
                               <div className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                                {entry.entity_type}
-                                {entry.entity_id ? ` • ${entry.entity_id}` : ""}
+                                {getEntityLabel(entry.entity_type)}
                               </div>
                               <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400 break-all">
                                 Admin: {actorName}

@@ -6,7 +6,7 @@ Run `Files/admin_audit_log.sql` in the Supabase SQL editor.
 This creates:
 - `public.admin_audit_log` table
 - indexes for `created_at`, `admin_uid`, `action`, `entity_type`, `entity_id`
-- RLS policies for super-admin read/insert
+- RLS policies for super-admin read and admin/super-admin insert
 
 ## Frontend changes
 - `ToolsModal` includes two new views: **Audit Log** and **Admins**.

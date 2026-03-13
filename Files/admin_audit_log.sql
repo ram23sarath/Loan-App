@@ -62,7 +62,8 @@ using (
 );
 
 drop policy if exists "Super admin can insert admin audit log" on public.admin_audit_log;
-create policy "Super admin can insert admin audit log"
+drop policy if exists "Admins can insert admin audit log" on public.admin_audit_log;
+create policy "Admins can insert admin audit log"
 on public.admin_audit_log
 for insert
 to authenticated
@@ -73,7 +74,10 @@ with check (
       from public.super_admins sa
       where sa.user_id = auth.uid()
     )
+    or coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') = 'admin'
     or coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') = 'super_admin'
+    or coalesce(auth.jwt() -> 'app_metadata' ->> 'is_admin', 'false') = 'true'
+    or coalesce(auth.jwt() -> 'user_metadata' ->> 'is_admin', 'false') = 'true'
   )
   and admin_uid = auth.uid()
 );

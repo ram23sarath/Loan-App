@@ -40,6 +40,58 @@ interface AuditLogResponse {
   error?: string;
 }
 
+const toAuditMetadata = (entry: AuditLogEntry): Record<string, unknown> => {
+  const value = entry.metadata;
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+};
+
+const toText = (value: unknown): string | null => {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+};
+
+const getEntityKey = (entityType: string, entityId: string) =>
+  `${entityType}:${entityId}`;
+
+const getEntityLabel = (entityType: string) => {
+  switch (entityType) {
+    case "loan":
+      return "Loan transaction";
+    case "subscription":
+      return "Subscription transaction";
+    case "installment":
+      return "Installment transaction";
+    case "data_entry":
+      return "Data entry transaction";
+    case "customer":
+      return "Customer";
+    default:
+      return entityType.replace(/_/g, " ");
+  }
+};
+
+const getActionLabel = (action: string) => {
+  switch (action) {
+    case "soft_delete":
+      return "deleted";
+    case "permanent_delete":
+      return "permanently deleted";
+    case "restore":
+      return "restored";
+    case "create":
+      return "created";
+    case "update":
+      return "updated";
+    case "adjust_misc":
+    case "adjust_misc_create":
+      return "adjusted";
+    default:
+      return action.replace(/_/g, " ");
+  }
+};
+
 export interface UserStatusCustomer {
   id: string;
   name: string;
@@ -164,6 +216,12 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
   const [adminsError, setAdminsError] = useState<string | null>(null);
   const [adminList, setAdminList] = useState<string[]>([]);
   const [serverIsSuperAdmin, setServerIsSuperAdmin] = useState(false);
+  const [auditCustomerNames, setAuditCustomerNames] = useState<
+    Record<string, string>
+  >({});
+  const [auditEntityCustomerNames, setAuditEntityCustomerNames] = useState<
+    Record<string, string>
+  >({});
 
   const canAccessAdminTools = uiIsSuperAdmin || sessionIsSuperAdmin || serverIsSuperAdmin;
 
@@ -212,8 +270,164 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
       setAdminsError(null);
       setAdminList([]);
       setServerIsSuperAdmin(false);
+      setAuditCustomerNames({});
+      setAuditEntityCustomerNames({});
     }
   }, [isOpen]);
+
+  const fetchAuditCustomerNames = async (entries: AuditLogEntry[]) => {
+    const customerIds = new Set<string>();
+    const loanIds = new Set<string>();
+    const subscriptionIds = new Set<string>();
+    const installmentIds = new Set<string>();
+    const dataEntryIds = new Set<string>();
+
+    entries.forEach((entry) => {
+      const metadata = toAuditMetadata(entry);
+      const metadataCustomerId = toText(metadata.customer_id);
+      const customerEntityId =
+        entry.entity_type === "customer" ? entry.entity_id : null;
+
+      if (customerEntityId) customerIds.add(customerEntityId);
+      if (metadataCustomerId) customerIds.add(metadataCustomerId);
+
+      if (!entry.entity_id) return;
+
+      if (entry.entity_type === "loan") loanIds.add(entry.entity_id);
+      if (entry.entity_type === "subscription")
+        subscriptionIds.add(entry.entity_id);
+      if (entry.entity_type === "installment")
+        installmentIds.add(entry.entity_id);
+      if (entry.entity_type === "data_entry") dataEntryIds.add(entry.entity_id);
+    });
+
+    const entityToCustomerId = new Map<string, string>();
+
+    if (loanIds.size > 0) {
+      const { data } = await supabase
+        .from("loans")
+        .select("id, customer_id")
+        .in("id", Array.from(loanIds));
+      (data || []).forEach((row: any) => {
+        if (row.id && row.customer_id) {
+          entityToCustomerId.set(getEntityKey("loan", row.id), row.customer_id);
+          customerIds.add(row.customer_id);
+        }
+      });
+    }
+
+    if (subscriptionIds.size > 0) {
+      const { data } = await supabase
+        .from("subscriptions")
+        .select("id, customer_id")
+        .in("id", Array.from(subscriptionIds));
+      (data || []).forEach((row: any) => {
+        if (row.id && row.customer_id) {
+          entityToCustomerId.set(
+            getEntityKey("subscription", row.id),
+            row.customer_id,
+          );
+          customerIds.add(row.customer_id);
+        }
+      });
+    }
+
+    if (dataEntryIds.size > 0) {
+      const { data } = await supabase
+        .from("data_entries")
+        .select("id, customer_id")
+        .in("id", Array.from(dataEntryIds));
+      (data || []).forEach((row: any) => {
+        if (row.id && row.customer_id) {
+          entityToCustomerId.set(
+            getEntityKey("data_entry", row.id),
+            row.customer_id,
+          );
+          customerIds.add(row.customer_id);
+        }
+      });
+    }
+
+    if (installmentIds.size > 0) {
+      const { data: installmentRows } = await supabase
+        .from("installments")
+        .select("id, loan_id")
+        .in("id", Array.from(installmentIds));
+
+      const uniqueLoanIds = Array.from(
+        new Set((installmentRows || []).map((row: any) => row.loan_id).filter(Boolean)),
+      );
+
+      const installmentLoanMap = new Map<string, string>();
+      (installmentRows || []).forEach((row: any) => {
+        if (row.id && row.loan_id) {
+          installmentLoanMap.set(row.id, row.loan_id);
+        }
+      });
+
+      if (uniqueLoanIds.length > 0) {
+        const { data: loanRows } = await supabase
+          .from("loans")
+          .select("id, customer_id")
+          .in("id", uniqueLoanIds);
+
+        const loanCustomerMap = new Map<string, string>();
+        (loanRows || []).forEach((row: any) => {
+          if (row.id && row.customer_id) {
+            loanCustomerMap.set(row.id, row.customer_id);
+            customerIds.add(row.customer_id);
+          }
+        });
+
+        installmentLoanMap.forEach((loanId, installmentId) => {
+          const customerId = loanCustomerMap.get(loanId);
+          if (customerId) {
+            entityToCustomerId.set(
+              getEntityKey("installment", installmentId),
+              customerId,
+            );
+          }
+        });
+      }
+    }
+
+    if (customerIds.size === 0) {
+      setAuditCustomerNames({});
+      setAuditEntityCustomerNames({});
+      return;
+    }
+
+    const { data: customersData, error: customersError } = await supabase
+      .from("customers")
+      .select("id, name")
+      .in("id", Array.from(customerIds));
+
+    if (customersError) {
+      console.warn("[AuditLog] Failed resolving customer names:", customersError.message);
+      return;
+    }
+
+    const customerNameMap = (customersData || []).reduce<Record<string, string>>(
+      (acc, row: any) => {
+        if (row.id && row.name) {
+          acc[row.id] = row.name;
+        }
+        return acc;
+      },
+      {},
+    );
+
+    const entityCustomerNameMap: Record<string, string> = {};
+    entityToCustomerId.forEach((customerId, entityKey) => {
+      const customerName = customerNameMap[customerId];
+      if (customerName) {
+        entityCustomerNameMap[entityKey] = customerName;
+      }
+    });
+
+    setAuditCustomerNames(customerNameMap);
+    setAuditEntityCustomerNames(entityCustomerNameMap);
+  };
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -446,7 +660,9 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
 
       if (response.ok && result.success) {
         setServerIsSuperAdmin(Boolean(result.is_super_admin));
-        setAuditEntries(result.entries || []);
+        const entries = result.entries || [];
+        setAuditEntries(entries);
+        await fetchAuditCustomerNames(entries);
         setAuditPage(result.pagination?.page || nextPage);
         setAuditTotalPages(result.pagination?.totalPages || 1);
         setAuditTotal(result.pagination?.total || 0);
@@ -1568,28 +1784,64 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                       </div>
                     ) : (
                       <div className="space-y-3 mb-5 max-h-[360px] overflow-y-auto pr-1">
-                        {auditEntries.map((entry) => (
-                          <div
-                            key={entry.id}
-                            className="p-3 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl"
-                          >
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="text-sm font-bold text-slate-900 dark:text-white">
-                                {entry.action}
+                        {auditEntries.map((entry) => {
+                          const metadata = toAuditMetadata(entry);
+                          const actorName =
+                            toText(metadata.actor_name) ||
+                            toText(metadata.actor_email) ||
+                            entry.admin_uid;
+                          const customerId =
+                            entry.entity_type === "customer"
+                              ? entry.entity_id
+                              : toText(metadata.customer_id);
+                          const customerName =
+                            toText(metadata.customer_name) ||
+                            (customerId ? auditCustomerNames[customerId] : null) ||
+                            customerId ||
+                            entry.entity_id ||
+                            "record";
+
+                          const actionLabel = getActionLabel(entry.action);
+                          const entityLabel = getEntityLabel(entry.entity_type);
+                          const entityCustomerName =
+                            entry.entity_id
+                              ? auditEntityCustomerNames[
+                                getEntityKey(entry.entity_type, entry.entity_id)
+                              ]
+                              : null;
+
+                          const sentence =
+                            entry.entity_type === "customer"
+                              ? `Customer ${customerName} was ${actionLabel} by ${actorName}`
+                              : customerName || entityCustomerName
+                                ? `${entityLabel} for customer ${
+                                  customerName || entityCustomerName
+                                } was ${actionLabel} by ${actorName}`
+                                : `${entityLabel} ${entry.entity_id || "record"} was ${actionLabel} by ${actorName}`;
+
+                          return (
+                            <div
+                              key={entry.id}
+                              className="p-3 bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl"
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="text-sm font-bold text-slate-900 dark:text-white">
+                                  {sentence}
+                                </div>
+                                <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                  {new Date(entry.created_at).toLocaleString()}
+                                </div>
                               </div>
-                              <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                                {new Date(entry.created_at).toLocaleString()}
+                              <div className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                                {entry.entity_type}
+                                {entry.entity_id ? ` • ${entry.entity_id}` : ""}
+                              </div>
+                              <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400 break-all">
+                                Admin: {actorName}
                               </div>
                             </div>
-                            <div className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                              {entry.entity_type}
-                              {entry.entity_id ? ` • ${entry.entity_id}` : ""}
-                            </div>
-                            <div className="mt-2 text-[11px] text-slate-500 dark:text-slate-400 break-all">
-                              Admin: {entry.admin_uid}
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
 

@@ -636,6 +636,13 @@ const logAuditEvent = (
   const isAdminRole = role === "admin" || role === "super_admin";
 
   if (!uid || (!isAdminRole && !isAdminFlag && !isEnvOverrideUid)) return;
+
+  const actorName =
+    (session?.user?.user_metadata?.name as string | undefined) ||
+    (session?.user?.app_metadata?.name as string | undefined) ||
+    null;
+  const actorEmail = session?.user?.email || null;
+
   supabase
     .from("admin_audit_log")
     .insert({
@@ -643,7 +650,11 @@ const logAuditEvent = (
       action,
       entity_type: entityType,
       entity_id: entityId,
-      metadata: (metadata ?? {}) as import("../types").Json,
+      metadata: {
+        ...(metadata ?? {}),
+        actor_name: actorName,
+        actor_email: actorEmail,
+      } as import("../types").Json,
     })
     .then(({ error }) => {
       if (error) console.error("[AuditLog] Failed to record event:", error);
@@ -3113,6 +3124,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     try {
       const deletedAt = new Date().toISOString();
       const deletedBy = session?.user?.id || session?.user?.email || null;
+      const customerName = customerMap.get(customerId)?.name || null;
 
       // Optimistic UI update - remove from local state immediately
       try {
@@ -3189,7 +3201,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .is("deleted_at", null);
       if (seniorityErr) throw seniorityErr;
 
-      logAuditEvent(session, "soft_delete", "customer", customerId);
+      logAuditEvent(session, "soft_delete", "customer", customerId, {
+        customer_name: customerName,
+      });
 
       await fetchData();
       await fetchDeletedCustomers();
@@ -3318,7 +3332,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       // Get the customer's deleted_at timestamp to restore matching related records
       const { data: customer, error: fetchError } = await supabase
         .from("customers")
-        .select("id, deleted_at")
+        .select("id, name, deleted_at")
         .eq("id", id)
         .single();
 
@@ -3384,7 +3398,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .eq("deleted_at", deletedAt);
       if (seniorityErr) throw seniorityErr;
 
-      logAuditEvent(session, "restore", "customer", id);
+      logAuditEvent(session, "restore", "customer", id, {
+        customer_name: (customer as any)?.name || null,
+      });
 
       await fetchData();
       await fetchDeletedCustomers();
@@ -3403,7 +3419,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       // Defensive check: verify the customer is soft-deleted before permanent deletion
       const { data: customer, error: fetchError } = await supabase
         .from("customers")
-        .select("id, user_id, deleted_at")
+        .select("id, name, user_id, deleted_at")
         .eq("id", id)
         .single();
 
@@ -3465,7 +3481,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .eq("id", id);
       if (delCustErr) throw delCustErr;
 
-      logAuditEvent(session, "permanent_delete", "customer", id);
+      logAuditEvent(session, "permanent_delete", "customer", id, {
+        customer_name: (customer as any)?.name || null,
+      });
 
       // Delete linked auth user if exists
       if (customerUserId) {

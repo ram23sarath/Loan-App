@@ -143,7 +143,10 @@ const CustomerDetailPage: React.FC = () => {
                 }
                 await updateInstallment(updated.id, {
                   amount: updated.amount,
-                  late_fee: updated.late_fee ?? 0,
+                  late_fee:
+                    updated.late_fee === "" || updated.late_fee === undefined
+                      ? null
+                      : updated.late_fee,
                   date: updated.date,
                   receipt_number: updated.receipt_number,
                 });

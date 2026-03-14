@@ -1573,7 +1573,10 @@ const LoanTableView: React.FC = () => {
                         await updateInstallment(editTarget.id, {
                           date: editForm.date,
                           amount: Number(editForm.amount),
-                          late_fee: Number(editForm.late_fee) || 0,
+                          late_fee:
+                            editForm.late_fee === "" || editForm.late_fee == null
+                              ? null
+                              : Number(editForm.late_fee),
                           receipt_number: editForm.receipt_number,
                         });
                         setEditTarget(null);

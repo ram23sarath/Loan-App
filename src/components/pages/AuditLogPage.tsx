@@ -4,7 +4,6 @@ import { useRouteReady } from "../RouteReadySignal";
 import PageWrapper from "../ui/PageWrapper";
 import { useData } from "../../context/DataContext";
 import { HistoryIcon } from "../../constants";
-import { supabase } from "../../lib/supabase";
 import type { AuditLogEntry } from "../../types";
 
 interface AuditLogResponse {
@@ -52,8 +51,20 @@ const toAmount = (value: unknown): number | null => {
 const getEntityKey = (entityType: string, entityId: string) =>
   `${entityType}:${entityId}`;
 
+const renderScalar = (value: unknown): string => {
+  if (value === null) return "—";
+  if (value === "") return "(empty string)";
+  if (value === undefined) return "(missing)";
+  return String(value);
+};
+
 const getExplicitAuditAmount = (entry: AuditLogEntry): number | null => {
   const metadata = toAuditMetadata(entry);
+  const changes = metadata.changes as
+    | { before?: Record<string, unknown> | null; after?: Record<string, unknown> | null }
+    | undefined;
+  const before = changes?.before ?? null;
+  const after = changes?.after ?? null;
   const amountKeys = [
     "derived_amount",
     "deleted_amount",
@@ -79,6 +90,16 @@ const getExplicitAuditAmount = (entry: AuditLogEntry): number | null => {
   if (updates && typeof updates === "object" && !Array.isArray(updates)) {
     const updatesRecord = updates as Record<string, unknown>;
     const found = toAmount(updatesRecord.amount);
+    if (found !== null) return found;
+  }
+
+  if (after && typeof after === "object") {
+    const found = toAmount((after as Record<string, unknown>).amount);
+    if (found !== null) return found;
+  }
+
+  if (before && typeof before === "object") {
+    const found = toAmount((before as Record<string, unknown>).amount);
     if (found !== null) return found;
   }
 
@@ -139,9 +160,17 @@ const formatCurrency = (value: number) =>
 
 const getAmountDiffText = (entry: AuditLogEntry): string | null => {
   const metadata = toAuditMetadata(entry);
+  const changes = metadata.changes as
+    | { before?: Record<string, unknown> | null; after?: Record<string, unknown> | null }
+    | undefined;
   const previousAmount =
-    toAmount(metadata.previous_amount) ?? toAmount(metadata.original_amount);
-  const newAmount = toAmount(metadata.new_amount) ?? null;
+    toAmount(changes?.before?.amount) ??
+    toAmount(metadata.previous_amount) ??
+    toAmount(metadata.original_amount);
+  const newAmount =
+    toAmount(changes?.after?.amount) ??
+    toAmount(metadata.new_amount) ??
+    null;
   const deletedAmount = toAmount(metadata.deleted_amount);
   const explicitAmount = getAuditAmount(entry);
 
@@ -214,152 +243,7 @@ const AuditLogPage = () => {
     signalRouteReady();
   }, [signalRouteReady]);
 
-  const enrichLegacyAuditAmounts = async (entries: AuditLogEntry[]) => {
-    if (!entries.length) return entries;
-
-    const historicalAmountByEntity = new Map<string, number>();
-
-    entries.forEach((entry) => {
-      if (!entry.entity_id) return;
-      const knownAmount = getExplicitAuditAmount(entry);
-      if (knownAmount === null) return;
-      historicalAmountByEntity.set(
-        getEntityKey(entry.entity_type, entry.entity_id),
-        knownAmount,
-      );
-    });
-
-    const withHistoricalFallback = entries.map((entry) => {
-      if (!entry.entity_id) return entry;
-      if (getExplicitAuditAmount(entry) !== null) return entry;
-
-      const historicalAmount = historicalAmountByEntity.get(
-        getEntityKey(entry.entity_type, entry.entity_id),
-      );
-      if (historicalAmount === undefined) return entry;
-
-      const metadata = toAuditMetadata(entry);
-      return {
-        ...entry,
-        metadata: {
-          ...metadata,
-          derived_amount: historicalAmount,
-        },
-      } as AuditLogEntry;
-    });
-
-    const unresolved = withHistoricalFallback.filter(
-      (entry) => entry.entity_id && getExplicitAuditAmount(entry) === null,
-    );
-
-    if (!unresolved.length) return withHistoricalFallback;
-
-    const unresolvedLoanIds = Array.from(
-      new Set(
-        unresolved
-          .filter((entry) => entry.entity_type === "loan")
-          .map((entry) => entry.entity_id as string),
-      ),
-    );
-
-    const unresolvedSubscriptionIds = Array.from(
-      new Set(
-        unresolved
-          .filter((entry) => entry.entity_type === "subscription")
-          .map((entry) => entry.entity_id as string),
-      ),
-    );
-
-    const unresolvedInstallmentIds = Array.from(
-      new Set(
-        unresolved
-          .filter((entry) => entry.entity_type === "installment")
-          .map((entry) => entry.entity_id as string),
-      ),
-    );
-
-    const dbAmountByEntity = new Map<string, number>();
-
-    if (unresolvedLoanIds.length > 0) {
-      const { data: loanRows, error: loanError } = await supabase
-        .from("loans")
-        .select("id, original_amount")
-        .in("id", unresolvedLoanIds);
-
-      if (loanError) {
-        console.warn("[AuditLogPage] Failed resolving loan amounts:", loanError.message);
-      } else {
-        (loanRows || []).forEach((row: any) => {
-          const amount = toAmount(row.original_amount);
-          if (row.id && amount !== null) {
-            dbAmountByEntity.set(getEntityKey("loan", row.id), amount);
-          }
-        });
-      }
-    }
-
-    if (unresolvedSubscriptionIds.length > 0) {
-      const { data: subscriptionRows, error: subscriptionError } = await supabase
-        .from("subscriptions")
-        .select("id, amount")
-        .in("id", unresolvedSubscriptionIds);
-
-      if (subscriptionError) {
-        console.warn(
-          "[AuditLogPage] Failed resolving subscription amounts:",
-          subscriptionError.message,
-        );
-      } else {
-        (subscriptionRows || []).forEach((row: any) => {
-          const amount = toAmount(row.amount);
-          if (row.id && amount !== null) {
-            dbAmountByEntity.set(getEntityKey("subscription", row.id), amount);
-          }
-        });
-      }
-    }
-
-    if (unresolvedInstallmentIds.length > 0) {
-      const { data: installmentRows, error: installmentError } = await supabase
-        .from("installments")
-        .select("id, amount")
-        .in("id", unresolvedInstallmentIds);
-
-      if (installmentError) {
-        console.warn(
-          "[AuditLogPage] Failed resolving installment amounts:",
-          installmentError.message,
-        );
-      } else {
-        (installmentRows || []).forEach((row: any) => {
-          const amount = toAmount(row.amount);
-          if (row.id && amount !== null) {
-            dbAmountByEntity.set(getEntityKey("installment", row.id), amount);
-          }
-        });
-      }
-    }
-
-    return withHistoricalFallback.map((entry) => {
-      if (!entry.entity_id) return entry;
-      if (getExplicitAuditAmount(entry) !== null) return entry;
-
-      const dbAmount = dbAmountByEntity.get(
-        getEntityKey(entry.entity_type, entry.entity_id),
-      );
-
-      if (dbAmount === undefined) return entry;
-
-      const metadata = toAuditMetadata(entry);
-      return {
-        ...entry,
-        metadata: {
-          ...metadata,
-          derived_amount: dbAmount,
-        },
-      } as AuditLogEntry;
-    });
-  };
+  const enrichLegacyAuditAmounts = async (entries: AuditLogEntry[]) => entries;
 
   const fetchAuditLogs = useCallback(
     async (nextPage = 1) => {
@@ -549,7 +433,7 @@ const AuditLogPage = () => {
                     const valueText = getAmountDiffText(entry);
                     const recordedAt = formatAuditTimeIst(entry.created_at);
 
-                    const baseSentence = `Admin ${actorName} ${actionLabel} ${entityLabel} for ${resolvedCustomerName}`;
+                    const baseSentence = `Admin ${renderScalar(actorName)} ${actionLabel} ${entityLabel} for ${renderScalar(resolvedCustomerName)}`;
                     const sentence = valueText ? `${baseSentence} — ${valueText}` : baseSentence;
 
                     return (

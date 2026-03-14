@@ -13,7 +13,37 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+const DEFAULT_AUDIT_REDACTION = {
+  redactKeys: ['password', 'passcode', 'token', 'access_token', 'refresh_token', 'ssn', 'credit_card', 'auth0_id'],
+  mask: '<REDACTED>',
+};
+
+const redactAuditObject = (input, policy = DEFAULT_AUDIT_REDACTION) => {
+  if (input === null || input === undefined) return input;
+  if (Array.isArray(input)) return input.map((v) => redactAuditObject(v, policy));
+  if (typeof input !== 'object') return input;
+  const out = {};
+  for (const [key, value] of Object.entries(input)) {
+    const shouldRedact = policy.redactKeys.some((rk) => rk.toLowerCase() === key.toLowerCase());
+    out[key] = shouldRedact ? policy.mask : redactAuditObject(value, policy);
+  }
+  return out;
+};
+
+const logAuditEvent = async (supabase, payload) => {
+  const { error } = await supabase.from('admin_audit_log').insert({
+    action: payload.action,
+    entity_type: payload.entity_type,
+    entity_id: payload.entity_id,
+    metadata: redactAuditObject(payload.metadata),
+  });
+  if (error) {
+    console.error('[AuditLog] Failed to write audit log:', error.message);
+  }
+};
+
 export default async (req) => {
+  const requestId = req.headers.get('x-request-id') || crypto.randomUUID();
   if (req.method !== 'POST') {
     return new Response('Method not allowed. Use POST.', { status: 405 });
   }
@@ -112,6 +142,23 @@ export default async (req) => {
         );
       }
 
+      await logAuditEvent(supabase, {
+        action: 'update',
+        entity_type: 'customer_auth_link',
+        entity_id: customer_id,
+        metadata: {
+          request_id: requestId,
+          source: 'update-user-from-customer:create-path',
+          customer_id,
+          user_id: newUserId,
+          changes: {
+            before: { customer_id, user_id: null },
+            after: { customer_id, user_id: newUserId },
+          },
+          fields_changed: ['user_id'],
+        },
+      });
+
       return new Response(
         JSON.stringify({ success: true, created: true, user_id: newUserId, email: expectedEmail }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
@@ -184,6 +231,23 @@ export default async (req) => {
           const { error: linkErr } = await supabase.from('customers').update({ user_id: newUserId }).eq('id', customer_id);
           if (linkErr) {
             console.error('Recreated user but failed linking to customer:', linkErr.message);
+          } else {
+            await logAuditEvent(supabase, {
+              action: 'update',
+              entity_type: 'customer_auth_link',
+              entity_id: customer_id,
+              metadata: {
+                request_id: requestId,
+                source: 'update-user-from-customer:recreate-path',
+                customer_id,
+                user_id: newUserId,
+                changes: {
+                  before: { customer_id, user_id: customer.user_id },
+                  after: { customer_id, user_id: newUserId },
+                },
+                fields_changed: ['user_id'],
+              },
+            });
           }
         }
 

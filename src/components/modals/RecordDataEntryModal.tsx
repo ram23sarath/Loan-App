@@ -76,7 +76,7 @@ const RecordDataEntryModal: React.FC<Props> = ({ customer, onClose, dataEntry })
           subtype: data.subtype || null,
           payment_method: data.payment_method || null,
           receipt_number: data.receipt || '',
-          notes: data.notes || '',
+          notes: data.notes === '' ? null : data.notes,
         } as any);
       } else {
         await addDataEntry({
@@ -87,7 +87,7 @@ const RecordDataEntryModal: React.FC<Props> = ({ customer, onClose, dataEntry })
           subtype: data.subtype || null,
           payment_method: data.payment_method || null,
           receipt_number: data.receipt || '',
-          notes: data.notes || '',
+          notes: data.notes === '' ? null : data.notes,
         } as any);
       }
       reset();

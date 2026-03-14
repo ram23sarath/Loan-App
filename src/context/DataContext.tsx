@@ -627,6 +627,48 @@ const normalizeAuditUuid = (value: string | null | undefined): string | null => 
   return UUID_REGEX.test(trimmed) ? trimmed : null;
 };
 
+type AuditSnapshot = Record<string, unknown> | null;
+
+const DEFAULT_AUDIT_REDACTION = {
+  redactKeys: ["password", "passcode", "token", "access_token", "refresh_token", "ssn", "credit_card", "auth0_id"],
+  mask: "<REDACTED>",
+};
+
+const redactAuditObject = (
+  input: unknown,
+  policy: { redactKeys: string[]; mask: string } = DEFAULT_AUDIT_REDACTION,
+): unknown => {
+  if (input === null || input === undefined) return input;
+  if (Array.isArray(input)) return input.map((v) => redactAuditObject(v, policy));
+  if (typeof input !== "object") return input;
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+    const shouldRedact = policy.redactKeys.some((rk) => rk.toLowerCase() === key.toLowerCase());
+    out[key] = shouldRedact ? policy.mask : redactAuditObject(value, policy);
+  }
+  return out;
+};
+
+const extractChangedFields = (
+  before: AuditSnapshot,
+  after: AuditSnapshot,
+): string[] => {
+  if (!before && !after) return [];
+  const keys = new Set([...Object.keys(before ?? {}), ...Object.keys(after ?? {})]);
+  return Array.from(keys).filter((k) => before?.[k] !== after?.[k]);
+};
+
+const buildAuditChangeMetadata = (
+  before: AuditSnapshot,
+  after: AuditSnapshot,
+) => ({
+  changes: {
+    before,
+    after,
+  },
+  fields_changed: extractChangedFields(before, after),
+});
+
 /** Fire-and-forget audit log insert — records actions for admin users. */
 const logAuditEvent = (
   session: Session | null,
@@ -666,7 +708,7 @@ const logAuditEvent = (
       entity_type: entityType,
       entity_id: normalizedEntityId,
       metadata: {
-        ...(metadata ?? {}),
+        ...(redactAuditObject(metadata ?? {}) as Record<string, unknown>),
         ...(hasRawEntityId && !normalizedEntityId
           ? { raw_entity_id: String(entityId).trim() }
           : {}),
@@ -1230,7 +1272,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
-      logAuditEvent(session, "create", "seniority", data.id, { customer_id: customerId, ...details });
+      const customerName = await resolveCustomerName(customerId);
+      logAuditEvent(session, "create", "seniority", data.id, {
+        customer_id: customerId,
+        customer_name: customerName,
+        ...details,
+        ...buildAuditChangeMetadata(null, (data as AuditSnapshot) ?? null),
+      });
 
       // Notify admins if this was a scoped request
       if (isScopedCustomer) {
@@ -1266,22 +1314,59 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const resolveCustomerName = async (
+    customerId: string | null | undefined,
+  ): Promise<string | null> => {
+    if (!customerId) return null;
+    const fromMap = customerMap.get(customerId)?.name;
+    if (fromMap) return fromMap;
+
+    const { data } = await supabase
+      .from("customers")
+      .select("name")
+      .eq("id", customerId)
+      .maybeSingle();
+
+    return ((data as { name?: string } | null)?.name ?? null) || null;
+  };
+
   const removeFromSeniority = async (id: string) => {
     if (isScopedCustomer)
       throw new Error(
         "Read-only access: scoped customers cannot modify seniority list",
       );
     try {
+      const { data: beforeRow } = await supabase
+        .from("loan_seniority")
+        .select("*")
+        .eq("id", id)
+        .single();
+      const customerId =
+        (beforeRow as { customer_id?: string } | null)?.customer_id ?? null;
+      const customerName = await resolveCustomerName(customerId);
       // Soft delete: set deleted_at timestamp instead of hard delete
+      const deletedAt = new Date().toISOString();
+      const deletedBy = session?.user?.id || session?.user?.email || null;
       const { error } = await supabase
         .from("loan_seniority")
         .update({
-          deleted_at: new Date().toISOString(),
-          deleted_by: session?.user?.id || session?.user?.email || null,
+          deleted_at: deletedAt,
+          deleted_by: deletedBy,
         } as any)
         .eq("id", id);
       if (error) throw error;
-      logAuditEvent(session, "soft_delete", "seniority", id);
+      logAuditEvent(session, "soft_delete", "seniority", id, {
+        customer_id: customerId,
+        customer_name: customerName,
+        ...buildAuditChangeMetadata(
+          (beforeRow as AuditSnapshot) ?? null,
+          {
+            ...((beforeRow as Record<string, unknown>) ?? {}),
+            deleted_at: deletedAt,
+            deleted_by: deletedBy,
+          },
+        ),
+      });
       await fetchSeniorityList();
       await fetchDeletedSeniorityList();
     } catch (err: any) {
@@ -1295,6 +1380,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         "Read-only access: scoped customers cannot restore seniority entries",
       );
     try {
+      const { data: beforeRow } = await supabase
+        .from("loan_seniority")
+        .select("*")
+        .eq("id", id)
+        .single();
+      const customerId =
+        (beforeRow as { customer_id?: string } | null)?.customer_id ?? null;
+      const customerName = await resolveCustomerName(customerId);
       // Restore soft-deleted entry by clearing deleted_at
       const { error } = await supabase
         .from("loan_seniority")
@@ -1304,7 +1397,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", id);
       if (error) throw error;
-      logAuditEvent(session, "restore", "seniority", id);
+      logAuditEvent(session, "restore", "seniority", id, {
+        customer_id: customerId,
+        customer_name: customerName,
+        ...buildAuditChangeMetadata(
+          (beforeRow as AuditSnapshot) ?? null,
+          {
+            ...((beforeRow as Record<string, unknown>) ?? {}),
+            deleted_at: null,
+            deleted_by: null,
+          },
+        ),
+      });
       await fetchSeniorityList();
       await fetchDeletedSeniorityList();
     } catch (err: any) {
@@ -1323,7 +1427,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       // Defensive check: verify the entry is soft-deleted before permanent deletion
       const { data: entry, error: fetchError } = await supabase
         .from("loan_seniority")
-        .select("id, deleted_at")
+        .select("id, customer_id, deleted_at")
         .eq("id", id)
         .single();
 
@@ -1336,12 +1440,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Hard delete - permanently remove the entry
+      const beforeSnapshot = (entry as AuditSnapshot) ?? null;
       const { error } = await supabase
         .from("loan_seniority")
         .delete()
         .eq("id", id);
       if (error) throw error;
-      logAuditEvent(session, "permanent_delete", "seniority", id);
+      logAuditEvent(session, "permanent_delete", "seniority", id, {
+        customer_id: (entry as { customer_id?: string } | null)?.customer_id ?? null,
+        customer_name: await resolveCustomerName(
+          (entry as { customer_id?: string } | null)?.customer_id ?? null,
+        ),
+        ...buildAuditChangeMetadata(beforeSnapshot, null),
+      });
       await fetchDeletedSeniorityList();
     } catch (err: any) {
       throw new Error(
@@ -1363,6 +1474,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         "Read-only access: scoped customers cannot modify seniority list",
       );
     try {
+      const { data: beforeRow } = await supabase
+        .from("loan_seniority")
+        .select("*")
+        .eq("id", id)
+        .single();
       const { data, error } = await supabase
         .from("loan_seniority")
         .update(updates)
@@ -1370,7 +1486,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
-      logAuditEvent(session, "update", "seniority", id, { updates });
+      const customerId =
+        (data as { customer_id?: string } | null)?.customer_id ??
+        (beforeRow as { customer_id?: string } | null)?.customer_id ??
+        null;
+      logAuditEvent(session, "update", "seniority", id, {
+        customer_id: customerId,
+        customer_name: await resolveCustomerName(customerId),
+        ...buildAuditChangeMetadata(
+          (beforeRow as AuditSnapshot) ?? null,
+          (data as AuditSnapshot) ?? null,
+        ),
+      });
       await fetchSeniorityList();
     } catch (err: any) {
       throw new Error(parseSupabaseError(err, `updating seniority item ${id}`));
@@ -1397,6 +1524,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // Capture previous phone from in-memory map so we can detect changes
     const previous = customerMap.get(customerId);
     const previousPhone = previous?.phone ?? null;
+    const { data: beforeRow } = await supabase
+      .from("customers")
+      .select("*")
+      .eq("id", customerId)
+      .single();
 
     try {
       const { data, error } = await supabase
@@ -1407,11 +1539,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .single();
       if (error || !data) throw error;
       logAuditEvent(session, "update", "customer", customerId, {
-        updates,
         customer_id: customerId,
         customer_name: data.name ?? previous?.name ?? null,
         previous_phone: previousPhone,
         new_phone: data.phone ?? null,
+        ...buildAuditChangeMetadata(
+          (beforeRow as AuditSnapshot) ?? null,
+          (data as AuditSnapshot) ?? null,
+        ),
       });
 
       await fetchData();
@@ -1474,6 +1609,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         "Read-only access: scoped customers cannot perform updates",
       );
     try {
+      const { data: beforeRow } = await supabase
+        .from("loans")
+        .select("*")
+        .eq("id", loanId)
+        .single();
       const previousLoan = loans.find((loan) => loan.id === loanId);
       const { data, error } = await supabase
         .from("loans")
@@ -1487,11 +1627,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         customerMap.get(data.customer_id)?.name ||
         null;
       logAuditEvent(session, "update", "loan", loanId, {
-        updates,
         customer_id: data.customer_id,
         customer_name: customerName,
         previous_amount: previousLoan?.original_amount ?? null,
         new_amount: data.original_amount ?? null,
+        ...buildAuditChangeMetadata(
+          (beforeRow as AuditSnapshot) ?? null,
+          (data as AuditSnapshot) ?? null,
+        ),
       });
       // Optimistically update local state
       setLoans((prev) =>
@@ -1516,6 +1659,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         "Read-only access: scoped customers cannot perform updates",
       );
     try {
+      const { data: beforeRow } = await supabase
+        .from("subscriptions")
+        .select("*")
+        .eq("id", subscriptionId)
+        .single();
       const previousSubscription = subscriptions.find(
         (subscription) => subscription.id === subscriptionId,
       );
@@ -1531,11 +1679,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         customerMap.get(data.customer_id)?.name ||
         null;
       logAuditEvent(session, "update", "subscription", subscriptionId, {
-        updates,
         customer_id: data.customer_id,
         customer_name: customerName,
         previous_amount: previousSubscription?.amount ?? null,
         new_amount: data.amount ?? null,
+        ...buildAuditChangeMetadata(
+          (beforeRow as AuditSnapshot) ?? null,
+          (data as AuditSnapshot) ?? null,
+        ),
       });
       // Optimistically update local state
       setSubscriptions((prev) =>
@@ -1634,6 +1785,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         "Read-only access: scoped customers cannot perform updates",
       );
     try {
+      const { data: beforeRow } = await supabase
+        .from("installments")
+        .select("*")
+        .eq("id", installmentId)
+        .single();
       const previousInstallment = installments.find(
         (installment) => installment.id === installmentId,
       );
@@ -1651,12 +1807,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         (customerId ? customerMap.get(customerId)?.name : null) ||
         null;
       logAuditEvent(session, "update", "installment", installmentId, {
-        updates,
         loan_id: data.loan_id,
         customer_id: customerId,
         customer_name: customerName,
         previous_amount: previousInstallment?.amount ?? null,
         new_amount: data.amount ?? null,
+        ...buildAuditChangeMetadata(
+          (beforeRow as AuditSnapshot) ?? null,
+          (data as AuditSnapshot) ?? null,
+        ),
       });
       // Optimistically update local state
       setInstallments((prev) =>
@@ -1742,6 +1901,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         amount: entry.amount,
         previous_amount: null,
         new_amount: entry.amount,
+        ...buildAuditChangeMetadata(null, (data as AuditSnapshot) ?? null),
       });
       // Optimistically update local state — avoids full 5-table refetch
       setDataEntries((prev) => [data as DataEntry, ...prev]);
@@ -1773,6 +1933,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         "Read-only access: scoped customers cannot update data entries",
       );
     try {
+      const { data: beforeRow } = await supabase
+        .from("data_entries")
+        .select("*")
+        .eq("id", id)
+        .single();
       const previousEntry = dataEntries.find((entry) => entry.id === id);
       const { data, error } = await supabase
         .from("data_entries")
@@ -1782,11 +1947,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .single();
       if (error || !data) throw error;
       logAuditEvent(session, "update", "data_entry", id, {
-        updates,
         customer_id: data.customer_id,
         customer_name: customerMap.get(data.customer_id)?.name || null,
         previous_amount: previousEntry?.amount ?? null,
         new_amount: data.amount ?? null,
+        ...buildAuditChangeMetadata(
+          (beforeRow as AuditSnapshot) ?? null,
+          (data as AuditSnapshot) ?? null,
+        ),
       });
       // Optimistically update local state with the returned data
       setDataEntries((prev) =>
@@ -1805,6 +1973,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       );
     try {
       const targetEntry = dataEntries.find((entry) => entry.id === id);
+      const { data: beforeRow } = await supabase
+        .from("data_entries")
+        .select("*")
+        .eq("id", id)
+        .single();
       // Soft delete: set deleted_at timestamp instead of hard delete
       const { error } = await supabase
         .from("data_entries")
@@ -1821,6 +1994,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             ? customerMap.get(targetEntry.customer_id)?.name
             : null) || null,
         deleted_amount: targetEntry?.amount ?? null,
+        ...buildAuditChangeMetadata(
+          (beforeRow as AuditSnapshot) ?? null,
+          {
+            ...((beforeRow as Record<string, unknown>) ?? {}),
+            deleted_at: new Date().toISOString(),
+            deleted_by: session?.user?.id || session?.user?.email || null,
+          },
+        ),
       });
       // Optimistically remove from local state
       setDataEntries((prev) => prev.filter((entry) => entry.id !== id));
@@ -1838,6 +2019,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       );
     try {
       // Restore soft-deleted entry by clearing deleted_at
+      const { data: beforeRow } = await supabase
+        .from("data_entries")
+        .select("*")
+        .eq("id", id)
+        .single();
       const { error } = await supabase
         .from("data_entries")
         .update({
@@ -1846,7 +2032,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", id);
       if (error) throw error;
-      logAuditEvent(session, "restore", "data_entry", id);
+      logAuditEvent(session, "restore", "data_entry", id, {
+        ...buildAuditChangeMetadata(
+          (beforeRow as AuditSnapshot) ?? null,
+          {
+            ...((beforeRow as Record<string, unknown>) ?? {}),
+            deleted_at: null,
+            deleted_by: null,
+          },
+        ),
+      });
       // Fetch the restored data entry
       const { data: restoredEntry, error: fetchErr } = await supabase
         .from("data_entries")
@@ -1903,6 +2098,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Hard delete - permanently remove the entry
+      const beforeSnapshot = (entry as AuditSnapshot) ?? null;
       const { error } = await supabase
         .from("data_entries")
         .delete()
@@ -1913,6 +2109,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         customer_id: customerId,
         customer_name: customerId ? customerMap.get(customerId)?.name || null : null,
         deleted_amount: (entry as any)?.amount ?? null,
+        ...buildAuditChangeMetadata(beforeSnapshot, null),
       });
       await fetchDeletedDataEntries();
     } catch (err: any) {
@@ -3021,6 +3218,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         customer_name: customerData.name,
         name: customerData.name,
         phone: customerData.phone,
+        ...buildAuditChangeMetadata(null, (data as AuditSnapshot) ?? null),
       });
 
       // Trigger background user creation without blocking the customer add flow.
@@ -3116,6 +3314,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         amount: loanData.original_amount,
         previous_amount: null,
         new_amount: loanData.original_amount,
+        ...buildAuditChangeMetadata(null, (data as AuditSnapshot) ?? null),
       });
       try {
         if (data.customer_id) {
@@ -3161,6 +3360,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         amount: subscriptionData.amount,
         previous_amount: null,
         new_amount: subscriptionData.amount,
+        ...buildAuditChangeMetadata(null, (data as AuditSnapshot) ?? null),
       });
       // Optimistically update local state with the returned subscription + customer data from state
       const customer = customerMap.get(data.customer_id);
@@ -3244,6 +3444,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         amount: installmentData.amount,
         previous_amount: null,
         new_amount: installmentData.amount,
+        ...buildAuditChangeMetadata(null, (data as AuditSnapshot) ?? null),
       });
       // Optimistically update local state
       setInstallments((prev) => [data as Installment, ...prev]);
@@ -3262,6 +3463,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       const deletedAt = new Date().toISOString();
       const deletedBy = session?.user?.id || session?.user?.email || null;
       const customerName = customerMap.get(customerId)?.name || null;
+      const { data: beforeRow } = await supabase
+        .from("customers")
+        .select("*")
+        .eq("id", customerId)
+        .single();
 
       // Optimistic UI update - remove from local state immediately
       try {
@@ -3340,6 +3546,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
       logAuditEvent(session, "soft_delete", "customer", customerId, {
         customer_name: customerName,
+        ...buildAuditChangeMetadata(
+          (beforeRow as AuditSnapshot) ?? null,
+          {
+            ...((beforeRow as Record<string, unknown>) ?? {}),
+            deleted_at: deletedAt,
+            deleted_by: deletedBy,
+          },
+        ),
       });
 
       await fetchData();
@@ -3358,12 +3572,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       throw new Error("Read-only access: scoped customers cannot delete loans");
     try {
       const targetLoan = loans.find((loan) => loan.id === loanId);
+      const deletedAt = new Date().toISOString();
+      const deletedBy = session?.user?.id || session?.user?.email || null;
+      const { data: beforeRow } = await supabase
+        .from("loans")
+        .select("*")
+        .eq("id", loanId)
+        .single();
       // Soft delete: set deleted_at timestamp instead of hard delete
       const { error } = await supabase
         .from("loans")
         .update({
-          deleted_at: new Date().toISOString(),
-          deleted_by: session?.user?.id || session?.user?.email || null,
+          deleted_at: deletedAt,
+          deleted_by: deletedBy,
         } as any)
         .eq("id", loanId);
       if (error) throw error;
@@ -3376,6 +3597,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             : null) ||
           null,
         deleted_amount: targetLoan?.original_amount ?? null,
+        ...buildAuditChangeMetadata(
+          (beforeRow as AuditSnapshot) ?? null,
+          {
+            ...((beforeRow as Record<string, unknown>) ?? {}),
+            deleted_at: deletedAt,
+            deleted_by: deletedBy,
+          },
+        ),
       });
       // Optimistically remove from local state
       setLoans((prev) => prev.filter((loan) => loan.id !== loanId));
@@ -3393,6 +3622,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       );
     try {
       // Restore soft-deleted entry by clearing deleted_at
+      const { data: beforeRow } = await supabase
+        .from("loans")
+        .select("*")
+        .eq("id", id)
+        .single();
       const { error } = await supabase
         .from("loans")
         .update({
@@ -3401,7 +3635,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", id);
       if (error) throw error;
-      logAuditEvent(session, "restore", "loan", id);
+      logAuditEvent(session, "restore", "loan", id, {
+        ...buildAuditChangeMetadata(
+          (beforeRow as AuditSnapshot) ?? null,
+          {
+            ...((beforeRow as Record<string, unknown>) ?? {}),
+            deleted_at: null,
+            deleted_by: null,
+          },
+        ),
+      });
       // Fetch the restored loan with customer relationship
       const { data: restoredLoan, error: fetchErr } = await supabase
         .from("loans")
@@ -3458,6 +3701,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Hard delete - permanently remove the loan (installments will cascade delete)
+      const beforeSnapshot = (entry as AuditSnapshot) ?? null;
       const { error } = await supabase.from("loans").delete().eq("id", id);
       if (error) throw error;
       const customerId = (entry as any)?.customer_id ?? null;
@@ -3465,6 +3709,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         customer_id: customerId,
         customer_name: customerId ? customerMap.get(customerId)?.name || null : null,
         deleted_amount: (entry as any)?.original_amount ?? null,
+        ...buildAuditChangeMetadata(beforeSnapshot, null),
       });
       await fetchDeletedLoans();
     } catch (err: any) {
@@ -3495,6 +3740,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const deletedAt = (customer as any).deleted_at;
+      const beforeSnapshot = (customer as AuditSnapshot) ?? null;
 
       // Restore the customer
       const { error: custErr } = await supabase
@@ -3552,6 +3798,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
       logAuditEvent(session, "restore", "customer", id, {
         customer_name: (customer as any)?.name || null,
+        ...buildAuditChangeMetadata(
+          beforeSnapshot,
+          {
+            ...((customer as Record<string, unknown>) ?? {}),
+            deleted_at: null,
+            deleted_by: null,
+          },
+        ),
       });
 
       await fetchData();
@@ -3584,6 +3838,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const customerUserId = (customer as any).user_id || null;
+      const beforeSnapshot = (customer as AuditSnapshot) ?? null;
 
       // Hard delete all related data entries
       const { error: delDataErr } = await supabase
@@ -3635,6 +3890,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
       logAuditEvent(session, "permanent_delete", "customer", id, {
         customer_name: (customer as any)?.name || null,
+        ...buildAuditChangeMetadata(beforeSnapshot, null),
       });
 
       // Delete linked auth user if exists
@@ -3687,12 +3943,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       const targetSubscription = subscriptions.find(
         (subscription) => subscription.id === subscriptionId,
       );
+      const deletedAt = new Date().toISOString();
+      const deletedBy = session?.user?.id || session?.user?.email || null;
+      const { data: beforeRow } = await supabase
+        .from("subscriptions")
+        .select("*")
+        .eq("id", subscriptionId)
+        .single();
       // Soft delete: set deleted_at timestamp instead of hard delete
       const { error } = await supabase
         .from("subscriptions")
         .update({
-          deleted_at: new Date().toISOString(),
-          deleted_by: session?.user?.id || session?.user?.email || null,
+          deleted_at: deletedAt,
+          deleted_by: deletedBy,
         } as any)
         .eq("id", subscriptionId);
       if (error) throw error;
@@ -3705,6 +3968,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             : null) ||
           null,
         deleted_amount: targetSubscription?.amount ?? null,
+        ...buildAuditChangeMetadata(
+          (beforeRow as AuditSnapshot) ?? null,
+          {
+            ...((beforeRow as Record<string, unknown>) ?? {}),
+            deleted_at: deletedAt,
+            deleted_by: deletedBy,
+          },
+        ),
       });
       // Optimistically remove from local state
       setSubscriptions((prev) =>
@@ -3754,6 +4025,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Parent customer exists and is not deleted - now safe to restore subscription in DB
+      const beforeSnapshot = (deletedSub as AuditSnapshot) ?? null;
       const { error } = await supabase
         .from("subscriptions")
         .update({
@@ -3763,7 +4035,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .eq("id", id);
       if (error) throw error;
 
-      logAuditEvent(session, "restore", "subscription", id);
+      logAuditEvent(session, "restore", "subscription", id, {
+        ...buildAuditChangeMetadata(
+          beforeSnapshot,
+          {
+            ...((deletedSub as Record<string, unknown>) ?? {}),
+            deleted_at: null,
+            deleted_by: null,
+          },
+        ),
+      });
 
       // Update UI state with restored subscription
       setSubscriptions((prev) => [deletedSub as SubscriptionWithCustomer, ...prev]);
@@ -3797,6 +4078,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Hard delete - permanently remove the entry
+      const beforeSnapshot = (entry as AuditSnapshot) ?? null;
       const { error } = await supabase
         .from("subscriptions")
         .delete()
@@ -3807,6 +4089,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         customer_id: customerId,
         customer_name: customerId ? customerMap.get(customerId)?.name || null : null,
         deleted_amount: (entry as any)?.amount ?? null,
+        ...buildAuditChangeMetadata(beforeSnapshot, null),
       });
       await fetchDeletedSubscriptions();
     } catch (err: any) {
@@ -3825,12 +4108,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       const targetInstallment = installments.find(
         (installment) => installment.id === installmentId,
       );
+      const deletedAt = new Date().toISOString();
+      const deletedBy = session?.user?.id || session?.user?.email || null;
+      const { data: beforeRow } = await supabase
+        .from("installments")
+        .select("*")
+        .eq("id", installmentId)
+        .single();
       // Soft delete: set deleted_at timestamp instead of hard delete
       const { error } = await supabase
         .from("installments")
         .update({
-          deleted_at: new Date().toISOString(),
-          deleted_by: session?.user?.id || session?.user?.email || null,
+          deleted_at: deletedAt,
+          deleted_by: deletedBy,
         } as any)
         .eq("id", installmentId);
       if (error) throw error;
@@ -3846,6 +4136,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           (customerId ? customerMap.get(customerId)?.name : null) ||
           null,
         deleted_amount: targetInstallment?.amount ?? null,
+        ...buildAuditChangeMetadata(
+          (beforeRow as AuditSnapshot) ?? null,
+          {
+            ...((beforeRow as Record<string, unknown>) ?? {}),
+            deleted_at: deletedAt,
+            deleted_by: deletedBy,
+          },
+        ),
       });
       // Optimistically remove from local state
       setInstallments((prev) =>
@@ -3895,6 +4193,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Restore soft-deleted entry by clearing deleted_at
+      const beforeSnapshot = (installment as AuditSnapshot) ?? null;
       const { error } = await supabase
         .from("installments")
         .update({
@@ -3903,7 +4202,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         } as any)
         .eq("id", id);
       if (error) throw error;
-      logAuditEvent(session, "restore", "installment", id);
+      logAuditEvent(session, "restore", "installment", id, {
+        ...buildAuditChangeMetadata(
+          beforeSnapshot,
+          {
+            ...((installment as Record<string, unknown>) ?? {}),
+            deleted_at: null,
+            deleted_by: null,
+          },
+        ),
+      });
       // Fetch the restored installment
       const { data: restoredInst, error: fetchErr } = await supabase
         .from("installments")
@@ -3942,6 +4250,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Hard delete - permanently remove the installment
+      const beforeSnapshot = (entry as AuditSnapshot) ?? null;
       const { error } = await supabase
         .from("installments")
         .delete()
@@ -3958,6 +4267,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           (customerId ? customerMap.get(customerId)?.name : null) ||
           null,
         deleted_amount: (entry as any)?.amount ?? null,
+        ...buildAuditChangeMetadata(beforeSnapshot, null),
       });
       await fetchDeletedInstallments();
     } catch (err: any) {

@@ -537,8 +537,8 @@ const DataPage = () => {
         amount: Number(editEntryForm.amount),
         type: editEntryForm.type,
         subtype: editEntryForm.subtype || null,
-        receipt_number: editEntryForm.receipt || "",
-        notes: editEntryForm.notes || "",
+        receipt_number: editEntryForm.receipt === "" ? null : editEntryForm.receipt,
+        notes: editEntryForm.notes === "" ? null : editEntryForm.notes,
         payment_method: editEntryForm.paymentMethod || null,
       });
       setEditEntryId(null);

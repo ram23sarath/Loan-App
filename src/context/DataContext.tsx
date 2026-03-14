@@ -1272,8 +1272,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
+      const customerName = await resolveCustomerName(customerId);
       logAuditEvent(session, "create", "seniority", data.id, {
         customer_id: customerId,
+        customer_name: customerName,
         ...details,
         ...buildAuditChangeMetadata(null, (data as AuditSnapshot) ?? null),
       });
@@ -1312,6 +1314,22 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const resolveCustomerName = async (
+    customerId: string | null | undefined,
+  ): Promise<string | null> => {
+    if (!customerId) return null;
+    const fromMap = customerMap.get(customerId)?.name;
+    if (fromMap) return fromMap;
+
+    const { data } = await supabase
+      .from("customers")
+      .select("name")
+      .eq("id", customerId)
+      .maybeSingle();
+
+    return ((data as { name?: string } | null)?.name ?? null) || null;
+  };
+
   const removeFromSeniority = async (id: string) => {
     if (isScopedCustomer)
       throw new Error(
@@ -1323,6 +1341,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select("*")
         .eq("id", id)
         .single();
+      const customerId =
+        (beforeRow as { customer_id?: string } | null)?.customer_id ?? null;
+      const customerName = await resolveCustomerName(customerId);
       // Soft delete: set deleted_at timestamp instead of hard delete
       const deletedAt = new Date().toISOString();
       const deletedBy = session?.user?.id || session?.user?.email || null;
@@ -1335,6 +1356,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .eq("id", id);
       if (error) throw error;
       logAuditEvent(session, "soft_delete", "seniority", id, {
+        customer_id: customerId,
+        customer_name: customerName,
         ...buildAuditChangeMetadata(
           (beforeRow as AuditSnapshot) ?? null,
           {
@@ -1362,6 +1385,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select("*")
         .eq("id", id)
         .single();
+      const customerId =
+        (beforeRow as { customer_id?: string } | null)?.customer_id ?? null;
+      const customerName = await resolveCustomerName(customerId);
       // Restore soft-deleted entry by clearing deleted_at
       const { error } = await supabase
         .from("loan_seniority")
@@ -1372,6 +1398,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .eq("id", id);
       if (error) throw error;
       logAuditEvent(session, "restore", "seniority", id, {
+        customer_id: customerId,
+        customer_name: customerName,
         ...buildAuditChangeMetadata(
           (beforeRow as AuditSnapshot) ?? null,
           {
@@ -1399,7 +1427,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       // Defensive check: verify the entry is soft-deleted before permanent deletion
       const { data: entry, error: fetchError } = await supabase
         .from("loan_seniority")
-        .select("id, deleted_at")
+        .select("id, customer_id, deleted_at")
         .eq("id", id)
         .single();
 
@@ -1419,6 +1447,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .eq("id", id);
       if (error) throw error;
       logAuditEvent(session, "permanent_delete", "seniority", id, {
+        customer_id: (entry as { customer_id?: string } | null)?.customer_id ?? null,
+        customer_name: await resolveCustomerName(
+          (entry as { customer_id?: string } | null)?.customer_id ?? null,
+        ),
         ...buildAuditChangeMetadata(beforeSnapshot, null),
       });
       await fetchDeletedSeniorityList();
@@ -1454,7 +1486,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
+      const customerId =
+        (data as { customer_id?: string } | null)?.customer_id ??
+        (beforeRow as { customer_id?: string } | null)?.customer_id ??
+        null;
       logAuditEvent(session, "update", "seniority", id, {
+        customer_id: customerId,
+        customer_name: await resolveCustomerName(customerId),
         ...buildAuditChangeMetadata(
           (beforeRow as AuditSnapshot) ?? null,
           (data as AuditSnapshot) ?? null,

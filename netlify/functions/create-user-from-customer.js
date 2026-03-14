@@ -141,26 +141,26 @@ export default async (req, context) => {
       console.warn(
         `⚠️  User created but customer update failed. Manual update may be needed.`
       );
-    }
+    } else {
+      console.log(`✅ Customer updated with user_id: ${userId}`);
 
-    console.log(`✅ Customer updated with user_id: ${userId}`);
-
-    await logAuditEvent(supabase, {
-      action: 'update',
-      entity_type: 'customer_auth_link',
-      entity_id: customer_id,
-      metadata: {
-        request_id: requestId,
-        source: 'create-user-from-customer',
-        customer_id,
-        user_id: userId,
-        changes: {
-          before: null,
-          after: { customer_id, user_id: userId },
+      await logAuditEvent(supabase, {
+        action: 'update',
+        entity_type: 'customer_auth_link',
+        entity_id: customer_id,
+        metadata: {
+          request_id: requestId,
+          source: 'create-user-from-customer',
+          customer_id,
+          user_id: userId,
+          changes: {
+            before: null,
+            after: { customer_id, user_id: userId },
+          },
+          fields_changed: ['user_id'],
         },
-        fields_changed: ['user_id'],
-      },
-    });
+      });
+    }
 
     // Create system notification
     const { error: notifyError } = await supabase

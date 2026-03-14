@@ -53,6 +53,7 @@ const getEntityKey = (entityType: string, entityId: string) =>
 
 const getExplicitAuditAmount = (entry: AuditLogEntry): number | null => {
   const metadata = toAuditMetadata(entry);
+  const changes = metadata.changes;
   const amountKeys = [
     "derived_amount",
     "deleted_amount",
@@ -79,6 +80,30 @@ const getExplicitAuditAmount = (entry: AuditLogEntry): number | null => {
     const updatesRecord = updates as Record<string, unknown>;
     const found = toAmount(updatesRecord.amount);
     if (found !== null) return found;
+  }
+
+  if (changes && typeof changes === "object" && !Array.isArray(changes)) {
+    const changesRecord = changes as Record<string, unknown>;
+    const after = changesRecord.after;
+    const before = changesRecord.before;
+
+    const snapshotAmountKeys = ["amount", "original_amount", "value"];
+
+    if (after && typeof after === "object" && !Array.isArray(after)) {
+      const afterRecord = after as Record<string, unknown>;
+      for (const key of snapshotAmountKeys) {
+        const found = toAmount(afterRecord[key]);
+        if (found !== null) return found;
+      }
+    }
+
+    if (before && typeof before === "object" && !Array.isArray(before)) {
+      const beforeRecord = before as Record<string, unknown>;
+      for (const key of snapshotAmountKeys) {
+        const found = toAmount(beforeRecord[key]);
+        if (found !== null) return found;
+      }
+    }
   }
 
   return null;
@@ -138,9 +163,36 @@ const formatCurrency = (value: number) =>
 
 const getAmountDiffText = (entry: AuditLogEntry): string | null => {
   const metadata = toAuditMetadata(entry);
-  const previousAmount =
+  const changes = metadata.changes;
+
+  let previousAmount =
     toAmount(metadata.previous_amount) ?? toAmount(metadata.original_amount);
-  const newAmount = toAmount(metadata.new_amount) ?? null;
+  let newAmount = toAmount(metadata.new_amount) ?? null;
+
+  if (changes && typeof changes === "object" && !Array.isArray(changes)) {
+    const changesRecord = changes as Record<string, unknown>;
+    const before = changesRecord.before;
+    const after = changesRecord.after;
+
+    if (before && typeof before === "object" && !Array.isArray(before)) {
+      const beforeRecord = before as Record<string, unknown>;
+      previousAmount =
+        previousAmount ??
+        toAmount(beforeRecord.amount) ??
+        toAmount(beforeRecord.original_amount) ??
+        toAmount(beforeRecord.value);
+    }
+
+    if (after && typeof after === "object" && !Array.isArray(after)) {
+      const afterRecord = after as Record<string, unknown>;
+      newAmount =
+        newAmount ??
+        toAmount(afterRecord.amount) ??
+        toAmount(afterRecord.original_amount) ??
+        toAmount(afterRecord.value);
+    }
+  }
+
   const deletedAmount = toAmount(metadata.deleted_amount);
   const explicitAmount = getAuditAmount(entry);
 

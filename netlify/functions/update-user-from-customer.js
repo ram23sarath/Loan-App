@@ -13,6 +13,32 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const AUDIT_SYSTEM_UID = (process.env.SUPER_ADMIN_UID || '').trim();
+const AUDIT_PII_KEYS = new Set(['phone', 'email', 'password', 'receipt', 'receipt_number', 'check_number']);
+
+const redactAuditMetadata = (value) => {
+  if (Array.isArray(value)) return value.map((item) => redactAuditMetadata(item));
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([k, v]) => [k, AUDIT_PII_KEYS.has(k) ? '[REDACTED]' : redactAuditMetadata(v)]),
+    );
+  }
+  return value;
+};
+
+const writeAuditEvent = async (supabase, action, entityType, entityId, metadata = {}) => {
+  if (!UUID_REGEX.test(AUDIT_SYSTEM_UID)) return;
+  await supabase.from('admin_audit_log').insert({
+    admin_uid: AUDIT_SYSTEM_UID,
+    action,
+    entity_type: entityType,
+    entity_id: UUID_REGEX.test(String(entityId || '').trim()) ? String(entityId).trim() : null,
+    metadata: redactAuditMetadata({ ...metadata, actor_name: 'system', actor_email: null }),
+  });
+};
+
 export default async (req) => {
   if (req.method !== 'POST') {
     return new Response('Method not allowed. Use POST.', { status: 405 });
@@ -95,6 +121,14 @@ export default async (req) => {
         .update({ user_id: newUserId })
         .eq('id', customer_id);
 
+      if (!updErr) {
+        await writeAuditEvent(supabase, 'link_user_id', 'customer', customer_id, {
+          customer_id,
+          customer_name: customer.name,
+          changes: { before: { user_id: customer.user_id ?? null }, after: { user_id: newUserId } },
+        });
+      }
+
       if (updErr) {
         console.error('Created user but failed to update customer.user_id:', updErr.message);
         try {
@@ -129,6 +163,12 @@ export default async (req) => {
       if (updateErr) {
         throw updateErr;
       }
+
+      await writeAuditEvent(supabase, 'sync_auth_user', 'customer', customer_id, {
+        customer_id,
+        customer_name: customer.name,
+        changes: { before: { phone: customer.phone }, after: { phone } },
+      });
 
       return new Response(
         JSON.stringify({ success: true, updated: true, user_id: customer.user_id, email: expectedEmail }),
@@ -184,6 +224,12 @@ export default async (req) => {
           const { error: linkErr } = await supabase.from('customers').update({ user_id: newUserId }).eq('id', customer_id);
           if (linkErr) {
             console.error('Recreated user but failed linking to customer:', linkErr.message);
+          } else {
+            await writeAuditEvent(supabase, 'link_user_id', 'customer', customer_id, {
+              customer_id,
+              customer_name: customer.name,
+              changes: { before: { user_id: customer.user_id ?? null }, after: { user_id: newUserId } },
+            });
           }
         }
 

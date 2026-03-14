@@ -627,6 +627,58 @@ const normalizeAuditUuid = (value: string | null | undefined): string | null => 
   return UUID_REGEX.test(trimmed) ? trimmed : null;
 };
 
+const AUDIT_PII_KEYS = new Set([
+  "phone",
+  "email",
+  "password",
+  "receipt",
+  "receipt_number",
+  "check_number",
+]);
+
+const redactAuditValue = (key: string, value: unknown): unknown => {
+  if (value == null) return value;
+  if (!AUDIT_PII_KEYS.has(key)) return value;
+  return "[REDACTED]";
+};
+
+const redactAuditMetadata = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((item) => redactAuditMetadata(item));
+  }
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return Object.fromEntries(
+      Object.entries(record).map(([k, v]) => [k, redactAuditValue(k, redactAuditMetadata(v))]),
+    );
+  }
+  return value;
+};
+
+const extractChangedFields = <T extends Record<string, unknown>>(
+  before: Partial<T> | null | undefined,
+  after: Partial<T> | null | undefined,
+): { before: Partial<T>; after: Partial<T> } => {
+  const beforeRecord = (before ?? {}) as Record<string, unknown>;
+  const afterRecord = (after ?? {}) as Record<string, unknown>;
+  const keys = new Set([...Object.keys(beforeRecord), ...Object.keys(afterRecord)]);
+
+  const changedBefore: Record<string, unknown> = {};
+  const changedAfter: Record<string, unknown> = {};
+
+  for (const key of keys) {
+    if (!Object.is(beforeRecord[key], afterRecord[key])) {
+      changedBefore[key] = beforeRecord[key] ?? null;
+      changedAfter[key] = afterRecord[key] ?? null;
+    }
+  }
+
+  return {
+    before: changedBefore as Partial<T>,
+    after: changedAfter as Partial<T>,
+  };
+};
+
 /** Fire-and-forget audit log insert — records actions for admin users. */
 const logAuditEvent = (
   session: Session | null,
@@ -666,7 +718,7 @@ const logAuditEvent = (
       entity_type: entityType,
       entity_id: normalizedEntityId,
       metadata: {
-        ...(metadata ?? {}),
+        ...(redactAuditMetadata(metadata ?? {}) as Record<string, unknown>),
         ...(hasRawEntityId && !normalizedEntityId
           ? { raw_entity_id: String(entityId).trim() }
           : {}),
@@ -1363,6 +1415,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         "Read-only access: scoped customers cannot modify seniority list",
       );
     try {
+      const previousEntry = seniorityList.find((entry: any) => entry.id === id);
       const { data, error } = await supabase
         .from("loan_seniority")
         .update(updates)
@@ -1370,7 +1423,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single();
       if (error || !data) throw error;
-      logAuditEvent(session, "update", "seniority", id, { updates });
+      logAuditEvent(session, "update", "seniority", id, {
+        changes: extractChangedFields(previousEntry ?? null, data as any),
+      });
       await fetchSeniorityList();
     } catch (err: any) {
       throw new Error(parseSupabaseError(err, `updating seniority item ${id}`));
@@ -1407,11 +1462,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .single();
       if (error || !data) throw error;
       logAuditEvent(session, "update", "customer", customerId, {
-        updates,
         customer_id: customerId,
         customer_name: data.name ?? previous?.name ?? null,
-        previous_phone: previousPhone,
-        new_phone: data.phone ?? null,
+        changes: extractChangedFields(previous ?? null, data as any),
       });
 
       await fetchData();
@@ -1487,11 +1540,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         customerMap.get(data.customer_id)?.name ||
         null;
       logAuditEvent(session, "update", "loan", loanId, {
-        updates,
         customer_id: data.customer_id,
         customer_name: customerName,
-        previous_amount: previousLoan?.original_amount ?? null,
-        new_amount: data.original_amount ?? null,
+        changes: extractChangedFields(previousLoan ?? null, data as any),
       });
       // Optimistically update local state
       setLoans((prev) =>
@@ -1531,11 +1582,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         customerMap.get(data.customer_id)?.name ||
         null;
       logAuditEvent(session, "update", "subscription", subscriptionId, {
-        updates,
         customer_id: data.customer_id,
         customer_name: customerName,
-        previous_amount: previousSubscription?.amount ?? null,
-        new_amount: data.amount ?? null,
+        changes: extractChangedFields(previousSubscription ?? null, data as any),
       });
       // Optimistically update local state
       setSubscriptions((prev) =>
@@ -1651,12 +1700,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         (customerId ? customerMap.get(customerId)?.name : null) ||
         null;
       logAuditEvent(session, "update", "installment", installmentId, {
-        updates,
         loan_id: data.loan_id,
         customer_id: customerId,
         customer_name: customerName,
-        previous_amount: previousInstallment?.amount ?? null,
-        new_amount: data.amount ?? null,
+        changes: extractChangedFields(previousInstallment ?? null, data as any),
       });
       // Optimistically update local state
       setInstallments((prev) =>
@@ -1738,10 +1785,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       logAuditEvent(session, "create", "data_entry", data.id, {
         customer_id: entry.customer_id,
         customer_name: customerMap.get(entry.customer_id)?.name || null,
-        type: entry.type,
-        amount: entry.amount,
-        previous_amount: null,
-        new_amount: entry.amount,
+        changes: { before: null, after: data },
       });
       // Optimistically update local state — avoids full 5-table refetch
       setDataEntries((prev) => [data as DataEntry, ...prev]);
@@ -1782,11 +1826,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .single();
       if (error || !data) throw error;
       logAuditEvent(session, "update", "data_entry", id, {
-        updates,
         customer_id: data.customer_id,
         customer_name: customerMap.get(data.customer_id)?.name || null,
-        previous_amount: previousEntry?.amount ?? null,
-        new_amount: data.amount ?? null,
+        changes: extractChangedFields(previousEntry ?? null, data as any),
       });
       // Optimistically update local state with the returned data
       setDataEntries((prev) =>
@@ -3019,8 +3061,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       logAuditEvent(session, "create", "customer", data.id, {
         customer_id: data.id,
         customer_name: customerData.name,
-        name: customerData.name,
-        phone: customerData.phone,
+        changes: { before: null, after: data },
       });
 
       // Trigger background user creation without blocking the customer add flow.
@@ -3113,9 +3154,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       logAuditEvent(session, "create", "loan", data.id, {
         customer_id: loanData.customer_id,
         customer_name: customerMap.get(loanData.customer_id)?.name || null,
-        amount: loanData.original_amount,
-        previous_amount: null,
-        new_amount: loanData.original_amount,
+        changes: { before: null, after: data },
       });
       try {
         if (data.customer_id) {
@@ -3158,9 +3197,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       logAuditEvent(session, "create", "subscription", data.id, {
         customer_id: subscriptionData.customer_id,
         customer_name: customerMap.get(subscriptionData.customer_id)?.name || null,
-        amount: subscriptionData.amount,
-        previous_amount: null,
-        new_amount: subscriptionData.amount,
+        changes: { before: null, after: data },
       });
       // Optimistically update local state with the returned subscription + customer data from state
       const customer = customerMap.get(data.customer_id);
@@ -3241,9 +3278,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           loanForStatus.customers?.name ||
           customerMap.get(loanForStatus.customer_id)?.name ||
           null,
-        amount: installmentData.amount,
-        previous_amount: null,
-        new_amount: installmentData.amount,
+        changes: { before: null, after: data },
       });
       // Optimistically update local state
       setInstallments((prev) => [data as Installment, ...prev]);

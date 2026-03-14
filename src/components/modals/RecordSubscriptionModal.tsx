@@ -41,7 +41,7 @@ const RecordSubscriptionModal: React.FC<Props> = ({ customer, onClose }) => {
         customer_id: customer.id,
         amount: Number(data.amount),
         date: data.date,
-        receipt: data.receipt || '',
+        receipt: data.receipt ?? null,
         late_fee: data.late_fee != null ? Number(data.late_fee) : null,
       };
       await addSubscription(payload);

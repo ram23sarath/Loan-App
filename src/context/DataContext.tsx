@@ -452,6 +452,15 @@ const fetchAllRecords = async <T,>(
   return allRecords;
 };
 
+// Build seniority query with proper filtering and ordering
+const buildSeniorityQuery = () =>
+  supabase
+    .from("loan_seniority")
+    .select("*, customers(name, phone, deleted_at)")
+    .is("deleted_at", null)
+    .order("loan_request_date", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true });
+
 // Fetch unfiltered global records for summary page (used by both fetchSummaryData and background pre-fetch)
 const fetchGlobalSummaryRecords = async () => {
   const [loans, subscriptions, installments, dataEntries] = await Promise.all([
@@ -1049,7 +1058,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
         let query = supabase
           .from("loan_seniority")
-          .select("*, customers(name, phone)")
+          .select("*, customers(name, phone, deleted_at)")
           .is("deleted_at", null)
           .order("loan_request_date", { ascending: true, nullsFirst: false })
           .order("created_at", { ascending: true });
@@ -1063,7 +1072,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           console.error("Supabase error fetching loan_seniority:", error);
           throw error;
         }
-        setSeniorityList((data as any[]) || []);
+        const rawSeniority = (data as any[]) || [];
+        setSeniorityList(rawSeniority.filter((e: any) => !e.customers?.deleted_at));
       } catch (err: any) {
         console.error("Failed to fetch loan seniority list", err);
       }
@@ -2495,6 +2505,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
               .from("customers")
               .select("id")
               .eq("user_id", session.user.id)
+              .is("deleted_at", null)
               .limit(1);
             if (!error && matchedCustomers && matchedCustomers.length > 0) {
               currentIsScoped = true;
@@ -2550,6 +2561,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             setIsRefreshing(true);
           }
 
+          // Start seniority fetch immediately so it runs in parallel with the main data fetch
+          const seniorityInitPromise = buildSeniorityQuery();
+
           // Inline the fetch logic during initialization to avoid issues with fetchData callback
           try {
             if (currentIsScoped && currentScopedId) {
@@ -2571,6 +2585,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     .from("subscriptions")
                     .select("*, customers(name, phone)")
                     .eq("customer_id", currentScopedId)
+                    .is("deleted_at", null)
                     .order("date", { ascending: true }),
                   supabase
                     .from("data_entries")
@@ -2769,17 +2784,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             // All users (including scoped) see the full seniority list
             // Primary sort uses loan_request_date so requested dates dictate the order,
             // with created_at providing a tie-breaker for same-day entries.
-            let query = supabase
-              .from("loan_seniority")
-              .select("*, customers(name, phone)")
-              .order("loan_request_date", {
-                ascending: true,
-                nullsFirst: false,
-              })
-              .order("created_at", { ascending: true });
-            const { data, error } = await query;
+            const { data, error } = await seniorityInitPromise;
             if (error) throw error;
-            const seniorityData = (data as any[]) || [];
+            const seniorityData = ((data as any[]) || []).filter(
+              (e: any) => !e.customers?.deleted_at,
+            );
             // Only update seniority state if it changed vs what was served
             if (
               !cachedSeniority ||
@@ -2898,6 +2907,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             .from("customers")
             .select("id")
             .eq("user_id", session.user.id)
+            .is("deleted_at", null)
             .limit(1);
           if (!error && matchedCustomers && matchedCustomers.length > 0) {
             currentIsScoped = true;
@@ -2911,6 +2921,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
         setIsScopedCustomer(currentIsScoped);
         setScopedCustomerId(currentScopedId);
+
+        // Start seniority fetch immediately so it runs in parallel with the main data fetch
+        const seniorityPostLoginPromise = buildSeniorityQuery();
 
         // Fetch all data
         if (currentIsScoped && currentScopedId) {
@@ -2932,6 +2945,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 .from("customers")
                 .select("*")
                 .eq("id", currentScopedId)
+                .is("deleted_at", null)
                 .limit(1),
               supabase
                 .from("loans")
@@ -2942,6 +2956,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 .from("subscriptions")
                 .select("*, customers(name, phone)")
                 .eq("customer_id", currentScopedId)
+                .is("deleted_at", null)
                 .order("date", { ascending: true }),
               supabase
                 .from("data_entries")
@@ -3111,17 +3126,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           }
 
           // Keep ordering consistent with the initialization fetch.
-          let query = supabase
-            .from("loan_seniority")
-            .select("*, customers(name, phone)")
-            .order("loan_request_date", { ascending: true, nullsFirst: false })
-            .order("created_at", { ascending: true });
-          if (currentIsScoped) {
-            query = query.eq("user_id", session.user.id as string);
-          }
-          const { data, error } = await query;
+          const { data, error } = await seniorityPostLoginPromise;
           if (error) throw error;
-          const seniorityData = (data as any[]) || [];
+          const seniorityData = ((data as any[]) || []).filter(
+            (e: any) => !e.customers?.deleted_at,
+          );
           if (isMounted) setSeniorityList(seniorityData);
           setCachedData(seniorityKey, seniorityData);
         } catch (err) {

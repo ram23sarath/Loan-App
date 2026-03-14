@@ -148,17 +148,32 @@ export default async (req) => {
     const subscriptionIds = new Set();
     const installmentIds = new Set();
     const dataEntryIds = new Set();
+    const entityToCustomerId = new Map();
+    let customerDirectory = {};
 
     entries.forEach((entry) => {
       const metadata = getEntryMetadata(entry);
       const metadataCustomerId =
         typeof metadata.customer_id === 'string' ? metadata.customer_id : null;
+      const metadataCustomerName =
+        typeof metadata.customer_name === 'string' ? metadata.customer_name.trim() : '';
 
       if (entry.entity_type === 'customer' && entry.entity_id) {
         customerIds.add(entry.entity_id);
       }
       if (metadataCustomerId) {
         customerIds.add(metadataCustomerId);
+        if (entry.entity_id) {
+          entityToCustomerId.set(getEntityKey(entry.entity_type, entry.entity_id), metadataCustomerId);
+        }
+      }
+
+      if (entry.entity_type === 'customer' && entry.entity_id && metadataCustomerName) {
+        customerDirectory[entry.entity_id] = metadataCustomerName;
+      }
+
+      if (metadataCustomerId && metadataCustomerName) {
+        customerDirectory[metadataCustomerId] = metadataCustomerName;
       }
 
       if (!entry.entity_id) return;
@@ -167,8 +182,6 @@ export default async (req) => {
       if (entry.entity_type === 'installment') installmentIds.add(entry.entity_id);
       if (entry.entity_type === 'data_entry') dataEntryIds.add(entry.entity_id);
     });
-
-    const entityToCustomerId = new Map();
 
     if (loanIds.size > 0) {
       const { data: loanRows } = await supabase
@@ -242,7 +255,6 @@ export default async (req) => {
       }
     }
 
-    let customerDirectory = {};
     if (customerIds.size > 0) {
       const { data: customerRows } = await supabase
         .from('customers')
@@ -254,7 +266,7 @@ export default async (req) => {
           acc[row.id] = row.name;
         }
         return acc;
-      }, {});
+      }, customerDirectory);
     }
 
     const entityCustomerNames = {};
@@ -277,6 +289,21 @@ export default async (req) => {
     );
 
     const adminDirectory = {};
+    entries.forEach((entry) => {
+      const metadata = getEntryMetadata(entry);
+      const actorName =
+        typeof metadata.actor_name === 'string' ? metadata.actor_name.trim() : '';
+      const actorEmail =
+        typeof metadata.actor_email === 'string' ? metadata.actor_email.trim() : '';
+      if (!entry.admin_uid) return;
+      if (actorName) {
+        adminDirectory[entry.admin_uid] = actorName;
+        return;
+      }
+      if (actorEmail && !adminDirectory[entry.admin_uid]) {
+        adminDirectory[entry.admin_uid] = actorEmail;
+      }
+    });
     await Promise.all(
       adminUids.map(async (uid) => {
         try {

@@ -56,6 +56,8 @@ const getExplicitAuditAmount = (entry: AuditLogEntry): number | null => {
   const metadata = toAuditMetadata(entry);
   const amountKeys = [
     "derived_amount",
+    "deleted_amount",
+    "created_amount",
     "original_amount",
     "previous_amount",
     "amount",
@@ -126,14 +128,55 @@ const getActionLabel = (action: string) => {
 
 const getAuditAmount = (entry: AuditLogEntry) => {
   const explicit = getExplicitAuditAmount(entry);
-  return explicit ?? 0;
+  return explicit;
 };
 
-const formatAuditAmount = (entry: AuditLogEntry) =>
-  getAuditAmount(entry).toLocaleString("en-IN", {
+const formatCurrency = (value: number) =>
+  value.toLocaleString("en-IN", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   });
+
+const getAmountDiffText = (entry: AuditLogEntry): string | null => {
+  const metadata = toAuditMetadata(entry);
+  const previousAmount =
+    toAmount(metadata.previous_amount) ?? toAmount(metadata.original_amount);
+  const newAmount = toAmount(metadata.new_amount) ?? null;
+  const deletedAmount = toAmount(metadata.deleted_amount);
+  const explicitAmount = getAuditAmount(entry);
+
+  if (entry.action === "update" || entry.action === "adjust_misc") {
+    if (previousAmount !== null && newAmount !== null) {
+      return `${formatCurrency(previousAmount)} → ${formatCurrency(newAmount)}`;
+    }
+    if (newAmount !== null) {
+      return formatCurrency(newAmount);
+    }
+    if (previousAmount !== null) {
+      return formatCurrency(previousAmount);
+    }
+  }
+
+  if (entry.action === "soft_delete" || entry.action === "permanent_delete") {
+    const value = deletedAmount ?? explicitAmount;
+    if (value !== null) {
+      return `deleted ${formatCurrency(value)}`;
+    }
+  }
+
+  if (entry.action === "create" || entry.action === "adjust_misc_create") {
+    const value = newAmount ?? explicitAmount;
+    if (value !== null) {
+      return formatCurrency(value);
+    }
+  }
+
+  if (explicitAmount !== null) {
+    return formatCurrency(explicitAmount);
+  }
+
+  return null;
+};
 
 const formatAuditTimeIst = (timestamp: string) =>
   new Intl.DateTimeFormat("en-IN", {
@@ -476,6 +519,7 @@ const AuditLogPage = () => {
                       toText(metadata.actor_name) ||
                       toText(metadata.actor_email) ||
                       auditAdminDirectory[entry.admin_uid] ||
+                      entry.admin_uid ||
                       "Admin user";
 
                     // Resolve customer ID from entity or metadata
@@ -498,14 +542,15 @@ const AuditLogPage = () => {
                     const entityLabel = getEntityLabel(entry.entity_type);
                     const resolvedCustomerName =
                       customerNameFromMetadata ||
+                      (entry.entity_type === "customer" ? toText(metadata.name) : null) ||
                       customerNameFromLookup ||
                       entityCustomerName ||
                       "Unknown Customer";
-                    const value = formatAuditAmount(entry);
+                    const valueText = getAmountDiffText(entry);
                     const recordedAt = formatAuditTimeIst(entry.created_at);
 
-                    // Clean sentence format without brackets
-                    const sentence = `Admin ${actorName} ${actionLabel} ${entityLabel} for ${resolvedCustomerName} — ${value}`;
+                    const baseSentence = `Admin ${actorName} ${actionLabel} ${entityLabel} for ${resolvedCustomerName}`;
+                    const sentence = valueText ? `${baseSentence} — ${valueText}` : baseSentence;
 
                     return (
                       <tr key={entry.id} className="align-top">

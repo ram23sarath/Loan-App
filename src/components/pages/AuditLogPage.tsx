@@ -158,6 +158,58 @@ const formatCurrency = (value: number) =>
     maximumFractionDigits: 2,
   });
 
+const HUMANIZED_FIELD_LABELS: Record<string, string> = {
+  receipt_number: "Receipt Number",
+  receipt: "Receipt",
+  notes: "Remarks",
+  payment_date: "Date",
+  date: "Date",
+  late_fee: "Late Fee",
+};
+
+const IGNORED_CHANGE_FIELDS = new Set(["updated_at", "created_at"]);
+
+const getChangedFieldKeys = (entry: AuditLogEntry): string[] => {
+  const metadata = toAuditMetadata(entry);
+  const changed = metadata.fields_changed;
+  if (Array.isArray(changed)) {
+    return changed.filter((k): k is string => typeof k === "string");
+  }
+
+  const changes = metadata.changes as
+    | { before?: Record<string, unknown> | null; after?: Record<string, unknown> | null }
+    | undefined;
+  const before = changes?.before ?? {};
+  const after = changes?.after ?? {};
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  return Array.from(keys).filter((k) => before[k] !== after[k]);
+};
+
+const getFieldChangeText = (entry: AuditLogEntry): string | null => {
+  const metadata = toAuditMetadata(entry);
+  const changes = metadata.changes as
+    | { before?: Record<string, unknown> | null; after?: Record<string, unknown> | null }
+    | undefined;
+  const before = changes?.before ?? {};
+  const after = changes?.after ?? {};
+
+  const keys = getChangedFieldKeys(entry)
+    .filter((key) => !IGNORED_CHANGE_FIELDS.has(key))
+    .filter((key) => key !== "amount");
+
+  if (!keys.length) return null;
+
+  const preview = keys.slice(0, 4).map((key) => {
+    const label = HUMANIZED_FIELD_LABELS[key] || key.replace(/_/g, " ");
+    const beforeValue = renderScalar(before[key]);
+    const afterValue = renderScalar(after[key]);
+    return `${label}: ${beforeValue} → ${afterValue}`;
+  });
+
+  const hidden = keys.length - preview.length;
+  return hidden > 0 ? `${preview.join("; ")}; +${hidden} more` : preview.join("; ");
+};
+
 const getAmountDiffText = (entry: AuditLogEntry): string | null => {
   const metadata = toAuditMetadata(entry);
   const changes = metadata.changes as
@@ -430,11 +482,15 @@ const AuditLogPage = () => {
                       customerNameFromLookup ||
                       entityCustomerName ||
                       "Unknown Customer";
-                    const valueText = getAmountDiffText(entry);
+                    const amountText = getAmountDiffText(entry);
+                    const fieldText = getFieldChangeText(entry);
                     const recordedAt = formatAuditTimeIst(entry.created_at);
 
                     const baseSentence = `Admin ${renderScalar(actorName)} ${actionLabel} ${entityLabel} for ${renderScalar(resolvedCustomerName)}`;
-                    const sentence = valueText ? `${baseSentence} — ${valueText}` : baseSentence;
+                    const detailParts = [amountText, fieldText].filter(Boolean) as string[];
+                    const sentence = detailParts.length
+                      ? `${baseSentence} — ${detailParts.join(" | ")}`
+                      : baseSentence;
 
                     return (
                       <tr key={entry.id} className="align-top">

@@ -62,11 +62,26 @@ export default async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
+    // Resolve the calling admin's identity from the Authorization header
+    let callerAdminUid = null;
+    let callerName = null;
+    let callerEmail = null;
+    const authHeader = req.headers.get('authorization') || req.headers.get('Authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.slice(7);
+      const { data: { user: callerUser }, error: callerError } = await supabase.auth.getUser(token);
+      if (!callerError && callerUser) {
+        callerAdminUid = callerUser.id;
+        callerName = callerUser.user_metadata?.name || callerUser.email?.split('@')[0] || callerUser.id;
+        callerEmail = callerUser.email;
+      }
+    }
+
     const userType = isAdmin ? 'Admin' : 'Regular';
     console.log(`👤 Creating ${userType} user: ${email}${name ? ` (${name})` : ''}`);
 
     // Create the auth user
-    const { data: userData, error: createError } = await supabase.auth.admin.createUser({
+    const createPayload = {
       email,
       password,
       email_confirm: true, // Auto-confirm email
@@ -76,7 +91,14 @@ export default async (req) => {
         created_via: 'admin_tools',
         created_at: new Date().toISOString(),
       },
-    });
+    };
+
+    // Set app_metadata.role so RLS policies recognise this user as an admin
+    if (isAdmin) {
+      createPayload.app_metadata = { role: 'admin' };
+    }
+
+    const { data: userData, error: createError } = await supabase.auth.admin.createUser(createPayload);
 
     if (createError) {
       console.error('❌ Error creating user:', createError.message);
@@ -92,6 +114,29 @@ export default async (req) => {
 
     const userId = userData.user.id;
     console.log(`✅ ${userType} user created: ${userId} (${email})`);
+
+    // Write audit log entry (service role bypasses RLS so the insert always succeeds)
+    if (callerAdminUid) {
+      const { error: auditError } = await supabase.from('admin_audit_log').insert({
+        admin_uid: callerAdminUid,
+        action: 'create',
+        entity_type: isAdmin ? 'admin_user' : 'auth_user',
+        entity_id: userId,
+        metadata: {
+          source: 'create-auth-user',
+          created_user_email: email,
+          created_user_name: name || '',
+          is_admin: isAdmin,
+          actor_name: callerName,
+          actor_email: callerEmail,
+        },
+      });
+      if (auditError) {
+        console.error('[AuditLog] Failed to write audit log:', auditError.message);
+      }
+    } else {
+      console.warn('[AuditLog] Skipped — no caller identity (missing Authorization header)');
+    }
 
     return new Response(
       JSON.stringify({

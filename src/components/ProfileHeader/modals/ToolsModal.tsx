@@ -203,7 +203,12 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
 
       const response = await fetch("/.netlify/functions/create-auth-user", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {}),
+        },
         body: JSON.stringify({
           email,
           password,

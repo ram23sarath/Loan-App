@@ -45,6 +45,11 @@ const getAdminDisplayName = (user) =>
       'Unknown Admin',
   );
 
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const isUuid = (value) => UUID_REGEX.test(String(value || '').trim());
+
 const listAllAuthAdmins = async (supabase) => {
   const directory = {};
   const uids = [];
@@ -181,9 +186,17 @@ export default async (req) => {
     query = query.gte('created_at', thirtyDaysAgo);
 
     if (safeSearch) {
-      query = query.or(
-        `metadata->>actor_name.ilike.%${safeSearch}%,metadata->>actor_email.ilike.%${safeSearch}%,admin_uid.ilike.%${safeSearch}%`,
-      );
+      const searchFilters = [
+        `metadata->>actor_name.ilike.%${safeSearch}%`,
+        `metadata->>actor_email.ilike.%${safeSearch}%`,
+      ];
+
+      // admin_uid is uuid-typed, so use eq only for valid UUID inputs.
+      if (isUuid(safeSearch)) {
+        searchFilters.push(`admin_uid.eq.${safeSearch}`);
+      }
+
+      query = query.or(searchFilters.join(','));
     }
 
     const from = (page - 1) * pageSize;

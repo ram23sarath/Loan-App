@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useRouteReady } from "../RouteReadySignal";
 import PageWrapper from "../ui/PageWrapper";
@@ -14,11 +14,9 @@ interface AuditLogResponse {
   entity_customer_names?: Record<string, string>;
   is_super_admin?: boolean;
   pagination?: {
-    page: number;
     pageSize: number;
-    total: number;
-    totalPages: number;
     hasMore: boolean;
+    nextCursor: string | null;
   };
   error?: string;
 }
@@ -291,8 +289,9 @@ const AuditLogPage = () => {
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditError, setAuditError] = useState<string | null>(null);
   const [auditPage, setAuditPage] = useState(1);
-  const [auditTotalPages, setAuditTotalPages] = useState(1);
-  const [auditTotal, setAuditTotal] = useState(0);
+  const [auditHasMore, setAuditHasMore] = useState(false);
+  const [auditPageCursors, setAuditPageCursors] = useState<Record<number, string | null>>({ 1: null });
+  const auditPageCursorsRef = useRef<Record<number, string | null>>({ 1: null });
   const [auditSearch, setAuditSearch] = useState("");
   const [auditCustomerNames, setAuditCustomerNames] = useState<Record<string, string>>({});
   const [auditEntityCustomerNames, setAuditEntityCustomerNames] = useState<Record<string, string>>({});
@@ -317,56 +316,78 @@ const AuditLogPage = () => {
         return;
       }
 
+      const currentCursor = auditPageCursorsRef.current[nextPage] ?? null;
+      if (nextPage > 1 && currentCursor === null) {
+        setAuditError("Missing page cursor. Reload or use Next in sequence.");
+        return;
+      }
+
       setAuditLoading(true);
       setAuditError(null);
       try {
-      const query = new URLSearchParams({
-        page: String(nextPage),
-        page_size: "20",
-      });
+        const query = new URLSearchParams({
+          page_size: "20",
+        });
 
-      if (auditSearch) query.set("search", auditSearch);
+        if (auditSearch) query.set("search", auditSearch);
+        if (currentCursor) query.set("cursor", currentCursor);
 
-      const response = await fetch(
-        `/.netlify/functions/get-audit-logs?${query.toString()}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
+        const response = await fetch(
+          `/.netlify/functions/get-audit-logs?${query.toString()}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+            },
           },
-        },
-      );
+        );
 
-      const result = (await response.json()) as AuditLogResponse;
+        const result = (await response.json()) as AuditLogResponse;
 
-      if (response.ok && result.success) {
-        setServerIsSuperAdmin(Boolean(result.is_super_admin));
-        const entries = await enrichLegacyAuditAmounts(result.entries || []);
-        setAuditEntries(entries);
-        setAuditCustomerNames(result.customer_directory || {});
-        setAuditEntityCustomerNames(result.entity_customer_names || {});
-        setAuditAdminDirectory(result.admin_directory || {});
-        setAuditPage(result.pagination?.page || nextPage);
-        setAuditTotalPages(result.pagination?.totalPages || 1);
-        setAuditTotal(result.pagination?.total || 0);
-      } else {
-        if (response.status === 401 || response.status === 403) {
-          setServerIsSuperAdmin(false);
+        if (response.ok && result.success) {
+          setServerIsSuperAdmin(Boolean(result.is_super_admin));
+          const entries = await enrichLegacyAuditAmounts(result.entries || []);
+          const nextCursorFromServer = result.pagination?.nextCursor ?? null;
+
+          setAuditEntries(entries);
+          setAuditCustomerNames(result.customer_directory || {});
+          setAuditEntityCustomerNames(result.entity_customer_names || {});
+          setAuditAdminDirectory(result.admin_directory || {});
+          setAuditPage(nextPage);
+          setAuditHasMore(Boolean(result.pagination?.hasMore));
+          setAuditPageCursors((prev) => {
+            const updated: Record<number, string | null> = {
+              ...prev,
+              [nextPage]: currentCursor,
+            };
+            if (nextCursorFromServer) {
+              updated[nextPage + 1] = nextCursorFromServer;
+            } else {
+              delete updated[nextPage + 1];
+            }
+            auditPageCursorsRef.current = updated;
+            return updated;
+          });
+        } else {
+          if (response.status === 401 || response.status === 403) {
+            setServerIsSuperAdmin(false);
+          }
+          setAuditError(result.error || "Failed to load audit logs");
         }
-        setAuditError(result.error || "Failed to load audit logs");
+      } catch (err: any) {
+        setAuditError(err.message || "Failed to load audit logs");
+      } finally {
+        setAuditLoading(false);
       }
-    } catch (err: any) {
-      setAuditError(err.message || "Failed to load audit logs");
-    } finally {
-      setAuditLoading(false);
-    }
     },
     [session, auditSearch],
   );
 
   useEffect(() => {
     if (session?.access_token) {
+      auditPageCursorsRef.current = { 1: null };
+      setAuditPageCursors({ 1: null });
       fetchAuditLogs(1);
     }
   }, [session, fetchAuditLogs]);
@@ -422,7 +443,11 @@ const AuditLogPage = () => {
               className="flex-1 px-3 py-2.5 text-sm bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all outline-none"
             />
             <button
-              onClick={() => fetchAuditLogs(1)}
+              onClick={() => {
+                auditPageCursorsRef.current = { 1: null };
+                setAuditPageCursors({ 1: null });
+                fetchAuditLogs(1);
+              }}
               disabled={auditLoading}
               className="px-4 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl transition-colors disabled:opacity-50"
             >
@@ -611,7 +636,7 @@ const AuditLogPage = () => {
 
           <div className="flex items-center justify-between gap-3">
             <div className="text-xs text-slate-500 dark:text-slate-400">
-              {auditTotal} total events • page {auditPage} of {auditTotalPages}
+              page {auditPage}
             </div>
             <div className="flex gap-2">
               <button
@@ -622,8 +647,8 @@ const AuditLogPage = () => {
                 Prev
               </button>
               <button
-                onClick={() => fetchAuditLogs(Math.min(auditTotalPages, auditPage + 1))}
-                disabled={auditLoading || auditPage >= auditTotalPages}
+                onClick={() => fetchAuditLogs(auditPage + 1)}
+                disabled={auditLoading || !auditHasMore || !auditPageCursors[auditPage + 1]}
                 className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-50"
               >
                 Next

@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
+import { z } from 'zod';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const SUPER_ADMIN_UID = (process.env.SUPER_ADMIN_UID || '').trim();
 
 const json = (payload, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -12,7 +12,7 @@ const json = (payload, status = 200) =>
 
 const sanitizeForIlike = (input) =>
   input
-    .replace(/[%]/g, '')
+    .replace(/[\\%_]/g, '\\$&')
     .replace(/,/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
@@ -49,6 +49,41 @@ const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const isUuid = (value) => UUID_REGEX.test(String(value || '').trim());
+
+const CURSOR_ID_REGEX = /^(\d+|[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i;
+
+const requestParamsSchema = z.object({
+  page_size: z.coerce.number().int().min(1).max(100).default(20),
+  search: z.string().default(''),
+  include_all_admins: z.preprocess((value) => parseBooleanParam(value), z.boolean().default(false)),
+  cursor: z.string().trim().max(500).optional(),
+});
+
+const cursorSchema = z.object({
+  created_at: z.string().datetime(),
+  id: z.union([
+    z.number().int().nonnegative(),
+    z.string().regex(CURSOR_ID_REGEX),
+  ]),
+});
+
+const decodeCursor = (cursor) => {
+  try {
+    const parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
+    return cursorSchema.safeParse(parsed);
+  } catch {
+    return { success: false };
+  }
+};
+
+const encodeCursor = (row) =>
+  Buffer.from(
+    JSON.stringify({
+      created_at: row.created_at,
+      id: row.id,
+    }),
+    'utf8',
+  ).toString('base64url');
 
 const listAllAuthAdmins = async (supabase) => {
   const directory = {};
@@ -92,21 +127,368 @@ const getEntryMetadata = (entry) => {
 
 const getEntityKey = (entityType, entityId) => `${entityType}:${entityId}`;
 
-const parseParams = async (req) => {
+const parseAndValidateParams = async (req) => {
+  let rawParams = {};
+
   if (req.method === 'POST') {
     try {
       const body = await req.json();
-      return body && typeof body === 'object' ? body : {};
+      rawParams = body && typeof body === 'object' ? body : {};
     } catch {
-      return {};
+      rawParams = {};
     }
+
+    const parsedParams = requestParamsSchema.safeParse(rawParams);
+    if (!parsedParams.success) {
+      return {
+        response: json(
+          {
+            error: 'Invalid request parameters',
+            details: parsedParams.error.flatten(),
+          },
+          400,
+        ),
+      };
+    }
+
+    const parsedCursor = parsedParams.data.cursor
+      ? decodeCursor(parsedParams.data.cursor)
+      : null;
+
+    if (parsedParams.data.cursor && !parsedCursor?.success) {
+      return { response: json({ error: 'Invalid cursor' }, 400) };
+    }
+
+    return {
+      params: {
+        ...parsedParams.data,
+        cursorData: parsedCursor?.success ? parsedCursor.data : null,
+      },
+    };
   }
 
   const url = new URL(req.url);
-  return {
-    page: url.searchParams.get('page') || '1',
+  rawParams = {
     page_size: url.searchParams.get('page_size') || '20',
     search: url.searchParams.get('search') || '',
+    include_all_admins: url.searchParams.get('include_all_admins') || 'false',
+    cursor: url.searchParams.get('cursor') || undefined,
+  };
+
+  const parsedParams = requestParamsSchema.safeParse(rawParams);
+  if (!parsedParams.success) {
+    return {
+      response: json(
+        {
+          error: 'Invalid request parameters',
+          details: parsedParams.error.flatten(),
+        },
+        400,
+      ),
+    };
+  }
+
+  const parsedCursor = parsedParams.data.cursor
+    ? decodeCursor(parsedParams.data.cursor)
+    : null;
+
+  if (parsedParams.data.cursor && !parsedCursor?.success) {
+    return { response: json({ error: 'Invalid cursor' }, 400) };
+  }
+
+  return {
+    params: {
+      ...parsedParams.data,
+      cursorData: parsedCursor?.success ? parsedCursor.data : null,
+    },
+  };
+};
+
+const authenticateUser = async (req, supabase) => {
+  const authHeader = req.headers.get('authorization') || '';
+  const bearerPrefix = 'Bearer ';
+  if (!authHeader.startsWith(bearerPrefix)) {
+    return { response: json({ error: 'Unauthorized' }, 401) };
+  }
+
+  const accessToken = authHeader.slice(bearerPrefix.length).trim();
+  if (!accessToken) {
+    return { response: json({ error: 'Unauthorized' }, 401) };
+  }
+
+  const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
+  if (userError || !userData?.user) {
+    console.error('[get-audit-logs] Token validation failed', userError);
+    return { response: json({ error: 'Unauthorized' }, 401) };
+  }
+
+  return { user: userData.user };
+};
+
+const validateSuperAdmin = async (user, supabase) => {
+  const { data: superAdminRow, error: superAdminLookupError } = await supabase
+    .from('super_admins')
+    .select('user_id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (superAdminLookupError) {
+    console.error('[get-audit-logs] Failed checking super_admins lookup', superAdminLookupError);
+    return { response: json({ error: 'Authorization check failed' }, 500) };
+  }
+
+  if (!superAdminRow?.user_id) {
+    return { response: json({ error: 'Forbidden' }, 403) };
+  }
+
+  return { isSuperAdmin: true, superAdminUid: user.id };
+};
+
+const fetchAuditLogs = async (params, supabase) => {
+  const pageSize = params.page_size;
+  const includeAllAdmins = params.include_all_admins;
+  const safeSearch = sanitizeForIlike(String(params.search || ''));
+  const cursorData = params.cursorData;
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  let query = supabase
+    .from('admin_audit_log')
+    .select('*')
+    .gte('created_at', thirtyDaysAgo);
+
+  if (safeSearch) {
+    const searchFilters = [
+      `metadata->>actor_name.ilike.%${safeSearch}%`,
+      `metadata->>actor_email.ilike.%${safeSearch}%`,
+    ];
+
+    // admin_uid is uuid-typed, so use eq only for valid UUID inputs.
+    if (isUuid(safeSearch)) {
+      searchFilters.push(`admin_uid.eq.${safeSearch}`);
+    }
+
+    query = query.or(searchFilters.join(','));
+  }
+
+  if (cursorData) {
+    query = query.or(
+      `created_at.lt.${cursorData.created_at},and(created_at.eq.${cursorData.created_at},id.lt.${cursorData.id})`,
+    );
+  }
+
+  const { data, error } = await query
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .range(0, pageSize);
+
+  if (error) {
+    console.error('[get-audit-logs] Failed to fetch audit logs', error);
+    return { response: json({ error: 'Failed to fetch audit logs' }, 500) };
+  }
+
+  const rows = data || [];
+  const hasMore = rows.length > pageSize;
+  const entries = hasMore ? rows.slice(0, pageSize) : rows;
+  const nextCursor = hasMore ? encodeCursor(entries[entries.length - 1]) : null;
+
+  return {
+    entries,
+    includeAllAdmins,
+    pagination: {
+      pageSize,
+      hasMore,
+      nextCursor,
+    },
+  };
+};
+
+const resolveRelatedEntities = async (entries, supabase) => {
+  const customerIds = new Set();
+  const loanIds = new Set();
+  const subscriptionIds = new Set();
+  const installmentIds = new Set();
+  const dataEntryIds = new Set();
+  let customerDirectory = {};
+  const entityCustomerNames = {};
+
+  const getJoinedName = (customersValue) => {
+    if (Array.isArray(customersValue)) {
+      return typeof customersValue[0]?.name === 'string' ? customersValue[0].name : '';
+    }
+    return typeof customersValue?.name === 'string' ? customersValue.name : '';
+  };
+
+  const setEntityCustomerName = (entityType, entityId, name) => {
+    if (!entityId || !name) return;
+    entityCustomerNames[getEntityKey(entityType, entityId)] = name;
+  };
+
+  entries.forEach((entry) => {
+    const metadata = getEntryMetadata(entry);
+    const metadataCustomerId =
+      typeof metadata.customer_id === 'string' ? metadata.customer_id : null;
+    const metadataCustomerName =
+      typeof metadata.customer_name === 'string' ? metadata.customer_name.trim() : '';
+
+    if (entry.entity_type === 'customer' && entry.entity_id) {
+      customerIds.add(entry.entity_id);
+    }
+    if (metadataCustomerId) {
+      customerIds.add(metadataCustomerId);
+      if (metadataCustomerName) customerDirectory[metadataCustomerId] = metadataCustomerName;
+    }
+
+    if (entry.entity_id && metadataCustomerName) {
+      setEntityCustomerName(entry.entity_type, entry.entity_id, metadataCustomerName);
+    }
+
+    if (entry.entity_type === 'customer' && entry.entity_id && metadataCustomerName) {
+      customerDirectory[entry.entity_id] = metadataCustomerName;
+    }
+
+    if (entry.entity_type === 'customer' && entry.entity_id && !metadataCustomerName) {
+      const fallbackName =
+        typeof metadata.name === 'string' && metadata.name.trim() ? metadata.name.trim() : '';
+      if (fallbackName) {
+        customerDirectory[entry.entity_id] = fallbackName;
+        setEntityCustomerName('customer', entry.entity_id, fallbackName);
+      }
+    }
+
+    if (!entry.entity_id) return;
+    if (entry.entity_type === 'loan') loanIds.add(entry.entity_id);
+    if (entry.entity_type === 'subscription') subscriptionIds.add(entry.entity_id);
+    if (entry.entity_type === 'installment') installmentIds.add(entry.entity_id);
+    if (entry.entity_type === 'data_entry') dataEntryIds.add(entry.entity_id);
+  });
+
+  const hydrateCustomersByIds = async () => {
+    if (customerIds.size === 0) return;
+
+    const { data: customerRows } = await supabase
+      .from('customers')
+      .select('id, name')
+      .in('id', Array.from(customerIds));
+
+    customerDirectory = (customerRows || []).reduce((acc, row) => {
+      if (row.id && row.name) {
+        acc[row.id] = row.name;
+      }
+      return acc;
+    }, customerDirectory);
+  };
+
+  const resolveEntityCustomersWithJoin = async (entityType, tableName, entityIds) => {
+    if (entityIds.size === 0) return;
+
+    const { data: rows } = await supabase
+      .from(tableName)
+      .select('id, customer_id, customers(name)')
+      .in('id', Array.from(entityIds));
+
+    (rows || []).forEach((row) => {
+      if (!row.id) return;
+      const joinedName = getJoinedName(row.customers);
+      if (row.customer_id && joinedName) {
+        customerDirectory[row.customer_id] = joinedName;
+      }
+      if (joinedName) {
+        setEntityCustomerName(entityType, row.id, joinedName);
+      }
+    });
+  };
+
+  await hydrateCustomersByIds();
+
+  await Promise.all([
+    resolveEntityCustomersWithJoin('loan', 'loans', loanIds),
+    resolveEntityCustomersWithJoin('subscription', 'subscriptions', subscriptionIds),
+    resolveEntityCustomersWithJoin('data_entry', 'data_entries', dataEntryIds),
+  ]);
+
+  if (installmentIds.size > 0) {
+    const { data: installmentRows } = await supabase
+      .from('installments')
+      .select('id, loan_id')
+      .in('id', Array.from(installmentIds));
+
+    const uniqueLoanIds = Array.from(
+      new Set((installmentRows || []).map((row) => row.loan_id).filter(Boolean)),
+    );
+
+    if (uniqueLoanIds.length > 0) {
+      const { data: loanRows } = await supabase
+        .from('loans')
+        .select('id, customer_id, customers(name)')
+        .in('id', uniqueLoanIds);
+
+      const loanLookup = new Map();
+      (loanRows || []).forEach((row) => {
+        if (row.id) {
+          const customerName = getJoinedName(row.customers);
+          loanLookup.set(row.id, {
+            customerId: row.customer_id,
+            customerName,
+          });
+          if (row.customer_id && customerName) {
+            customerDirectory[row.customer_id] = customerName;
+          }
+        }
+      });
+
+      (installmentRows || []).forEach((row) => {
+        const loan = loanLookup.get(row.loan_id);
+        if (row.id && loan?.customerName) {
+          setEntityCustomerName('installment', row.id, loan.customerName);
+        }
+      });
+    }
+  }
+
+  return {
+    customerDirectory,
+    entityCustomerNames,
+  };
+};
+
+const resolveAdminDirectory = async (entries, includeAllAdmins, supabase) => {
+  let adminUids = Array.from(new Set(entries.map((entry) => entry.admin_uid).filter(Boolean)));
+
+  const adminDirectory = {};
+  entries.forEach((entry) => {
+    const metadata = getEntryMetadata(entry);
+    const actorName =
+      typeof metadata.actor_name === 'string' ? metadata.actor_name.trim() : '';
+    const actorEmail =
+      typeof metadata.actor_email === 'string' ? metadata.actor_email.trim() : '';
+
+    if (!entry.admin_uid) return;
+    if (actorName) {
+      adminDirectory[entry.admin_uid] = actorName;
+      return;
+    }
+    if (actorEmail && !adminDirectory[entry.admin_uid]) {
+      adminDirectory[entry.admin_uid] = actorEmail;
+      return;
+    }
+    if (!adminDirectory[entry.admin_uid]) {
+      adminDirectory[entry.admin_uid] = entry.admin_uid;
+    }
+  });
+
+  if (includeAllAdmins) {
+    const { uids: allAdminUids, directory: allAdminDirectory } = await listAllAuthAdmins(supabase);
+    adminUids = Array.from(new Set([...adminUids, ...allAdminUids]));
+    Object.entries(allAdminDirectory).forEach(([uid, displayName]) => {
+      if (!adminDirectory[uid]) {
+        adminDirectory[uid] = displayName;
+      }
+    });
+  }
+
+  return {
+    adminUids,
+    adminDirectory,
   };
 };
 
@@ -115,345 +497,54 @@ export default async (req) => {
     return new Response('Method not allowed', { status: 405 });
   }
 
-  if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !SUPER_ADMIN_UID) {
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
     console.error('[get-audit-logs] Missing required server configuration', {
       hasSupabaseUrl: Boolean(SUPABASE_URL),
       hasServiceRole: Boolean(SERVICE_ROLE_KEY),
-      hasSuperAdminUid: Boolean(SUPER_ADMIN_UID),
     });
     return json({ error: 'Server configuration error' }, 500);
   }
 
-  const params = await parseParams(req);
-  const authHeader = req.headers.get('authorization') || '';
-  const bearerPrefix = 'Bearer ';
-  if (!authHeader.startsWith(bearerPrefix)) {
-    return json({ error: 'Unauthorized' }, 401);
-  }
-  const accessToken = authHeader.slice(bearerPrefix.length).trim();
-  if (!accessToken) {
-    return json({ error: 'Unauthorized' }, 401);
-  }
-
-  const page = Math.max(1, Number.parseInt(String(params.page || '1'), 10) || 1);
-  const pageSize = Math.min(
-    100,
-    Math.max(1, Number.parseInt(String(params.page_size || '20'), 10) || 20),
-  );
-  const includeAllAdmins = parseBooleanParam(params.include_all_admins);
-
-  const safeSearch = sanitizeForIlike(String(params.search || ''));
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const paramsResult = await parseAndValidateParams(req);
+  if (paramsResult.response) return paramsResult.response;
+  const params = paramsResult.params;
 
   try {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
-    if (userError || !userData?.user) {
-      console.error('[get-audit-logs] Token validation failed', userError);
-      return json({ error: 'Unauthorized' }, 401);
-    }
+    const authResult = await authenticateUser(req, supabase);
+    if (authResult.response) return authResult.response;
 
-    const user = userData.user;
-    const role = String(user.app_metadata?.role || '').toLowerCase();
-    const isSuperAdminByRole = role === 'super_admin';
-    const isSuperAdminByUid = user.id === SUPER_ADMIN_UID;
+    const superAdminResult = await validateSuperAdmin(authResult.user, supabase);
+    if (superAdminResult.response) return superAdminResult.response;
 
-    const { data: superAdminRow, error: superAdminLookupError } = await supabase
-      .from('super_admins')
-      .select('user_id')
-      .eq('user_id', user.id)
-      .maybeSingle();
+    const auditLogResult = await fetchAuditLogs(params, supabase);
+    if (auditLogResult.response) return auditLogResult.response;
 
-    if (superAdminLookupError) {
-      console.error('[get-audit-logs] Failed checking super_admins lookup', superAdminLookupError);
-      return json({ error: 'Authorization check failed' }, 500);
-    }
+    const { entries, includeAllAdmins, pagination } = auditLogResult;
 
-    const isSuperAdminByLookup = Boolean(superAdminRow?.user_id);
-    const isSuperAdmin = isSuperAdminByUid || isSuperAdminByRole || isSuperAdminByLookup;
+    const { customerDirectory, entityCustomerNames } =
+      await resolveRelatedEntities(entries, supabase);
 
-    if (!isSuperAdmin) {
-      return json({ error: 'Forbidden' }, 403);
-    }
-
-    let query = supabase
-      .from('admin_audit_log')
-      .select('*', { count: 'exact' });
-
-    query = query.gte('created_at', thirtyDaysAgo);
-
-    if (safeSearch) {
-      const searchFilters = [
-        `metadata->>actor_name.ilike.%${safeSearch}%`,
-        `metadata->>actor_email.ilike.%${safeSearch}%`,
-      ];
-
-      // admin_uid is uuid-typed, so use eq only for valid UUID inputs.
-      if (isUuid(safeSearch)) {
-        searchFilters.push(`admin_uid.eq.${safeSearch}`);
-      }
-
-      query = query.or(searchFilters.join(','));
-    }
-
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
-
-    const { data, error, count } = await query
-      .order('created_at', { ascending: false })
-      .order('id', { ascending: false })
-      .range(from, to);
-
-    if (error) {
-      console.error('[get-audit-logs] Failed to fetch audit logs', error);
-      return json({ error: 'Failed to fetch audit logs' }, 500);
-    }
-
-    const entries = data || [];
-    const total = count || 0;
-    const totalPages = total > 0 ? Math.ceil(total / pageSize) : 1;
-
-    const customerIds = new Set();
-    const loanIds = new Set();
-    const subscriptionIds = new Set();
-    const installmentIds = new Set();
-    const dataEntryIds = new Set();
-    const entityToCustomerId = new Map();
-    const entityToMetadataCustomerName = {};
-    let customerDirectory = {};
-
-    entries.forEach((entry) => {
-      const metadata = getEntryMetadata(entry);
-      const metadataCustomerId =
-        typeof metadata.customer_id === 'string' ? metadata.customer_id : null;
-      const metadataCustomerName =
-        typeof metadata.customer_name === 'string' ? metadata.customer_name.trim() : '';
-
-      if (entry.entity_type === 'customer' && entry.entity_id) {
-        customerIds.add(entry.entity_id);
-      }
-      if (metadataCustomerId) {
-        customerIds.add(metadataCustomerId);
-        if (entry.entity_id) {
-          const entityKey = getEntityKey(entry.entity_type, entry.entity_id);
-          entityToCustomerId.set(entityKey, metadataCustomerId);
-          if (metadataCustomerName) {
-            entityToMetadataCustomerName[entityKey] = metadataCustomerName;
-          }
-        }
-      }
-
-      if (entry.entity_id && metadataCustomerName) {
-        const entityKey = getEntityKey(entry.entity_type, entry.entity_id);
-        entityToMetadataCustomerName[entityKey] = metadataCustomerName;
-      }
-
-      if (entry.entity_type === 'customer' && entry.entity_id && metadataCustomerName) {
-        customerDirectory[entry.entity_id] = metadataCustomerName;
-      }
-
-      if (entry.entity_type === 'customer' && entry.entity_id && !metadataCustomerName) {
-        const fallbackName =
-          typeof metadata.name === 'string' && metadata.name.trim() ? metadata.name.trim() : '';
-        if (fallbackName) {
-          customerDirectory[entry.entity_id] = fallbackName;
-        }
-      }
-
-      if (metadataCustomerId && metadataCustomerName) {
-        customerDirectory[metadataCustomerId] = metadataCustomerName;
-      }
-
-      if (!entry.entity_id) return;
-      if (entry.entity_type === 'loan') loanIds.add(entry.entity_id);
-      if (entry.entity_type === 'subscription') subscriptionIds.add(entry.entity_id);
-      if (entry.entity_type === 'installment') installmentIds.add(entry.entity_id);
-      if (entry.entity_type === 'data_entry') dataEntryIds.add(entry.entity_id);
-    });
-
-    if (loanIds.size > 0) {
-      const { data: loanRows } = await supabase
-        .from('loans')
-        .select('id, customer_id')
-        .in('id', Array.from(loanIds));
-      (loanRows || []).forEach((row) => {
-        if (row.id && row.customer_id) {
-          entityToCustomerId.set(getEntityKey('loan', row.id), row.customer_id);
-          customerIds.add(row.customer_id);
-        }
-      });
-    }
-
-    if (subscriptionIds.size > 0) {
-      const { data: subRows } = await supabase
-        .from('subscriptions')
-        .select('id, customer_id')
-        .in('id', Array.from(subscriptionIds));
-      (subRows || []).forEach((row) => {
-        if (row.id && row.customer_id) {
-          entityToCustomerId.set(getEntityKey('subscription', row.id), row.customer_id);
-          customerIds.add(row.customer_id);
-        }
-      });
-    }
-
-    if (dataEntryIds.size > 0) {
-      const { data: dataEntryRows } = await supabase
-        .from('data_entries')
-        .select('id, customer_id')
-        .in('id', Array.from(dataEntryIds));
-      (dataEntryRows || []).forEach((row) => {
-        if (row.id && row.customer_id) {
-          entityToCustomerId.set(getEntityKey('data_entry', row.id), row.customer_id);
-          customerIds.add(row.customer_id);
-        }
-      });
-    }
-
-    if (installmentIds.size > 0) {
-      const { data: installmentRows } = await supabase
-        .from('installments')
-        .select('id, loan_id')
-        .in('id', Array.from(installmentIds));
-
-      const uniqueLoanIds = Array.from(
-        new Set((installmentRows || []).map((row) => row.loan_id).filter(Boolean)),
-      );
-
-      if (uniqueLoanIds.length > 0) {
-        const { data: installmentLoanRows } = await supabase
-          .from('loans')
-          .select('id, customer_id')
-          .in('id', uniqueLoanIds);
-
-        const loanCustomerMap = new Map();
-        (installmentLoanRows || []).forEach((row) => {
-          if (row.id && row.customer_id) {
-            loanCustomerMap.set(row.id, row.customer_id);
-            customerIds.add(row.customer_id);
-          }
-        });
-
-        (installmentRows || []).forEach((row) => {
-          const customerId = loanCustomerMap.get(row.loan_id);
-          if (row.id && customerId) {
-            entityToCustomerId.set(getEntityKey('installment', row.id), customerId);
-          }
-        });
-      }
-    }
-
-    if (customerIds.size > 0) {
-      const { data: customerRows } = await supabase
-        .from('customers')
-        .select('id, name')
-        .in('id', Array.from(customerIds));
-
-      customerDirectory = (customerRows || []).reduce((acc, row) => {
-        if (row.id && row.name) {
-          acc[row.id] = row.name;
-        }
-        return acc;
-      }, customerDirectory);
-    }
-
-    const entityCustomerNames = {};
-    entityToCustomerId.forEach((customerId, entityKey) => {
-      const customerName = customerDirectory[customerId];
-      if (customerName) {
-        entityCustomerNames[entityKey] = customerName;
-        return;
-      }
-      const metadataName = entityToMetadataCustomerName[entityKey];
-      if (metadataName) {
-        entityCustomerNames[entityKey] = metadataName;
-      }
-    });
-
-    Object.entries(entityToMetadataCustomerName).forEach(([entityKey, customerName]) => {
-      if (customerName && !entityCustomerNames[entityKey]) {
-        entityCustomerNames[entityKey] = customerName;
-      }
-    });
-
-    const { data: adminRows } = await supabase
-      .from('admin_audit_log')
-      .select('admin_uid')
-      .gte('created_at', thirtyDaysAgo)
-      .order('created_at', { ascending: false })
-      .limit(2000);
-
-    let adminUids = Array.from(
-      new Set((adminRows || []).map((item) => item.admin_uid).filter(Boolean)),
+    const { adminUids, adminDirectory } = await resolveAdminDirectory(
+      entries,
+      includeAllAdmins,
+      supabase,
     );
-
-    const adminDirectory = {};
-    entries.forEach((entry) => {
-      const metadata = getEntryMetadata(entry);
-      const actorName =
-        typeof metadata.actor_name === 'string' ? metadata.actor_name.trim() : '';
-      const actorEmail =
-        typeof metadata.actor_email === 'string' ? metadata.actor_email.trim() : '';
-      if (!entry.admin_uid) return;
-      if (actorName) {
-        adminDirectory[entry.admin_uid] = actorName;
-        return;
-      }
-      if (actorEmail && !adminDirectory[entry.admin_uid]) {
-        adminDirectory[entry.admin_uid] = actorEmail;
-      }
-    });
-    await Promise.all(
-      adminUids.map(async (uid) => {
-        try {
-          const { data: adminUserData, error: adminUserError } =
-            await supabase.auth.admin.getUserById(uid);
-          if (adminUserError || !adminUserData?.user) {
-            return;
-          }
-          const user = adminUserData.user;
-          const displayName =
-            user.user_metadata?.name ||
-            user.app_metadata?.name ||
-            user.email ||
-            uid;
-          adminDirectory[uid] = String(displayName);
-        } catch (lookupError) {
-          console.warn('[get-audit-logs] Admin lookup failed for uid', uid, lookupError);
-        }
-      }),
-    );
-
-    if (includeAllAdmins) {
-      const { uids: allAdminUids, directory: allAdminDirectory } = await listAllAuthAdmins(supabase);
-      adminUids = Array.from(new Set([...adminUids, ...allAdminUids]));
-      Object.entries(allAdminDirectory).forEach(([uid, displayName]) => {
-        if (!adminDirectory[uid]) {
-          adminDirectory[uid] = displayName;
-        }
-      });
-    }
 
     return json({
       success: true,
       is_super_admin: true,
-      super_admin_uid: SUPER_ADMIN_UID,
+      super_admin_uid: superAdminResult.superAdminUid,
       include_all_admins: includeAllAdmins,
       entries,
-      admins: [SUPER_ADMIN_UID, ...adminUids.filter((uid) => uid !== SUPER_ADMIN_UID)],
+      admins: adminUids,
       admin_directory: adminDirectory,
       customer_directory: customerDirectory,
       entity_customer_names: entityCustomerNames,
-      pagination: {
-        page,
-        pageSize,
-        total,
-        totalPages,
-        hasMore: page < totalPages,
-      },
+      pagination,
     });
   } catch (error) {
     console.error('[get-audit-logs] Unexpected server error', error);

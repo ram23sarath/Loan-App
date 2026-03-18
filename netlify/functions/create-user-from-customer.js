@@ -15,6 +15,10 @@ import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPER_ADMIN_UID = (process.env.SUPER_ADMIN_UID || '').trim();
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const DEFAULT_AUDIT_REDACTION = {
   redactKeys: ['password', 'passcode', 'token', 'access_token', 'refresh_token', 'ssn', 'credit_card', 'auth0_id'],
@@ -33,11 +37,62 @@ const redactAuditObject = (input, policy = DEFAULT_AUDIT_REDACTION) => {
   return out;
 };
 
+const normalizeAuditUuid = (value) => {
+  if (!value) return null;
+  const trimmed = String(value).trim();
+  return UUID_REGEX.test(trimmed) ? trimmed : null;
+};
+
+const getOptionalString = (value) => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed || null;
+};
+
+const resolveAuditActor = async (req, supabase, payload = {}) => {
+  let adminUid = normalizeAuditUuid(payload.admin_uid);
+  let actorName = getOptionalString(payload.actor_name);
+  let actorEmail = getOptionalString(payload.actor_email);
+
+  const authHeader = req.headers.get('authorization') || req.headers.get('Authorization') || '';
+  if (authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7).trim();
+    if (token) {
+      const { data: userData, error: userError } = await supabase.auth.getUser(token);
+      if (!userError && userData?.user) {
+        const caller = userData.user;
+        adminUid = normalizeAuditUuid(caller.id) || adminUid;
+        actorName =
+          getOptionalString(caller.user_metadata?.name) ||
+          getOptionalString(caller.app_metadata?.name) ||
+          getOptionalString(caller.email ? caller.email.split('@')[0] : null) ||
+          actorName;
+        actorEmail = getOptionalString(caller.email) || actorEmail;
+      }
+    }
+  }
+
+  if (!adminUid) {
+    adminUid = normalizeAuditUuid(SUPER_ADMIN_UID);
+  }
+
+  return { admin_uid: adminUid, actor_name: actorName, actor_email: actorEmail };
+};
+
 const logAuditEvent = async (supabase, payload) => {
+  const adminUid = normalizeAuditUuid(payload.admin_uid);
+  if (!adminUid) {
+    console.warn('[AuditLog] Skipped audit write: missing valid admin_uid');
+    return;
+  }
+
+  const normalizedEntityId = normalizeAuditUuid(payload.entity_id);
+
   const { error } = await supabase.from('admin_audit_log').insert({
+    admin_uid: adminUid,
     action: payload.action,
     entity_type: payload.entity_type,
-    entity_id: payload.entity_id,
+    entity_id: normalizedEntityId,
     metadata: redactAuditObject(payload.metadata),
   });
   if (error) {
@@ -65,7 +120,7 @@ export default async (req, context) => {
 
   try {
     // Parse request body
-    const { customer_id, name, phone } = await req.json();
+    const { customer_id, name, phone, admin_uid, actor_name, actor_email } = await req.json();
 
     // Validate input
     if (!customer_id || !name || !phone) {
@@ -95,6 +150,12 @@ export default async (req, context) => {
         autoRefreshToken: false,
         persistSession: false,
       },
+    });
+
+    const auditActor = await resolveAuditActor(req, supabase, {
+      admin_uid,
+      actor_name,
+      actor_email,
     });
 
     // Create the Supabase auth user
@@ -145,12 +206,15 @@ export default async (req, context) => {
       console.log(`✅ Customer updated with user_id: ${userId}`);
 
       await logAuditEvent(supabase, {
+        admin_uid: auditActor.admin_uid,
         action: 'update',
         entity_type: 'customer_auth_link',
         entity_id: customer_id,
         metadata: {
           request_id: requestId,
           source: 'create-user-from-customer',
+          actor_name: auditActor.actor_name,
+          actor_email: auditActor.actor_email,
           customer_id,
           user_id: userId,
           changes: {

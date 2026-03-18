@@ -18,6 +18,65 @@ const sanitizeForIlike = (input) =>
     .trim()
     .slice(0, 80);
 
+const parseBooleanParam = (value) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value === 1;
+  if (typeof value !== 'string') return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
+};
+
+const isAdminLikeUser = (user) => {
+  const role = String(user?.app_metadata?.role || '').toLowerCase();
+  if (role === 'admin' || role === 'super_admin') return true;
+
+  return Boolean(
+    user?.app_metadata?.is_admin === true ||
+      user?.user_metadata?.is_admin === true,
+  );
+};
+
+const getAdminDisplayName = (user) =>
+  String(
+    user?.user_metadata?.name ||
+      user?.app_metadata?.name ||
+      user?.email ||
+      user?.id ||
+      'Unknown Admin',
+  );
+
+const listAllAuthAdmins = async (supabase) => {
+  const directory = {};
+  const uids = [];
+
+  const perPage = 100;
+  let page = 1;
+  const maxPages = 50;
+
+  while (page <= maxPages) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
+    if (error) {
+      console.warn('[get-audit-logs] Failed listing auth users for include_all_admins', error);
+      break;
+    }
+
+    const users = data?.users || [];
+    users.forEach((user) => {
+      if (!isAdminLikeUser(user) || !user?.id) return;
+      directory[user.id] = getAdminDisplayName(user);
+      uids.push(user.id);
+    });
+
+    if (users.length < perPage) break;
+    page += 1;
+  }
+
+  return {
+    uids: Array.from(new Set(uids)),
+    directory,
+  };
+};
+
 const getEntryMetadata = (entry) => {
   const metadata = entry?.metadata;
   if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
@@ -76,6 +135,7 @@ export default async (req) => {
     100,
     Math.max(1, Number.parseInt(String(params.page_size || '20'), 10) || 20),
   );
+  const includeAllAdmins = parseBooleanParam(params.include_all_admins);
 
   const safeSearch = sanitizeForIlike(String(params.search || ''));
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -313,7 +373,7 @@ export default async (req) => {
       .order('created_at', { ascending: false })
       .limit(2000);
 
-    const adminUids = Array.from(
+    let adminUids = Array.from(
       new Set((adminRows || []).map((item) => item.admin_uid).filter(Boolean)),
     );
 
@@ -354,10 +414,21 @@ export default async (req) => {
       }),
     );
 
+    if (includeAllAdmins) {
+      const { uids: allAdminUids, directory: allAdminDirectory } = await listAllAuthAdmins(supabase);
+      adminUids = Array.from(new Set([...adminUids, ...allAdminUids]));
+      Object.entries(allAdminDirectory).forEach(([uid, displayName]) => {
+        if (!adminDirectory[uid]) {
+          adminDirectory[uid] = displayName;
+        }
+      });
+    }
+
     return json({
       success: true,
       is_super_admin: true,
       super_admin_uid: SUPER_ADMIN_UID,
+      include_all_admins: includeAllAdmins,
       entries,
       admins: [SUPER_ADMIN_UID, ...adminUids.filter((uid) => uid !== SUPER_ADMIN_UID)],
       admin_directory: adminDirectory,

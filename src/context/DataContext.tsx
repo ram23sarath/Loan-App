@@ -1575,10 +1575,23 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
               "/.netlify/functions/update-user-from-customer",
               {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                  "Content-Type": "application/json",
+                  ...(session?.access_token
+                    ? { Authorization: `Bearer ${session.access_token}` }
+                    : {}),
+                },
                 body: JSON.stringify({
                   customer_id: customerId,
                   phone: updates.phone,
+                  admin_uid: session?.user?.id ?? null,
+                  actor_name:
+                    (session?.user?.user_metadata?.name as string | undefined) ||
+                    (session?.user?.app_metadata?.name as string | undefined) ||
+                    (session?.user?.email
+                      ? String(session.user.email).split("@")[0]
+                      : null),
+                  actor_email: session?.user?.email ?? null,
                 }),
               },
             );
@@ -3241,11 +3254,22 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 "Content-Type": "application/json",
                 "Cache-Control": "no-cache",
                 Pragma: "no-cache",
+                ...(session?.access_token
+                  ? { Authorization: `Bearer ${session.access_token}` }
+                  : {}),
               },
               body: JSON.stringify({
                 customer_id: data.id,
                 name: customerData.name,
                 phone: customerData.phone,
+                admin_uid: session?.user?.id ?? null,
+                actor_name:
+                  (session?.user?.user_metadata?.name as string | undefined) ||
+                  (session?.user?.app_metadata?.name as string | undefined) ||
+                  (session?.user?.email
+                    ? String(session.user.email).split("@")[0]
+                    : null),
+                actor_email: session?.user?.email ?? null,
               }),
             });
 

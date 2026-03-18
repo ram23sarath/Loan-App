@@ -149,6 +149,7 @@ export default async (req) => {
     const installmentIds = new Set();
     const dataEntryIds = new Set();
     const entityToCustomerId = new Map();
+    const entityToMetadataCustomerName = {};
     let customerDirectory = {};
 
     entries.forEach((entry) => {
@@ -164,12 +165,29 @@ export default async (req) => {
       if (metadataCustomerId) {
         customerIds.add(metadataCustomerId);
         if (entry.entity_id) {
-          entityToCustomerId.set(getEntityKey(entry.entity_type, entry.entity_id), metadataCustomerId);
+          const entityKey = getEntityKey(entry.entity_type, entry.entity_id);
+          entityToCustomerId.set(entityKey, metadataCustomerId);
+          if (metadataCustomerName) {
+            entityToMetadataCustomerName[entityKey] = metadataCustomerName;
+          }
         }
+      }
+
+      if (entry.entity_id && metadataCustomerName) {
+        const entityKey = getEntityKey(entry.entity_type, entry.entity_id);
+        entityToMetadataCustomerName[entityKey] = metadataCustomerName;
       }
 
       if (entry.entity_type === 'customer' && entry.entity_id && metadataCustomerName) {
         customerDirectory[entry.entity_id] = metadataCustomerName;
+      }
+
+      if (entry.entity_type === 'customer' && entry.entity_id && !metadataCustomerName) {
+        const fallbackName =
+          typeof metadata.name === 'string' && metadata.name.trim() ? metadata.name.trim() : '';
+        if (fallbackName) {
+          customerDirectory[entry.entity_id] = fallbackName;
+        }
       }
 
       if (metadataCustomerId && metadataCustomerName) {
@@ -273,6 +291,17 @@ export default async (req) => {
     entityToCustomerId.forEach((customerId, entityKey) => {
       const customerName = customerDirectory[customerId];
       if (customerName) {
+        entityCustomerNames[entityKey] = customerName;
+        return;
+      }
+      const metadataName = entityToMetadataCustomerName[entityKey];
+      if (metadataName) {
+        entityCustomerNames[entityKey] = metadataName;
+      }
+    });
+
+    Object.entries(entityToMetadataCustomerName).forEach(([entityKey, customerName]) => {
+      if (customerName && !entityCustomerNames[entityKey]) {
         entityCustomerNames[entityKey] = customerName;
       }
     });

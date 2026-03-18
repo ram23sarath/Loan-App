@@ -3916,6 +3916,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             body: JSON.stringify({
               customer_id: id,
               user_id: customerUserId,
+              customer_name: (customer as any)?.name ?? null,
+              admin_uid: session?.user?.id ?? null,
+              actor_name:
+                (session?.user?.user_metadata?.name as string | undefined) ||
+                (session?.user?.app_metadata?.name as string | undefined) ||
+                (session?.user?.email
+                  ? String(session.user.email).split("@")[0]
+                  : null),
+              actor_email: session?.user?.email ?? null,
             }),
           });
           if (!resp.ok) {

@@ -266,6 +266,16 @@ const formatAuditTimeIst = (timestamp: string) =>
     timeZone: "Asia/Kolkata",
   }).format(new Date(timestamp));
 
+const isQuarterlyInterestEntry = (entry: AuditLogEntry) => {
+  const metadata = toAuditMetadata(entry);
+  const source = toText(metadata.source);
+  return (
+    entry.entity_type === "quarterly_interest_run" ||
+    source === "quarterly-interest-cron" ||
+    typeof metadata.quarter === "string"
+  );
+};
+
 const AuditLogPage = () => {
   const signalRouteReady = useRouteReady();
   const { session } = useData();
@@ -290,6 +300,8 @@ const AuditLogPage = () => {
   const [serverIsSuperAdmin, setServerIsSuperAdmin] = useState(false);
 
   const canAccessAudit = uiIsSuperAdmin || sessionIsSuperAdmin || serverIsSuperAdmin;
+  const quarterlyAuditEntries = auditEntries.filter(isQuarterlyInterestEntry);
+  const generalAuditEntries = auditEntries.filter((entry) => !isQuarterlyInterestEntry(entry));
 
   useEffect(() => {
     signalRouteReady();
@@ -436,75 +448,164 @@ const AuditLogPage = () => {
               No audit events found.
             </div>
           ) : (
-            <div className="mb-5 overflow-auto rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/40">
-              <table className="min-w-full text-left text-sm">
-                <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-800/90">
-                  <tr>
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                      Transaction
-                    </th>
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                      Recorded At (IST)
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-700/70">
-                  {auditEntries.map((entry) => {
-                    const metadata = toAuditMetadata(entry);
-                    const actorName =
-                      toText(metadata.actor_name) ||
-                      toText(metadata.actor_email) ||
-                      auditAdminDirectory[entry.admin_uid] ||
-                      entry.admin_uid ||
-                      "Admin user";
+            <div className="space-y-5 mb-5">
+              {quarterlyAuditEntries.length > 0 && (
+                <div>
+                  <h3 className="mb-2 px-1 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                    Quarterly Interest Audit Logs
+                  </h3>
+                  <div className="overflow-auto rounded-2xl border border-emerald-200 dark:border-emerald-700/60 bg-white dark:bg-slate-900/40">
+                    <table className="min-w-full text-left text-sm">
+                      <thead className="sticky top-0 z-10 bg-emerald-50 dark:bg-emerald-900/20">
+                        <tr>
+                          <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                            Transaction
+                          </th>
+                          <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300 whitespace-nowrap">
+                            Recorded At (IST)
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-emerald-100 dark:divide-emerald-800/30">
+                        {quarterlyAuditEntries.map((entry) => {
+                          const metadata = toAuditMetadata(entry);
+                          const actorName =
+                            toText(metadata.actor_name) ||
+                            toText(metadata.actor_email) ||
+                            auditAdminDirectory[entry.admin_uid] ||
+                            entry.admin_uid ||
+                            "Admin user";
 
-                    // Resolve customer ID from entity or metadata
-                    const customerId =
-                      entry.entity_type === "customer"
-                        ? entry.entity_id
-                        : toText(metadata.customer_id);
-                    
-                    // Try multiple sources for customer name, in priority order
-                    const customerNameFromMetadata = toText(metadata.customer_name);
-                    const customerNameFromLookup = customerId ? auditCustomerNames[customerId] : null;
-                    const entityCustomerName =
-                      entry.entity_id
-                        ? auditEntityCustomerNames[
-                            getEntityKey(entry.entity_type, entry.entity_id)
-                          ]
-                        : null;
+                          const customerId =
+                            entry.entity_type === "customer"
+                              ? entry.entity_id
+                              : toText(metadata.customer_id);
+                          const customerNameFromMetadata = toText(metadata.customer_name);
+                          const customerNameFromLookup = customerId
+                            ? auditCustomerNames[customerId]
+                            : null;
+                          const entityCustomerName =
+                            entry.entity_id
+                              ? auditEntityCustomerNames[
+                                  getEntityKey(entry.entity_type, entry.entity_id)
+                                ]
+                              : null;
 
-                    const actionLabel = getActionLabel(entry.action);
-                    const entityLabel = getEntityLabel(entry.entity_type);
-                    const resolvedCustomerName =
-                      customerNameFromMetadata ||
-                      (entry.entity_type === "customer" ? toText(metadata.name) : null) ||
-                      customerNameFromLookup ||
-                      entityCustomerName ||
-                      "Unknown Customer";
-                    const amountText = getAmountDiffText(entry);
-                    const fieldText = getFieldChangeText(entry);
-                    const recordedAt = formatAuditTimeIst(entry.created_at);
+                          const actionLabel = getActionLabel(entry.action);
+                          const entityLabel = getEntityLabel(entry.entity_type);
+                          const resolvedCustomerName =
+                            customerNameFromMetadata ||
+                            (entry.entity_type === "customer" ? toText(metadata.name) : null) ||
+                            customerNameFromLookup ||
+                            entityCustomerName ||
+                            "Unknown Customer";
+                          const amountText = getAmountDiffText(entry);
+                          const fieldText = getFieldChangeText(entry);
+                          const recordedAt = formatAuditTimeIst(entry.created_at);
 
-                    const baseSentence = `Admin ${renderScalar(actorName)} ${actionLabel} ${entityLabel} for ${renderScalar(resolvedCustomerName)}`;
-                    const detailParts = [amountText, fieldText].filter(Boolean) as string[];
-                    const sentence = detailParts.length
-                      ? `${baseSentence} — ${detailParts.join(" | ")}`
-                      : baseSentence;
+                          const baseSentence = `Admin ${renderScalar(actorName)} ${actionLabel} ${entityLabel} for ${renderScalar(resolvedCustomerName)}`;
+                          const detailParts = [amountText, fieldText].filter(
+                            Boolean,
+                          ) as string[];
+                          const sentence = detailParts.length
+                            ? `${baseSentence} — ${detailParts.join(" | ")}`
+                            : baseSentence;
 
-                    return (
-                      <tr key={entry.id} className="align-top">
-                        <td className="px-4 py-3 text-slate-800 dark:text-slate-100 font-medium">
-                          {sentence}
-                        </td>
-                        <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                          {recordedAt}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          return (
+                            <tr key={entry.id} className="align-top">
+                              <td className="px-4 py-3 text-slate-800 dark:text-slate-100 font-medium">
+                                {sentence}
+                              </td>
+                              <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                {recordedAt}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {generalAuditEntries.length > 0 && (
+                <div>
+                  <h3 className="mb-2 px-1 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                    General Audit Logs
+                  </h3>
+                  <div className="overflow-auto rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/40">
+                    <table className="min-w-full text-left text-sm">
+                      <thead className="sticky top-0 z-10 bg-slate-50 dark:bg-slate-800/90">
+                        <tr>
+                          <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                            Transaction
+                          </th>
+                          <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                            Recorded At (IST)
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-700/70">
+                        {generalAuditEntries.map((entry) => {
+                          const metadata = toAuditMetadata(entry);
+                          const actorName =
+                            toText(metadata.actor_name) ||
+                            toText(metadata.actor_email) ||
+                            auditAdminDirectory[entry.admin_uid] ||
+                            entry.admin_uid ||
+                            "Admin user";
+
+                          const customerId =
+                            entry.entity_type === "customer"
+                              ? entry.entity_id
+                              : toText(metadata.customer_id);
+                          const customerNameFromMetadata = toText(metadata.customer_name);
+                          const customerNameFromLookup = customerId
+                            ? auditCustomerNames[customerId]
+                            : null;
+                          const entityCustomerName =
+                            entry.entity_id
+                              ? auditEntityCustomerNames[
+                                  getEntityKey(entry.entity_type, entry.entity_id)
+                                ]
+                              : null;
+
+                          const actionLabel = getActionLabel(entry.action);
+                          const entityLabel = getEntityLabel(entry.entity_type);
+                          const resolvedCustomerName =
+                            customerNameFromMetadata ||
+                            (entry.entity_type === "customer" ? toText(metadata.name) : null) ||
+                            customerNameFromLookup ||
+                            entityCustomerName ||
+                            "Unknown Customer";
+                          const amountText = getAmountDiffText(entry);
+                          const fieldText = getFieldChangeText(entry);
+                          const recordedAt = formatAuditTimeIst(entry.created_at);
+
+                          const baseSentence = `Admin ${renderScalar(actorName)} ${actionLabel} ${entityLabel} for ${renderScalar(resolvedCustomerName)}`;
+                          const detailParts = [amountText, fieldText].filter(
+                            Boolean,
+                          ) as string[];
+                          const sentence = detailParts.length
+                            ? `${baseSentence} — ${detailParts.join(" | ")}`
+                            : baseSentence;
+
+                          return (
+                            <tr key={entry.id} className="align-top">
+                              <td className="px-4 py-3 text-slate-800 dark:text-slate-100 font-medium">
+                                {sentence}
+                              </td>
+                              <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                {recordedAt}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

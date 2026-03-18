@@ -27,6 +27,54 @@ import { NOTIFICATION_TYPES, NOTIFICATION_STATUSES } from '../../shared/notifica
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const CRON_SECRET = process.env.CRON_SECRET;
+const SUPER_ADMIN_UID = (process.env.SUPER_ADMIN_UID || '').trim();
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+const DEFAULT_AUDIT_REDACTION = {
+  redactKeys: ['password', 'passcode', 'token', 'access_token', 'refresh_token', 'ssn', 'credit_card', 'auth0_id'],
+  mask: '<REDACTED>',
+};
+
+const redactAuditObject = (input, policy = DEFAULT_AUDIT_REDACTION) => {
+  if (input === null || input === undefined) return input;
+  if (Array.isArray(input)) return input.map((v) => redactAuditObject(v, policy));
+  if (typeof input !== 'object') return input;
+  const out = {};
+  for (const [key, value] of Object.entries(input)) {
+    const shouldRedact = policy.redactKeys.some((rk) => rk.toLowerCase() === key.toLowerCase());
+    out[key] = shouldRedact ? policy.mask : redactAuditObject(value, policy);
+  }
+  return out;
+};
+
+const normalizeAuditUuid = (value) => {
+  if (!value) return null;
+  const trimmed = String(value).trim();
+  return UUID_REGEX.test(trimmed) ? trimmed : null;
+};
+
+const logAuditEvent = async (supabase, payload) => {
+  const adminUid = normalizeAuditUuid(payload.admin_uid);
+  if (!adminUid) {
+    console.warn('[AuditLog] Skipped quarterly-interest audit write: invalid admin_uid');
+    return;
+  }
+
+  const entityId = normalizeAuditUuid(payload.entity_id);
+
+  const { error } = await supabase.from('admin_audit_log').insert({
+    admin_uid: adminUid,
+    action: payload.action,
+    entity_type: payload.entity_type,
+    entity_id: entityId,
+    metadata: redactAuditObject(payload.metadata),
+  });
+  if (error) {
+    console.error('[AuditLog] Failed to write quarterly-interest audit log:', error.message || error);
+  }
+};
 
 /**
  * Get financial year quarter boundaries for a given date.
@@ -141,10 +189,50 @@ export default async (req) => {
           results.errors++;
         }
         results.details.push({ id: customer.id, name: customer.name, ...result });
+
+        await logAuditEvent(supabase, {
+          admin_uid: SUPER_ADMIN_UID,
+          action: result.status === 'success' ? 'create' : 'update',
+          entity_type: 'quarterly_interest_run',
+          entity_id: customer.id,
+          metadata: {
+            source: 'quarterly-interest-cron',
+            actor_name: 'System Cron',
+            actor_email: 'system-cron@internal',
+            customer_id: customer.id,
+            customer_name: customer.name,
+            quarter: quarter.label,
+            period_start: quarter.start,
+            period_end: quarter.end,
+            status: result.status,
+            reason: result.reason || null,
+            interest_charged: result.interest_charged || 0,
+            subscription_total: result.subscription_total || 0,
+          },
+        });
       } catch (err) {
         console.error(`❌ Exception for ${customer.name}:`, err.message);
         results.errors++;
         results.details.push({ id: customer.id, name: customer.name, status: 'error', error: err.message });
+
+        await logAuditEvent(supabase, {
+          admin_uid: SUPER_ADMIN_UID,
+          action: 'update',
+          entity_type: 'quarterly_interest_run',
+          entity_id: customer.id,
+          metadata: {
+            source: 'quarterly-interest-cron',
+            actor_name: 'System Cron',
+            actor_email: 'system-cron@internal',
+            customer_id: customer.id,
+            customer_name: customer.name,
+            quarter: quarter.label,
+            period_start: quarter.start,
+            period_end: quarter.end,
+            status: 'error',
+            error: err.message || String(err),
+          },
+        });
       }
     }
 
@@ -252,6 +340,22 @@ export default async (req) => {
       const supabaseForNotif = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
         auth: { autoRefreshToken: false, persistSession: false },
       });
+
+      await logAuditEvent(supabaseForNotif, {
+        admin_uid: SUPER_ADMIN_UID,
+        action: 'update',
+        entity_type: 'quarterly_interest_run',
+        entity_id: null,
+        metadata: {
+          source: 'quarterly-interest-cron',
+          actor_name: 'System Cron',
+          actor_email: 'system-cron@internal',
+          status: 'fatal_error',
+          error: err.message || String(err),
+          timestamp: new Date().toISOString(),
+        },
+      });
+
       await supabaseForNotif.from('system_notifications').insert([{
         type: NOTIFICATION_TYPES.QUARTERLY_INTEREST,
         status: NOTIFICATION_STATUSES.ERROR,

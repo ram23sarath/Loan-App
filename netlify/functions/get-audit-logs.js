@@ -60,7 +60,10 @@ const requestParamsSchema = z.object({
 });
 
 const cursorSchema = z.object({
-  created_at: z.string().datetime(),
+  created_at: z
+    .string()
+    .trim()
+    .refine((value) => !Number.isNaN(Date.parse(value)), 'Invalid datetime'),
   id: z.union([
     z.number().int().nonnegative(),
     z.string().regex(CURSOR_ID_REGEX),

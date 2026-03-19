@@ -166,6 +166,53 @@ const HUMANIZED_FIELD_LABELS: Record<string, string> = {
 };
 
 const IGNORED_CHANGE_FIELDS = new Set(["updated_at", "created_at"]);
+const CREATE_STYLE_ACTIONS = new Set(["create", "adjust_misc_create"]);
+const DELETE_STYLE_ACTIONS = new Set(["soft_delete", "permanent_delete"]);
+
+const getChangeBoundaryValue = (
+  entry: AuditLogEntry,
+  side: "before" | "after",
+  value: unknown,
+): unknown => {
+  if (value !== undefined) {
+    return value;
+  }
+
+  // For create/delete style actions, absent baseline values are expected.
+  if (
+    side === "before" &&
+    (CREATE_STYLE_ACTIONS.has(entry.action) || DELETE_STYLE_ACTIONS.has(entry.action))
+  ) {
+    return null;
+  }
+
+  return undefined;
+};
+
+const getHumanReadableAuditValue = (
+  entry: AuditLogEntry,
+  key: string,
+  value: unknown,
+  adminDirectory: Record<string, string>,
+): unknown => {
+  const text = toText(value);
+  if (!text) {
+    return value;
+  }
+
+  if (key.endsWith("_by") || key === "admin_uid") {
+    const metadata = toAuditMetadata(entry);
+    return (
+      adminDirectory[text] ||
+      adminDirectory[entry.admin_uid] ||
+      toText(metadata.actor_name) ||
+      toText(metadata.actor_email) ||
+      text
+    );
+  }
+
+  return value;
+};
 
 const getChangedFieldKeys = (entry: AuditLogEntry): string[] => {
   const metadata = toAuditMetadata(entry);
@@ -183,7 +230,10 @@ const getChangedFieldKeys = (entry: AuditLogEntry): string[] => {
   return Array.from(keys).filter((k) => before[k] !== after[k]);
 };
 
-const getFieldChangeText = (entry: AuditLogEntry): string | null => {
+export const getFieldChangeText = (
+  entry: AuditLogEntry,
+  adminDirectory: Record<string, string> = {},
+): string | null => {
   const metadata = toAuditMetadata(entry);
   const changes = metadata.changes as
     | { before?: Record<string, unknown> | null; after?: Record<string, unknown> | null }
@@ -199,8 +249,22 @@ const getFieldChangeText = (entry: AuditLogEntry): string | null => {
 
   const details = keys.map((key) => {
     const label = HUMANIZED_FIELD_LABELS[key] || key.replace(/_/g, " ");
-    const beforeValue = renderScalar(before[key]);
-    const afterValue = renderScalar(after[key]);
+    const beforeValue = renderScalar(
+      getHumanReadableAuditValue(
+        entry,
+        key,
+        getChangeBoundaryValue(entry, "before", before[key]),
+        adminDirectory,
+      ),
+    );
+    const afterValue = renderScalar(
+      getHumanReadableAuditValue(
+        entry,
+        key,
+        getChangeBoundaryValue(entry, "after", after[key]),
+        adminDirectory,
+      ),
+    );
     return `${label}: ${beforeValue} → ${afterValue}`;
   });
 
@@ -527,7 +591,7 @@ const AuditLogPage = () => {
                             entityCustomerName ||
                             "Unknown Customer";
                           const amountText = getAmountDiffText(entry);
-                          const fieldText = getFieldChangeText(entry);
+                          const fieldText = getFieldChangeText(entry, auditAdminDirectory);
                           const recordedAt = formatAuditTimeIst(entry.created_at);
 
                           const baseSentence = `Admin ${renderScalar(actorName)} ${actionLabel} ${entityLabel} for ${renderScalar(resolvedCustomerName)}`;
@@ -606,7 +670,7 @@ const AuditLogPage = () => {
                             entityCustomerName ||
                             "Unknown Customer";
                           const amountText = getAmountDiffText(entry);
-                          const fieldText = getFieldChangeText(entry);
+                          const fieldText = getFieldChangeText(entry, auditAdminDirectory);
                           const recordedAt = formatAuditTimeIst(entry.created_at);
 
                           const baseSentence = `Admin ${renderScalar(actorName)} ${actionLabel} ${entityLabel} for ${renderScalar(resolvedCustomerName)}`;

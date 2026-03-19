@@ -50,6 +50,7 @@ const getOptionalString = (value) => {
 };
 
 const resolveAuditActor = async (req, supabase, payload = {}) => {
+  let actorSource = 'payload';
   let adminUid = normalizeAuditUuid(payload.admin_uid);
   let actorName = getOptionalString(payload.actor_name);
   let actorEmail = getOptionalString(payload.actor_email);
@@ -61,7 +62,11 @@ const resolveAuditActor = async (req, supabase, payload = {}) => {
       const { data: userData, error: userError } = await supabase.auth.getUser(token);
       if (!userError && userData?.user) {
         const caller = userData.user;
-        adminUid = normalizeAuditUuid(caller.id) || adminUid;
+        const callerAdminUid = normalizeAuditUuid(caller.id);
+        if (callerAdminUid) {
+          adminUid = callerAdminUid;
+          actorSource = 'token';
+        }
         actorName =
           getOptionalString(caller.user_metadata?.name) ||
           getOptionalString(caller.app_metadata?.name) ||
@@ -74,9 +79,21 @@ const resolveAuditActor = async (req, supabase, payload = {}) => {
 
   if (!adminUid) {
     adminUid = normalizeAuditUuid(SUPER_ADMIN_UID);
+    if (adminUid) {
+      actorSource = 'super_admin_fallback';
+    }
   }
 
-  return { admin_uid: adminUid, actor_name: actorName, actor_email: actorEmail };
+  if (!adminUid) {
+    actorSource = 'missing';
+  }
+
+  return {
+    admin_uid: adminUid,
+    actor_name: actorName,
+    actor_email: actorEmail,
+    actor_source: actorSource,
+  };
 };
 
 const logAuditEvent = async (supabase, payload) => {
@@ -215,6 +232,7 @@ export default async (req, context) => {
           source: 'create-user-from-customer',
           actor_name: auditActor.actor_name,
           actor_email: auditActor.actor_email,
+          actor_source: auditActor.actor_source,
           customer_id,
           user_id: userId,
           changes: {

@@ -197,15 +197,14 @@ const getFieldChangeText = (entry: AuditLogEntry): string | null => {
 
   if (!keys.length) return null;
 
-  const preview = keys.slice(0, 4).map((key) => {
+  const details = keys.map((key) => {
     const label = HUMANIZED_FIELD_LABELS[key] || key.replace(/_/g, " ");
     const beforeValue = renderScalar(before[key]);
     const afterValue = renderScalar(after[key]);
     return `${label}: ${beforeValue} → ${afterValue}`;
   });
 
-  const hidden = keys.length - preview.length;
-  return hidden > 0 ? `${preview.join("; ")}; +${hidden} more` : preview.join("; ");
+  return details.join("; ");
 };
 
 const getAmountDiffText = (entry: AuditLogEntry): string | null => {
@@ -293,6 +292,7 @@ const AuditLogPage = () => {
   const [auditPageCursors, setAuditPageCursors] = useState<Record<number, string | null>>({ 1: null });
   const auditPageCursorsRef = useRef<Record<number, string | null>>({ 1: null });
   const [auditSearch, setAuditSearch] = useState("");
+  const auditAppliedSearchRef = useRef("");
   const [auditCustomerNames, setAuditCustomerNames] = useState<Record<string, string>>({});
   const [auditEntityCustomerNames, setAuditEntityCustomerNames] = useState<Record<string, string>>({});
   const [auditAdminDirectory, setAuditAdminDirectory] = useState<Record<string, string>>({});
@@ -329,7 +329,8 @@ const AuditLogPage = () => {
           page_size: "20",
         });
 
-        if (auditSearch) query.set("search", auditSearch);
+        const appliedSearch = auditAppliedSearchRef.current;
+        if (appliedSearch) query.set("search", appliedSearch);
         if (currentCursor) query.set("cursor", currentCursor);
 
         const response = await fetch(
@@ -381,7 +382,7 @@ const AuditLogPage = () => {
         setAuditLoading(false);
       }
     },
-    [session, auditSearch],
+    [session],
   );
 
   useEffect(() => {
@@ -444,6 +445,7 @@ const AuditLogPage = () => {
             />
             <button
               onClick={() => {
+                auditAppliedSearchRef.current = auditSearch;
                 auditPageCursorsRef.current = { 1: null };
                 setAuditPageCursors({ 1: null });
                 fetchAuditLogs(1);

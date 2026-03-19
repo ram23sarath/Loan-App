@@ -43,6 +43,56 @@ const normalizeAuditUuid = (value) => {
   return UUID_REGEX.test(trimmed) ? trimmed : null;
 };
 
+const getOptionalString = (value) => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed || null;
+};
+
+const resolveAuditActor = async (req, supabase, payload = {}) => {
+  let actorSource = 'payload';
+  let adminUid = normalizeAuditUuid(payload.admin_uid);
+  let actorName = getOptionalString(payload.actor_name);
+  let actorEmail = getOptionalString(payload.actor_email);
+
+  const authHeader = req.headers.get('authorization') || req.headers.get('Authorization') || '';
+  if (authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7).trim();
+    if (token) {
+      const { data: userData, error: userError } = await supabase.auth.getUser(token);
+      if (!userError && userData?.user) {
+        const caller = userData.user;
+        adminUid = normalizeAuditUuid(caller.id) || adminUid;
+        actorSource = 'token';
+        actorName =
+          getOptionalString(caller.user_metadata?.name) ||
+          getOptionalString(caller.app_metadata?.name) ||
+          getOptionalString(caller.email ? caller.email.split('@')[0] : null) ||
+          actorName;
+        actorEmail = getOptionalString(caller.email) || actorEmail;
+      }
+    }
+  }
+
+  if (!adminUid) {
+    adminUid = normalizeAuditUuid(SUPER_ADMIN_UID);
+    if (adminUid) {
+      actorSource = 'super_admin_fallback';
+    }
+  }
+
+  if (!adminUid) {
+    actorSource = 'missing';
+  }
+
+  return {
+    admin_uid: adminUid,
+    actor_name: actorName,
+    actor_email: actorEmail,
+    actor_source: actorSource,
+  };
+};
+
 const logAuditEvent = async (supabase, payload) => {
   const { error } = await supabase.from('admin_audit_log').insert({
     admin_uid: payload.admin_uid,
@@ -85,6 +135,12 @@ export default async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
+    const auditActor = await resolveAuditActor(req, supabase, {
+      admin_uid,
+      actor_name,
+      actor_email,
+    });
+
     console.log(`🗑️  Deleting auth user ${user_id} for customer ${customer_id}`);
 
     // Call deleteUser - SDK may accept the id directly
@@ -96,7 +152,7 @@ export default async (req) => {
 
     console.log(`✅ Auth user deleted: ${user_id}`);
 
-    const normalizedAdminUid = normalizeAuditUuid(admin_uid) || normalizeAuditUuid(SUPER_ADMIN_UID);
+    const normalizedAdminUid = auditActor.admin_uid;
     const normalizedUserId = normalizeAuditUuid(user_id);
     const normalizedCustomerId = normalizeAuditUuid(customer_id);
 
@@ -113,9 +169,10 @@ export default async (req) => {
           source: 'delete-user-from-customer',
           customer_id: normalizedCustomerId,
           user_id: normalizedUserId,
-          actor_name: typeof actor_name === 'string' && actor_name.trim() ? actor_name.trim() : null,
-          actor_email: typeof actor_email === 'string' && actor_email.trim() ? actor_email.trim() : null,
-          customer_name: typeof customer_name === 'string' && customer_name.trim() ? customer_name.trim() : null,
+          actor_name: auditActor.actor_name,
+          actor_email: auditActor.actor_email,
+          actor_source: auditActor.actor_source,
+          customer_name: getOptionalString(customer_name),
           changes: {
             before: {
               customer_id: normalizedCustomerId,

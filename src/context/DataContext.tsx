@@ -3496,6 +3496,34 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       const deletedAt = new Date().toISOString();
       const deletedBy = session?.user?.id || session?.user?.email || null;
       const customerName = customerMap.get(customerId)?.name || null;
+      const relatedLoanIds = loans
+        .filter((loan) => loan.customer_id === customerId && !(loan as any).deleted_at)
+        .map((loan) => loan.id);
+      const relatedSubscriptionIds = subscriptions
+        .filter(
+          (subscription) =>
+            subscription.customer_id === customerId &&
+            !(subscription as any).deleted_at,
+        )
+        .map((subscription) => subscription.id);
+      const relatedDataEntryIds = dataEntries
+        .filter(
+          (entry) => entry.customer_id === customerId && !(entry as any).deleted_at,
+        )
+        .map((entry) => entry.id);
+      const relatedSeniorityIds = seniorityList
+        .filter(
+          (seniority) =>
+            seniority.customer_id === customerId && !(seniority as any).deleted_at,
+        )
+        .map((seniority) => seniority.id);
+      const relatedInstallmentIds = installments
+        .filter(
+          (installment) =>
+            relatedLoanIds.includes(installment.loan_id) &&
+            !(installment as any).deleted_at,
+        )
+        .map((installment) => installment.id);
       const { data: beforeRow } = await supabase
         .from("customers")
         .select("*")
@@ -3576,6 +3604,29 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .eq("customer_id", customerId)
         .is("deleted_at", null);
       if (seniorityErr) throw seniorityErr;
+
+      const cascadeCounts = {
+        loans: relatedLoanIds.length,
+        subscriptions: relatedSubscriptionIds.length,
+        data_entries: relatedDataEntryIds.length,
+        loan_seniority: relatedSeniorityIds.length,
+        installments_by_loan: relatedInstallmentIds.length,
+      };
+
+      if (Object.values(cascadeCounts).some((count) => count > 0)) {
+        logAuditEvent(session, "soft_delete", "customer_cascade", customerId, {
+          customer_id: customerId,
+          customer_name: customerName,
+          deleted_at: deletedAt,
+          deleted_by: deletedBy,
+          cascade_counts: cascadeCounts,
+          loan_ids: relatedLoanIds.slice(0, 25),
+          subscription_ids: relatedSubscriptionIds.slice(0, 25),
+          data_entry_ids: relatedDataEntryIds.slice(0, 25),
+          seniority_ids: relatedSeniorityIds.slice(0, 25),
+          installment_ids: relatedInstallmentIds.slice(0, 25),
+        });
+      }
 
       logAuditEvent(session, "soft_delete", "customer", customerId, {
         customer_name: customerName,
@@ -3873,6 +3924,27 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       const customerUserId = (customer as any).user_id || null;
       const beforeSnapshot = (customer as AuditSnapshot) ?? null;
 
+      const { data: dataEntriesForCustomer, error: dataEntriesFetchError } =
+        await supabase
+          .from("data_entries")
+          .select("id")
+          .eq("customer_id", id);
+      if (dataEntriesFetchError) throw dataEntriesFetchError;
+
+      const { data: seniorityForCustomer, error: seniorityFetchError } =
+        await supabase
+          .from("loan_seniority")
+          .select("id")
+          .eq("customer_id", id);
+      if (seniorityFetchError) throw seniorityFetchError;
+
+      const { data: subscriptionsForCustomer, error: subscriptionsFetchError } =
+        await supabase
+          .from("subscriptions")
+          .select("id")
+          .eq("customer_id", id);
+      if (subscriptionsFetchError) throw subscriptionsFetchError;
+
       // Hard delete all related data entries
       const { error: delDataErr } = await supabase
         .from("data_entries")
@@ -3894,7 +3966,18 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .eq("customer_id", id);
       if (loansFetchError) throw loansFetchError;
       const loanIds = (loansForCustomer || []).map((l: any) => l.id);
+      let installmentIds: string[] = [];
       if (loanIds.length > 0) {
+        const { data: installmentsForCustomerLoans, error: installmentsFetchError } =
+          await supabase
+            .from("installments")
+            .select("id")
+            .in("loan_id", loanIds);
+        if (installmentsFetchError) throw installmentsFetchError;
+        installmentIds = (installmentsForCustomerLoans || []).map(
+          (installment: any) => installment.id,
+        );
+
         const { error: delInstallErr } = await supabase
           .from("installments")
           .delete()
@@ -3920,6 +4003,34 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         .delete()
         .eq("id", id);
       if (delCustErr) throw delCustErr;
+
+      const cascadeCounts = {
+        loans: loanIds.length,
+        subscriptions: (subscriptionsForCustomer || []).length,
+        data_entries: (dataEntriesForCustomer || []).length,
+        loan_seniority: (seniorityForCustomer || []).length,
+        installments: installmentIds.length,
+      };
+
+      if (Object.values(cascadeCounts).some((count) => count > 0)) {
+        logAuditEvent(session, "permanent_delete", "customer_cascade", id, {
+          customer_id: id,
+          customer_name: (customer as any)?.name || null,
+          customer_user_id: customerUserId,
+          cascade_counts: cascadeCounts,
+          loan_ids: loanIds.slice(0, 25),
+          subscription_ids: (subscriptionsForCustomer || [])
+            .map((subscription: any) => subscription.id)
+            .slice(0, 25),
+          data_entry_ids: (dataEntriesForCustomer || [])
+            .map((entry: any) => entry.id)
+            .slice(0, 25),
+          seniority_ids: (seniorityForCustomer || [])
+            .map((seniority: any) => seniority.id)
+            .slice(0, 25),
+          installment_ids: installmentIds.slice(0, 25),
+        });
+      }
 
       logAuditEvent(session, "permanent_delete", "customer", id, {
         customer_name: (customer as any)?.name || null,

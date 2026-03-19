@@ -257,7 +257,12 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
         "/.netlify/functions/reset-customer-password",
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(session?.access_token
+              ? { Authorization: `Bearer ${session.access_token}` }
+              : {}),
+          },
           body: JSON.stringify({
             email: changePasswordEmail,
             new_password: changePasswordNew,

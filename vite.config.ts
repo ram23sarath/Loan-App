@@ -1,5 +1,5 @@
 import path from 'path';
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   // VITE_ prefixed env variables are automatically exposed to client code
@@ -21,10 +21,5 @@ export default defineConfig({
         secure: false,
       },
     },
-  },
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    include: ['src/**/*.test.{ts,tsx}'],
   },
 });

@@ -1,14 +1,23 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useRouteReady } from "../RouteReadySignal";
 import PageWrapper from "../ui/PageWrapper";
 import { useData } from "../../context/DataContext";
 import { HistoryIcon } from "../../constants";
 import type { AuditLogEntry } from "../../types";
+import {
+  buildAuditSentence,
+  formatAuditTimeIst,
+  initialAuditPageCursors,
+  isQuarterlyInterestEntry,
+  normalizeAuditSearch,
+  toText,
+  updateAuditPageCursors,
+} from "./auditLogHelpers";
 
 interface AuditLogResponse {
   success: boolean;
-  entries: AuditLogEntry[];
+  entries?: unknown;
   admin_directory?: Record<string, string>;
   customer_directory?: Record<string, string>;
   entity_customer_names?: Record<string, string>;
@@ -21,320 +30,45 @@ interface AuditLogResponse {
   error?: string;
 }
 
-const toAuditMetadata = (entry: AuditLogEntry): Record<string, unknown> => {
-  const value = entry.metadata;
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    return value as Record<string, unknown>;
-  }
-  return {};
-};
+type AuditAccessState = "authorizing" | "authorized" | "forbidden";
+type AuditFetchMode = "initial" | "search" | "refresh" | "page";
 
-const toText = (value: unknown): string | null => {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-};
+const hasKey = <T extends object>(value: T, key: number) =>
+  Object.prototype.hasOwnProperty.call(value, key);
 
-const toAmount = (value: unknown): number | null => {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
+const toRecord = (value: unknown): Record<string, string> => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
   }
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) {
-      return parsed;
+  const mapped: Record<string, string> = {};
+  for (const [key, raw] of Object.entries(value)) {
+    const text = toText(raw);
+    if (text) {
+      mapped[key] = text;
     }
   }
-  return null;
+  return mapped;
 };
 
-const getEntityKey = (entityType: string, entityId: string) =>
-  `${entityType}:${entityId}`;
-
-const renderScalar = (value: unknown): string => {
-  if (value === null) return "—";
-  if (value === "") return "(empty string)";
-  if (value === undefined) return "(missing)";
-  return String(value);
-};
-
-const getExplicitAuditAmount = (entry: AuditLogEntry): number | null => {
-  const metadata = toAuditMetadata(entry);
-  const changes = metadata.changes as
-    | { before?: Record<string, unknown> | null; after?: Record<string, unknown> | null }
-    | undefined;
-  const before = changes?.before ?? null;
-  const after = changes?.after ?? null;
-  const amountKeys = [
-    "derived_amount",
-    "deleted_amount",
-    "created_amount",
-    "original_amount",
-    "previous_amount",
-    "amount",
-    "subscription_amount",
-    "installment_amount",
-    "loan_amount",
-    "value",
-    "adjustment_amount",
-    "misc_amount",
-    "new_amount",
-  ];
-
-  for (const key of amountKeys) {
-    const found = toAmount(metadata[key]);
-    if (found !== null) return found;
+const isAuditLogEntry = (value: unknown): value is AuditLogEntry => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
   }
-
-  const updates = metadata.updates;
-  if (updates && typeof updates === "object" && !Array.isArray(updates)) {
-    const updatesRecord = updates as Record<string, unknown>;
-    const found = toAmount(updatesRecord.amount);
-    if (found !== null) return found;
-  }
-
-  if (after && typeof after === "object") {
-    const found = toAmount((after as Record<string, unknown>).amount);
-    if (found !== null) return found;
-  }
-
-  if (before && typeof before === "object") {
-    const found = toAmount((before as Record<string, unknown>).amount);
-    if (found !== null) return found;
-  }
-
-  return null;
-};
-
-const getEntityLabel = (entityType: string) => {
-  switch (entityType) {
-    case "loan":
-      return "Loan";
-    case "subscription":
-      return "Subscription";
-    case "installment":
-      return "Installment";
-    case "data_entry":
-      return "Data Entry";
-    case "customer":
-      return "Customer";
-    default:
-      return entityType
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (char) => char.toUpperCase());
-  }
-};
-
-const getActionLabel = (action: string) => {
-  switch (action) {
-    case "soft_delete":
-      return "Deleted";
-    case "permanent_delete":
-      return "Permanently Deleted";
-    case "restore":
-      return "Restored";
-    case "create":
-      return "Added";
-    case "update":
-      return "Updated";
-    case "adjust_misc":
-    case "adjust_misc_create":
-      return "Adjusted";
-    default:
-      return action
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (char) => char.toUpperCase());
-  }
-};
-
-const getAuditAmount = (entry: AuditLogEntry) => {
-  const explicit = getExplicitAuditAmount(entry);
-  return explicit;
-};
-
-const formatCurrency = (value: number) =>
-  value.toLocaleString("en-IN", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
-
-const HUMANIZED_FIELD_LABELS: Record<string, string> = {
-  receipt_number: "Receipt Number",
-  receipt: "Receipt",
-  notes: "Remarks",
-  payment_date: "Date",
-  date: "Date",
-  late_fee: "Late Fee",
-};
-
-const IGNORED_CHANGE_FIELDS = new Set(["updated_at", "created_at"]);
-const CREATE_STYLE_ACTIONS = new Set(["create", "adjust_misc_create"]);
-const DELETE_STYLE_ACTIONS = new Set(["soft_delete", "permanent_delete"]);
-
-const getChangeBoundaryValue = (
-  entry: AuditLogEntry,
-  side: "before" | "after",
-  value: unknown,
-): unknown => {
-  if (value !== undefined) {
-    return value;
-  }
-
-  // For create/delete style actions, absent baseline values are expected.
-  if (
-    side === "before" &&
-    (CREATE_STYLE_ACTIONS.has(entry.action) || DELETE_STYLE_ACTIONS.has(entry.action))
-  ) {
-    return null;
-  }
-
-  return undefined;
-};
-
-const getHumanReadableAuditValue = (
-  entry: AuditLogEntry,
-  key: string,
-  value: unknown,
-  adminDirectory: Record<string, string>,
-): unknown => {
-  const text = toText(value);
-  if (!text) {
-    return value;
-  }
-
-  if (key.endsWith("_by") || key === "admin_uid") {
-    const metadata = toAuditMetadata(entry);
-    return (
-      adminDirectory[text] ||
-      adminDirectory[entry.admin_uid] ||
-      toText(metadata.actor_name) ||
-      toText(metadata.actor_email) ||
-      text
-    );
-  }
-
-  return value;
-};
-
-const getChangedFieldKeys = (entry: AuditLogEntry): string[] => {
-  const metadata = toAuditMetadata(entry);
-  const changed = metadata.fields_changed;
-  if (Array.isArray(changed)) {
-    return changed.filter((k): k is string => typeof k === "string");
-  }
-
-  const changes = metadata.changes as
-    | { before?: Record<string, unknown> | null; after?: Record<string, unknown> | null }
-    | undefined;
-  const before = changes?.before ?? {};
-  const after = changes?.after ?? {};
-  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
-  return Array.from(keys).filter((k) => before[k] !== after[k]);
-};
-
-export const getFieldChangeText = (
-  entry: AuditLogEntry,
-  adminDirectory: Record<string, string> = {},
-): string | null => {
-  const metadata = toAuditMetadata(entry);
-  const changes = metadata.changes as
-    | { before?: Record<string, unknown> | null; after?: Record<string, unknown> | null }
-    | undefined;
-  const before = changes?.before ?? {};
-  const after = changes?.after ?? {};
-
-  const keys = getChangedFieldKeys(entry)
-    .filter((key) => !IGNORED_CHANGE_FIELDS.has(key))
-    .filter((key) => key !== "amount");
-
-  if (!keys.length) return null;
-
-  const details = keys.map((key) => {
-    const label = HUMANIZED_FIELD_LABELS[key] || key.replace(/_/g, " ");
-    const beforeValue = renderScalar(
-      getHumanReadableAuditValue(
-        entry,
-        key,
-        getChangeBoundaryValue(entry, "before", before[key]),
-        adminDirectory,
-      ),
-    );
-    const afterValue = renderScalar(
-      getHumanReadableAuditValue(
-        entry,
-        key,
-        getChangeBoundaryValue(entry, "after", after[key]),
-        adminDirectory,
-      ),
-    );
-    return `${label}: ${beforeValue} → ${afterValue}`;
-  });
-
-  return details.join("; ");
-};
-
-const getAmountDiffText = (entry: AuditLogEntry): string | null => {
-  const metadata = toAuditMetadata(entry);
-  const changes = metadata.changes as
-    | { before?: Record<string, unknown> | null; after?: Record<string, unknown> | null }
-    | undefined;
-  const previousAmount =
-    toAmount(changes?.before?.amount) ??
-    toAmount(metadata.previous_amount) ??
-    toAmount(metadata.original_amount);
-  const newAmount =
-    toAmount(changes?.after?.amount) ??
-    toAmount(metadata.new_amount) ??
-    null;
-  const deletedAmount = toAmount(metadata.deleted_amount);
-  const explicitAmount = getAuditAmount(entry);
-
-  if (entry.action === "update" || entry.action === "adjust_misc") {
-    if (previousAmount !== null && newAmount !== null) {
-      return `${formatCurrency(previousAmount)} → ${formatCurrency(newAmount)}`;
-    }
-    if (newAmount !== null) {
-      return formatCurrency(newAmount);
-    }
-    if (previousAmount !== null) {
-      return formatCurrency(previousAmount);
-    }
-  }
-
-  if (entry.action === "soft_delete" || entry.action === "permanent_delete") {
-    const value = deletedAmount ?? explicitAmount;
-    if (value !== null) {
-      return `deleted ${formatCurrency(value)}`;
-    }
-  }
-
-  if (entry.action === "create" || entry.action === "adjust_misc_create") {
-    const value = newAmount ?? explicitAmount;
-    if (value !== null) {
-      return formatCurrency(value);
-    }
-  }
-
-  if (explicitAmount !== null) {
-    return formatCurrency(explicitAmount);
-  }
-
-  return null;
-};
-
-const formatAuditTimeIst = (timestamp: string) =>
-  new Intl.DateTimeFormat("en-IN", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "Asia/Kolkata",
-  }).format(new Date(timestamp));
-
-const isQuarterlyInterestEntry = (entry: AuditLogEntry) => {
-  const metadata = toAuditMetadata(entry);
-  const source = toText(metadata.source);
+  const row = value as Record<string, unknown>;
   return (
-    entry.entity_type === "quarterly_interest_run" ||
-    source === "quarterly-interest-cron" ||
-    typeof metadata.quarter === "string"
+    typeof row.id === "string" &&
+    typeof row.admin_uid === "string" &&
+    typeof row.action === "string" &&
+    typeof row.entity_type === "string" &&
+    typeof row.created_at === "string"
   );
+};
+
+const toAuditEntries = (value: unknown): AuditLogEntry[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter(isAuditLogEntry);
 };
 
 const AuditLogPage = () => {
@@ -347,36 +81,66 @@ const AuditLogPage = () => {
   );
   const sessionRole = String(session?.user?.app_metadata?.role || "").toLowerCase();
   const sessionIsSuperAdmin = sessionRole === "super_admin";
+  const authHintIsSuperAdmin = uiIsSuperAdmin || sessionIsSuperAdmin;
 
   const [auditEntries, setAuditEntries] = useState<AuditLogEntry[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditError, setAuditError] = useState<string | null>(null);
   const [auditPage, setAuditPage] = useState(1);
   const [auditHasMore, setAuditHasMore] = useState(false);
-  const [auditPageCursors, setAuditPageCursors] = useState<Record<number, string | null>>({ 1: null });
-  const auditPageCursorsRef = useRef<Record<number, string | null>>({ 1: null });
+  const [auditPageCursors, setAuditPageCursors] = useState<Record<number, string | null>>(
+    initialAuditPageCursors(),
+  );
+  const auditPageCursorsRef = useRef<Record<number, string | null>>(
+    initialAuditPageCursors(),
+  );
   const [auditSearch, setAuditSearch] = useState("");
   const auditAppliedSearchRef = useRef("");
   const [auditCustomerNames, setAuditCustomerNames] = useState<Record<string, string>>({});
   const [auditEntityCustomerNames, setAuditEntityCustomerNames] = useState<Record<string, string>>({});
   const [auditAdminDirectory, setAuditAdminDirectory] = useState<Record<string, string>>({});
-  const [serverIsSuperAdmin, setServerIsSuperAdmin] = useState(false);
+  const [accessState, setAccessState] = useState<AuditAccessState>("authorizing");
+  const [fetchMode, setFetchMode] = useState<AuditFetchMode | null>(null);
+  const latestRequestRef = useRef(0);
 
-  const canAccessAudit = uiIsSuperAdmin || sessionIsSuperAdmin || serverIsSuperAdmin;
-  const quarterlyAuditEntries = auditEntries.filter(isQuarterlyInterestEntry);
-  const generalAuditEntries = auditEntries.filter((entry) => !isQuarterlyInterestEntry(entry));
+  const canAccessAudit = accessState === "authorized";
+  const isAuthorizing = accessState === "authorizing";
+  const isInitialLoading = auditLoading && (fetchMode === "initial" || fetchMode === null);
+  const isPageLoading = auditLoading && fetchMode === "page";
+
+  const { quarterlyAuditEntries, generalAuditEntries } = useMemo(() => {
+    const quarterly: AuditLogEntry[] = [];
+    const general: AuditLogEntry[] = [];
+    for (const entry of auditEntries) {
+      if (isQuarterlyInterestEntry(entry)) {
+        quarterly.push(entry);
+      } else {
+        general.push(entry);
+      }
+    }
+    return { quarterlyAuditEntries: quarterly, generalAuditEntries: general };
+  }, [auditEntries]);
 
   useEffect(() => {
     signalRouteReady();
   }, [signalRouteReady]);
 
+  const resetPaginationState = useCallback(() => {
+    const initial = initialAuditPageCursors();
+    auditPageCursorsRef.current = initial;
+    setAuditPage(1);
+    setAuditHasMore(false);
+    setAuditPageCursors(initial);
+  }, []);
+
   const enrichLegacyAuditAmounts = async (entries: AuditLogEntry[]) => entries;
 
   const fetchAuditLogs = useCallback(
-    async (nextPage = 1) => {
+    async (nextPage = 1, mode: AuditFetchMode = "page") => {
       const accessToken = session?.access_token;
       if (!accessToken) {
         setAuditError("Missing session token. Please sign in again.");
+        setAccessState("forbidden");
         return;
       }
 
@@ -386,7 +150,10 @@ const AuditLogPage = () => {
         return;
       }
 
+      const requestId = latestRequestRef.current + 1;
+      latestRequestRef.current = requestId;
       setAuditLoading(true);
+      setFetchMode(mode);
       setAuditError(null);
       try {
         const query = new URLSearchParams({
@@ -408,54 +175,104 @@ const AuditLogPage = () => {
           },
         );
 
-        const result = (await response.json()) as AuditLogResponse;
+        if (requestId !== latestRequestRef.current) {
+          return;
+        }
+
+        const resultRaw = await response
+          .json()
+          .catch(() => ({ success: false, error: "Invalid server response." }));
+        const result = (resultRaw || {}) as AuditLogResponse;
 
         if (response.ok && result.success) {
-          setServerIsSuperAdmin(Boolean(result.is_super_admin));
-          const entries = await enrichLegacyAuditAmounts(result.entries || []);
-          const nextCursorFromServer = result.pagination?.nextCursor ?? null;
+          const superAdminFromServer = Boolean(result.is_super_admin ?? true);
+          if (!superAdminFromServer) {
+            setAccessState("forbidden");
+            setAuditEntries([]);
+            setAuditError("Access denied. This page is available only to the super admin.");
+            return;
+          }
+
+          setAccessState("authorized");
+          const entries = await enrichLegacyAuditAmounts(toAuditEntries(result.entries));
+          const nextCursorFromServer = toText(result.pagination?.nextCursor) ?? null;
 
           setAuditEntries(entries);
-          setAuditCustomerNames(result.customer_directory || {});
-          setAuditEntityCustomerNames(result.entity_customer_names || {});
-          setAuditAdminDirectory(result.admin_directory || {});
+          setAuditCustomerNames(toRecord(result.customer_directory));
+          setAuditEntityCustomerNames(toRecord(result.entity_customer_names));
+          setAuditAdminDirectory(toRecord(result.admin_directory));
           setAuditPage(nextPage);
           setAuditHasMore(Boolean(result.pagination?.hasMore));
           setAuditPageCursors((prev) => {
-            const updated: Record<number, string | null> = {
-              ...prev,
-              [nextPage]: currentCursor,
-            };
-            if (nextCursorFromServer) {
-              updated[nextPage + 1] = nextCursorFromServer;
-            } else {
-              delete updated[nextPage + 1];
-            }
+            const updated = updateAuditPageCursors(
+              prev,
+              nextPage,
+              currentCursor,
+              nextCursorFromServer,
+            );
             auditPageCursorsRef.current = updated;
             return updated;
           });
         } else {
           if (response.status === 401 || response.status === 403) {
-            setServerIsSuperAdmin(false);
+            setAccessState("forbidden");
+            setAuditEntries([]);
+            setAuditHasMore(false);
+            resetPaginationState();
+            setAuditError("Access denied. This page is available only to the super admin.");
+            return;
           }
           setAuditError(result.error || "Failed to load audit logs");
         }
       } catch (err: any) {
         setAuditError(err.message || "Failed to load audit logs");
       } finally {
-        setAuditLoading(false);
+        if (requestId === latestRequestRef.current) {
+          setAuditLoading(false);
+          setFetchMode(null);
+        }
       }
     },
-    [session],
+    [authHintIsSuperAdmin, resetPaginationState, session],
   );
 
   useEffect(() => {
     if (session?.access_token) {
-      auditPageCursorsRef.current = { 1: null };
-      setAuditPageCursors({ 1: null });
-      fetchAuditLogs(1);
+      setAccessState("authorizing");
+      resetPaginationState();
+      fetchAuditLogs(1, "initial");
+    } else {
+      setAccessState("forbidden");
+      setAuditError("Missing session token. Please sign in again.");
     }
-  }, [session, fetchAuditLogs]);
+  }, [session?.access_token, fetchAuditLogs, resetPaginationState]);
+
+  const canGoPrev =
+    canAccessAudit && !auditLoading && auditPage > 1 && hasKey(auditPageCursors, auditPage - 1);
+  const hasNextCursor =
+    hasKey(auditPageCursors, auditPage + 1) && Boolean(auditPageCursors[auditPage + 1]);
+  const canGoNext = canAccessAudit && !auditLoading && auditHasMore && hasNextCursor;
+
+  const renderAuditRows = (entries: AuditLogEntry[]) =>
+    entries.map((entry) => {
+      const sentence = buildAuditSentence(entry, {
+        adminDirectory: auditAdminDirectory,
+        customerDirectory: auditCustomerNames,
+        entityCustomerNames: auditEntityCustomerNames,
+      });
+      const recordedAt = formatAuditTimeIst(entry.created_at);
+
+      return (
+        <tr key={entry.id} className="align-top">
+          <td className="px-4 py-3 text-slate-800 dark:text-slate-100 font-medium">
+            {sentence}
+          </td>
+          <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+            {recordedAt}
+          </td>
+        </tr>
+      );
+    });
 
   return (
     <PageWrapper>
@@ -465,8 +282,8 @@ const AuditLogPage = () => {
           <span>Audit Log</span>
         </h2>
         <motion.button
-          onClick={() => fetchAuditLogs(auditPage)}
-          disabled={auditLoading || !canAccessAudit}
+          onClick={() => fetchAuditLogs(auditPage, "refresh")}
+          disabled={auditLoading || !canAccessAudit || isAuthorizing}
           className="w-10 h-10 flex items-center justify-center bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full transition-colors hover:bg-emerald-100 dark:hover:bg-emerald-500/20 disabled:opacity-50"
           whileTap={{ scale: 0.9 }}
           title="Refresh"
@@ -487,7 +304,13 @@ const AuditLogPage = () => {
         </motion.button>
       </div>
 
-      {!canAccessAudit && (
+      {isAuthorizing && (
+        <div className="mb-4 p-4 rounded-xl bg-slate-50 text-slate-700 dark:bg-slate-800/30 dark:text-slate-300 text-sm font-medium border border-slate-200 dark:border-slate-700/50">
+          Verifying access to audit logs...
+        </div>
+      )}
+
+      {accessState === "forbidden" && (
         <div className="mb-4 p-4 rounded-xl bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 text-sm font-medium border border-rose-200 dark:border-rose-500/20">
           Access denied. This page is available only to the super admin.
         </div>
@@ -509,15 +332,14 @@ const AuditLogPage = () => {
             />
             <button
               onClick={() => {
-                auditAppliedSearchRef.current = auditSearch;
-                auditPageCursorsRef.current = { 1: null };
-                setAuditPageCursors({ 1: null });
-                fetchAuditLogs(1);
+                auditAppliedSearchRef.current = normalizeAuditSearch(auditSearch);
+                resetPaginationState();
+                fetchAuditLogs(1, "search");
               }}
-              disabled={auditLoading}
+              disabled={auditLoading || isAuthorizing || !canAccessAudit}
               className="px-4 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl transition-colors disabled:opacity-50"
             >
-              Apply
+              {fetchMode === "search" && auditLoading ? "Searching..." : "Apply"}
             </button>
           </div>
 
@@ -527,7 +349,7 @@ const AuditLogPage = () => {
             </div>
           )}
 
-          {auditLoading && auditEntries.length === 0 ? (
+          {isInitialLoading && auditEntries.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
               <div className="w-10 h-10 border-4 border-slate-100 dark:border-slate-800 border-t-emerald-500 rounded-full animate-spin mb-4"></div>
               <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
@@ -558,61 +380,7 @@ const AuditLogPage = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-emerald-100 dark:divide-emerald-800/30">
-                        {quarterlyAuditEntries.map((entry) => {
-                          const metadata = toAuditMetadata(entry);
-                          const actorName =
-                            toText(metadata.actor_name) ||
-                            toText(metadata.actor_email) ||
-                            auditAdminDirectory[entry.admin_uid] ||
-                            entry.admin_uid ||
-                            "Admin user";
-
-                          const customerId =
-                            entry.entity_type === "customer"
-                              ? entry.entity_id
-                              : toText(metadata.customer_id);
-                          const customerNameFromMetadata = toText(metadata.customer_name);
-                          const customerNameFromLookup = customerId
-                            ? auditCustomerNames[customerId]
-                            : null;
-                          const entityCustomerName =
-                            entry.entity_id
-                              ? auditEntityCustomerNames[
-                                  getEntityKey(entry.entity_type, entry.entity_id)
-                                ]
-                              : null;
-
-                          const actionLabel = getActionLabel(entry.action);
-                          const entityLabel = getEntityLabel(entry.entity_type);
-                          const resolvedCustomerName =
-                            customerNameFromMetadata ||
-                            (entry.entity_type === "customer" ? toText(metadata.name) : null) ||
-                            customerNameFromLookup ||
-                            entityCustomerName ||
-                            "Unknown Customer";
-                          const amountText = getAmountDiffText(entry);
-                          const fieldText = getFieldChangeText(entry, auditAdminDirectory);
-                          const recordedAt = formatAuditTimeIst(entry.created_at);
-
-                          const baseSentence = `Admin ${renderScalar(actorName)} ${actionLabel} ${entityLabel} for ${renderScalar(resolvedCustomerName)}`;
-                          const detailParts = [amountText, fieldText].filter(
-                            Boolean,
-                          ) as string[];
-                          const sentence = detailParts.length
-                            ? `${baseSentence} — ${detailParts.join(" | ")}`
-                            : baseSentence;
-
-                          return (
-                            <tr key={entry.id} className="align-top">
-                              <td className="px-4 py-3 text-slate-800 dark:text-slate-100 font-medium">
-                                {sentence}
-                              </td>
-                              <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                                {recordedAt}
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        {renderAuditRows(quarterlyAuditEntries)}
                       </tbody>
                     </table>
                   </div>
@@ -637,61 +405,7 @@ const AuditLogPage = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-700/70">
-                        {generalAuditEntries.map((entry) => {
-                          const metadata = toAuditMetadata(entry);
-                          const actorName =
-                            toText(metadata.actor_name) ||
-                            toText(metadata.actor_email) ||
-                            auditAdminDirectory[entry.admin_uid] ||
-                            entry.admin_uid ||
-                            "Admin user";
-
-                          const customerId =
-                            entry.entity_type === "customer"
-                              ? entry.entity_id
-                              : toText(metadata.customer_id);
-                          const customerNameFromMetadata = toText(metadata.customer_name);
-                          const customerNameFromLookup = customerId
-                            ? auditCustomerNames[customerId]
-                            : null;
-                          const entityCustomerName =
-                            entry.entity_id
-                              ? auditEntityCustomerNames[
-                                  getEntityKey(entry.entity_type, entry.entity_id)
-                                ]
-                              : null;
-
-                          const actionLabel = getActionLabel(entry.action);
-                          const entityLabel = getEntityLabel(entry.entity_type);
-                          const resolvedCustomerName =
-                            customerNameFromMetadata ||
-                            (entry.entity_type === "customer" ? toText(metadata.name) : null) ||
-                            customerNameFromLookup ||
-                            entityCustomerName ||
-                            "Unknown Customer";
-                          const amountText = getAmountDiffText(entry);
-                          const fieldText = getFieldChangeText(entry, auditAdminDirectory);
-                          const recordedAt = formatAuditTimeIst(entry.created_at);
-
-                          const baseSentence = `Admin ${renderScalar(actorName)} ${actionLabel} ${entityLabel} for ${renderScalar(resolvedCustomerName)}`;
-                          const detailParts = [amountText, fieldText].filter(
-                            Boolean,
-                          ) as string[];
-                          const sentence = detailParts.length
-                            ? `${baseSentence} — ${detailParts.join(" | ")}`
-                            : baseSentence;
-
-                          return (
-                            <tr key={entry.id} className="align-top">
-                              <td className="px-4 py-3 text-slate-800 dark:text-slate-100 font-medium">
-                                {sentence}
-                              </td>
-                              <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                                {recordedAt}
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        {renderAuditRows(generalAuditEntries)}
                       </tbody>
                     </table>
                   </div>
@@ -706,21 +420,30 @@ const AuditLogPage = () => {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={() => fetchAuditLogs(Math.max(1, auditPage - 1))}
-                disabled={auditLoading || auditPage <= 1}
+                onClick={() => {
+                  if (!canGoPrev) return;
+                  fetchAuditLogs(Math.max(1, auditPage - 1), "page");
+                }}
+                disabled={!canGoPrev}
                 className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-50"
               >
                 Prev
               </button>
               <button
-                onClick={() => fetchAuditLogs(auditPage + 1)}
-                disabled={auditLoading || !auditHasMore || !auditPageCursors[auditPage + 1]}
+                onClick={() => {
+                  if (!canGoNext) return;
+                  fetchAuditLogs(auditPage + 1, "page");
+                }}
+                disabled={!canGoNext}
                 className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 disabled:opacity-50"
               >
                 Next
               </button>
             </div>
           </div>
+          {isPageLoading && (
+            <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">Loading page...</div>
+          )}
         </>
       )}
     </PageWrapper>

@@ -23,9 +23,36 @@ const HUMANIZED_FIELD_LABELS: Record<string, string> = {
   payment_date: "Date",
   date: "Date",
   late_fee: "Late Fee",
+  deleted_at: "Deleted At",
+  deleted_by: "Deleted By",
+  subtype: "Subtype",
+  payment_method: "Payment Method",
+  type: "Type",
+  original_amount: "Original Amount",
+  interest_amount: "Interest Amount",
+  total_instalments: "Total Instalments",
+  check_number: "Cheque Number",
+  installment_number: "Installment Number",
+  station_name: "Station Name",
+  loan_type: "Loan Type",
+  loan_request_date: "Loan Request Date",
+  name: "Name",
+  phone: "Phone",
 };
 
-const IGNORED_CHANGE_FIELDS = new Set(["updated_at", "created_at"]);
+const IGNORED_CHANGE_FIELDS = new Set([
+  "updated_at",
+  "created_at",
+  "id",
+  "customer_id",
+  "user_id",
+  "loan_id",
+  "entity_id",
+  "admin_uid",
+  "actor_name",
+  "actor_email",
+  "raw_entity_id",
+]);
 const CREATE_STYLE_ACTIONS = new Set(["create", "adjust_misc_create"]);
 const DELETE_STYLE_ACTIONS = new Set(["soft_delete", "permanent_delete"]);
 
@@ -235,8 +262,24 @@ export const getFieldChangeText = (
 
   if (!keys.length) return null;
 
+  const isCreate = CREATE_STYLE_ACTIONS.has(entry.action);
+
   const details = keys.map((key) => {
     const label = HUMANIZED_FIELD_LABELS[key] || key.replace(/_/g, " ");
+
+    if (isCreate) {
+      // For create actions, only show "Field: value" (no before→after)
+      const afterRaw = getHumanReadableAuditValue(
+        entry,
+        key,
+        getChangeBoundaryValue(entry, "after", after[key]),
+        adminDirectory,
+      );
+      // Skip fields that are null, undefined, or empty string
+      if (afterRaw === null || afterRaw === undefined || afterRaw === "") return null;
+      return `${label}: ${renderScalar(afterRaw)}`;
+    }
+
     const beforeValue = renderScalar(
       getHumanReadableAuditValue(
         entry,
@@ -253,10 +296,12 @@ export const getFieldChangeText = (
         adminDirectory,
       ),
     );
+    // Skip lines where both values are the null sentinel
+    if (beforeValue === "—" && afterValue === "—") return null;
     return `${label}: ${beforeValue} → ${afterValue}`;
-  });
+  }).filter(Boolean) as string[];
 
-  return details.join("; ");
+  return details.length ? details.join("; ") : null;
 };
 
 export const getAmountDiffText = (entry: AuditLogEntry): string | null => {
@@ -277,13 +322,13 @@ export const getAmountDiffText = (entry: AuditLogEntry): string | null => {
 
   if (entry.action === "update" || entry.action === "adjust_misc") {
     if (previousAmount !== null && newAmount !== null) {
-      return `${formatCurrency(previousAmount)} → ${formatCurrency(newAmount)}`;
+      return `${formatCurrency(Math.abs(previousAmount))} → ${formatCurrency(Math.abs(newAmount))}`;
     }
     if (newAmount !== null) {
-      return formatCurrency(newAmount);
+      return formatCurrency(Math.abs(newAmount));
     }
     if (previousAmount !== null) {
-      return formatCurrency(previousAmount);
+      return formatCurrency(Math.abs(previousAmount));
     }
   }
 
@@ -358,10 +403,12 @@ export const buildAuditSentence = (
   const amountText = getAmountDiffText(entry);
   const fieldText = getFieldChangeText(entry, directories.adminDirectory);
 
-  const baseSentence = `Admin ${renderScalar(actorName)} ${actionLabel} ${entityLabel} for ${renderScalar(resolvedCustomerName)}`;
-  const detailParts = [amountText, fieldText].filter(Boolean) as string[];
+  const baseSentence = `${renderScalar(actorName)} ${actionLabel} ${entityLabel} for ${renderScalar(resolvedCustomerName)}`;
+  const detailParts: string[] = [];
+  if (amountText) detailParts.push(`Amount: ${amountText}`);
+  if (fieldText) detailParts.push(fieldText);
   return detailParts.length
-    ? `${baseSentence} — ${detailParts.join(" | ")}`
+    ? `${baseSentence} — ${detailParts.join(" · ")}`
     : baseSentence;
 };
 

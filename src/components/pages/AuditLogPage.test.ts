@@ -48,12 +48,20 @@ describe("AuditLogPage field change formatting", () => {
 
     const text = getFieldChangeText(entry);
 
-    expect(text).toContain("id: — → 199");
-    expect(text).toContain("customer id: — → c66e9af6-5f71-4950-8d94-f8c9b3a90bdf");
-    expect(text).toContain("Date: — → 2018-06-30");
-    expect(text).toContain("Receipt Number: — → (empty string)");
-    expect(text).toContain("Remarks: — → Garland and Shall");
-    expect(text).toContain("payment method: — → Cash");
+    // id and customer_id are now ignored (internal fields)
+    expect(text).not.toContain("id:");
+    expect(text).not.toContain("customer id");
+    // deleted_at/deleted_by with null values should be filtered (— → —)
+    expect(text).not.toContain("Deleted At");
+    expect(text).not.toContain("Deleted By");
+    // Meaningful fields should appear without before→after arrows (just values)
+    expect(text).toContain("Date: 2018-06-30");
+    expect(text).not.toContain("→");
+    // Empty receipt_number should be omitted (optional field not meaningfully entered)
+    expect(text).not.toContain("Receipt Number");
+    expect(text).toContain("Remarks: Garland and Shall");
+    expect(text).toContain("Payment Method: Cash");
+    expect(text).toContain("Subtype: Retirement Gift");
     expect(text).not.toContain("(missing)");
   });
 
@@ -70,11 +78,17 @@ describe("AuditLogPage field change formatting", () => {
 
     const text = getFieldChangeText(entry);
 
-    expect(text).toContain("id: — → 548828b0-1960-4c09-a041-bf5079be679d");
-    expect(text).toContain("customer id: — → c66e9af6-5f71-4950-8d94-f8c9b3a90bdf");
-    expect(text).toContain("Date: — → 2018-02-02");
-    expect(text).toContain("Receipt: — → 1140");
-    expect(text).toContain("Late Fee: — → 0");
+    // id and customer_id are now ignored
+    expect(text).not.toContain("id:");
+    expect(text).not.toContain("customer id");
+    // deleted_at/deleted_by with null values should be filtered
+    expect(text).not.toContain("Deleted At");
+    expect(text).not.toContain("Deleted By");
+    // Meaningful fields should appear without arrows
+    expect(text).toContain("Date: 2018-02-02");
+    expect(text).toContain("Receipt: 1140");
+    expect(text).toContain("Late Fee: 0");
+    expect(text).not.toContain("→");
     expect(text).not.toContain("(missing)");
   });
 
@@ -92,9 +106,24 @@ describe("AuditLogPage field change formatting", () => {
       "c34dedcb-a4da-4836-b349-dd55b2008f5f": "Admin I J Reddy",
     });
 
-    expect(text).toContain("deleted at: — → 2026-03-17T13:20:31.597Z");
-    expect(text).toContain("deleted by: — → Admin I J Reddy");
+    expect(text).toContain("Deleted At: — → 2026-03-17T13:20:31.597Z");
+    expect(text).toContain("Deleted By: — → Admin I J Reddy");
     expect(text).not.toContain("c34dedcb-a4da-4836-b349-dd55b2008f5f");
+  });
+
+  it("omits fields where both before and after are null", () => {
+    const entry = buildCreateEntry("data_entry", {
+      date: "2025-01-01",
+      amount: 500,
+      deleted_at: null,
+      deleted_by: null,
+    });
+
+    const text = getFieldChangeText(entry);
+
+    expect(text).not.toContain("Deleted At");
+    expect(text).not.toContain("Deleted By");
+    expect(text).toContain("Date");
   });
 });
 
@@ -117,6 +146,15 @@ describe("AuditLogPage amount diff formatting", () => {
 
     expect(getAmountDiffText(entry)).toBe("deleted 4,300");
   });
+
+  it("shows absolute value for negative amounts in adjustments", () => {
+    const entry = buildEntry("adjust_misc", "subscription", {
+      previous_amount: 1000,
+      new_amount: -3515,
+    });
+
+    expect(getAmountDiffText(entry)).toBe("1,000 → 3,515");
+  });
 });
 
 describe("AuditLogPage sentence rendering", () => {
@@ -136,8 +174,10 @@ describe("AuditLogPage sentence rendering", () => {
       entityCustomerNames: {},
     });
 
-    expect(sentence).toContain("Admin A. Kumar Added Loan for Shyam Traders");
+    expect(sentence).toContain("A. Kumar Added Loan for Shyam Traders");
+    expect(sentence).toContain("Amount:");
     expect(sentence).toContain("12,000");
+    expect(sentence).not.toContain("Admin A. Kumar");
     expect(sentence).not.toContain("undefined");
     expect(sentence).not.toContain("null");
   });

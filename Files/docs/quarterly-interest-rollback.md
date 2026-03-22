@@ -82,35 +82,127 @@ $$;
 
 ### 3. Rollback a SPECIFIC Quarter (by date)
 
+Use this version when you want to undo one quarter across all impacted customers. It aggregates ledger rows per customer first, so each customer is updated once even if multiple ledger rows exist for that period. This version also adds integrity, consistency, transaction, negative-balance, and concurrency checks.
+
 ```sql
 DO $$
 DECLARE
-    rec RECORD;
-    v_target_start date := '2026-01-01';  -- Change to the quarter start you want to undo
-    rolled_back int := 0;
+    v_target_start   date := DATE '2026-01-01';  -- Change to the quarter start you want to undo
+    v_row_count      int;
+    v_customer_count int;
+    v_missing_customer_count int;
+    v_negative_customer_count int;
+    v_updated_count  int;
+    v_deleted_count  int;
 BEGIN
-    FOR rec IN
-        SELECT id, customer_id, interest_amount
+    -- Concurrency guard: choose a stricter lock in maintenance-only environments if you need a harder write freeze.
+    -- SHARE ROW EXCLUSIVE blocks concurrent writes to the ledger while keeping reads available.
+    LOCK TABLE public.interest_ledger IN SHARE ROW EXCLUSIVE MODE;
+    LOCK TABLE public.customer_interest IN ROW EXCLUSIVE MODE;
+
+    SELECT
+        COUNT(*),
+        COUNT(DISTINCT customer_id)
+    INTO
+        v_row_count,
+        v_customer_count
+    FROM public.interest_ledger
+    WHERE period_start = v_target_start;
+
+    IF v_row_count = 0 THEN
+        RAISE EXCEPTION 'No interest ledger rows found for period starting %', v_target_start;
+    END IF;
+
+    -- Integrity guard: fail fast if any ledger customer has no matching customer_interest row.
+    SELECT COUNT(*)
+    INTO v_missing_customer_count
+    FROM (
+        SELECT DISTINCT il.customer_id
+        FROM public.interest_ledger il
+        LEFT JOIN public.customer_interest ci ON ci.customer_id = il.customer_id
+        WHERE il.period_start = v_target_start
+          AND ci.customer_id IS NULL
+    ) missing_customers;
+
+    IF v_missing_customer_count > 0 THEN
+        RAISE EXCEPTION
+            'Rollback aborted: % customers have interest_ledger rows for period starting % but no matching customer_interest row',
+            v_missing_customer_count,
+            v_target_start;
+    END IF;
+
+    -- Negative-balance guard: abort instead of silently clamping with GREATEST(..., 0).
+    SELECT COUNT(*)
+    INTO v_negative_customer_count
+    FROM public.customer_interest ci
+    JOIN (
+        SELECT
+            customer_id,
+            SUM(interest_amount) AS total_interest_amount
         FROM public.interest_ledger
         WHERE period_start = v_target_start
-    LOOP
-        -- Subtract from running total
-        UPDATE public.customer_interest
-        SET total_interest_charged = GREATEST(0, total_interest_charged - rec.interest_amount),
-            updated_at = now()
-        WHERE customer_id = rec.customer_id;
+        GROUP BY customer_id
+    ) r ON r.customer_id = ci.customer_id
+    WHERE ci.total_interest_charged < r.total_interest_amount;
 
-        -- Delete the ledger entry
-        DELETE FROM public.interest_ledger WHERE id = rec.id;
+    IF v_negative_customer_count > 0 THEN
+        RAISE EXCEPTION
+            'Rollback aborted: % customers would go negative when reversing period starting %',
+            v_negative_customer_count,
+            v_target_start;
+    END IF;
 
-        RAISE NOTICE 'Rolled back ₹% for customer %', rec.interest_amount, rec.customer_id;
-        rolled_back := rolled_back + 1;
-    END LOOP;
+    WITH rolled_up AS (
+        SELECT
+            customer_id,
+            SUM(interest_amount) AS total_interest_amount
+        FROM public.interest_ledger
+        WHERE period_start = v_target_start
+        GROUP BY customer_id
+    )
+    UPDATE public.customer_interest ci
+    SET
+        total_interest_charged = ci.total_interest_charged - r.total_interest_amount,
+        updated_at = now()
+    FROM rolled_up r
+    WHERE ci.customer_id = r.customer_id;
 
-    RAISE NOTICE 'Total rolled back: % customers for quarter starting %', rolled_back, v_target_start;
+    GET DIAGNOSTICS v_updated_count = ROW_COUNT;
+
+    DELETE FROM public.interest_ledger
+    WHERE period_start = v_target_start;
+
+    GET DIAGNOSTICS v_deleted_count = ROW_COUNT;
+
+    -- Consistency check: the number of updated customer rows and deleted ledger rows must match expectations.
+    IF v_updated_count <> v_customer_count THEN
+        RAISE EXCEPTION
+            'Consistency check failed: expected % customer_interest rows to update, but updated %',
+            v_customer_count,
+            v_updated_count;
+    END IF;
+
+    IF v_deleted_count <> v_row_count THEN
+        RAISE EXCEPTION
+            'Consistency check failed: expected % interest_ledger rows to delete, but deleted %',
+            v_row_count,
+            v_deleted_count;
+    END IF;
+
+    RAISE NOTICE
+        'Rolled back % ledger rows across % customers; updated % customer_interest rows; deleted % ledger rows for period starting %',
+        v_row_count,
+        v_customer_count,
+        v_updated_count,
+        v_deleted_count,
+        v_target_start;
 END;
 $$;
 ```
+
+Customer impact for this rollback is the number of distinct customers in `interest_ledger` for the chosen `period_start`. It does not affect customers outside that quarter.
+
+Transaction note: if any check fails, the block raises an exception and the rollback is aborted as one atomic statement.
 
 ### 4. Full Nuclear Reset — Remove ALL Interest Data
 

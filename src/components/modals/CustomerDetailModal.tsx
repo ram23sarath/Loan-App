@@ -255,12 +255,15 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
       (acc, loan) => acc + loan.original_amount + loan.interest_amount,
       0,
     );
-    // Subscription total = Sum of amounts + Interest Charged (Added as requested)
-    const rawSubscriptionTotal = subscriptions.reduce(
+    const totalLoanInterest = loans.reduce(
+      (acc, loan) => acc + loan.interest_amount,
+      0,
+    );
+    // Subscription total should include only subscription amounts
+    const totalSubscription = subscriptions.reduce(
       (acc, sub) => acc + sub.amount,
       0,
     );
-    const totalSubscription = rawSubscriptionTotal + interestCharged;
 
     // Calculate total late fees from subscriptions and this customer's installments only
     const totalLateFees =
@@ -274,11 +277,13 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
       0,
     );
 
-    // Net = (Subscription + Interest + Late Fees) - Expenditures
-    const netTotal = totalSubscription + totalLateFees - totalMiscEntries;
+    // Net = (Subscription + Loan Interest + Late Fees) - Expenditures
+    const netTotal =
+      totalSubscription + totalLoanInterest + totalLateFees - totalMiscEntries;
 
     return {
       totalLoan,
+      totalLoanInterest,
       totalSubscription,
       totalLateFees,
       totalMiscEntries,
@@ -681,13 +686,21 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               <p className="text-xs sm:text-sm md:text-base text-gray-500 dark:text-dark-muted mb-4">
                 {customer.phone}
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5 sm:gap-2 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-1.5 sm:gap-2 text-xs">
                 <div className="p-1.5 rounded-lg bg-green-50 dark:bg-green-900/20">
                   <span className="text-gray-600 dark:text-dark-muted text-xs block mb-0.5">
                     Loan:
                   </span>
                   <p className="font-bold text-green-600 dark:text-green-400 text-xs sm:text-sm">
                     {formatCurrency(summaryTotals.totalLoan)}
+                  </p>
+                </div>
+                <div className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20">
+                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-0.5">
+                    Loan Interest:
+                  </span>
+                  <p className="font-bold text-amber-600 dark:text-amber-400 text-xs sm:text-sm">
+                    {formatCurrency(summaryTotals.totalLoanInterest)}
                   </p>
                 </div>
                 <div className="p-1.5 rounded-lg bg-cyan-50 dark:bg-cyan-900/20">
@@ -701,8 +714,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
                 <div className="p-1.5 rounded-lg bg-orange-50 dark:bg-orange-900/20">
                   <span className="text-gray-600 dark:text-dark-muted text-xs block mb-0.5">
-                    Interest:
-                  </span>
+                    Subscription Interest:                  </span>
                   <p className="font-bold text-orange-600 dark:text-orange-400 text-xs sm:text-sm">
                     {formatCurrency(interestCharged)}
                   </p>
@@ -1549,7 +1561,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                           </span>
                         ) : (
                           <span className="inline-block px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full dark:bg-red-900/30 dark:text-red-400">
-                            Expenditure
+                            {entry.subtype || "-"} - {entry.payment_method || "-"}
                           </span>
                         )}
                       </div>
@@ -1630,7 +1642,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                             </span>
                           ) : (
                             <span className="inline-block px-2 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-full dark:bg-red-900/30 dark:text-red-400">
-                              Expenditure
+                              {entry.subtype || "-"} - {entry.payment_method || "-"}
                             </span>
                           )}
                         </div>

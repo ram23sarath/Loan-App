@@ -1,7 +1,6 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import ReactDOM from "react-dom";
 import { motion, Variants, AnimatePresence } from "framer-motion";
-// NOTE: xlsx is dynamically imported in handleIndividualExport to reduce bundle size (~500KB)
 import type {
   Customer,
   LoanWithCustomer,
@@ -9,28 +8,33 @@ import type {
   Installment,
   DataEntry,
 } from "../../types";
-import { supabase } from "../../lib/supabase";
 import GlassCard from "../ui/GlassCard";
 import RecordLoanModal from "./RecordLoanModal";
 import RecordSubscriptionModal from "./RecordSubscriptionModal";
 import RecordDataEntryModal from "./RecordDataEntryModal";
+import CustomerDetailHeader from "./customer-detail/components/CustomerDetailHeader";
+import CustomerDetailMobileActions from "./customer-detail/components/CustomerDetailMobileActions";
+import CustomerDetailBanners from "./customer-detail/components/CustomerDetailBanners";
 import useFocusTrap from "../hooks/useFocusTrap";
 import {
-  XIcon,
-  FileDownIcon,
   LandmarkIcon,
   HistoryIcon,
   Trash2Icon,
 } from "../../constants";
 import { formatDate } from "../../utils/dateFormatter";
-import { formatNumberIndian } from "../../utils/numberFormatter";
 import DeleteConfirmationModal from "./DeleteConfirmationModal";
-import { useModalBackHandler } from "../../utils/useModalBackHandler";
 import {
-  isLoanOngoing as isLoanOngoingUtil,
-  getLoanRepaymentProgress,
-  ONGOING_PAYMENT_THRESHOLD,
-} from "../../utils/loanStatus";
+  buildInstallmentsByLoanId,
+  calculateLoanMetrics,
+  calculateOngoingLoanInfo,
+  calculateSummaryTotals,
+  formatCurrency,
+  isLoanOngoing,
+} from "./customer-detail/utils/calculations";
+import { useSubscriptionSort } from "./customer-detail/hooks/useSubscriptionSort";
+import { useCustomerInterest } from "./customer-detail/hooks/useCustomerInterest";
+import { useModalBodyEffects } from "./customer-detail/hooks/useModalBodyEffects";
+import { useCustomerDetailActions } from "./customer-detail/hooks/useCustomerDetailActions";
 
 interface CustomerDetailModalProps {
   customer: Customer;
@@ -74,23 +78,6 @@ const modalVariants: Variants = {
     scale: 0.97,
     transition: { duration: 0.18, ease: "easeIn" },
   },
-};
-
-const formatCurrency = (amount: number) => `₹${formatNumberIndian(amount)}`;
-
-// Re-export shared helpers under local names for use in this file
-const calculatePaymentPercentage = (
-  loan: LoanWithCustomer,
-  installmentsByLoanId: Map<string, Installment[]>,
-): number => {
-  const installments = installmentsByLoanId.get(loan.id) || [];
-  return getLoanRepaymentProgress(loan, installments);
-};
-const isLoanOngoing = (
-  loan: LoanWithCustomer,
-  installmentsByLoanId: Map<string, Installment[]>,
-): boolean => {
-  return isLoanOngoingUtil(loan, installmentsByLoanId);
 };
 
 // Helper function to stop event propagation with proper TypeScript typing
@@ -200,195 +187,79 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 }) => {
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const [expandedLoanId, setExpandedLoanId] = useState<string | null>(null);
-  const [subscriptionSortBy, setSubscriptionSortBy] = useState<
-    "date" | "receipt" | "amount"
-  >("date");
-  const [subscriptionSortOrder, setSubscriptionSortOrder] = useState<
-    "asc" | "desc"
-  >("desc");
   const noteRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
-  // Interest state
-  const [interestCharged, setInterestCharged] = useState(0);
+  const interestCharged = useCustomerInterest(customer.id);
 
-  // Fetch interest for this customer
-  useEffect(() => {
-    const fetchInterest = async () => {
-      // Only fetch for the specific customer or all (if we expand later)
-      // Currently logic is tied to specific ID in backend, but frontend can just query by ID
-      try {
-        const { data, error } = await supabase
-          .from("customer_interest")
-          .select("total_interest_charged")
-          .eq("customer_id", customer.id)
-          .single();
-
-        if (data && !error) {
-          setInterestCharged(data.total_interest_charged || 0);
-        } else {
-          setInterestCharged(0);
-        }
-      } catch (err) {
-        console.error("Error fetching customer interest:", err);
-      }
-    };
-
-    fetchInterest();
-  }, [customer.id]);
-
-  // Lookup map for O(1) installment access by loan_id
   const installmentsByLoanId = useMemo(() => {
-    const map = new Map<string, Installment[]>();
-    installments.forEach((inst) => {
-      const existing = map.get(inst.loan_id) || [];
-      existing.push(inst);
-      map.set(inst.loan_id, existing);
-    });
-    return map;
+    return buildInstallmentsByLoanId(installments);
   }, [installments]);
 
-  // ... (existing code)
-
-  // Calculate summary totals
   const summaryTotals = useMemo(() => {
-    const totalLoan = loans.reduce(
-      (acc, loan) => acc + loan.original_amount + loan.interest_amount,
-      0,
+    return calculateSummaryTotals(
+      loans,
+      subscriptions,
+      installments,
+      dataEntries,
+      interestCharged,
     );
-    const totalLoanInterest = loans.reduce(
-      (acc, loan) => acc + loan.interest_amount,
-      0,
-    );
-    // Subscription total should include only subscription amounts
-    const totalSubscription = subscriptions.reduce(
-      (acc, sub) => acc + sub.amount,
-      0,
-    );
-
-    // Calculate total late fees from subscriptions and this customer's installments only
-    const totalLateFees =
-      subscriptions.reduce((acc, sub) => acc + (sub.late_fee || 0), 0) +
-      installments
-        .filter((inst) => loans.some((l) => l.id === inst.loan_id))
-        .reduce((acc, inst) => acc + (inst.late_fee || 0), 0);
-
-    const totalMiscEntries = dataEntries.reduce(
-      (acc, entry) => acc + entry.amount,
-      0,
-    );
-
-    // Net = (Subscription + Loan Interest + Late Fees) - Expenditures
-    const netTotal =
-      totalSubscription + totalLoanInterest + totalLateFees - totalMiscEntries;
-
-    return {
-      totalLoan,
-      totalLoanInterest,
-      totalSubscription,
-      totalLateFees,
-      totalMiscEntries,
-      netTotal,
-      interestCharged, // Export if needed for UI
-    };
   }, [loans, subscriptions, dataEntries, interestCharged, installments]);
 
-  // Sorted subscriptions
-  const sortedSubscriptions = useMemo(() => {
-    const sorted = [...subscriptions];
-    sorted.sort((a, b) => {
-      let compareValue = 0;
+  const {
+    subscriptionSortBy,
+    subscriptionSortOrder,
+    sortedSubscriptions,
+    toggleDateSort,
+    toggleAmountSort,
+    toggleReceiptSort,
+  } = useSubscriptionSort(subscriptions);
 
-      if (subscriptionSortBy === "date") {
-        compareValue = new Date(a.date).getTime() - new Date(b.date).getTime();
-      } else if (subscriptionSortBy === "receipt") {
-        const receiptA = a.receipt || "";
-        const receiptB = b.receipt || "";
-        compareValue = receiptA.localeCompare(receiptB);
-      } else if (subscriptionSortBy === "amount") {
-        compareValue = a.amount - b.amount;
-      }
-
-      return subscriptionSortOrder === "desc" ? -compareValue : compareValue;
-    });
-    return sorted;
-  }, [subscriptions, subscriptionSortBy, subscriptionSortOrder]);
-
-  // Delete confirmation states
-  const [deleteLoanTarget, setDeleteLoanTarget] =
-    useState<LoanWithCustomer | null>(null);
-  const [deleteSubTarget, setDeleteSubTarget] =
-    useState<SubscriptionWithCustomer | null>(null);
-  const [deleteInstTarget, setDeleteInstTarget] = useState<Installment | null>(
-    null,
-  );
-  const [deleteDataEntryTarget, setDeleteDataEntryTarget] =
-    useState<DataEntry | null>(null);
-  const [isDeletingDataEntry, setIsDeletingDataEntry] = useState(false);
-  const [isDeletingLoan, setIsDeletingLoan] = useState(false);
-  const [isDeletingSubscription, setIsDeletingSubscription] = useState(false);
-  const [isDeletingInstallment, setIsDeletingInstallment] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [exportError, setExportError] = useState<string | null>(null);
-  const [exportSuccess, setExportSuccess] = useState<string | null>(null);
-  const [showRecordLoan, setShowRecordLoan] = useState<boolean>(false);
-  const [showRecordSubscription, setShowRecordSubscription] =
-    useState<boolean>(false);
-  const [showRecordDataEntry, setShowRecordDataEntry] =
-    useState<boolean>(false);
-  const [editingDataEntry, setEditingDataEntry] = useState<DataEntry | null>(
-    null,
-  );
-  const [isExporting, setIsExporting] = useState(false);
-
-  // Consolidated back handler for internal modal stack
-  // Avoid pushing multiple history entries by registering a single handler
-  // that closes the top-most internal modal in priority order.
-  const anyInternalModalOpen =
-    !!deleteLoanTarget ||
-    !!deleteSubTarget ||
-    !!deleteInstTarget ||
-    !!deleteDataEntryTarget ||
-    showRecordLoan ||
-    showRecordSubscription ||
-    showRecordDataEntry ||
-    !!editingDataEntry;
-
-  const closeTopInternalModal = () => {
-    if (editingDataEntry) {
-      setEditingDataEntry(null);
-      return;
-    }
-    if (showRecordDataEntry) {
-      setShowRecordDataEntry(false);
-      return;
-    }
-    if (showRecordSubscription) {
-      setShowRecordSubscription(false);
-      return;
-    }
-    if (showRecordLoan) {
-      setShowRecordLoan(false);
-      return;
-    }
-    if (deleteDataEntryTarget) {
-      setDeleteDataEntryTarget(null);
-      return;
-    }
-    if (deleteInstTarget) {
-      setDeleteInstTarget(null);
-      return;
-    }
-    if (deleteSubTarget) {
-      setDeleteSubTarget(null);
-      return;
-    }
-    if (deleteLoanTarget) {
-      setDeleteLoanTarget(null);
-      return;
-    }
-  };
-
-  useModalBackHandler(anyInternalModalOpen, closeTopInternalModal);
+  const {
+    deleteLoanTarget,
+    setDeleteLoanTarget,
+    deleteSubTarget,
+    setDeleteSubTarget,
+    deleteInstTarget,
+    setDeleteInstTarget,
+    deleteDataEntryTarget,
+    setDeleteDataEntryTarget,
+    showRecordLoan,
+    setShowRecordLoan,
+    showRecordSubscription,
+    setShowRecordSubscription,
+    showRecordDataEntry,
+    setShowRecordDataEntry,
+    editingDataEntry,
+    setEditingDataEntry,
+    isDeletingDataEntry,
+    isDeletingLoan,
+    isDeletingSubscription,
+    isDeletingInstallment,
+    deleteError,
+    setDeleteError,
+    isExporting,
+    exportError,
+    setExportError,
+    exportSuccess,
+    setExportSuccess,
+    anyInternalModalOpen,
+    closeTopInternalModal,
+    confirmDeleteLoan,
+    confirmDeleteSubscription,
+    confirmDeleteInstallment,
+    confirmDeleteDataEntry,
+    handleIndividualExport,
+  } = useCustomerDetailActions({
+    customer,
+    loans,
+    subscriptions,
+    installments,
+    deleteLoan,
+    deleteSubscription,
+    deleteInstallment,
+    deleteDataEntry,
+    installmentsByLoanId,
+  });
 
   const deleteLoanRef = useRef<HTMLDivElement | null>(null);
   const deleteSubRef = useRef<HTMLDivElement | null>(null);
@@ -400,258 +271,24 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   useFocusTrap(deleteInstRef, "button");
   useFocusTrap(deleteDataEntryRef, "button");
 
+  useModalBodyEffects({
+    expandedNoteId,
+    noteRefs,
+    anyInternalModalOpen,
+    closeTopInternalModal,
+    onClose,
+    onCollapseNote: () => setExpandedNoteId(null),
+  });
+
   const handleNoteClick = (id: string) => {
     setExpandedNoteId(expandedNoteId === id ? null : id);
   };
 
-  // Calculate summary totals
-
-  // Get details of ongoing loan for tooltip
-  // Reuse calculatePaymentPercentage helper to avoid duplicate computation
   const ongoingLoanInfo = useMemo(() => {
-    const ongoing = loans.find((loan) =>
-      isLoanOngoing(loan, installmentsByLoanId),
-    );
-
-    if (!ongoing) return null;
-
-    const paymentPercentage = Math.round(
-      calculatePaymentPercentage(ongoing, installmentsByLoanId),
-    );
-    const loanInstallments = installmentsByLoanId.get(ongoing.id) || [];
-    const amountPaid = loanInstallments.reduce(
-      (acc, inst) => acc + inst.amount,
-      0,
-    );
-    const totalRepayable = ongoing.original_amount + ongoing.interest_amount;
-
-    return {
-      paymentPercentage,
-      amountPaid,
-      totalRepayable,
-    };
+    return calculateOngoingLoanInfo(loans, installmentsByLoanId);
   }, [loans, installmentsByLoanId]);
 
-  // Simple boolean derived from ongoingLoanInfo
   const hasOngoingLoan = !!ongoingLoanInfo;
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        expandedNoteId &&
-        noteRefs.current[expandedNoteId] &&
-        !noteRefs.current[expandedNoteId]?.contains(event.target as Node)
-      ) {
-        setExpandedNoteId(null);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [expandedNoteId]);
-
-  useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      // If any internal modal is open, let it handle the Escape key
-      if (
-        deleteDataEntryTarget ||
-        deleteInstTarget ||
-        deleteSubTarget ||
-        deleteLoanTarget ||
-        showRecordDataEntry ||
-        showRecordLoan ||
-        showRecordSubscription ||
-        editingDataEntry
-      ) {
-        return;
-      }
-      // Otherwise close the whole modal
-      onClose();
-    };
-    document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
-  }, [
-    deleteDataEntryTarget,
-    deleteInstTarget,
-    deleteSubTarget,
-    deleteLoanTarget,
-    showRecordDataEntry,
-    showRecordLoan,
-    showRecordSubscription,
-    editingDataEntry,
-    onClose,
-  ]);
-
-  // Prevent background scrolling while modal is open (handle iOS/Android correctly)
-  const scrollYRef = useRef<number>(0);
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    scrollYRef.current = window.scrollY || window.pageYOffset || 0;
-    const bodyStyle = document.body.style;
-    bodyStyle.position = "fixed";
-    bodyStyle.top = `-${scrollYRef.current}px`;
-    bodyStyle.left = "0";
-    bodyStyle.right = "0";
-    bodyStyle.width = "100%";
-
-    return () => {
-      bodyStyle.position = "";
-      bodyStyle.top = "";
-      bodyStyle.left = "";
-      bodyStyle.right = "";
-      bodyStyle.width = "";
-      window.scrollTo(0, scrollYRef.current);
-    };
-  }, []);
-
-  const confirmDeleteLoan = async () => {
-    if (!deleteLoanTarget) return;
-    setDeleteError(null);
-    setIsDeletingLoan(true);
-    try {
-      await deleteLoan(deleteLoanTarget.id);
-      setDeleteLoanTarget(null);
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : String(error);
-      setDeleteError(msg);
-      setDeleteLoanTarget(null);
-    } finally {
-      setIsDeletingLoan(false);
-    }
-  };
-
-  const confirmDeleteSubscription = async () => {
-    if (!deleteSubTarget) return;
-    setDeleteError(null);
-    setIsDeletingSubscription(true);
-    try {
-      await deleteSubscription(deleteSubTarget.id);
-      setDeleteSubTarget(null);
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : String(error);
-      setDeleteError(msg);
-      setDeleteSubTarget(null);
-    } finally {
-      setIsDeletingSubscription(false);
-    }
-  };
-
-  const confirmDeleteInstallment = async () => {
-    if (!deleteInstTarget) return;
-    setDeleteError(null);
-    setIsDeletingInstallment(true);
-    try {
-      await deleteInstallment(deleteInstTarget.id);
-      setDeleteInstTarget(null);
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : String(error);
-      setDeleteError(msg);
-      setDeleteInstTarget(null);
-    } finally {
-      setIsDeletingInstallment(false);
-    }
-  };
-
-  const confirmDeleteDataEntry = async () => {
-    if (!deleteDataEntryTarget || !deleteDataEntry) return;
-    setDeleteError(null);
-    setIsDeletingDataEntry(true);
-    try {
-      await deleteDataEntry(deleteDataEntryTarget.id);
-      setDeleteDataEntryTarget(null);
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : String(error);
-      setDeleteError(msg);
-      setDeleteDataEntryTarget(null);
-    } finally {
-      setIsDeletingDataEntry(false);
-    }
-  };
-  const handleIndividualExport = async () => {
-    setExportError(null);
-    setExportSuccess(null);
-    setIsExporting(true);
-    try {
-      const XLSX = await import("xlsx");
-      const customerLoansData = loans.map((loan) => {
-        const loanInstallments = installmentsByLoanId.get(loan.id) || [];
-        const amountPaid = loanInstallments.reduce(
-          (acc, inst) => acc + inst.amount,
-          0,
-        );
-        const lateFeesPaid = loanInstallments.reduce(
-          (acc, inst) => acc + (inst.late_fee || 0),
-          0,
-        );
-        const totalRepayable = loan.original_amount + loan.interest_amount;
-        const isOngoing = isLoanOngoing(loan, installmentsByLoanId);
-
-        return {
-          "Loan ID": loan.id,
-          "Original Amount": loan.original_amount,
-          "Interest Amount": loan.interest_amount,
-          "Total Repayable": totalRepayable,
-          "Amount Paid": amountPaid,
-          "Late Fees Paid": lateFeesPaid,
-          Balance: totalRepayable - amountPaid,
-          "Loan Date": formatDate(loan.payment_date),
-          Status: isOngoing ? "In Progress" : "Paid Off",
-        };
-      });
-
-      const customerSubscriptionsData = subscriptions.map((sub) => ({
-        "Subscription ID": sub.id,
-        Amount: sub.amount,
-        Date: formatDate(sub.date),
-        Receipt: sub.receipt,
-      }));
-
-      const customerInstallmentsData = installments
-        .filter((inst) => loans.some((l) => l.id === inst.loan_id))
-        .map((inst) => ({
-          "Installment ID": inst.id,
-          "Loan ID": inst.loan_id,
-          "Installment Number": inst.installment_number,
-          "Amount Paid": inst.amount,
-          "Late Fee Paid": inst.late_fee || 0,
-          "Payment Date": formatDate(inst.date),
-          "Receipt Number": inst.receipt_number,
-        }));
-
-      const wb = XLSX.utils.book_new();
-
-      if (customerLoansData.length > 0)
-        XLSX.utils.book_append_sheet(
-          wb,
-          XLSX.utils.json_to_sheet(customerLoansData),
-          "Loans",
-        );
-      if (customerSubscriptionsData.length > 0)
-        XLSX.utils.book_append_sheet(
-          wb,
-          XLSX.utils.json_to_sheet(customerSubscriptionsData),
-          "Subscriptions",
-        );
-      if (customerInstallmentsData.length > 0)
-        XLSX.utils.book_append_sheet(
-          wb,
-          XLSX.utils.json_to_sheet(customerInstallmentsData),
-          "Installments",
-        );
-
-      const sanitizedName = customer.name.replace(/[/\\?%*:|"<>]/g, "_");
-      XLSX.writeFile(wb, `${sanitizedName}_Details.xlsx`);
-      setExportSuccess(
-        `Data exported successfully: ${sanitizedName}_Details.xlsx`,
-      );
-    } catch (error) {
-      console.error("Export failed:", error);
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      setExportError(`Export failed: ${errorMsg}`);
-    } finally {
-      setIsExporting(false);
-    }
-  };
 
   return ReactDOM.createPortal(
     <motion.div
@@ -674,119 +311,14 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
         exit="exit"
         onClick={(e) => e.stopPropagation()}
       >
-        <GlassCard
-          className="!p-0 w-full flex-shrink-0 dark:bg-dark-card dark:border-dark-border"
-          disable3D
-        >
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 sm:p-5 md:p-6 border-b border-gray-200 dark:border-dark-border gap-4 md:gap-6">
-            <div className="flex-1 min-w-0">
-              <h2 className="text-lg sm:text-2xl md:text-3xl font-bold dark:text-dark-text truncate">
-                {customer.name}
-              </h2>
-              <p className="text-xs sm:text-sm md:text-base text-gray-500 dark:text-dark-muted mb-4">
-                {customer.phone}
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-1.5 sm:gap-2 text-xs">
-                <div className="p-1.5 rounded-lg bg-green-50 dark:bg-green-900/20">
-                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-0.5">
-                    Loan:
-                  </span>
-                  <p className="font-bold text-green-600 dark:text-green-400 text-xs sm:text-sm">
-                    {formatCurrency(summaryTotals.totalLoan)}
-                  </p>
-                </div>
-                <div className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20">
-                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-0.5">
-                    Loan Interest:
-                  </span>
-                  <p className="font-bold text-amber-600 dark:text-amber-400 text-xs sm:text-sm">
-                    {formatCurrency(summaryTotals.totalLoanInterest)}
-                  </p>
-                </div>
-                <div className="p-1.5 rounded-lg bg-cyan-50 dark:bg-cyan-900/20">
-                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-0.5">
-                    Subscription:
-                  </span>
-                  <p className="font-bold text-cyan-600 dark:text-cyan-400 text-xs sm:text-sm">
-                    {formatCurrency(summaryTotals.totalSubscription)}
-                  </p>
-                </div>
-
-                <div className="p-1.5 rounded-lg bg-orange-50 dark:bg-orange-900/20">
-                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-0.5">
-                    Subscription Interest:                  </span>
-                  <p className="font-bold text-orange-600 dark:text-orange-400 text-xs sm:text-sm">
-                    {formatCurrency(interestCharged)}
-                  </p>
-                </div>
-
-                <div className="p-1.5 rounded-lg bg-red-50 dark:bg-red-900/20">
-                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-0.5">
-                    Late Fees:
-                  </span>
-                  <p className="font-bold text-red-600 dark:text-red-400 text-xs sm:text-sm">
-                    {formatCurrency(summaryTotals.totalLateFees)}
-                  </p>
-                </div>
-
-                <div className="p-1.5 rounded-lg bg-pink-50 dark:bg-pink-900/20">
-                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-0.5">
-                    Expenditure:
-                  </span>
-                  <p className="font-bold text-pink-600 dark:text-pink-400 text-xs sm:text-sm">
-                    {formatCurrency(summaryTotals.totalMiscEntries)}
-                  </p>
-                </div>
-
-                <div className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/20">
-                  <span className="text-gray-600 dark:text-dark-muted text-xs block mb-0.5">
-                    Net:
-                  </span>
-                  <p
-                    className={`font-bold text-xs sm:text-sm ${summaryTotals.netTotal >= 0 ? "text-indigo-600 dark:text-indigo-400" : "text-red-600 dark:text-red-400"}`}
-                  >
-                    {formatCurrency(summaryTotals.netTotal)}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0 md:self-start">
-              <motion.button
-                onClick={handleIndividualExport}
-                disabled={isExporting}
-                aria-label={isExporting ? "Exporting customer details" : "Export customer details"}
-                aria-busy={isExporting}
-                className={`flex items-center justify-center gap-2 px-4 h-10 text-xs sm:text-sm font-semibold transition-colors bg-gray-100 rounded-lg dark:bg-slate-700 dark:text-dark-text whitespace-nowrap leading-none disabled:opacity-60 disabled:cursor-not-allowed ${isExporting ? "hover:bg-gray-100 dark:hover:bg-slate-700" : "hover:bg-gray-200 dark:hover:bg-slate-600"}`}
-                whileHover={{ scale: isExporting ? 1 : 1.05 }}
-                whileTap={{ scale: isExporting ? 1 : 0.95 }}
-              >
-                {isExporting ? (
-                  <svg
-                    className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 animate-spin"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                  </svg>
-                ) : (
-                  <FileDownIcon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
-                )}
-                <span className="hidden sm:inline">{isExporting ? "Exporting..." : "Export Details"}</span>
-                <span className="sm:hidden">{isExporting ? "Exporting" : "Export"}</span>
-              </motion.button>
-              <motion.button
-                onClick={onClose}
-                className="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text flex-shrink-0 transition-colors leading-none"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <XIcon className="w-5 h-5" />
-              </motion.button>
-            </div>
-          </div>
-        </GlassCard>
+        <CustomerDetailHeader
+          customer={customer}
+          summaryTotals={summaryTotals}
+          interestCharged={interestCharged}
+          isExporting={isExporting}
+          onExport={handleIndividualExport}
+          onClose={onClose}
+        />
 
         <div
           className="mt-2 sm:mt-4 space-y-3 sm:space-y-6 flex-1 min-h-0 pb-6 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-slate-600 dark:scrollbar-track-slate-800 px-2 sm:px-0"
@@ -878,14 +410,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                     {loans.map((loan, idx) => {
                       const loanInstallments =
                         installmentsByLoanId.get(loan.id) || [];
-                      const amountPaid = loanInstallments.reduce(
-                        (acc, inst) => acc + inst.amount,
-                        0,
-                      );
-                      const totalRepayable =
-                        loan.original_amount + loan.interest_amount;
-                      const balance = totalRepayable - amountPaid;
-                      const isPaidOff = amountPaid >= totalRepayable;
+                      const { amountPaid, totalRepayable, balance, isPaidOff } =
+                        calculateLoanMetrics(loan, installmentsByLoanId);
                       const isExpanded = expandedLoanId === loan.id;
 
                       return (
@@ -1061,14 +587,8 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   {loans.map((loan, idx) => {
                     const loanInstallments =
                       installmentsByLoanId.get(loan.id) || [];
-                    const amountPaid = loanInstallments.reduce(
-                      (acc, inst) => acc + inst.amount,
-                      0,
-                    );
-                    const totalRepayable =
-                      loan.original_amount + loan.interest_amount;
-                    const balance = totalRepayable - amountPaid;
-                    const isPaidOff = amountPaid >= totalRepayable;
+                    const { amountPaid, totalRepayable, balance, isPaidOff } =
+                      calculateLoanMetrics(loan, installmentsByLoanId);
                     const isExpanded = expandedLoanId === loan.id;
 
                     return (
@@ -1329,16 +849,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                         #
                       </th>
                       <th
-                        onClick={() => {
-                          if (subscriptionSortBy === "date") {
-                            setSubscriptionSortOrder(
-                              subscriptionSortOrder === "asc" ? "desc" : "asc",
-                            );
-                          } else {
-                            setSubscriptionSortBy("date");
-                            setSubscriptionSortOrder("desc");
-                          }
-                        }}
+                        onClick={toggleDateSort}
                         className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text cursor-pointer hover:bg-gray-200/50 dark:hover:bg-slate-600/50 transition-colors"
                       >
                         Date{" "}
@@ -1346,16 +857,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                           (subscriptionSortOrder === "desc" ? "↓" : "↑")}
                       </th>
                       <th
-                        onClick={() => {
-                          if (subscriptionSortBy === "amount") {
-                            setSubscriptionSortOrder(
-                              subscriptionSortOrder === "asc" ? "desc" : "asc",
-                            );
-                          } else {
-                            setSubscriptionSortBy("amount");
-                            setSubscriptionSortOrder("asc");
-                          }
-                        }}
+                        onClick={toggleAmountSort}
                         className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text cursor-pointer hover:bg-gray-200/50 dark:hover:bg-slate-600/50 transition-colors"
                       >
                         Amount{" "}
@@ -1366,16 +868,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                         Late Fee
                       </th>
                       <th
-                        onClick={() => {
-                          if (subscriptionSortBy === "receipt") {
-                            setSubscriptionSortOrder(
-                              subscriptionSortOrder === "asc" ? "desc" : "asc",
-                            );
-                          } else {
-                            setSubscriptionSortBy("receipt");
-                            setSubscriptionSortOrder("asc");
-                          }
-                        }}
+                        onClick={toggleReceiptSort}
                         className="px-4 py-2 border-b dark:border-dark-border text-left text-sm font-semibold text-gray-600 dark:text-dark-text cursor-pointer hover:bg-gray-200/50 dark:hover:bg-slate-600/50 transition-colors"
                       >
                         Receipt #{" "}
@@ -1776,218 +1269,22 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           )}
         </AnimatePresence>
 
-        <div className="md:hidden sticky bottom-0 z-30 mt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-          <p id="mobile-touch-guidance" className="sr-only">
-            Mobile actions use minimum 48 by 48 pixel touch targets per
-            Material Design and WCAG 2.5.5 Target Size guidance.
-          </p>
-          <GlassCard
-            className="!p-2 dark:bg-dark-card dark:border-dark-border"
-            disable3D
-          >
-            <div className="grid grid-cols-4 gap-2">
-              <motion.button
-                onClick={handleIndividualExport}
-                disabled={isExporting}
-                aria-label="Export customer details"
-                aria-describedby="mobile-touch-guidance"
-                className="min-h-12 rounded-lg bg-slate-100 dark:bg-slate-700 text-[11px] font-semibold text-slate-700 dark:text-dark-text disabled:opacity-60"
-                whileTap={{ scale: 0.98 }}
-              >
-                {isExporting ? "Exporting" : "Export"}
-              </motion.button>
-              <motion.button
-                onClick={() => setShowRecordLoan(true)}
-                aria-label="Record loan"
-                aria-describedby="mobile-touch-guidance"
-                className="min-h-12 rounded-lg bg-indigo-600 text-[11px] font-semibold text-white"
-                whileTap={{ scale: 0.98 }}
-              >
-                Loan
-              </motion.button>
-              <motion.button
-                onClick={() => setShowRecordSubscription(true)}
-                aria-label="Record subscription"
-                aria-describedby="mobile-touch-guidance"
-                className="min-h-12 rounded-lg bg-cyan-600 text-[11px] font-semibold text-white"
-                whileTap={{ scale: 0.98 }}
-              >
-                Sub
-              </motion.button>
-              <motion.button
-                onClick={() => setShowRecordDataEntry(true)}
-                aria-label="Record expenditure entry"
-                aria-describedby="mobile-touch-guidance"
-                className="min-h-12 rounded-lg bg-pink-600 text-[11px] font-semibold text-white"
-                whileTap={{ scale: 0.98 }}
-              >
-                Entry
-              </motion.button>
-            </div>
-          </GlassCard>
-        </div>
+        <CustomerDetailMobileActions
+          isExporting={isExporting}
+          onExport={handleIndividualExport}
+          onRecordLoan={() => setShowRecordLoan(true)}
+          onRecordSubscription={() => setShowRecordSubscription(true)}
+          onRecordDataEntry={() => setShowRecordDataEntry(true)}
+        />
 
-        {/* Delete Error Display */}
-        <AnimatePresence>
-          {deleteError && (
-            <motion.div
-              className="fixed bottom-4 right-4 max-w-sm p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg shadow-lg z-50"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 text-red-600 dark:text-red-400">
-                  <svg
-                    className="w-5 h-5"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                    Error deleting record
-                  </p>
-                  <p className="text-sm text-red-700 dark:text-red-300 mt-1">
-                    {deleteError}
-                  </p>
-                </div>
-                <motion.button
-                  onClick={() => setDeleteError(null)}
-                  className="flex-shrink-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Export Error Display */}
-        <AnimatePresence>
-          {exportError && (
-            <motion.div
-              className="fixed bottom-4 right-4 max-w-sm p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg shadow-lg z-50"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 text-red-600 dark:text-red-400">
-                  <svg
-                    className="w-5 h-5"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                    Export failed
-                  </p>
-                  <p className="text-sm text-red-700 dark:text-red-300 mt-1">
-                    {exportError}
-                  </p>
-                </div>
-                <motion.button
-                  onClick={() => setExportError(null)}
-                  className="flex-shrink-0 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Export Success Display */}
-        <AnimatePresence>
-          {exportSuccess && (
-            <motion.div
-              className="fixed bottom-4 right-4 max-w-sm p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg shadow-lg z-50"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 text-green-600 dark:text-green-400">
-                  <svg
-                    className="w-5 h-5"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                    Export successful
-                  </p>
-                  <p className="text-sm text-green-700 dark:text-green-300 mt-1">
-                    {exportSuccess}
-                  </p>
-                </div>
-                <motion.button
-                  onClick={() => setExportSuccess(null)}
-                  className="flex-shrink-0 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <CustomerDetailBanners
+          deleteError={deleteError}
+          exportError={exportError}
+          exportSuccess={exportSuccess}
+          onClearDeleteError={() => setDeleteError(null)}
+          onClearExportError={() => setExportError(null)}
+          onClearExportSuccess={() => setExportSuccess(null)}
+        />
         {/* Delete Loan Confirmation Modal */}
         <DeleteConfirmationModal
           isOpen={!!deleteLoanTarget}

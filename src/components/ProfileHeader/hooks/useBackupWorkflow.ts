@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import { apiRequest } from '../../../lib/apiClient';
 
 export interface BackupArtifact {
     id: number;
@@ -76,20 +77,22 @@ export function useBackupWorkflow(): UseBackupWorkflowReturn {
 
         try {
             // Trigger the workflow
-            const res = await fetch('/.netlify/functions/trigger-backup', { method: 'POST' });
-            if (!res.ok) {
-                const txt = await res.text();
-                throw new Error(txt || 'Failed to start backup');
-            }
+            await apiRequest('/.netlify/functions/trigger-backup', {
+                method: 'POST',
+                timeoutMs: 20000,
+                retries: 1,
+            });
 
             setBackupCurrentStep('Workflow dispatched, waiting for run to start...');
 
             // Poll for status
             const pollStatus = async () => {
                 try {
-                    const statusRes = await fetch('/.netlify/functions/backup-status');
-                    if (statusRes.ok) {
-                        const data = await statusRes.json();
+                    const data = await apiRequest<any>('/.netlify/functions/backup-status', {
+                        method: 'GET',
+                        timeoutMs: 10000,
+                        dedupeKey: 'backup-status-poll',
+                    });
                         if (data.found) {
                             setBackupRunId(data.id);
                             setBackupProgress(data.progress || 0);
@@ -121,7 +124,6 @@ export function useBackupWorkflow(): UseBackupWorkflowReturn {
                                 }
                             }
                         }
-                    }
                 } catch (e) {
                     console.error('Status poll error:', e);
                 }
@@ -152,24 +154,12 @@ export function useBackupWorkflow(): UseBackupWorkflowReturn {
         setBackupCurrentStep('Cancelling backup...');
 
         try {
-            const res = await fetch('/.netlify/functions/cancel-backup', {
+            await apiRequest('/.netlify/functions/cancel-backup', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ runId: backupRunId })
+                body: { runId: backupRunId },
+                timeoutMs: 15000,
             });
-
-            if (res.ok) {
-                setBackupCurrentStep('❌ Backup cancelled');
-            } else {
-                let errorMsg = 'Unknown error';
-                try {
-                    const data = await res.json();
-                    errorMsg = data.error || errorMsg;
-                } catch {
-                    errorMsg = await res.text() || errorMsg;
-                }
-                setBackupCurrentStep(`⚠️ Cancel failed: ${errorMsg}`);
-            }
+            setBackupCurrentStep('❌ Backup cancelled');
         } catch (e: any) {
             setBackupCurrentStep(`⚠️ Cancel failed: ${e.message}`);
         } finally {
@@ -196,19 +186,12 @@ export function useBackupWorkflow(): UseBackupWorkflowReturn {
 
         setBackupDownloading(true);
         try {
-            const res = await fetch('/.netlify/functions/download-artifact', {
+            const blob = await apiRequest<Blob>('/.netlify/functions/download-artifact', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ run_id: backupRunId, artifact_id: artifact.id })
+                body: { run_id: backupRunId, artifact_id: artifact.id },
+                parseAs: 'blob',
+                timeoutMs: 30000,
             });
-
-            if (!res.ok) {
-                const txt = await res.text();
-                throw new Error(txt || 'Download failed');
-            }
-
-            // Download the blob
-            const blob = await res.blob();
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;

@@ -53,4 +53,16 @@ describe('apiRequest', () => {
       message: 'Nope',
     });
   });
+
+  it('preserves plain-text http error bodies instead of raising parse errors', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('Missing GITHUB_TOKEN env var', { status: 500, statusText: 'Internal Server Error' }),
+    );
+
+    await expect(apiRequest('/api/plain-error')).rejects.toMatchObject<ApiError>({
+      type: 'http',
+      status: 500,
+      message: 'Missing GITHUB_TOKEN env var',
+    });
+  });
 });

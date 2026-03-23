@@ -58,7 +58,10 @@ const buildHeaders = (headers: HeadersInit | undefined, body: unknown) => {
   return resolved;
 };
 
-const parseResponse = async (response: Response, parseAs: NonNullable<RequestOptions['parseAs']>) => {
+const parseResponse = async (
+  response: Response,
+  parseAs: NonNullable<RequestOptions['parseAs']>,
+) => {
   if (parseAs === 'response') return response;
   if (parseAs === 'text') return response.text();
   if (parseAs === 'blob') return response.blob();
@@ -69,6 +72,44 @@ const parseResponse = async (response: Response, parseAs: NonNullable<RequestOpt
     return JSON.parse(text);
   } catch (error) {
     throw new ApiError('Invalid server response.', { type: 'parse', status: response.status, details: text, cause: error });
+  }
+};
+
+const getErrorMessageFromBody = (parsed: unknown, response: Response) => {
+  if (typeof parsed === 'string' && parsed.trim()) {
+    return parsed.trim();
+  }
+
+  if (
+    parsed &&
+    typeof parsed === 'object' &&
+    'error' in parsed &&
+    typeof (parsed as { error?: unknown }).error === 'string'
+  ) {
+    return String((parsed as { error: string }).error);
+  }
+
+  return response.statusText || 'Request failed.';
+};
+
+const parseErrorResponse = async (response: Response, parseAs: NonNullable<RequestOptions['parseAs']>) => {
+  if (parseAs === 'response') {
+    return null;
+  }
+
+  if (parseAs === 'text' || parseAs === 'blob') {
+    return response.text();
+  }
+
+  const rawText = await response.text();
+  if (!rawText.trim()) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(rawText);
+  } catch {
+    return rawText;
   }
 };
 
@@ -126,15 +167,17 @@ export async function apiRequest<T = unknown>(url: string, options: RequestOptio
           signal: controller.signal,
         });
 
-        const parsed = await parseResponse(response, parseAs);
-
         if (!response.ok) {
-          const message =
-            parsed && typeof parsed === 'object' && 'error' in parsed && typeof (parsed as { error?: unknown }).error === 'string'
-              ? String((parsed as { error: string }).error)
-              : response.statusText || 'Request failed.';
-          throw new ApiError(message, { type: 'http', status: response.status, details: parsed });
+          const parsedErrorBody = await parseErrorResponse(response.clone(), parseAs);
+          const message = getErrorMessageFromBody(parsedErrorBody, response);
+          throw new ApiError(message, {
+            type: 'http',
+            status: response.status,
+            details: parsedErrorBody,
+          });
         }
+
+        const parsed = await parseResponse(response, parseAs);
 
         if (cacheKey && staleTimeMs > 0) {
           responseCache.set(cacheKey, { data: parsed, expiresAt: Date.now() + staleTimeMs });

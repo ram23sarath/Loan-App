@@ -3,7 +3,7 @@ import ReactDOM from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
-import { apiRequest, ApiError } from "../../../lib/apiClient";
+import { apiRequest, ApiError, clearApiCache } from "../../../lib/apiClient";
 import { supabase } from "../../../lib/supabase";
 import type { Document } from "../../../types";
 
@@ -353,6 +353,7 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
         },
       );
       if (result.success) {
+        clearApiCache("tools:compare-users");
         await fetchUserStatus();
       } else {
         setUserStatusError(

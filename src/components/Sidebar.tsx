@@ -14,6 +14,8 @@ import {
 import { useData } from "../context/DataContext";
 import HamburgerIcon from "./ui/HamburgerIcon";
 import { ProfileHeaderHandle } from "./ProfileHeader";
+import { buildAvatarPublicUrl } from "../lib/avatarStorage";
+import { getAvatarMetadata } from "../utils/avatarUtils";
 
 const DatabaseIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -300,6 +302,19 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
   const initials =
     (displayName && displayName.trim().charAt(0).toUpperCase()) || "U";
 
+  const avatarMeta = getAvatarMetadata(
+    (session?.user?.user_metadata as Record<string, unknown> | undefined) || null,
+  );
+  const avatarImageUrl = buildAvatarPublicUrl(
+    avatarMeta.avatarPath,
+    avatarMeta.avatarUpdatedAt,
+  );
+  const [avatarImageFailed, setAvatarImageFailed] = React.useState(false);
+
+  React.useEffect(() => {
+    setAvatarImageFailed(false);
+  }, [avatarImageUrl]);
+
   return (
     <>
       {/* 1. PORTRAIT MOBILE NAV (Bottom Bar) */}
@@ -449,9 +464,18 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
                     }}
                     className="w-full flex items-center gap-3 px-3 py-3 rounded-lg border border-transparent text-gray-700 hover:bg-gray-100 transition-colors dark:text-dark-text dark:hover:bg-slate-700"
                   >
-                    <div className="w-5 h-5 rounded-full bg-indigo-600 text-white font-semibold flex items-center justify-center text-[10px] shrink-0">
-                      {initials}
-                    </div>
+                    {avatarImageUrl && !avatarImageFailed ? (
+                      <img
+                        src={avatarImageUrl}
+                        alt={displayName}
+                        className="w-5 h-5 rounded-full object-cover shrink-0"
+                        onError={() => setAvatarImageFailed(true)}
+                      />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full bg-indigo-600 text-white font-semibold flex items-center justify-center text-[10px] shrink-0">
+                        {initials}
+                      </div>
+                    )}
                     <span className="text-sm font-medium">Profile</span>
                   </button>
                 </div>

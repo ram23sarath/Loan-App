@@ -6,3 +6,6 @@ export type { UseNotificationsReturn, Notification } from './useNotifications';
 
 export { useProfileEditing } from './useProfileEditing';
 export type { UseProfileEditingReturn } from './useProfileEditing';
+
+export { useAvatarUpload } from './useAvatarUpload';
+export type { UseAvatarUploadReturn } from './useAvatarUpload';

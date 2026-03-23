@@ -58,6 +58,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   const [showToolsModal, setShowToolsModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
+  const [avatarImageFailed, setAvatarImageFailed] = useState(false);
 
   // Custom hooks
   const backup = useBackupWorkflow();
@@ -74,8 +75,12 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
 
   const userEmail = session?.user?.email || "User";
   const adminNameFromMeta = session?.user?.user_metadata?.name || "";
+  const userMetadata =
+    (session?.user?.user_metadata as Record<string, unknown> | undefined) || null;
 
   const profileEditing = useProfileEditing({
+    userId: session?.user?.id ?? null,
+    userMetadata,
     isScopedCustomer,
     scopedCustomerId,
     customerDetails,
@@ -148,6 +153,10 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
       JSON.stringify({ type: "PROFILE_DROPDOWN_OPEN", payload: { isOpen: showMenu } })
     );
   }, [showMenu]);
+
+  useEffect(() => {
+    setAvatarImageFailed(false);
+  }, [profileEditing.avatarImageUrl]);
 
   if (!session || !session.user) return null;
 
@@ -243,7 +252,16 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
               ease: "easeInOut",
             }}
           />
-          {initials}
+          {profileEditing.avatarImageUrl && !avatarImageFailed ? (
+            <img
+              src={profileEditing.avatarImageUrl}
+              alt={displayName}
+              className="w-12 h-12 rounded-full object-cover"
+              onError={() => setAvatarImageFailed(true)}
+            />
+          ) : (
+            initials
+          )}
         </motion.button>
       </div>
 
@@ -478,6 +496,16 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
         setAdminName={profileEditing.setAdminName}
         setIsEditingAdminName={profileEditing.setIsEditingAdminName}
         onSaveAdminName={profileEditing.saveAdminName}
+        avatarImageUrl={profileEditing.avatarImageUrl}
+        isUploadingAvatar={profileEditing.isUploadingAvatar}
+        avatarUploadError={profileEditing.avatarUploadError?.message ?? null}
+        avatarStatusText={profileEditing.avatarStatusText}
+        avatarPreviewUrl={profileEditing.avatarPreviewUrl}
+        selectedAvatarFileName={profileEditing.selectedAvatarFile?.name ?? null}
+        onSelectAvatarFile={profileEditing.selectAvatarFile}
+        onSaveAvatar={profileEditing.saveAvatar}
+        onRetryAvatarUpload={profileEditing.retryAvatarUpload}
+        onCancelAvatarUpload={profileEditing.cancelCurrentUpload}
       />
 
       {/* Backup Progress Modal */}

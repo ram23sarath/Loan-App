@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { Customer } from '../../../types';
+import { useAvatarUpload, UseAvatarUploadReturn } from './useAvatarUpload';
 
 export interface UseProfileEditingReturn {
     // Station name (for customers)
@@ -17,9 +18,23 @@ export interface UseProfileEditingReturn {
     setAdminName: (name: string) => void;
     setIsEditingAdminName: (editing: boolean) => void;
     saveAdminName: () => Promise<void>;
+    // Avatar upload
+    avatarImageUrl: string | null;
+    isUploadingAvatar: boolean;
+    avatarUploadError: UseAvatarUploadReturn['avatarUploadError'];
+    avatarStatusText: string | null;
+    selectedAvatarFile: File | null;
+    avatarPreviewUrl: string | null;
+    selectAvatarFile: (file: File | null) => Promise<void>;
+    saveAvatar: () => Promise<void>;
+    retryAvatarUpload: () => Promise<void>;
+    cancelCurrentUpload: () => void;
+    resetAvatarTransientState: () => void;
 }
 
 interface UseProfileEditingOptions {
+    userId: string | null;
+    userMetadata: Record<string, unknown> | null | undefined;
     isScopedCustomer: boolean;
     scopedCustomerId: string | null;
     customerDetails: Customer | null;
@@ -29,6 +44,8 @@ interface UseProfileEditingOptions {
 }
 
 export function useProfileEditing({
+    userId,
+    userMetadata,
     isScopedCustomer,
     scopedCustomerId,
     customerDetails,
@@ -45,6 +62,12 @@ export function useProfileEditing({
     const [adminName, setAdminName] = useState('');
     const [isEditingAdminName, setIsEditingAdminName] = useState(false);
     const [isSavingAdminName, setIsSavingAdminName] = useState(false);
+
+    const avatar = useAvatarUpload({
+        userId,
+        userMetadata,
+        showProfilePanel,
+    });
 
     // Initialize station name when profile panel opens
     useEffect(() => {
@@ -81,8 +104,14 @@ export function useProfileEditing({
 
         try {
             setIsSavingAdminName(true);
+            const { data: sessionData } = await supabase.auth.getSession();
+            const currentMetadata =
+                (sessionData.session?.user?.user_metadata as Record<string, unknown> | undefined) || {};
             const { error } = await supabase.auth.updateUser({
-                data: { name: adminName }
+                data: {
+                    ...currentMetadata,
+                    name: adminName,
+                }
             });
             if (error) throw error;
             setIsEditingAdminName(false);
@@ -108,5 +137,17 @@ export function useProfileEditing({
         setAdminName,
         setIsEditingAdminName,
         saveAdminName,
+        // Avatar upload
+        avatarImageUrl: avatar.avatarImageUrl,
+        isUploadingAvatar: avatar.isUploadingAvatar,
+        avatarUploadError: avatar.avatarUploadError,
+        avatarStatusText: avatar.avatarStatusText,
+        selectedAvatarFile: avatar.selectedAvatarFile,
+        avatarPreviewUrl: avatar.avatarPreviewUrl,
+        selectAvatarFile: avatar.selectAvatarFile,
+        saveAvatar: avatar.saveAvatar,
+        retryAvatarUpload: avatar.retryAvatarUpload,
+        cancelCurrentUpload: avatar.cancelCurrentUpload,
+        resetAvatarTransientState: avatar.resetAvatarTransientState,
     };
 }

@@ -23,6 +23,17 @@ interface ProfilePanelModalProps {
     setAdminName: (name: string) => void;
     setIsEditingAdminName: (editing: boolean) => void;
     onSaveAdminName: () => void;
+    // Avatar upload
+    avatarImageUrl: string | null;
+    isUploadingAvatar: boolean;
+    avatarUploadError: string | null;
+    avatarStatusText: string | null;
+    avatarPreviewUrl: string | null;
+    selectedAvatarFileName: string | null;
+    onSelectAvatarFile: (file: File | null) => Promise<void>;
+    onSaveAvatar: () => Promise<void>;
+    onRetryAvatarUpload: () => Promise<void>;
+    onCancelAvatarUpload: () => void;
 }
 
 const ProfilePanelModal: React.FC<ProfilePanelModalProps> = ({
@@ -44,7 +55,52 @@ const ProfilePanelModal: React.FC<ProfilePanelModalProps> = ({
     setAdminName,
     setIsEditingAdminName,
     onSaveAdminName,
+    avatarImageUrl,
+    isUploadingAvatar,
+    avatarUploadError,
+    avatarStatusText,
+    avatarPreviewUrl,
+    selectedAvatarFileName,
+    onSelectAvatarFile,
+    onSaveAvatar,
+    onRetryAvatarUpload,
+    onCancelAvatarUpload,
 }) => {
+    const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+    const [avatarSelectionError, setAvatarSelectionError] = React.useState<string | null>(null);
+
+    React.useEffect(() => {
+        if (!isOpen && fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+        if (!isOpen) {
+            setAvatarSelectionError(null);
+        }
+    }, [isOpen]);
+
+    const displayName = isScopedCustomer
+        ? (customerDetails?.name ?? '')
+        : (adminNameFromMeta ?? userEmail ?? '');
+
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const nextFile = event.target.files?.[0] ?? null;
+        setAvatarSelectionError(null);
+        try {
+            await onSelectAvatarFile(nextFile);
+            setAvatarSelectionError(null);
+        } catch (error) {
+            console.error('[ProfilePanelModal] Failed to process selected avatar file', error);
+            const message = error instanceof Error && error.message
+                ? error.message
+                : 'Could not select avatar image. Please try again.';
+            setAvatarSelectionError(message);
+            event.target.value = '';
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
+
     return (
         <AnimatePresence>
             {isOpen && (
@@ -104,6 +160,89 @@ const ProfilePanelModal: React.FC<ProfilePanelModalProps> = ({
                             >
                                 <label className="text-xs text-gray-500 uppercase tracking-wide dark:text-dark-muted">Email</label>
                                 <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1 break-all dark:text-dark-text">{userEmail}</p>
+                            </motion.div>
+
+                            <motion.div
+                                className="border-b border-gray-200 pb-3 md:pb-4 dark:border-dark-border"
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.18, type: 'spring', stiffness: 300, damping: 24 }}
+                            >
+                                <label className="text-xs text-gray-500 uppercase tracking-wide dark:text-dark-muted">Avatar</label>
+                                <div className="mt-2 flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 overflow-hidden flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-semibold">
+                                        {avatarPreviewUrl || avatarImageUrl ? (
+                                            <img
+                                                src={avatarPreviewUrl || avatarImageUrl || ''}
+                                                alt="Avatar preview"
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <span>{displayName.trim().charAt(0).toUpperCase() || 'U'}</span>
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[11px] md:text-xs text-gray-500 dark:text-dark-muted truncate">
+                                            {selectedAvatarFileName || 'JPG, PNG, WebP up to 10MB'}
+                                        </p>
+                                        {avatarStatusText && (
+                                            <p className="text-[11px] md:text-xs text-indigo-600 dark:text-indigo-400 mt-1">{avatarStatusText}</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept="image/jpeg,image/jpg,image/png,image/webp"
+                                        className="hidden"
+                                        onChange={handleFileChange}
+                                        disabled={isUploadingAvatar}
+                                        id="avatar-file-input"
+                                    />
+                                    <label
+                                        htmlFor="avatar-file-input"
+                                        className={`px-3 py-2 text-xs md:text-sm font-medium rounded transition-colors cursor-pointer ${isUploadingAvatar ? 'bg-gray-200 text-gray-500 cursor-not-allowed dark:bg-slate-700 dark:text-dark-muted' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50'}`}
+                                    >
+                                        Choose Image
+                                    </label>
+                                    <button
+                                        onClick={() => void onSaveAvatar()}
+                                        disabled={!selectedAvatarFileName || isUploadingAvatar}
+                                        className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-xs md:text-sm font-medium rounded transition-colors"
+                                    >
+                                        {isUploadingAvatar ? 'Saving...' : 'Save Avatar'}
+                                    </button>
+                                    {isUploadingAvatar && (
+                                        <button
+                                            onClick={onCancelAvatarUpload}
+                                            className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs md:text-sm font-medium rounded transition-colors dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
+                                        >
+                                            Cancel
+                                        </button>
+                                    )}
+                                </div>
+
+                                {avatarUploadError && (
+                                    <div className="mt-2 text-xs text-red-600 dark:text-red-400">
+                                        <p>{avatarUploadError}</p>
+                                        {!!selectedAvatarFileName && (
+                                            <button
+                                                onClick={() => void onRetryAvatarUpload()}
+                                                className="mt-2 text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
+                                            >
+                                                Retry
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+
+                                {avatarSelectionError && (
+                                    <div className="mt-2 text-xs text-red-600 dark:text-red-400">
+                                        <p>{avatarSelectionError}</p>
+                                    </div>
+                                )}
                             </motion.div>
 
                             {/* Customer Details (if scoped user) */}

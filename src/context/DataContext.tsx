@@ -2887,6 +2887,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           lastUserIdRef.current = session.user?.id || null;
         }
       }
+
+      // Handle user metadata updates (e.g. avatar path/name changes)
+      if (_event === "USER_UPDATED" && session) {
+        setSession(session);
+        lastSessionTokenRef.current = session.access_token;
+        lastUserIdRef.current = session.user?.id || null;
+      }
     });
 
     return () => {

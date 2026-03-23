@@ -59,10 +59,22 @@ export const buildAvatarPublicUrl = (
 
   if (!publicUrl) return null;
 
-  if (!avatarUpdatedAt) return publicUrl;
+  const finalUrl = avatarUpdatedAt
+    ? `${publicUrl}?v=${encodeURIComponent(avatarUpdatedAt)}`
+    : publicUrl;
 
-  const version = encodeURIComponent(avatarUpdatedAt);
-  return `${publicUrl}?v=${version}`;
+  if (import.meta.env.DEV) {
+    console.debug("[AvatarStorage] buildAvatarPublicUrl", {
+      bucket: AVATAR_BUCKET,
+      avatarPath,
+      avatarUpdatedAt,
+      publicUrl,
+      finalUrl,
+      hasPublicSegment: publicUrl.includes("/storage/v1/object/public/"),
+    });
+  }
+
+  return finalUrl;
 };
 
 export const persistAvatarMetadata = async (

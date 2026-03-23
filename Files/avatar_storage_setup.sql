@@ -24,7 +24,8 @@ with check (
   bucket_id = 'avatars'
   and split_part(name, '/', 1) = 'users'
   and split_part(name, '/', 2) = auth.uid()::text
-  and split_part(name, '/', 3) ~ '^avatar\\.(webp|jpg|jpeg|png)$'
+  and split_part(name, '/', 3) in ('avatar.webp', 'avatar.jpg', 'avatar.jpeg', 'avatar.png')
+  and split_part(name, '/', 4) = ''
 );
 
 -- Authenticated users may update only their own avatar path.
@@ -43,7 +44,8 @@ with check (
   bucket_id = 'avatars'
   and split_part(name, '/', 1) = 'users'
   and split_part(name, '/', 2) = auth.uid()::text
-  and split_part(name, '/', 3) ~ '^avatar\\.(webp|jpg|jpeg|png)$'
+  and split_part(name, '/', 3) in ('avatar.webp', 'avatar.jpg', 'avatar.jpeg', 'avatar.png')
+  and split_part(name, '/', 4) = ''
 );
 
 -- Authenticated users may delete only within their own folder.

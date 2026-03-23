@@ -2457,10 +2457,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             setSeniorityList(cachedData.seniorityList || []);
           }
 
-          // FIX: Progressive Loading - Unblock UI immediately
+          // Progressive Loading: unblock UI immediately while data continues in background.
+          // Keep isRefreshing reserved for explicit/user-triggered refresh actions.
           if (isMounted) {
             setLoading(false);
-            setIsRefreshing(true);
           }
 
           // Start seniority fetch immediately so it runs in parallel with the main data fetch
@@ -2730,12 +2730,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    setIsRefreshing(true);
-    refetchDataAfterLogin().finally(() => {
-      if (isMounted) {
-        setIsRefreshing(false);
-      }
-    });
+    // Silent post-login bootstrap: load in background without global sync banner.
+    refetchDataAfterLogin();
 
     return () => {
       isMounted = false;

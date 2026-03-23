@@ -10,6 +10,7 @@ import {
 } from "../../../utils/avatarUtils";
 import {
   buildAvatarPublicUrl,
+  deleteOldAvatarFile,
   persistAvatarMetadata,
   resolveAvatarPathForFile,
   uploadAvatarToStorage,
@@ -212,6 +213,12 @@ export const useAvatarUpload = ({
 
     try {
       const avatarPathForFile = resolveAvatarPathForFile(userId, selectedAvatarFile);
+
+      // Clean up old avatar if uploading a different format
+      if (avatarPath && avatarPath !== avatarPathForFile) {
+        await deleteOldAvatarFile(avatarPath, userId, controller.signal);
+      }
+
       await uploadAvatarToStorage(selectedAvatarFile, userId, avatarPathForFile, controller.signal);
 
       if (controller.signal.aborted) {
@@ -246,7 +253,7 @@ export const useAvatarUpload = ({
     } finally {
       setIsUploadingAvatar(false);
     }
-  }, [cancelCurrentUpload, revokePreviewUrl, selectedAvatarFile, userId]);
+  }, [cancelCurrentUpload, revokePreviewUrl, selectedAvatarFile, userId, avatarPath]);
 
   const retryAvatarUpload = useCallback(async () => {
     await saveAvatar();

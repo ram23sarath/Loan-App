@@ -116,6 +116,35 @@ export const resolveAvatarPathForFile = (userId: string, file: File): string => 
   return buildAvatarPath(userId, file.type);
 };
 
+export const deleteOldAvatarFile = async (
+  previousAvatarPath: string | null,
+  userId: string,
+  signal?: AbortSignal,
+): Promise<void> => {
+  if (!previousAvatarPath || !userId) {
+    return;
+  }
+
+  if (signal?.aborted) {
+    throw new DOMException("Avatar cleanup aborted", "AbortError");
+  }
+
+  // Only delete if it's a different path (different format)
+  try {
+    const { error } = await supabase.storage
+      .from(AVATAR_BUCKET)
+      .remove([previousAvatarPath]);
+
+    if (error) {
+      // Log but don't throw - cleanup failure shouldn't fail the upload
+      console.warn("[AvatarStorage] Failed to delete old avatar:", error.message);
+    }
+  } catch (error) {
+    // Log but don't throw - cleanup failure shouldn't fail the upload
+    console.warn("[AvatarStorage] Failed to delete old avatar:", error);
+  }
+};
+
 export const mapAvatarStorageError = (error: unknown) => {
   return normalizeAvatarError(error, "upload", "Avatar upload failed.");
 };

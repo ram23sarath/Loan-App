@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo, useEffect } from "react";
 import ReactDOM from "react-dom";
 import { motion, Variants, AnimatePresence } from "framer-motion";
 import type {
@@ -35,6 +35,10 @@ import { useSubscriptionSort } from "./customer-detail/hooks/useSubscriptionSort
 import { useCustomerInterest } from "./customer-detail/hooks/useCustomerInterest";
 import { useModalBodyEffects } from "./customer-detail/hooks/useModalBodyEffects";
 import { useCustomerDetailActions } from "./customer-detail/hooks/useCustomerDetailActions";
+import { useData } from "../../context/DataContext";
+import { buildAvatarPublicUrl } from "../../lib/avatarStorage";
+import { getAvatarMetadata } from "../../utils/avatarUtils";
+import { fetchCustomerAvatarMetadata } from "../../lib/customerAvatarApi";
 
 interface CustomerDetailModalProps {
   customer: Customer;
@@ -187,7 +191,11 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 }) => {
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const [expandedLoanId, setExpandedLoanId] = useState<string | null>(null);
+  const [customerAvatarPath, setCustomerAvatarPath] = useState<string | null>(null);
+  const [customerAvatarUpdatedAt, setCustomerAvatarUpdatedAt] =
+    useState<string | null>(null);
   const noteRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const { session } = useData();
 
   const interestCharged = useCustomerInterest(customer.id);
 
@@ -290,6 +298,60 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
   const hasOngoingLoan = !!ongoingLoanInfo;
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadCustomerAvatar = async () => {
+      const customerUserId = String(customer.user_id || "").trim();
+      if (!customerUserId) {
+        if (!cancelled) {
+          setCustomerAvatarPath(null);
+          setCustomerAvatarUpdatedAt(null);
+        }
+        return;
+      }
+
+      const currentUserMetadata = getAvatarMetadata(
+        (session?.user?.user_metadata as Record<string, unknown> | undefined) ||
+          null,
+      );
+      const isSelf = session?.user?.id === customerUserId;
+
+      if (isSelf && currentUserMetadata.avatarPath) {
+        if (!cancelled) {
+          setCustomerAvatarPath(currentUserMetadata.avatarPath);
+          setCustomerAvatarUpdatedAt(currentUserMetadata.avatarUpdatedAt);
+        }
+        return;
+      }
+
+      const metadata = await fetchCustomerAvatarMetadata(
+        customerUserId,
+        session?.access_token,
+      );
+
+      if (cancelled) return;
+
+      setCustomerAvatarPath(metadata.avatarPath);
+      setCustomerAvatarUpdatedAt(metadata.avatarUpdatedAt);
+    };
+
+    void loadCustomerAvatar();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    customer.user_id,
+    session?.access_token,
+    session?.user?.id,
+    session?.user?.user_metadata,
+  ]);
+
+  const customerAvatarUrl = useMemo(() => {
+    return buildAvatarPublicUrl(customerAvatarPath, customerAvatarUpdatedAt);
+  }, [customerAvatarPath, customerAvatarUpdatedAt]);
+
   return ReactDOM.createPortal(
     <motion.div
       className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-black/40 p-4"
@@ -317,6 +379,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           interestCharged={interestCharged}
           isExporting={isExporting}
           onExport={handleIndividualExport}
+          avatarImageUrl={customerAvatarUrl}
           onClose={onClose}
         />
 

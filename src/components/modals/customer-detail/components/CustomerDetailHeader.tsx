@@ -12,6 +12,7 @@ interface CustomerDetailHeaderProps {
   interestCharged: number;
   isExporting: boolean;
   onExport: () => void;
+  avatarImageUrl?: string | null;
   onClose: () => void;
 }
 
@@ -21,8 +22,17 @@ const CustomerDetailHeader: React.FC<CustomerDetailHeaderProps> = ({
   interestCharged,
   isExporting,
   onExport,
+  avatarImageUrl,
   onClose,
 }) => {
+  const [avatarLoadFailed, setAvatarLoadFailed] = React.useState(false);
+
+  React.useEffect(() => {
+    setAvatarLoadFailed(false);
+  }, [avatarImageUrl]);
+
+  const shouldShowAvatar = Boolean(avatarImageUrl && !avatarLoadFailed);
+
   return (
     <GlassCard
       className="!p-0 w-full flex-shrink-0 dark:bg-dark-card dark:border-dark-border"
@@ -30,12 +40,25 @@ const CustomerDetailHeader: React.FC<CustomerDetailHeaderProps> = ({
     >
       <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 sm:p-5 md:p-6 border-b border-gray-200 dark:border-dark-border gap-4 md:gap-6">
         <div className="flex-1 min-w-0">
-          <h2 className="text-lg sm:text-2xl md:text-3xl font-bold dark:text-dark-text truncate">
-            {customer.name}
-          </h2>
-          <p className="text-xs sm:text-sm md:text-base text-gray-500 dark:text-dark-muted mb-4">
-            {customer.phone}
-          </p>
+          <div className="flex items-start gap-3 sm:gap-4">
+            {shouldShowAvatar && (
+              <img
+                src={avatarImageUrl || undefined}
+                alt={`${customer.name} avatar`}
+                className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full object-cover ring-2 ring-indigo-200 dark:ring-indigo-900/60 flex-shrink-0"
+                onError={() => setAvatarLoadFailed(true)}
+                loading="lazy"
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg sm:text-2xl md:text-3xl font-bold dark:text-dark-text truncate">
+                {customer.name}
+              </h2>
+              <p className="text-xs sm:text-sm md:text-base text-gray-500 dark:text-dark-muted mb-4">
+                {customer.phone}
+              </p>
+            </div>
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-1.5 sm:gap-2 text-xs">
             <div className="p-1.5 rounded-lg bg-green-50 dark:bg-green-900/20">
               <span className="text-gray-600 dark:text-dark-muted text-xs block mb-0.5">

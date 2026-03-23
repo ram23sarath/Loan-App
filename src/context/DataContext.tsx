@@ -9,6 +9,8 @@ import React, {
   useMemo,
 } from "react";
 import { supabase } from "../lib/supabase";
+import { apiRequest } from "../lib/apiClient";
+import { loadAppData, loadGlobalSummaryRecords, resolveScopedCustomer } from "../lib/dataLoaders";
 import type { Session } from "@supabase/supabase-js";
 import type {
   Customer,
@@ -461,6 +463,20 @@ const buildSeniorityQuery = () =>
     .order("loan_request_date", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true });
 
+const buildDataCacheKey = (isScoped: boolean, scopedCustomerId: string | null) =>
+  isScoped && scopedCustomerId ? `data_scoped_${scopedCustomerId}` : "data_admin";
+
+const normalizeSnapshotForCompare = (snapshot: Record<string, unknown> | null) =>
+  snapshot
+    ? {
+        customers: snapshot.customers || [],
+        loans: snapshot.loans || [],
+        subscriptions: snapshot.subscriptions || [],
+        installments: snapshot.installments || [],
+        dataEntries: snapshot.dataEntries || [],
+      }
+    : null;
+
 // Fetch unfiltered global records for summary page (used by both fetchSummaryData and background pre-fetch)
 const fetchGlobalSummaryRecords = async () => {
   const [loans, subscriptions, installments, dataEntries] = await Promise.all([
@@ -819,7 +835,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         try {
           // Fetch fresh data from network (background refresh)
           const { loans: allLoans, subscriptions: allSubs, installments: allInstallments, dataEntries: allEntries } =
-            await fetchGlobalSummaryRecords();
+            await loadGlobalSummaryRecords();
           setSummaryLoans(allLoans);
           setSummarySubscriptions(allSubs);
           setSummaryInstallments(allInstallments);
@@ -865,6 +881,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     return map;
   }, [installments]);
 
+  const applyDataSnapshot = useCallback((snapshot: Awaited<ReturnType<typeof loadAppData>>) => {
+    setCustomers(snapshot.customers);
+    setLoans(snapshot.loans);
+    setSubscriptions(snapshot.subscriptions);
+    setInstallments(snapshot.installments);
+    setDataEntries(snapshot.dataEntries);
+  }, []);
+
   // UPDATED: Accepts optional arguments. If provided, uses them; otherwise falls back to state.
   // This allows the useEffect to call it with calculated values before state updates commit.
   // NOTE: No dependency array needed since we're using overrides during initialization
@@ -885,141 +909,23 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         const effectiveScopedId =
           overrideScopedId !== undefined ? overrideScopedId : scopedCustomerId;
 
-        // If the user is scoped to a customer, fetch only that customer's related data
-        if (effectiveIsScoped && effectiveScopedId) {
-          // Customers: only the scoped customer (excluding soft-deleted)
-          const { data: customerData, error: custErr } = await supabase
-            .from("customers")
-            .select("*")
-            .eq("id", effectiveScopedId)
-            .is("deleted_at", null)
-            .limit(1);
-          if (custErr) throw custErr;
-          setCustomers((customerData as unknown as Customer[]) || []);
+        const snapshot = await loadAppData({
+          isScoped: effectiveIsScoped,
+          scopedCustomerId: effectiveScopedId,
+        });
+        applyDataSnapshot(snapshot);
 
-          // Loans for this customer (excluding soft-deleted)
-          const { data: loansData, error: loansError } = await supabase
-            .from("loans")
-            .select("*, customers(name, phone)")
-            .eq("customer_id", effectiveScopedId)
-            .is("deleted_at", null);
-          if (loansError) throw loansError;
-          const loansArr = (loansData as unknown as LoanWithCustomer[]) || [];
-          setLoans(loansArr);
-
-          // Subscriptions for this customer
-          // Subscriptions for this customer (sorted by date ascending: oldest to newest)
-          const { data: subscriptionsData, error: subscriptionsError } =
-            await supabase
-              .from("subscriptions")
-              .select("*, customers(name, phone)")
-              .eq("customer_id", effectiveScopedId)
-              .is("deleted_at", null)
-              .order("date", { ascending: true });
-          if (subscriptionsError) throw subscriptionsError;
-          setSubscriptions(
-            (subscriptionsData as unknown as SubscriptionWithCustomer[]) || [],
-          );
-
-          // Installments: fetch installments for loans owned by this customer (by loan_id)
-          const loanIds = loansArr.map((l) => l.id);
-          if (loanIds.length > 0) {
-            const { data: installmentsData, error: installmentsError } =
-              await supabase
-                .from("installments")
-                .select("*")
-                .in("loan_id", loanIds)
-                .is("deleted_at", null);
-            if (installmentsError) throw installmentsError;
-            setInstallments((installmentsData as Installment[]) || []);
-          } else {
-            setInstallments([]);
-          }
-
-          // Data entries for this customer (excluding soft-deleted)
-          const { data: dataEntriesData, error: dataEntriesError } =
-            await supabase
-              .from("data_entries")
-              .select("*")
-              .eq("customer_id", effectiveScopedId)
-              .is("deleted_at", null);
-          if (dataEntriesError) throw dataEntriesError;
-          setDataEntries((dataEntriesData as DataEntry[]) || []);
-        } else {
-          // Full fetch for admin/users with no scoped customer - PARALLEL fetch for performance
-          const [
-            customersData,
-            loansData,
-            subscriptionsData,
-            installmentsData,
-            dataEntriesData,
-          ] = await Promise.all([
-            fetchAllRecords<Customer>(
-              () =>
-                supabase
-                  .from("customers")
-                  .select("*")
-                  .is("deleted_at", null)
-                  .order("created_at", { ascending: false }),
-              "customers",
-            ),
-            fetchAllRecords<LoanWithCustomer>(
-              () =>
-                supabase
-                  .from("loans")
-                  .select("*, customers(name, phone)")
-                  .is("deleted_at", null)
-                  .order("created_at", { ascending: false }),
-              "loans",
-            ),
-            fetchAllRecords<SubscriptionWithCustomer>(
-              () =>
-                supabase
-                  .from("subscriptions")
-                  .select("*, customers(name, phone)")
-                  .is("deleted_at", null)
-                  .order("created_at", { ascending: false }),
-              "subscriptions",
-            ),
-            fetchAllRecords<Installment>(
-              () =>
-                supabase
-                  .from("installments")
-                  .select("*")
-                  .is("deleted_at", null)
-                  .order("created_at", { ascending: false }),
-              "installments",
-            ),
-            fetchAllRecords<DataEntry>(
-              () =>
-                supabase
-                  .from("data_entries")
-                  .select("*")
-                  .is("deleted_at", null)
-                  .order("date", { ascending: false }),
-              "data_entries",
-            ),
-          ]);
-
-          setCustomers(customersData);
-          setLoans(loansData);
-          setSubscriptions(subscriptionsData);
-          setInstallments(installmentsData);
-          setDataEntries(dataEntriesData);
-
-          // Check for overdue installments and create notifications (admin only) - non-blocking
-          if (!effectiveIsScoped) {
-            checkAndNotifyOverdueInstallments(
-              installmentsData,
-              loansData,
-              customersData,
-            ).catch((notificationErr) => {
-              console.error(
-                "Error checking overdue installments:",
-                notificationErr,
-              );
-            });
-          }
+        if (!effectiveIsScoped) {
+          checkAndNotifyOverdueInstallments(
+            snapshot.installments,
+            snapshot.loans,
+            snapshot.customers,
+          ).catch((notificationErr) => {
+            console.error(
+              "Error checking overdue installments:",
+              notificationErr,
+            );
+          });
         }
       } catch (error: any) {
         console.error("Error in fetchData:", error);
@@ -1033,7 +939,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     },
-    [isScopedCustomer, scopedCustomerId],
+    [applyDataSnapshot, isScopedCustomer, scopedCustomerId],
   );
 
   // UPDATED: Accepts optional arguments to avoid stale state during initialization and auth state changes.
@@ -1571,17 +1477,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           try {
             // Call directly to Supabase to update auth user
             // Note: This is a client-side call but uses RLS-protected data
-            const resp = await fetch(
+            await apiRequest(
               "/.netlify/functions/update-user-from-customer",
               {
                 method: "POST",
                 headers: {
-                  "Content-Type": "application/json",
                   ...(session?.access_token
                     ? { Authorization: `Bearer ${session.access_token}` }
                     : {}),
                 },
-                body: JSON.stringify({
+                body: {
                   customer_id: customerId,
                   phone: updates.phone,
                   admin_uid: session?.user?.id ?? null,
@@ -1592,20 +1497,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                       ? String(session.user.email).split("@")[0]
                       : null),
                   actor_email: session?.user?.email ?? null,
-                }),
+                },
+                timeoutMs: 15000,
               },
             );
-            if (!resp.ok) {
-              const errData = await resp.json().catch(() => ({}));
-              console.error(
-                "Failed to update auth user after phone change:",
-                errData.error || resp.statusText,
-              );
-            } else {
-              console.log(
-                `Successfully synced auth credentials for customer ${customerId} to phone ${updates.phone}`,
-              );
-            }
+            console.log(
+              `Successfully synced auth credentials for customer ${customerId} to phone ${updates.phone}`,
+            );
           } catch (err) {
             console.error(
               "Failed to update auth user after phone change:",
@@ -2514,16 +2412,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         if (session && session.user && session.user.id) {
           console.log("[DataContext] Stage 2: Checking user scope...");
           try {
-            const { data: matchedCustomers, error } = await supabase
-              .from("customers")
-              .select("id")
-              .eq("user_id", session.user.id)
-              .is("deleted_at", null)
-              .limit(1);
-            if (!error && matchedCustomers && matchedCustomers.length > 0) {
-              currentIsScoped = true;
-              currentScopedId = matchedCustomers[0].id;
-            }
+            const resolvedScope = await resolveScopedCustomer(session.user.id);
+            currentIsScoped = resolvedScope.isScoped;
+            currentScopedId = resolvedScope.scopedCustomerId;
           } catch (err) {
             console.error("Error checking scoped customer", err);
           }
@@ -2552,9 +2443,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           }
 
           // Load cached data immediately if available (for smooth UX)
-          const cacheKey = currentIsScoped
-            ? `data_scoped_${currentScopedId}`
-            : "data_admin";
+          const cacheKey = buildDataCacheKey(currentIsScoped, currentScopedId);
           const cachedData = getCachedData(cacheKey);
           // Keep reference to what was served so we can skip re-renders when
           // the background fetch returns the same data.
@@ -2579,207 +2468,39 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
           // Inline the fetch logic during initialization to avoid issues with fetchData callback
           try {
-            if (currentIsScoped && currentScopedId) {
-              // Scoped customer data fetch
-              const [customerRes, loansRes, subsRes, dataEntriesRes] =
-                await Promise.all([
-                  supabase
-                    .from("customers")
-                    .select("*")
-                    .eq("id", currentScopedId)
-                    .is("deleted_at", null)
-                    .limit(1),
-                  supabase
-                    .from("loans")
-                    .select("*, customers(name, phone)")
-                    .eq("customer_id", currentScopedId)
-                    .is("deleted_at", null),
-                  supabase
-                    .from("subscriptions")
-                    .select("*, customers(name, phone)")
-                    .eq("customer_id", currentScopedId)
-                    .is("deleted_at", null)
-                    .order("date", { ascending: true }),
-                  supabase
-                    .from("data_entries")
-                    .select("*")
-                    .eq("customer_id", currentScopedId)
-                    .is("deleted_at", null),
-                ]);
+            const freshSnapshot = await loadAppData({
+              isScoped: currentIsScoped,
+              scopedCustomerId: currentScopedId,
+            });
 
-              if (!isMounted) return;
+            if (!isMounted) return;
 
-              if (customerRes.error) throw customerRes.error;
-              if (loansRes.error) throw loansRes.error;
-              if (subsRes.error) throw subsRes.error;
-              if (dataEntriesRes.error) throw dataEntriesRes.error;
+            const dataChanged =
+              !normalizeSnapshotForCompare(dataServedFromCache) ||
+              JSON.stringify(freshSnapshot) !==
+                JSON.stringify(normalizeSnapshotForCompare(dataServedFromCache));
 
-              const customersData =
-                (customerRes.data as unknown as Customer[]) || [];
-              const loansArr =
-                (loansRes.data as unknown as LoanWithCustomer[]) || [];
-              const subscriptionsData =
-                (subsRes.data as unknown as SubscriptionWithCustomer[]) || [];
-              const dataEntriesData =
-                (dataEntriesRes.data as DataEntry[]) || [];
+            if (dataChanged && isMounted) {
+              applyDataSnapshot(freshSnapshot);
+            }
 
-              // Fetch installments for loans
-              let installmentsData: Installment[] = [];
-              const loanIds = loansArr.map((l) => l.id);
-              if (loanIds.length > 0) {
-                const { data: fetchedInstallments, error: installmentsError } =
-                  await supabase
-                    .from("installments")
-                    .select("*")
-                    .in("loan_id", loanIds);
-                if (installmentsError) throw installmentsError;
-                installmentsData = (fetchedInstallments as Installment[]) || [];
-              }
-
-              // Only update state when data has actually changed vs what was
-              // served from cache. This prevents blank re-renders on navigation.
-              const freshScoped = {
-                customers: customersData,
-                loans: loansArr,
-                subscriptions: subscriptionsData,
-                installments: installmentsData,
-                dataEntries: dataEntriesData,
-              };
-              const cachedScoped = dataServedFromCache
-                ? {
-                  customers: dataServedFromCache.customers || [],
-                  loans: dataServedFromCache.loans || [],
-                  subscriptions: dataServedFromCache.subscriptions || [],
-                  installments: dataServedFromCache.installments || [],
-                  dataEntries: dataServedFromCache.dataEntries || [],
-                }
-                : null;
-              const scopedDataChanged =
-                !cachedScoped ||
-                JSON.stringify(freshScoped) !== JSON.stringify(cachedScoped);
-
-              if (scopedDataChanged && isMounted) {
-                setCustomers(customersData);
-                setLoans(loansArr);
-                setSubscriptions(subscriptionsData);
-                setDataEntries(dataEntriesData);
-                setInstallments(installmentsData);
-              }
-
-              // Always update cache (refreshes TTL so next visit stays fast)
-              setCachedData(`data_scoped_${currentScopedId}`, {
-                ...freshScoped,
-                seniorityList: [], // Will be set below
-              });
-            } else {
-              // Admin/full data fetch - PARALLEL fetch using Promise.all for performance
-              // This fetches all 5 tables simultaneously instead of sequentially
-              const [
-                customersData,
-                loansData,
-                subscriptionsData,
-                installmentsData,
-                dataEntriesData,
-              ] = await Promise.all([
-                fetchAllRecords<Customer>(
-                  () =>
-                    supabase
-                      .from("customers")
-                      .select("*")
-                      .is("deleted_at", null)
-                      .order("created_at", { ascending: false }),
-                  "customers",
-                ),
-                fetchAllRecords<LoanWithCustomer>(
-                  () =>
-                    supabase
-                      .from("loans")
-                      .select("*, customers(name, phone)")
-                      .is("deleted_at", null)
-                      .order("created_at", { ascending: false }),
-                  "loans",
-                ),
-                fetchAllRecords<SubscriptionWithCustomer>(
-                  () =>
-                    supabase
-                      .from("subscriptions")
-                      .select("*, customers(name, phone)")
-                      .is("deleted_at", null)
-                      .order("created_at", { ascending: false }),
-                  "subscriptions",
-                ),
-                fetchAllRecords<Installment>(
-                  () =>
-                    supabase
-                      .from("installments")
-                      .select("*")
-                      .is("deleted_at", null)
-                      .order("created_at", { ascending: false }),
-                  "installments",
-                ),
-                fetchAllRecords<DataEntry>(
-                  () =>
-                    supabase
-                      .from("data_entries")
-                      .select("*")
-                      .is("deleted_at", null)
-                      .order("date", { ascending: false }),
-                  "data_entries",
-                ),
-              ]);
-
-              if (!isMounted) return;
-
-              // Only update state when data has actually changed vs what was
-              // served from cache. This prevents unnecessary re-renders.
-              const freshAdmin = {
-                customers: customersData,
-                loans: loansData,
-                subscriptions: subscriptionsData,
-                installments: installmentsData,
-                dataEntries: dataEntriesData,
-              };
-              const cachedAdmin = dataServedFromCache
-                ? {
-                  customers: dataServedFromCache.customers || [],
-                  loans: dataServedFromCache.loans || [],
-                  subscriptions: dataServedFromCache.subscriptions || [],
-                  installments: dataServedFromCache.installments || [],
-                  dataEntries: dataServedFromCache.dataEntries || [],
-                }
-                : null;
-              const adminDataChanged =
-                !cachedAdmin ||
-                JSON.stringify(freshAdmin) !== JSON.stringify(cachedAdmin);
-
-              if (adminDataChanged && isMounted) {
-                setCustomers(customersData);
-                setLoans(loansData);
-                setSubscriptions(subscriptionsData);
-                setInstallments(installmentsData);
-                setDataEntries(dataEntriesData);
-              }
-
-              // Check for overdue installments (admin only) - run in background, don't block
-              if (!currentIsScoped) {
-                checkAndNotifyOverdueInstallments(
-                  installmentsData,
-                  loansData,
-                  customersData,
-                ).catch((notificationErr) => {
-                  console.error(
-                    "Error checking overdue installments during init:",
-                    notificationErr,
-                  );
-                });
-              }
-
-              // Always update cache (refreshes TTL so next visit stays fast)
-              setCachedData("data_admin", {
-                ...freshAdmin,
-                seniorityList: [], // Will be set below
+            if (!currentIsScoped) {
+              checkAndNotifyOverdueInstallments(
+                freshSnapshot.installments,
+                freshSnapshot.loans,
+                freshSnapshot.customers,
+              ).catch((notificationErr) => {
+                console.error(
+                  "Error checking overdue installments during init:",
+                  notificationErr,
+                );
               });
             }
+
+            setCachedData(cacheKey, {
+              ...freshSnapshot,
+              seniorityList: [],
+            });
           } catch (err) {
             console.error("Error fetching data during initialization", err);
           }
@@ -2820,7 +2541,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           // Background pre-fetch of global summary data for scoped users.
           // Non-blocking: populates localStorage cache so SummaryPage renders instantly.
           if (currentIsScoped && !getCachedData("summary_global")) {
-            fetchGlobalSummaryRecords()
+            loadGlobalSummaryRecords()
               .then((summaryRecords) => {
                 setCachedData("summary_global", summaryRecords);
               })
@@ -2923,16 +2644,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         let currentScopedId: string | null = null;
 
         try {
-          const { data: matchedCustomers, error } = await supabase
-            .from("customers")
-            .select("id")
-            .eq("user_id", session.user.id)
-            .is("deleted_at", null)
-            .limit(1);
-          if (!error && matchedCustomers && matchedCustomers.length > 0) {
-            currentIsScoped = true;
-            currentScopedId = matchedCustomers[0].id;
-          }
+          const resolvedScope = await resolveScopedCustomer(session.user.id);
+          currentIsScoped = resolvedScope.isScoped;
+          currentScopedId = resolvedScope.scopedCustomerId;
         } catch (err) {
           console.error("Error checking scoped customer after login", err);
         }
@@ -2946,193 +2660,48 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         const seniorityPostLoginPromise = buildSeniorityQuery();
 
         // Fetch all data
-        if (currentIsScoped && currentScopedId) {
-          // Load from cache first for instant display
-          const cacheKey = `data_scoped_${currentScopedId}`;
-          const cachedData = getCachedData(cacheKey);
-          if (cachedData && isMounted) {
-            setCustomers(cachedData.customers || []);
-            setLoans(cachedData.loans || []);
-            setSubscriptions(cachedData.subscriptions || []);
-            setDataEntries(cachedData.dataEntries || []);
-            setInstallments(cachedData.installments || []);
-          }
+        const cacheKey = buildDataCacheKey(currentIsScoped, currentScopedId);
+        const cachedData = getCachedData(cacheKey);
+        if (cachedData && isMounted) {
+          setCustomers(cachedData.customers || []);
+          setLoans(cachedData.loans || []);
+          setSubscriptions(cachedData.subscriptions || []);
+          setDataEntries(cachedData.dataEntries || []);
+          setInstallments(cachedData.installments || []);
+        }
 
-          // Scoped customer data fetch
-          const [customerRes, loansRes, subsRes, dataEntriesRes] =
-            await Promise.all([
-              supabase
-                .from("customers")
-                .select("*")
-                .eq("id", currentScopedId)
-                .is("deleted_at", null)
-                .limit(1),
-              supabase
-                .from("loans")
-                .select("*, customers(name, phone)")
-                .eq("customer_id", currentScopedId)
-                .is("deleted_at", null),
-              supabase
-                .from("subscriptions")
-                .select("*, customers(name, phone)")
-                .eq("customer_id", currentScopedId)
-                .is("deleted_at", null)
-                .order("date", { ascending: true }),
-              supabase
-                .from("data_entries")
-                .select("*")
-                .eq("customer_id", currentScopedId)
-                .is("deleted_at", null),
-            ]);
+        const freshSnapshot = await loadAppData({
+          isScoped: currentIsScoped,
+          scopedCustomerId: currentScopedId,
+        });
 
-          if (!isMounted) return;
+        if (!isMounted) return;
 
-          if (customerRes.error) throw customerRes.error;
-          if (loansRes.error) throw loansRes.error;
-          if (subsRes.error) throw subsRes.error;
-          if (dataEntriesRes.error) throw dataEntriesRes.error;
+        applyDataSnapshot(freshSnapshot);
+        setCachedData(cacheKey, {
+          ...freshSnapshot,
+          seniorityList: [],
+        });
 
-          setCustomers((customerRes.data as unknown as Customer[]) || []);
-          const loansArr =
-            (loansRes.data as unknown as LoanWithCustomer[]) || [];
-          setLoans(loansArr);
-          setSubscriptions(
-            (subsRes.data as unknown as SubscriptionWithCustomer[]) || [],
-          );
-          setDataEntries((dataEntriesRes.data as DataEntry[]) || []);
-
-          // Fetch installments
-          const loanIds = loansArr.map((l) => l.id);
-          let installmentsData: Installment[] = [];
-          if (loanIds.length > 0) {
-            const { data, error: installmentsError } = await supabase
-              .from("installments")
-              .select("*")
-              .in("loan_id", loanIds);
-            if (installmentsError) throw installmentsError;
-            installmentsData = (data as Installment[]) || [];
-          }
-          if (isMounted) setInstallments(installmentsData);
-
-          // Cache all scoped customer data
-          setCachedData(cacheKey, {
-            customers: (customerRes.data as unknown as Customer[]) || [],
-            loans: loansArr,
-            subscriptions:
-              (subsRes.data as unknown as SubscriptionWithCustomer[]) || [],
-            installments: installmentsData,
-            dataEntries: (dataEntriesRes.data as DataEntry[]) || [],
-            seniorityList: [],
+        if (!currentIsScoped) {
+          checkAndNotifyOverdueInstallments(
+            freshSnapshot.installments,
+            freshSnapshot.loans,
+            freshSnapshot.customers,
+          ).catch((notificationErr) => {
+            console.error(
+              "Error checking overdue installments after login:",
+              notificationErr,
+            );
           });
-
-          // Background pre-fetch of global summary data for scoped users
-          if (!getCachedData("summary_global")) {
-            fetchGlobalSummaryRecords()
-              .then((summaryRecords) => {
-                setCachedData("summary_global", summaryRecords);
-              })
-              .catch((err) => {
-                console.error("[DataContext] Background summary pre-fetch failed:", err);
-              });
-          }
-        } else {
-          // Load from cache first for instant display
-          const cacheKey = "data_admin";
-          const cachedData = getCachedData(cacheKey);
-          if (cachedData && isMounted) {
-            setCustomers(cachedData.customers || []);
-            setLoans(cachedData.loans || []);
-            setSubscriptions(cachedData.subscriptions || []);
-            setInstallments(cachedData.installments || []);
-            setDataEntries(cachedData.dataEntries || []);
-          }
-
-          // Admin/full data fetch - PARALLEL fetch for performance
-          const [
-            customersData,
-            loansData,
-            subscriptionsData,
-            installmentsData,
-            dataEntriesData,
-          ] = await Promise.all([
-            fetchAllRecords<Customer>(
-              () =>
-                supabase
-                  .from("customers")
-                  .select("*")
-                  .is("deleted_at", null)
-                  .order("created_at", { ascending: false }),
-              "customers",
-            ),
-            fetchAllRecords<LoanWithCustomer>(
-              () =>
-                supabase
-                  .from("loans")
-                  .select("*, customers(name, phone)")
-                  .is("deleted_at", null)
-                  .order("created_at", { ascending: false }),
-              "loans",
-            ),
-            fetchAllRecords<SubscriptionWithCustomer>(
-              () =>
-                supabase
-                  .from("subscriptions")
-                  .select("*, customers(name, phone)")
-                  .is("deleted_at", null)
-                  .order("created_at", { ascending: false }),
-              "subscriptions",
-            ),
-            fetchAllRecords<Installment>(
-              () =>
-                supabase
-                  .from("installments")
-                  .select("*")
-                  .is("deleted_at", null)
-                  .order("created_at", { ascending: false }),
-              "installments",
-            ),
-            fetchAllRecords<DataEntry>(
-              () =>
-                supabase
-                  .from("data_entries")
-                  .select("*")
-                  .is("deleted_at", null)
-                  .order("date", { ascending: false }),
-              "data_entries",
-            ),
-          ]);
-
-          if (!isMounted) return;
-
-          setCustomers(customersData);
-          setLoans(loansData);
-          setSubscriptions(subscriptionsData);
-          setInstallments(installmentsData);
-          setDataEntries(dataEntriesData);
-
-          // Check for overdue installments (admin only) - non-blocking
-          if (!currentIsScoped) {
-            checkAndNotifyOverdueInstallments(
-              installmentsData,
-              loansData,
-              customersData,
-            ).catch((notificationErr) => {
-              console.error(
-                "Error checking overdue installments after login:",
-                notificationErr,
-              );
+        } else if (!getCachedData("summary_global")) {
+          loadGlobalSummaryRecords()
+            .then((summaryRecords) => {
+              setCachedData("summary_global", summaryRecords);
+            })
+            .catch((err) => {
+              console.error("[DataContext] Background summary pre-fetch failed:", err);
             });
-          }
-
-          // Cache admin data
-          setCachedData("data_admin", {
-            customers: customersData,
-            loans: loansData,
-            subscriptions: subscriptionsData,
-            installments: installmentsData,
-            dataEntries: dataEntriesData,
-            seniorityList: [],
-          });
         }
 
         // Fetch seniority list
@@ -3161,7 +2730,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    refetchDataAfterLogin();
+    setIsRefreshing(true);
+    refetchDataAfterLogin().finally(() => {
+      if (isMounted) {
+        setIsRefreshing(false);
+      }
+    });
 
     return () => {
       isMounted = false;
@@ -3255,17 +2829,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         (async () => {
           try {
             const createUrl = `/.netlify/functions/create-user-from-customer?_=${Date.now()}`;
-            const resp = await fetch(createUrl, {
+            const successData = await apiRequest<{ user_id?: string }>(createUrl, {
               method: "POST",
               headers: {
-                "Content-Type": "application/json",
                 "Cache-Control": "no-cache",
                 Pragma: "no-cache",
                 ...(session?.access_token
                   ? { Authorization: `Bearer ${session.access_token}` }
                   : {}),
               },
-              body: JSON.stringify({
+              body: {
                 customer_id: data.id,
                 name: customerData.name,
                 phone: customerData.phone,
@@ -3277,51 +2850,51 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     ? String(session.user.email).split("@")[0]
                     : null),
                 actor_email: session?.user?.email ?? null,
-              }),
+              },
+              timeoutMs: 15000,
+              dedupeKey: createUrl,
             });
 
-            if (!resp.ok) {
-              const errData = await resp.json().catch(() => ({}));
-              console.warn(
-                "⚠️  Background user creation failed:",
-                errData.error || resp.statusText,
-              );
-              try {
-                if (typeof window !== "undefined") {
-                  window.dispatchEvent(
-                    new CustomEvent("background-user-create", {
-                      detail: {
-                        status: "error",
-                        customer_id: data.id,
-                        message: errData.error || resp.statusText,
-                      },
-                    }),
-                  );
-                }
-              } catch (e) { }
-            } else {
-              const successData = await resp.json().catch(() => ({}));
-              console.log(
-                "✅ Background user auto-created:",
-                successData.user_id || "<unknown>",
-              );
-              try {
-                if (typeof window !== "undefined") {
-                  window.dispatchEvent(
-                    new CustomEvent("background-user-create", {
-                      detail: {
-                        status: "success",
-                        customer_id: data.id,
-                        user_id: successData.user_id,
-                        message: "User created successfully",
-                      },
-                    }),
-                  );
-                }
-              } catch (e) { }
-            }
-          } catch (err) {
-            console.warn("⚠️  Error during background user creation:", err);
+            console.log(
+              "✅ Background user auto-created:",
+              successData.user_id || "<unknown>",
+            );
+            try {
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(
+                  new CustomEvent("background-user-create", {
+                    detail: {
+                      status: "success",
+                      customer_id: data.id,
+                      user_id: successData.user_id,
+                      message: "User created successfully",
+                    },
+                  }),
+                );
+              }
+            } catch (e) { }
+          } catch (err: any) {
+            const errData =
+              err?.details && typeof err.details === "object" ? err.details : {};
+            console.warn(
+              "⚠️  Background user creation failed:",
+              (errData as { error?: string }).error || err.message,
+            );
+            try {
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(
+                  new CustomEvent("background-user-create", {
+                    detail: {
+                      status: "error",
+                      customer_id: data.id,
+                      message:
+                        (errData as { error?: string }).error || err.message,
+                    },
+                  }),
+                );
+              }
+            } catch (e) { }
+            console.warn("⚠️  Error during background user creation:", err);
           }
         })();
       } catch (userCreateError) {
@@ -4048,14 +3621,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (customerUserId) {
         try {
           const deleteUrl = `/.netlify/functions/delete-user-from-customer?_=${Date.now()}`;
-          const resp = await fetch(deleteUrl, {
+          await apiRequest(deleteUrl, {
             method: "POST",
             headers: {
-              "Content-Type": "application/json",
               "Cache-Control": "no-cache",
               Pragma: "no-cache",
             },
-            body: JSON.stringify({
+            body: {
               customer_id: id,
               user_id: customerUserId,
               customer_name: (customer as any)?.name ?? null,
@@ -4067,17 +3639,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                   ? String(session.user.email).split("@")[0]
                   : null),
               actor_email: session?.user?.email ?? null,
-            }),
+            },
+            timeoutMs: 15000,
+            dedupeKey: deleteUrl,
           });
-          if (!resp.ok) {
-            const errData = await resp.json().catch(() => ({}));
-            console.warn(
-              "Warning: failed to delete linked auth user:",
-              errData.error || resp.statusText,
-            );
-          } else {
-            console.log("✅ Linked auth user deleted for customer", id);
-          }
+          console.log("✅ Linked auth user deleted for customer", id);
         } catch (e) {
           console.warn(
             "Warning: error calling delete-user-from-customer function",

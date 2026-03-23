@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useRouteReady } from "../RouteReadySignal";
 import PageWrapper from "../ui/PageWrapper";
 import { useData } from "../../context/DataContext";
+import { apiRequest, ApiError } from "../../lib/apiClient";
 import { HistoryIcon } from "../../constants";
 import type { AuditLogEntry } from "../../types";
 import {
@@ -164,14 +165,15 @@ const AuditLogPage = () => {
         if (appliedSearch) query.set("search", appliedSearch);
         if (currentCursor) query.set("cursor", currentCursor);
 
-        const response = await fetch(
+        const result = await apiRequest<AuditLogResponse>(
           `/.netlify/functions/get-audit-logs?${query.toString()}`,
           {
             method: "GET",
             headers: {
-              "Content-Type": "application/json",
               Authorization: `Bearer ${accessToken}`,
             },
+            timeoutMs: 15000,
+            dedupeKey: `audit-logs:${query.toString()}`,
           },
         );
 
@@ -179,12 +181,7 @@ const AuditLogPage = () => {
           return;
         }
 
-        const resultRaw = await response
-          .json()
-          .catch(() => ({ success: false, error: "Invalid server response." }));
-        const result = (resultRaw || {}) as AuditLogResponse;
-
-        if (response.ok && result.success) {
+        if (result.success) {
           const superAdminFromServer = Boolean(result.is_super_admin ?? true);
           if (!superAdminFromServer) {
             setAccessState("forbidden");
@@ -214,17 +211,17 @@ const AuditLogPage = () => {
             return updated;
           });
         } else {
-          if (response.status === 401 || response.status === 403) {
-            setAccessState("forbidden");
-            setAuditEntries([]);
-            setAuditHasMore(false);
-            resetPaginationState();
-            setAuditError("Access denied. This page is available only to the super admin.");
-            return;
-          }
           setAuditError(result.error || "Failed to load audit logs");
         }
       } catch (err: any) {
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+          setAccessState("forbidden");
+          setAuditEntries([]);
+          setAuditHasMore(false);
+          resetPaginationState();
+          setAuditError("Access denied. This page is available only to the super admin.");
+          return;
+        }
         setAuditError(err.message || "Failed to load audit logs");
       } finally {
         if (requestId === latestRequestRef.current) {

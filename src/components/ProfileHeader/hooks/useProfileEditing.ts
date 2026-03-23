@@ -21,12 +21,14 @@ export interface UseProfileEditingReturn {
     // Avatar upload
     avatarImageUrl: string | null;
     isUploadingAvatar: boolean;
+    isDeletingAvatar: boolean;
     avatarUploadError: UseAvatarUploadReturn['avatarUploadError'];
     avatarStatusText: string | null;
     selectedAvatarFile: File | null;
     avatarPreviewUrl: string | null;
     selectAvatarFile: (file: File | null) => Promise<void>;
     saveAvatar: () => Promise<void>;
+    deleteAvatar: () => Promise<void>;
     retryAvatarUpload: () => Promise<void>;
     cancelCurrentUpload: () => void;
     resetAvatarTransientState: () => void;
@@ -140,12 +142,14 @@ export function useProfileEditing({
         // Avatar upload
         avatarImageUrl: avatar.avatarImageUrl,
         isUploadingAvatar: avatar.isUploadingAvatar,
+        isDeletingAvatar: avatar.isDeletingAvatar,
         avatarUploadError: avatar.avatarUploadError,
         avatarStatusText: avatar.avatarStatusText,
         selectedAvatarFile: avatar.selectedAvatarFile,
         avatarPreviewUrl: avatar.avatarPreviewUrl,
         selectAvatarFile: avatar.selectAvatarFile,
         saveAvatar: avatar.saveAvatar,
+        deleteAvatar: avatar.deleteAvatar,
         retryAvatarUpload: avatar.retryAvatarUpload,
         cancelCurrentUpload: avatar.cancelCurrentUpload,
         resetAvatarTransientState: avatar.resetAvatarTransientState,

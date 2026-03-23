@@ -11,12 +11,14 @@ import { DataProvider } from "./context/DataContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import Sidebar from "./components/Sidebar";
 import ProfileHeader from "./components/ProfileHeader";
+import type { ProfileHeaderHandle } from "./components/ProfileHeader";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import LoadingSpinner from "./components/ui/LoadingSpinner";
 import { useData } from "./context/DataContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 import InactivityLogoutModal from "./components/modals/InactivityLogoutModal";
 import { RouteReadySignal } from "./components/RouteReadySignal";
+import { getAvatarMetadata } from "./utils/avatarUtils";
 
 // Lazy load page components for better initial bundle size
 const AddCustomerPage = React.lazy(
@@ -407,8 +409,141 @@ const AutoLogout = () => {
   );
 };
 
+const buildLocalDateKey = (): string => {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const AvatarReminderBanner = ({
+  onOpenAvatar,
+  onDismiss,
+}: {
+  onOpenAvatar: () => void;
+  onDismiss: () => void;
+}) => {
+  return (
+    <div className="mx-4 mt-4 sm:mx-6">
+      <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-indigo-900 shadow-sm dark:border-indigo-700/60 dark:bg-indigo-900/20 dark:text-indigo-200">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm font-medium">
+            Add your profile picture to personalize your account.
+          </p>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onOpenAvatar}
+              className="text-sm font-semibold text-indigo-700 underline underline-offset-2 hover:text-indigo-800 dark:text-indigo-300 dark:hover:text-indigo-200"
+            >
+              Update profile picture
+            </button>
+            <button
+              type="button"
+              onClick={onDismiss}
+              className="rounded-md border border-indigo-300 px-2.5 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-500 dark:text-indigo-300 dark:hover:bg-indigo-900/40"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AppShell = ({
+  profileRef,
+}: {
+  profileRef: React.RefObject<ProfileHeaderHandle>;
+}) => {
+  const { session } = useData();
+  const location = useLocation();
+  const [showAvatarReminder, setShowAvatarReminder] = React.useState(false);
+
+  const currentUserId = session?.user?.id ?? null;
+  const avatarMeta = getAvatarMetadata(
+    (session?.user?.user_metadata as Record<string, unknown> | undefined) || null,
+  );
+  const hasAvatar = Boolean(avatarMeta.avatarPath);
+  const isHomeRoute = location.pathname === "/home";
+
+  const reminderStorageKey = React.useMemo(() => {
+    if (!currentUserId) return null;
+    return `loan_app_avatar_reminder_${currentUserId}_${buildLocalDateKey()}`;
+  }, [currentUserId]);
+
+  React.useEffect(() => {
+    if (!currentUserId || hasAvatar || !isHomeRoute || !reminderStorageKey) {
+      setShowAvatarReminder(false);
+      return;
+    }
+
+    let hasSeenReminderToday = false;
+    try {
+      hasSeenReminderToday =
+        window.localStorage.getItem(reminderStorageKey) === "1";
+    } catch {
+      hasSeenReminderToday = false;
+    }
+
+    if (hasSeenReminderToday) {
+      setShowAvatarReminder(false);
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(reminderStorageKey, "1");
+    } catch {
+      // Ignore storage failures and continue showing reminder in-memory.
+    }
+    setShowAvatarReminder(true);
+  }, [currentUserId, hasAvatar, isHomeRoute, reminderStorageKey]);
+
+  const handleOpenAvatarReminder = React.useCallback(() => {
+    profileRef.current?.openProfilePanel({ openAvatarEditor: true });
+    setShowAvatarReminder(false);
+  }, [profileRef]);
+
+  const handleDismissAvatarReminder = React.useCallback(() => {
+    setShowAvatarReminder(false);
+    if (!reminderStorageKey) return;
+    try {
+      window.localStorage.setItem(reminderStorageKey, "1");
+    } catch {
+      // Ignore storage failures.
+    }
+  }, [reminderStorageKey]);
+
+  return (
+    <div className="w-full h-screen overflow-hidden relative">
+      <ProfileHeader ref={profileRef} />
+      <div className="flex w-full h-screen overflow-hidden">
+        <Sidebar profileRef={profileRef} />
+        <main
+          className="flex-1 h-full overflow-y-auto sidebar-transition"
+          // Use the CSS variable set by Sidebar to offset content when sidebar is visible on desktop.
+          style={{
+            paddingLeft: "var(--sidebar-offset, 0px)",
+            scrollbarGutter: "stable",
+          }}
+        >
+          {showAvatarReminder && (
+            <AvatarReminderBanner
+              onOpenAvatar={handleOpenAvatarReminder}
+              onDismiss={handleDismissAvatarReminder}
+            />
+          )}
+          <AnimatedRoutes />
+        </main>
+      </div>
+    </div>
+  );
+};
+
 const App = () => {
-  const profileRef = React.useRef<React.ElementRef<typeof ProfileHeader>>(null);
+  const profileRef = React.useRef<ProfileHeaderHandle>(null);
 
   return (
     <DataProvider>
@@ -422,22 +557,7 @@ const App = () => {
                 path="/*"
                 element={
                   <ProtectedRoute>
-                    <div className="w-full h-screen overflow-hidden relative">
-                      <ProfileHeader ref={profileRef} />
-                      <div className="flex w-full h-screen overflow-hidden">
-                        <Sidebar profileRef={profileRef} />
-                        <main
-                          className="flex-1 h-full overflow-y-auto sidebar-transition"
-                          // Use the CSS variable set by Sidebar to offset content when sidebar is visible on desktop.
-                          style={{
-                            paddingLeft: "var(--sidebar-offset, 0px)",
-                            scrollbarGutter: "stable",
-                          }}
-                        >
-                          <AnimatedRoutes />
-                        </main>
-                      </div>
-                    </div>
+                    <AppShell profileRef={profileRef} />
                   </ProtectedRoute>
                 }
               />

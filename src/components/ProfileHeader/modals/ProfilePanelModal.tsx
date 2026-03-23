@@ -5,6 +5,7 @@ import { Customer } from '../../../types';
 interface ProfilePanelModalProps {
     isOpen: boolean;
     onClose: () => void;
+    openAvatarEditorOnOpen?: boolean;
     userEmail: string;
     isScopedCustomer: boolean;
     customerDetails: Customer | null;
@@ -26,12 +27,14 @@ interface ProfilePanelModalProps {
     // Avatar upload
     avatarImageUrl: string | null;
     isUploadingAvatar: boolean;
+    isDeletingAvatar: boolean;
     avatarUploadError: string | null;
     avatarStatusText: string | null;
     avatarPreviewUrl: string | null;
     selectedAvatarFileName: string | null;
     onSelectAvatarFile: (file: File | null) => Promise<void>;
     onSaveAvatar: () => Promise<void>;
+    onDeleteAvatar: () => Promise<void>;
     onRetryAvatarUpload: () => Promise<void>;
     onCancelAvatarUpload: () => void;
 }
@@ -39,6 +42,7 @@ interface ProfilePanelModalProps {
 const ProfilePanelModal: React.FC<ProfilePanelModalProps> = ({
     isOpen,
     onClose,
+    openAvatarEditorOnOpen = false,
     userEmail,
     isScopedCustomer,
     customerDetails,
@@ -57,18 +61,21 @@ const ProfilePanelModal: React.FC<ProfilePanelModalProps> = ({
     onSaveAdminName,
     avatarImageUrl,
     isUploadingAvatar,
+    isDeletingAvatar,
     avatarUploadError,
     avatarStatusText,
     avatarPreviewUrl,
     selectedAvatarFileName,
     onSelectAvatarFile,
     onSaveAvatar,
+    onDeleteAvatar,
     onRetryAvatarUpload,
     onCancelAvatarUpload,
 }) => {
     const fileInputRef = React.useRef<HTMLInputElement | null>(null);
     const [avatarSelectionError, setAvatarSelectionError] = React.useState<string | null>(null);
     const [showAvatarActions, setShowAvatarActions] = React.useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
     const [avatarImageFailed, setAvatarImageFailed] = React.useState(false);
 
     React.useEffect(() => {
@@ -78,9 +85,16 @@ const ProfilePanelModal: React.FC<ProfilePanelModalProps> = ({
         if (!isOpen) {
             setAvatarSelectionError(null);
             setShowAvatarActions(false);
+            setShowDeleteConfirm(false);
             setAvatarImageFailed(false);
         }
     }, [isOpen]);
+
+    React.useEffect(() => {
+        if (isOpen && openAvatarEditorOnOpen) {
+            setShowAvatarActions(true);
+        }
+    }, [isOpen, openAvatarEditorOnOpen]);
 
     const displayName = isScopedCustomer
         ? (customerDetails?.name ?? '')
@@ -100,6 +114,19 @@ const ProfilePanelModal: React.FC<ProfilePanelModalProps> = ({
 
     const handleAvatarEditClick = () => {
         setShowAvatarActions((current) => !current);
+    };
+
+    const handleDeleteAvatarClick = () => {
+        setShowDeleteConfirm(true);
+    };
+
+    const handleCancelDeleteAvatar = () => {
+        setShowDeleteConfirm(false);
+    };
+
+    const handleConfirmDeleteAvatar = async () => {
+        setShowDeleteConfirm(false);
+        await onDeleteAvatar();
     };
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -205,23 +232,32 @@ const ProfilePanelModal: React.FC<ProfilePanelModalProps> = ({
                                                         accept="image/jpeg,image/jpg,image/png,image/webp"
                                                         className="hidden"
                                                         onChange={handleFileChange}
-                                                        disabled={isUploadingAvatar}
+                                                        disabled={isUploadingAvatar || isDeletingAvatar}
                                                         id="avatar-file-input"
                                                     />
                                                     <div className="flex flex-wrap gap-2">
                                                         <label
                                                             htmlFor="avatar-file-input"
-                                                            className={`px-3 py-2 text-xs md:text-sm font-medium rounded transition-colors cursor-pointer ${isUploadingAvatar ? 'bg-gray-200 text-gray-500 cursor-not-allowed dark:bg-slate-700 dark:text-dark-muted' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50'}`}
+                                                            className={`px-3 py-2 text-xs md:text-sm font-medium rounded transition-colors cursor-pointer ${(isUploadingAvatar || isDeletingAvatar) ? 'bg-gray-200 text-gray-500 cursor-not-allowed dark:bg-slate-700 dark:text-dark-muted' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50'}`}
                                                         >
                                                             Choose Image
                                                         </label>
                                                         <button
                                                             onClick={() => void onSaveAvatar()}
-                                                            disabled={!selectedAvatarFileName || isUploadingAvatar}
+                                                            disabled={!selectedAvatarFileName || isUploadingAvatar || isDeletingAvatar}
                                                             className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-xs md:text-sm font-medium rounded transition-colors"
                                                         >
                                                             {isUploadingAvatar ? 'Saving...' : 'Save Avatar'}
                                                         </button>
+                                                        {!!avatarImageUrl && (
+                                                            <button
+                                                                onClick={handleDeleteAvatarClick}
+                                                                disabled={isUploadingAvatar || isDeletingAvatar}
+                                                                className="px-3 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white text-xs md:text-sm font-medium rounded transition-colors"
+                                                            >
+                                                                Delete Avatar
+                                                            </button>
+                                                        )}
                                                         {isUploadingAvatar && (
                                                             <button
                                                                 onClick={onCancelAvatarUpload}
@@ -249,6 +285,33 @@ const ProfilePanelModal: React.FC<ProfilePanelModalProps> = ({
                                                     {avatarSelectionError && (
                                                         <div className="mt-2 text-xs text-red-600 dark:text-red-400">
                                                             <p>{avatarSelectionError}</p>
+                                                        </div>
+                                                    )}
+
+                                                    {showDeleteConfirm && (
+                                                        <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300">
+                                                            <p className="font-medium">
+                                                                Delete your profile picture?
+                                                            </p>
+                                                            <p className="mt-1">
+                                                                This will remove the uploaded avatar from your account.
+                                                            </p>
+                                                            <div className="mt-3 flex flex-wrap gap-2">
+                                                                <button
+                                                                    onClick={() => void handleConfirmDeleteAvatar()}
+                                                                    disabled={isUploadingAvatar || isDeletingAvatar}
+                                                                    className="px-3 py-2 rounded bg-red-600 text-white font-medium hover:bg-red-700 disabled:bg-red-400 transition-colors"
+                                                                >
+                                                                    {isDeletingAvatar ? 'Deleting...' : 'Delete'}
+                                                                </button>
+                                                                <button
+                                                                    onClick={handleCancelDeleteAvatar}
+                                                                    disabled={isUploadingAvatar || isDeletingAvatar}
+                                                                    className="px-3 py-2 rounded bg-gray-200 text-gray-800 font-medium hover:bg-gray-300 disabled:bg-gray-100 transition-colors dark:bg-slate-700 dark:text-dark-text dark:hover:bg-slate-600"
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </motion.div>
@@ -292,6 +355,17 @@ const ProfilePanelModal: React.FC<ProfilePanelModalProps> = ({
                                 <label className="text-xs text-gray-500 uppercase tracking-wide dark:text-dark-muted">Email</label>
                                 <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1 break-all dark:text-dark-text">{userEmail}</p>
                             </motion.div>
+
+                            {avatarStatusText && (
+                                <motion.div
+                                    className="rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-xs text-indigo-700 dark:border-indigo-900/40 dark:bg-indigo-900/20 dark:text-indigo-300"
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.18, type: 'spring', stiffness: 300, damping: 24 }}
+                                >
+                                    <p>{avatarStatusText}</p>
+                                </motion.div>
+                            )}
 
                             {avatarUploadError && (
                                 <motion.div

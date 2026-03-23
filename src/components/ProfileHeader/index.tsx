@@ -34,6 +34,7 @@ import {
 
 export interface ProfileHeaderHandle {
   openMenu: () => void;
+  openProfilePanel: (options?: { openAvatarEditor?: boolean }) => void;
 }
 
 const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
@@ -55,6 +56,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   // Modal visibility state
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showProfilePanel, setShowProfilePanel] = useState(false);
+  const [openAvatarEditorOnOpen, setOpenAvatarEditorOnOpen] = useState(false);
   const [showToolsModal, setShowToolsModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
@@ -92,6 +94,11 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   // Expose openMenu method to parent via ref
   useImperativeHandle(ref, () => ({
     openMenu: () => setShowMenu(true),
+    openProfilePanel: (options) => {
+      setShowMenu(false);
+      setOpenAvatarEditorOnOpen(Boolean(options?.openAvatarEditor));
+      setShowProfilePanel(true);
+    },
   }));
 
   // Handle Escape key to close modals
@@ -172,6 +179,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
   // Event handlers
   const handleViewProfile = () => {
     setShowMenu(false);
+    setOpenAvatarEditorOnOpen(false);
     setShowProfilePanel(true);
   };
 
@@ -193,6 +201,7 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
       setShowLogoutConfirm(false);
       setShowMenu(false);
       setShowProfilePanel(false);
+      setOpenAvatarEditorOnOpen(false);
     }
   };
 
@@ -479,7 +488,11 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
       {/* Profile Panel Modal */}
       <ProfilePanelModal
         isOpen={showProfilePanel}
-        onClose={() => setShowProfilePanel(false)}
+        onClose={() => {
+          setShowProfilePanel(false);
+          setOpenAvatarEditorOnOpen(false);
+        }}
+        openAvatarEditorOnOpen={openAvatarEditorOnOpen}
         userEmail={userEmail}
         isScopedCustomer={isScopedCustomer}
         customerDetails={customerDetails}
@@ -498,12 +511,14 @@ const ProfileHeader = forwardRef<ProfileHeaderHandle>((props, ref) => {
         onSaveAdminName={profileEditing.saveAdminName}
         avatarImageUrl={profileEditing.avatarImageUrl}
         isUploadingAvatar={profileEditing.isUploadingAvatar}
+        isDeletingAvatar={profileEditing.isDeletingAvatar}
         avatarUploadError={profileEditing.avatarUploadError?.message ?? null}
         avatarStatusText={profileEditing.avatarStatusText}
         avatarPreviewUrl={profileEditing.avatarPreviewUrl}
         selectedAvatarFileName={profileEditing.selectedAvatarFile?.name ?? null}
         onSelectAvatarFile={profileEditing.selectAvatarFile}
         onSaveAvatar={profileEditing.saveAvatar}
+        onDeleteAvatar={profileEditing.deleteAvatar}
         onRetryAvatarUpload={profileEditing.retryAvatarUpload}
         onCancelAvatarUpload={profileEditing.cancelCurrentUpload}
       />

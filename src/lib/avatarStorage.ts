@@ -112,6 +112,45 @@ export const persistAvatarMetadata = async (
   };
 };
 
+export const clearAvatarMetadata = async (): Promise<{
+  metadata: AvatarMetadataShape;
+  session: Session | null;
+}> => {
+  const { data: beforeSessionData, error: beforeSessionError } = await supabase.auth.getSession();
+  if (beforeSessionError) {
+    throw createAvatarError("metadata", beforeSessionError.message, beforeSessionError);
+  }
+
+  const authenticatedSession = beforeSessionData.session;
+  if (!authenticatedSession || !authenticatedSession.user) {
+    throw createAvatarError("auth", "You must be signed in to update avatar metadata.");
+  }
+
+  const currentMetadata = authenticatedSession.user.user_metadata || {};
+  const nextMetadata: Record<string, unknown> = {
+    ...currentMetadata,
+    avatar_path: null,
+    avatar_updated_at: null,
+  };
+
+  const { error: metadataError } = await supabase.auth.updateUser({ data: nextMetadata });
+  if (metadataError) {
+    throw createAvatarError("metadata", metadataError.message, metadataError);
+  }
+
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) {
+    throw createAvatarError("metadata", sessionError.message, sessionError);
+  }
+
+  const metadata = getAvatarMetadata(sessionData.session?.user?.user_metadata as Record<string, unknown>);
+
+  return {
+    metadata,
+    session: sessionData.session,
+  };
+};
+
 export const resolveAvatarPathForFile = (userId: string, file: File): string => {
   return buildAvatarPath(userId, file.type);
 };

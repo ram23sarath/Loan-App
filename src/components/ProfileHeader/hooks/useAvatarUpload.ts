@@ -10,6 +10,7 @@ import {
 } from "../../../utils/avatarUtils";
 import {
   buildAvatarPublicUrl,
+  clearAvatarMetadata,
   deleteOldAvatarFile,
   persistAvatarMetadata,
   resolveAvatarPathForFile,
@@ -47,12 +48,14 @@ const isAbortLikeError = (error: unknown): boolean => {
 export interface UseAvatarUploadReturn {
   avatarImageUrl: string | null;
   isUploadingAvatar: boolean;
+  isDeletingAvatar: boolean;
   avatarUploadError: AvatarUploadError | null;
   avatarStatusText: string | null;
   selectedAvatarFile: File | null;
   avatarPreviewUrl: string | null;
   selectAvatarFile: (file: File | null) => Promise<void>;
   saveAvatar: () => Promise<void>;
+  deleteAvatar: () => Promise<void>;
   retryAvatarUpload: () => Promise<void>;
   cancelCurrentUpload: () => void;
   resetAvatarTransientState: () => void;
@@ -71,6 +74,7 @@ export const useAvatarUpload = ({
   );
 
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isDeletingAvatar, setIsDeletingAvatar] = useState(false);
   const [avatarUploadError, setAvatarUploadError] = useState<AvatarUploadError | null>(null);
   const [avatarStatusText, setAvatarStatusText] = useState<string | null>(null);
   const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
@@ -259,15 +263,68 @@ export const useAvatarUpload = ({
     await saveAvatar();
   }, [saveAvatar]);
 
+  const deleteAvatar = useCallback(async () => {
+    if (!userId) {
+      setAvatarUploadError(createAvatarError("auth", "You must be signed in to remove an avatar."));
+      return;
+    }
+
+    cancelCurrentUpload();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    setAvatarUploadError(null);
+    setAvatarStatusText("Removing avatar...");
+    setIsDeletingAvatar(true);
+
+    try {
+      if (avatarPath) {
+        await deleteOldAvatarFile(avatarPath, userId, controller.signal);
+      }
+
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      const cleared = await clearAvatarMetadata();
+
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      setAvatarPath(cleared.metadata.avatarPath);
+      setAvatarUpdatedAt(cleared.metadata.avatarUpdatedAt);
+      setAvatarPreviewUrl((previous) => {
+        revokePreviewUrl(previous);
+        return null;
+      });
+      setSelectedAvatarFile(null);
+      setAvatarStatusText(null);
+    } catch (error) {
+      if (isAbortLikeError(error)) {
+        return;
+      }
+
+      const mapped = normalizeAvatarError(error, "metadata", "Failed to remove avatar.");
+      console.error(`[AvatarDelete][${mapped.category}]`, mapped);
+      setAvatarUploadError(mapped);
+      setAvatarStatusText(null);
+    } finally {
+      setIsDeletingAvatar(false);
+    }
+  }, [avatarPath, cancelCurrentUpload, revokePreviewUrl, userId]);
+
   return {
     avatarImageUrl,
     isUploadingAvatar,
+    isDeletingAvatar,
     avatarUploadError,
     avatarStatusText,
     selectedAvatarFile,
     avatarPreviewUrl,
     selectAvatarFile,
     saveAvatar,
+    deleteAvatar,
     retryAvatarUpload,
     cancelCurrentUpload,
     resetAvatarTransientState,

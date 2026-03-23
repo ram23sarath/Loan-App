@@ -3,6 +3,7 @@ import ReactDOM from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import type { Session } from "@supabase/supabase-js";
+import { apiRequest, ApiError } from "../../../lib/apiClient";
 import { supabase } from "../../../lib/supabase";
 import type { Document } from "../../../types";
 
@@ -201,24 +202,25 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
         : `${createUserPhone}@gmail.com`;
       const password = createUserIsAdmin ? createUserPassword : createUserPhone;
 
-      const response = await fetch("/.netlify/functions/create-auth-user", {
+      const result = await apiRequest<{ success: boolean; error?: string }>(
+        "/.netlify/functions/create-auth-user",
+        {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           ...(session?.access_token
             ? { Authorization: `Bearer ${session.access_token}` }
             : {}),
         },
-        body: JSON.stringify({
+        body: {
           email,
           password,
           name: createUserName,
           phone: createUserIsAdmin ? "" : createUserPhone,
           isAdmin: createUserIsAdmin,
-        }),
+        },
+        timeoutMs: 15000,
       });
-      const result = await response.json();
-      if (response.ok && result.success) {
+      if (result.success) {
         const userType = createUserIsAdmin ? "Admin user" : "Scoped user";
         const loginInfo = createUserIsAdmin
           ? `Email: ${createUserEmail}`
@@ -253,24 +255,23 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
     setToolsLoading(true);
     setToolsMessage(null);
     try {
-      const response = await fetch(
+      const result = await apiRequest<{ success: boolean; error?: string; details?: string }>(
         "/.netlify/functions/reset-customer-password",
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
             ...(session?.access_token
               ? { Authorization: `Bearer ${session.access_token}` }
               : {}),
           },
-          body: JSON.stringify({
+          body: {
             email: changePasswordEmail,
             new_password: changePasswordNew,
-          }),
+          },
+          timeoutMs: 15000,
         },
       );
-      const result = await response.json();
-      if (response.ok && result.success) {
+      if (result.success) {
         setToolsMessage({
           type: "success",
           text: "Password changed successfully!",
@@ -297,10 +298,22 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
     setUserStatusLoading(true);
     setUserStatusError(null);
     try {
-      const response = await fetch("/.netlify/functions/compare-users");
-      const result = await response.json();
-      if (response.ok && result.success) {
-        setUserStatusData(result);
+      const result = await apiRequest<(UserStatusData & { success: boolean; error?: string })>(
+        "/.netlify/functions/compare-users",
+        {
+          method: "GET",
+          timeoutMs: 15000,
+          cacheKey: "tools:compare-users",
+          staleTimeMs: 10_000,
+        },
+      );
+      if (result.success) {
+        setUserStatusData({
+          summary: result.summary,
+          customersWithoutUserId: result.customersWithoutUserId,
+          customersWithOrphanedUserId: result.customersWithOrphanedUserId,
+          timestamp: result.timestamp,
+        });
       } else {
         setUserStatusError(result.error || "Failed to fetch user status");
       }
@@ -314,17 +327,16 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
   const handleFixMissingUser = async (customer: UserStatusCustomer) => {
     setFixingUserId(customer.id);
     try {
-      const response = await fetch(
+      const result = await apiRequest<{ success: boolean; error?: string }>(
         "/.netlify/functions/create-user-from-customer",
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
             ...(session?.access_token
               ? { Authorization: `Bearer ${session.access_token}` }
               : {}),
           },
-          body: JSON.stringify({
+          body: {
             customer_id: customer.id,
             name: customer.name,
             phone: customer.phone,
@@ -336,11 +348,11 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
                 ? String(session.user.email).split("@")[0]
                 : null),
             actor_email: session?.user?.email ?? null,
-          }),
+          },
+          timeoutMs: 15000,
         },
       );
-      const result = await response.json();
-      if (response.ok && result.success) {
+      if (result.success) {
         await fetchUserStatus();
       } else {
         setUserStatusError(
@@ -365,29 +377,18 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
     try {
       progressTimer1 = setTimeout(() => setSyncProgress(30), 800);
 
-      const response = await fetch("/.netlify/functions/sync-customer-auth", {
+      const result = await apiRequest<any>("/.netlify/functions/sync-customer-auth", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dryRun: false }),
+        body: { dryRun: false },
+        timeoutMs: 30000,
       });
 
       setSyncProgress(70);
 
-      const resultText = await response.text();
-      let result: any = {};
-      try {
-        result = JSON.parse(resultText);
-      } catch {
-        result = {
-          error: resultText || "Received non-JSON response from sync endpoint",
-          message: resultText || "Received non-JSON response from sync endpoint",
-        };
-      }
-
       setSyncProgress(90);
       await new Promise((resolve) => setTimeout(resolve, 300));
 
-      if (response.ok && result && result.success) {
+      if (result && result.success) {
         setSyncProgress(100);
         setSyncResult(result as SyncResultData);
         await new Promise((resolve) => setTimeout(resolve, 500));
@@ -395,7 +396,6 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
       } else {
         const errMsg =
           (result && (result.error || result.message)) ||
-          resultText ||
           "Sync failed";
         setSyncError(String(errMsg));
         setSyncPhase("results");
@@ -421,27 +421,26 @@ const ToolsModal: React.FC<ToolsModalProps> = ({
     setAdminsLoading(true);
     setAdminsError(null);
     try {
-      const headers: HeadersInit = {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      };
-
-      const response = await fetch(
+      const result = await apiRequest<AdminUsersResponse>(
         `/.netlify/functions/get-admin-users`,
-        { method: "GET", headers },
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          timeoutMs: 15000,
+        },
       );
-      const result = (await response.json()) as AdminUsersResponse;
-
-      if (response.ok && result.success) {
+      if (result.success) {
         setServerIsSuperAdmin(Boolean(result.is_super_admin));
         setAdminList(result.admins || []);
       } else {
-        if (response.status === 401 || response.status === 403) {
-          setServerIsSuperAdmin(false);
-        }
         setAdminsError(result.error || "Failed to load admins");
       }
     } catch (err: any) {
+      if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+        setServerIsSuperAdmin(false);
+      }
       setAdminsError(err.message || "Failed to load admins");
     } finally {
       setAdminsLoading(false);

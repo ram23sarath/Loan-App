@@ -8,6 +8,15 @@ const UUID_REGEX =
 
 const isUuid = (value) => UUID_REGEX.test(String(value || '').trim());
 
+const resolveRequestUrl = (req) => {
+  try {
+    return new URL(req.url);
+  } catch {
+    // Some local runtimes provide a relative req.url; fallback keeps parsing stable.
+    return new URL(req.url, 'http://localhost');
+  }
+};
+
 const json = (payload, status = 200) =>
   new Response(JSON.stringify(payload), {
     status,
@@ -50,7 +59,7 @@ export default async (req) => {
     return json({ error: 'Unauthorized' }, 401);
   }
 
-  const requestUrl = new URL(req.url);
+  const requestUrl = resolveRequestUrl(req);
   const customerUserId = String(
     requestUrl.searchParams.get('customer_user_id') || '',
   ).trim();
@@ -71,7 +80,26 @@ export default async (req) => {
 
     const caller = callerData.user;
     const isSelfRequest = caller.id === customerUserId;
-    if (!isSelfRequest && !isAdminLikeUser(caller)) {
+    let isSuperAdminByLookup = false;
+    if (!isSelfRequest) {
+      const { data: superAdminRow, error: superAdminLookupError } = await supabase
+        .from('super_admins')
+        .select('user_id')
+        .eq('user_id', caller.id)
+        .maybeSingle();
+
+      if (superAdminLookupError) {
+        console.error(
+          '[get-customer-avatar-metadata] Failed checking super_admins lookup',
+          superAdminLookupError,
+        );
+        return json({ error: 'Authorization check failed' }, 500);
+      }
+
+      isSuperAdminByLookup = Boolean(superAdminRow?.user_id);
+    }
+
+    if (!isSelfRequest && !isAdminLikeUser(caller) && !isSuperAdminByLookup) {
       return json({ error: 'Forbidden' }, 403);
     }
 

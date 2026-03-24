@@ -57,7 +57,7 @@ interface CustomerDetailModalProps {
   onEditDataEntry?: (dataEntry: DataEntry) => void;
 }
 
-type CustomerDetailSection = "loans" | "subscriptions" | "entries";
+type CustomerDetailSection = "loans" | "subscriptions" | "entries" | null;
 
 const backdropVariants: Variants = {
   hidden: { opacity: 0 },
@@ -216,7 +216,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const [expandedLoanId, setExpandedLoanId] = useState<string | null>(null);
   const [mobileActiveSection, setMobileActiveSection] =
-    useState<CustomerDetailSection>("loans");
+    useState<CustomerDetailSection>(null);
   const [customerAvatarPath, setCustomerAvatarPath] = useState<string | null>(null);
   const [customerAvatarUpdatedAt, setCustomerAvatarUpdatedAt] =
     useState<string | null>(null);

@@ -19,6 +19,7 @@ import { formatDate } from "../../utils/dateFormatter";
 import { useDebounce } from "../../utils/useDebounce";
 import { useEscapeKey } from "../hooks/useEscapeKey";
 import { useModalBackHandler } from "../../utils/useModalBackHandler";
+import { useReducedMotion } from "../hooks/useReducedMotion";
 import AlertPopup from "../ui/AlertPopup";
 import LoadingButton from "../ui/LoadingButton";
 import { canRequestNewLoan } from "../../utils/loanStatus";
@@ -30,8 +31,8 @@ const listContainerVariants: Variants = {
     opacity: 1,
     transition: {
       delay,
-      staggerChildren: 0.06,
-      delayChildren: 0.1,
+      staggerChildren: 0.03,
+      delayChildren: 0.06,
     },
   }),
 };
@@ -45,9 +46,9 @@ const listItemVariants: Variants = {
     opacity: 1,
     y: 0,
     transition: {
-      type: "spring",
-      stiffness: 300,
-      damping: 24,
+      type: "tween",
+      ease: "easeOut",
+      duration: 0.2,
     },
   },
   exit: {
@@ -69,10 +70,10 @@ const tableRowVariants: Variants = {
     y: 0,
     scale: 1,
     transition: {
-      type: "spring",
-      stiffness: 100,
-      damping: 15,
-      delay: i * 0.04,
+      type: "tween",
+      ease: "easeOut",
+      duration: 0.2,
+      delay: i * 0.02,
     },
   }),
   exit: {
@@ -188,6 +189,7 @@ const searchResultVariants: Variants = {
 
 const LoanSeniorityPage = () => {
   const signalRouteReady = useRouteReady();
+  const prefersReducedMotion = useReducedMotion();
   const {
     customers,
     loans,
@@ -349,23 +351,15 @@ const LoanSeniorityPage = () => {
     }
   };
 
-  const removeFromList = async (id: string) => {
-    try {
-      await removeFromSeniority(id);
-    } catch (err) {
-      showAlert(
-        "Error",
-        (err as Error).message ||
-          "Failed to remove customer from seniority list",
-        "error",
-      );
-    }
-  };
-
   const [modalCustomer, setModalCustomer] = useState<any | null>(null);
   const [stationName, setStationName] = useState("");
   const [stationSearchTerm, setStationSearchTerm] = useState("");
   const [isStationDropdownOpen, setIsStationDropdownOpen] = useState(false);
+  const [isDesktopViewport, setIsDesktopViewport] = useState(() =>
+    typeof window !== "undefined"
+      ? window.matchMedia("(min-width: 768px)").matches
+      : true,
+  );
   const [loanType, setLoanType] = useState("General");
   const [loanRequestDate, setLoanRequestDate] = useState("");
   const [modalEditingId, setModalEditingId] = useState<string | null>(null);
@@ -379,6 +373,29 @@ const LoanSeniorityPage = () => {
   const modalRef = useRef<HTMLDivElement>(null);
   const listSearchInputRef = useRef<HTMLInputElement | null>(null);
   const stationDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia("(min-width: 768px)");
+    const handleChange = (event: MediaQueryListEvent) => {
+      setIsDesktopViewport(event.matches);
+    };
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", handleChange);
+    } else {
+      mediaQuery.addListener(handleChange);
+    }
+
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener("change", handleChange);
+      } else {
+        mediaQuery.removeListener(handleChange);
+      }
+    };
+  }, []);
 
   // Filter fire stations based on search term
   const filteredStations = useMemo(() => {
@@ -1066,18 +1083,22 @@ const LoanSeniorityPage = () => {
           </motion.div>
         ) : (
           <>
-            {/* Desktop table */}
-            <motion.div
-              className="hidden md:block overflow-x-auto"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                delay: listSectionDelay + 0.05,
-                type: "spring",
-                stiffness: 260,
-                damping: 24,
-              }}
-            >
+            {isDesktopViewport ? (
+              <motion.div
+                className="overflow-x-auto"
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={
+                  prefersReducedMotion
+                    ? { duration: 0 }
+                    : {
+                        delay: listSectionDelay + 0.05,
+                        type: "tween",
+                        ease: "easeOut",
+                        duration: 0.22,
+                      }
+                }
+              >
               <table className="min-w-full border-collapse">
                 <thead>
                   <tr className="bg-gray-100 dark:bg-gray-800">
@@ -1107,24 +1128,22 @@ const LoanSeniorityPage = () => {
                   </tr>
                 </thead>
                 <motion.tbody
-                  initial="hidden"
-                  animate="visible"
-                  variants={tableBodyVariants}
+                  initial={false}
+                  animate={prefersReducedMotion ? undefined : "visible"}
+                  variants={prefersReducedMotion ? undefined : tableBodyVariants}
                   transition={{ delay: listSectionDelay + 0.1 }}
                 >
-                  <AnimatePresence mode="popLayout">
+                  <AnimatePresence initial={false}>
                     {paginatedSeniorityList.map((entry: any, idx: number) => (
                       <motion.tr
                         key={entry.id}
                         className="even:bg-gray-50 dark:even:bg-gray-800/50 cursor-pointer"
                         custom={idx}
                         variants={tableRowVariants}
-                        initial="hidden"
+                        initial={false}
                         animate="visible"
                         exit="exit"
                         whileHover="hover"
-                        layout
-                        layoutId={`row-${entry.id}`}
                       >
                         <td className="px-4 py-3 text-gray-800 dark:text-dark-text">
                           {(currentPage - 1) * itemsPerPage + idx + 1}
@@ -1196,29 +1215,23 @@ const LoanSeniorityPage = () => {
                 </motion.tbody>
               </table>
             </motion.div>
-
-            {/* Mobile cards */}
-            <motion.div
-              className="md:hidden space-y-3"
-              variants={listContainerVariants}
-              initial="hidden"
-              animate="visible"
-              custom={listSectionDelay + 0.05}
-            >
-              <AnimatePresence mode="popLayout">
+            ) : (
+              <motion.div
+                className="space-y-3"
+                variants={listContainerVariants}
+                initial={prefersReducedMotion ? false : "hidden"}
+                animate={prefersReducedMotion ? undefined : "visible"}
+                custom={listSectionDelay + 0.05}
+              >
+              <AnimatePresence initial={false}>
                 {paginatedSeniorityList.map((entry: any, idx: number) => (
                   <motion.div
                     key={entry.id}
                     className="bg-white dark:bg-dark-bg border border-gray-100 dark:border-dark-border rounded p-3"
                     variants={listItemVariants}
-                    layout
-                    layoutId={`card-${entry.id}`}
-                    whileHover={{
-                      scale: 1.01,
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                      transition: { duration: 0.2 },
-                    }}
-                    whileTap={{ scale: 0.99 }}
+                    initial={false}
+                    whileHover={prefersReducedMotion ? undefined : { scale: 1.008 }}
+                    whileTap={prefersReducedMotion ? undefined : { scale: 0.995 }}
                   >
                     <div className="flex items-start justify-between">
                       <div className="min-w-0">
@@ -1308,6 +1321,7 @@ const LoanSeniorityPage = () => {
                 ))}
               </AnimatePresence>
             </motion.div>
+            )}
 
             {totalPages > 1 && (
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-dark-border">

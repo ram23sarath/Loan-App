@@ -177,8 +177,24 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
     customerMap,
   } = useData();
 
+  const getMobileVisibleCount = React.useCallback((width: number) => {
+    if (width < 360) {
+      return 2;
+    }
+    if (width < 420) {
+      return 3;
+    }
+    if (width < 520) {
+      return 4;
+    }
+    return 5;
+  }, []);
+
   const [showLandscapeMenu, setShowLandscapeMenu] = React.useState(false);
   const [showMobileMenu, setShowMobileMenu] = React.useState(false);
+  const [mobileVisibleCount, setMobileVisibleCount] = React.useState(() =>
+    typeof window !== "undefined" ? getMobileVisibleCount(window.innerWidth) : 3,
+  );
   const menuRef = React.useRef<HTMLDivElement>(null);
   const isInNativeWrapper =
     typeof window !== "undefined" &&
@@ -189,11 +205,16 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
     (item) => !item.adminOnly || !isScopedCustomer,
   );
 
-  // Mobile primary items are explicitly marked with mobilePrimary flag:
-  // - Home is included for all users
-  // - Add Customer and Add Record are included for admins (filtered out for scoped users)
-  // This approach is resilient to reordering of nav items and makes selection intent explicit.
+  // Prioritize explicit mobile-primary items, then fill remaining slots from other items.
   const mobilePrimaryNavItems = navItems.filter((item) => item.mobilePrimary);
+  const mobileSecondaryNavItems = navItems.filter((item) => !item.mobilePrimary);
+  const prioritizedMobileNavItems = [...mobilePrimaryNavItems, ...mobileSecondaryNavItems];
+  const visibleMobileNavItems = prioritizedMobileNavItems.slice(
+    0,
+    Math.min(mobileVisibleCount, prioritizedMobileNavItems.length),
+  );
+  const hasOverflowMobileNavItems =
+    prioritizedMobileNavItems.length > visibleMobileNavItems.length;
   const activeLinkClass =
     "bg-indigo-50 text-indigo-600 font-semibold dark:bg-indigo-900/30 dark:text-indigo-400";
   const inactiveLinkClass =
@@ -284,6 +305,48 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
     setShowMobileMenu(false);
   }, [location.pathname]);
 
+  React.useEffect(() => {
+    if (!hasOverflowMobileNavItems) {
+      setShowMobileMenu(false);
+    }
+  }, [hasOverflowMobileNavItems]);
+
+  React.useEffect(() => {
+    const resizeDebounceTimerRef: { current: ReturnType<typeof setTimeout> | null } = {
+      current: null,
+    };
+
+    const updateMobileVisibleCount = () => {
+      if (typeof window === "undefined") return;
+
+      setMobileVisibleCount(getMobileVisibleCount(window.innerWidth));
+    };
+
+    const handleViewportChange = () => {
+      if (resizeDebounceTimerRef.current) {
+        clearTimeout(resizeDebounceTimerRef.current);
+      }
+
+      resizeDebounceTimerRef.current = setTimeout(() => {
+        updateMobileVisibleCount();
+        resizeDebounceTimerRef.current = null;
+      }, 150);
+    };
+
+    updateMobileVisibleCount();
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("orientationchange", handleViewportChange);
+
+    return () => {
+      if (resizeDebounceTimerRef.current) {
+        clearTimeout(resizeDebounceTimerRef.current);
+        resizeDebounceTimerRef.current = null;
+      }
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("orientationchange", handleViewportChange);
+    };
+  }, []);
+
 
   const handleProfileClick = () => {
     profileRef.current?.openMenu();
@@ -327,7 +390,7 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
         >
           <div className="flex justify-around items-center py-2 overflow-x-auto w-full gap-1">
-            {mobilePrimaryNavItems.map((item, idx) => (
+            {visibleMobileNavItems.map((item, idx) => (
               <NavLink
                 key={item.path}
                 to={item.path}
@@ -373,21 +436,23 @@ const Sidebar: React.FC<SidebarProps> = ({ profileRef }) => {
               </NavLink>
             ))}
 
-            <motion.button
-              onClick={() => setShowMobileMenu(true)}
-              className={`flex flex-col items-center justify-center px-2 py-1.5 min-w-[60px] max-w-[80px] flex-shrink-0 transition-colors duration-200 text-[10px] ${showMobileMenu ? "text-indigo-600 dark:text-indigo-400" : "text-gray-500 hover:text-gray-700 dark:text-dark-muted dark:hover:text-dark-text"}`}
-              aria-label="Open full menu"
-              whileTap={{ scale: 0.95 }}
-            >
-              <motion.div
-                className="w-6 h-6 flex-shrink-0 flex items-center justify-center"
-                animate={{ y: showMobileMenu ? -1 : 0 }}
-                transition={{ type: "spring", stiffness: 350, damping: 24 }}
+            {hasOverflowMobileNavItems && (
+              <motion.button
+                onClick={() => setShowMobileMenu(true)}
+                className={`flex flex-col items-center justify-center px-2 py-1.5 min-w-[60px] max-w-[80px] flex-shrink-0 transition-colors duration-200 text-[10px] ${showMobileMenu ? "text-indigo-600 dark:text-indigo-400" : "text-gray-500 hover:text-gray-700 dark:text-dark-muted dark:hover:text-dark-text"}`}
+                aria-label="Open full menu"
+                whileTap={{ scale: 0.95 }}
               >
-                <ChevronUpIcon className="w-6 h-6" />
-              </motion.div>
-              <span className="mt-1 text-center leading-tight">More</span>
-            </motion.button>
+                <motion.div
+                  className="w-6 h-6 flex-shrink-0 flex items-center justify-center"
+                  animate={{ y: showMobileMenu ? -1 : 0 }}
+                  transition={{ type: "spring", stiffness: 350, damping: 24 }}
+                >
+                  <ChevronUpIcon className="w-6 h-6" />
+                </motion.div>
+                <span className="mt-1 text-center leading-tight">More</span>
+              </motion.button>
+            )}
           </div>
         </motion.nav>
       )}

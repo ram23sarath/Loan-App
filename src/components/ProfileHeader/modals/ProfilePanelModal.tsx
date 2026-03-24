@@ -164,7 +164,7 @@ const ProfilePanelModal: React.FC<ProfilePanelModalProps> = ({
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.98, opacity: 0, y: 4 }}
                         transition={{ type: 'tween', ease: [0.25, 0.1, 0.25, 1], duration: 0.25 }}
-                        className="bg-white rounded-xl shadow-2xl p-4 md:p-6 w-full max-w-sm md:max-w-md max-h-[90vh] overflow-y-auto z-[100] dark:bg-dark-card dark:border dark:border-dark-border"
+                        className="bg-white rounded-lg sm:rounded-xl shadow-2xl p-3 sm:p-4 md:p-6 w-full mx-3 sm:mx-0 max-w-sm md:max-w-md max-h-[90vh] overflow-y-auto z-[100] dark:bg-dark-card dark:border dark:border-dark-border"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <motion.div
@@ -173,10 +173,10 @@ const ProfilePanelModal: React.FC<ProfilePanelModalProps> = ({
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ type: 'tween', ease: 'easeOut', duration: 0.2 }}
                         >
-                            <div className="flex items-start justify-between gap-3">
-                                <h2 className="min-w-0 pr-2 text-lg md:text-2xl font-bold text-gray-800 dark:text-dark-text">Profile</h2>
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                                <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 dark:text-dark-text order-2 sm:order-1">Profile</h2>
 
-                                <div className="flex shrink-0 items-start gap-3">
+                                <div className="flex shrink-0 items-start gap-2 sm:gap-3 order-1 sm:order-2">
                                     <div className="flex flex-col items-end gap-2">
                                         <div className="relative h-[4.5rem] w-[4.5rem] overflow-visible">
                                             <div className="absolute inset-0 overflow-hidden rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-semibold shadow-lg ring-2 ring-white/70 dark:ring-dark-card/80">
@@ -197,7 +197,7 @@ const ProfilePanelModal: React.FC<ProfilePanelModalProps> = ({
                                             <button
                                                 type="button"
                                                 onClick={handleAvatarEditClick}
-                                                className="absolute -right-1 -bottom-1 inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-indigo-700 text-white shadow-lg shadow-indigo-700/40 transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:border-dark-card dark:focus:ring-offset-dark-card"
+                                                className="absolute -right-1 sm:-right-2 -bottom-1 sm:-bottom-2 inline-flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border-2 border-white bg-indigo-700 text-white shadow-lg shadow-indigo-700/40 transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:border-dark-card dark:focus:ring-offset-dark-card"
                                                 aria-label={showAvatarActions ? 'Hide avatar upload options' : 'Edit avatar'}
                                                 title={showAvatarActions ? 'Hide avatar upload options' : 'Edit avatar'}
                                             >
@@ -235,33 +235,33 @@ const ProfilePanelModal: React.FC<ProfilePanelModalProps> = ({
                                                         disabled={isUploadingAvatar || isDeletingAvatar}
                                                         id="avatar-file-input"
                                                     />
-                                                    <div className="flex flex-wrap gap-2">
+                                                    <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                                                         <label
                                                             htmlFor="avatar-file-input"
-                                                            className={`px-3 py-2 text-xs md:text-sm font-medium rounded transition-colors cursor-pointer ${(isUploadingAvatar || isDeletingAvatar) ? 'bg-gray-200 text-gray-500 cursor-not-allowed dark:bg-slate-700 dark:text-dark-muted' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50'}`}
+                                                            className={`flex-1 sm:flex-initial px-3 py-2 text-xs sm:text-sm font-medium rounded transition-colors cursor-pointer text-center sm:text-left ${(isUploadingAvatar || isDeletingAvatar) ? 'bg-gray-200 text-gray-500 cursor-not-allowed dark:bg-slate-700 dark:text-dark-muted' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50'}`}
                                                         >
                                                             Choose Image
                                                         </label>
                                                         <button
                                                             onClick={() => void onSaveAvatar()}
                                                             disabled={!selectedAvatarFileName || isUploadingAvatar || isDeletingAvatar}
-                                                            className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-xs md:text-sm font-medium rounded transition-colors"
+                                                            className="flex-1 sm:flex-initial px-3 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-xs sm:text-sm font-medium rounded transition-colors"
                                                         >
-                                                            {isUploadingAvatar ? 'Saving...' : 'Save Avatar'}
+                                                            {isUploadingAvatar ? 'Saving...' : 'Save'}
                                                         </button>
                                                         {!!avatarImageUrl && (
                                                             <button
                                                                 onClick={handleDeleteAvatarClick}
                                                                 disabled={isUploadingAvatar || isDeletingAvatar}
-                                                                className="px-3 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white text-xs md:text-sm font-medium rounded transition-colors"
+                                                                className="flex-1 sm:flex-initial px-3 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white text-xs sm:text-sm font-medium rounded transition-colors"
                                                             >
-                                                                Delete Avatar
+                                                                Delete
                                                             </button>
                                                         )}
                                                         {isUploadingAvatar && (
                                                             <button
                                                                 onClick={onCancelAvatarUpload}
-                                                                className="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs md:text-sm font-medium rounded transition-colors dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
+                                                                className="flex-1 sm:flex-initial px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs sm:text-sm font-medium rounded transition-colors dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
                                                             >
                                                                 Cancel
                                                             </button>
@@ -331,54 +331,54 @@ const ProfilePanelModal: React.FC<ProfilePanelModalProps> = ({
                             </div>
                         </motion.div>
 
-                        <div className="space-y-3 md:space-y-4">
+                        <div className="space-y-2.5 sm:space-y-3 md:space-y-4">
                             {/* Account Type */}
                             <motion.div
-                                className="border-b border-gray-200 pb-3 md:pb-4 dark:border-dark-border"
+                                className="border-b border-gray-200 pb-2.5 sm:pb-3 md:pb-4 dark:border-dark-border"
                                 initial={{ opacity: 0, x: -10 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: 0.1, type: 'spring', stiffness: 300, damping: 24 }}
                             >
-                                <label className="text-xs text-gray-500 uppercase tracking-wide dark:text-dark-muted">Account Type</label>
-                                <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1 dark:text-dark-text">
+                                <label className="text-xs md:text-sm text-gray-500 uppercase tracking-wide dark:text-dark-muted">Account Type</label>
+                                <p className="text-xs sm:text-sm md:text-base font-semibold text-gray-800 mt-1 dark:text-dark-text">
                                     {isScopedCustomer ? 'Customer' : 'Admin'}
                                 </p>
                             </motion.div>
 
                             {/* Email */}
                             <motion.div
-                                className="border-b border-gray-200 pb-3 md:pb-4 dark:border-dark-border"
+                                className="border-b border-gray-200 pb-2.5 sm:pb-3 md:pb-4 dark:border-dark-border"
                                 initial={{ opacity: 0, x: -10 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: 0.15, type: 'spring', stiffness: 300, damping: 24 }}
                             >
-                                <label className="text-xs text-gray-500 uppercase tracking-wide dark:text-dark-muted">Email</label>
-                                <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1 break-all dark:text-dark-text">{userEmail}</p>
+                                <label className="text-xs md:text-sm text-gray-500 uppercase tracking-wide dark:text-dark-muted">Email</label>
+                                <p className="text-xs sm:text-sm md:text-base font-semibold text-gray-800 mt-1 break-all dark:text-dark-text">{userEmail}</p>
                             </motion.div>
 
                             {avatarStatusText && (
                                 <motion.div
-                                    className="rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-xs text-indigo-700 dark:border-indigo-900/40 dark:bg-indigo-900/20 dark:text-indigo-300"
+                                    className="rounded-lg border border-indigo-200 bg-indigo-50 p-2 sm:p-3 text-xs sm:text-sm text-indigo-700 dark:border-indigo-900/40 dark:bg-indigo-900/20 dark:text-indigo-300"
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: 0.18, type: 'spring', stiffness: 300, damping: 24 }}
                                 >
-                                    <p>{avatarStatusText}</p>
+                                    <p className="break-words">{avatarStatusText}</p>
                                 </motion.div>
                             )}
 
                             {avatarUploadError && (
                                 <motion.div
-                                    className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300"
+                                    className="rounded-lg border border-red-200 bg-red-50 p-2 sm:p-3 text-xs sm:text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300"
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: 0.18, type: 'spring', stiffness: 300, damping: 24 }}
                                 >
-                                    <p>{avatarUploadError}</p>
+                                    <p className="break-words">{avatarUploadError}</p>
                                     {!!selectedAvatarFileName && (
                                         <button
                                             onClick={() => void onRetryAvatarUpload()}
-                                            className="mt-2 text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
+                                            className="mt-2 text-xs px-2 py-1 w-full sm:w-auto bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
                                         >
                                             Retry
                                         </button>
@@ -388,42 +388,42 @@ const ProfilePanelModal: React.FC<ProfilePanelModalProps> = ({
 
                             {avatarSelectionError && (
                                 <motion.div
-                                    className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300"
+                                    className="rounded-lg border border-red-200 bg-red-50 p-2 sm:p-3 text-xs sm:text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300"
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: 0.18, type: 'spring', stiffness: 300, damping: 24 }}
                                 >
-                                    <p>{avatarSelectionError}</p>
+                                    <p className="break-words">{avatarSelectionError}</p>
                                 </motion.div>
                             )}
 
                             {/* Customer Details (if scoped user) */}
                             {isScopedCustomer && customerDetails ? (
                                 <>
-                                    <div className="border-b border-gray-200 pb-3 md:pb-4 dark:border-dark-border">
-                                        <label className="text-xs text-gray-500 uppercase tracking-wide dark:text-dark-muted">Customer Name</label>
-                                        <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1 dark:text-dark-text">{customerDetails.name || '—'}</p>
+                                    <div className="border-b border-gray-200 pb-2.5 sm:pb-3 md:pb-4 dark:border-dark-border">
+                                        <label className="text-xs md:text-sm text-gray-500 uppercase tracking-wide dark:text-dark-muted">Customer Name</label>
+                                        <p className="text-xs sm:text-sm md:text-base font-semibold text-gray-800 mt-1 break-words dark:text-dark-text">{customerDetails.name || '—'}</p>
                                     </div>
 
-                                    <div className="border-b border-gray-200 pb-3 md:pb-4 dark:border-dark-border">
-                                        <label className="text-xs text-gray-500 uppercase tracking-wide dark:text-dark-muted">Phone Number</label>
-                                        <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1 dark:text-dark-text">{customerDetails.phone || '—'}</p>
+                                    <div className="border-b border-gray-200 pb-2.5 sm:pb-3 md:pb-4 dark:border-dark-border">
+                                        <label className="text-xs md:text-sm text-gray-500 uppercase tracking-wide dark:text-dark-muted">Phone Number</label>
+                                        <p className="text-xs sm:text-sm md:text-base font-semibold text-gray-800 mt-1 break-words dark:text-dark-text">{customerDetails.phone || '—'}</p>
                                     </div>
 
                                     {customerDetails.address && (
-                                        <div className="border-b border-gray-200 pb-3 md:pb-4 dark:border-dark-border">
-                                            <label className="text-xs text-gray-500 uppercase tracking-wide dark:text-dark-muted">Address</label>
-                                            <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1 break-words dark:text-dark-text">{customerDetails.address}</p>
+                                        <div className="border-b border-gray-200 pb-2.5 sm:pb-3 md:pb-4 dark:border-dark-border">
+                                            <label className="text-xs md:text-sm text-gray-500 uppercase tracking-wide dark:text-dark-muted">Address</label>
+                                            <p className="text-xs sm:text-sm md:text-base font-semibold text-gray-800 mt-1 break-words dark:text-dark-text">{customerDetails.address}</p>
                                         </div>
                                     )}
 
                                     {/* Station Name - Editable */}
-                                    <div className="border-b border-gray-200 pb-3 md:pb-4 dark:border-dark-border">
-                                        <div className="flex items-center justify-between gap-2 mb-2">
-                                            <label className="text-xs text-gray-500 uppercase tracking-wide dark:text-dark-muted">Station Name</label>
+                                    <div className="border-b border-gray-200 pb-2.5 sm:pb-3 md:pb-4 dark:border-dark-border">
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                                            <label className="text-xs md:text-sm text-gray-500 uppercase tracking-wide dark:text-dark-muted">Station Name</label>
                                             <button
                                                 onClick={() => setIsEditingStation(!isEditingStation)}
-                                                className="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
+                                                className="text-xs px-3 py-1.5 w-full sm:w-auto bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
                                             >
                                                 {isEditingStation ? 'Cancel' : 'Edit'}
                                             </button>
@@ -435,18 +435,18 @@ const ProfilePanelModal: React.FC<ProfilePanelModalProps> = ({
                                                     value={stationName}
                                                     onChange={(e) => setStationName(e.target.value)}
                                                     placeholder="Enter station name"
-                                                    className="w-full bg-gray-50 border border-gray-300 rounded px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted"
+                                                    className="w-full bg-gray-50 border border-gray-300 rounded px-3 py-2 text-xs sm:text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted"
                                                 />
                                                 <button
                                                     onClick={onSaveStation}
                                                     disabled={isSavingStation}
-                                                    className="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-xs md:text-sm font-medium rounded transition-colors"
+                                                    className="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-xs sm:text-sm md:text-base font-medium rounded transition-colors"
                                                 >
                                                     {isSavingStation ? 'Saving...' : 'Save'}
                                                 </button>
                                             </div>
                                         ) : (
-                                            <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1 dark:text-dark-text">{stationName || '—'}</p>
+                                            <p className="text-xs sm:text-sm md:text-base font-semibold text-gray-800 mt-1 break-words dark:text-dark-text">{stationName || '—'}</p>
                                         )}
                                     </div>
                                 </>
@@ -456,12 +456,12 @@ const ProfilePanelModal: React.FC<ProfilePanelModalProps> = ({
                                 </div>
                             ) : (
                                 /* Admin Name - Editable */
-                                <div className="border-b border-gray-200 pb-3 md:pb-4 dark:border-dark-border">
-                                    <div className="flex items-center justify-between gap-2 mb-2">
-                                        <label className="text-xs text-gray-500 uppercase tracking-wide dark:text-dark-muted">Display Name</label>
+                                <div className="border-b border-gray-200 pb-2.5 sm:pb-3 md:pb-4 dark:border-dark-border">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                                        <label className="text-xs md:text-sm text-gray-500 uppercase tracking-wide dark:text-dark-muted">Display Name</label>
                                         <button
                                             onClick={() => setIsEditingAdminName(!isEditingAdminName)}
-                                            className="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
+                                            className="text-xs px-3 py-1.5 w-full sm:w-auto bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors dark:bg-indigo-900/30 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
                                         >
                                             {isEditingAdminName ? 'Cancel' : 'Edit'}
                                         </button>
@@ -473,18 +473,18 @@ const ProfilePanelModal: React.FC<ProfilePanelModalProps> = ({
                                                 value={adminName}
                                                 onChange={(e) => setAdminName(e.target.value)}
                                                 placeholder="Enter your name"
-                                                className="w-full bg-gray-50 border border-gray-300 rounded px-3 py-2 text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted"
+                                                className="w-full bg-gray-50 border border-gray-300 rounded px-3 py-2 text-xs sm:text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted"
                                             />
                                             <button
                                                 onClick={onSaveAdminName}
                                                 disabled={isSavingAdminName}
-                                                className="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-xs md:text-sm font-medium rounded transition-colors"
+                                                className="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-xs sm:text-sm md:text-base font-medium rounded transition-colors"
                                             >
                                                 {isSavingAdminName ? 'Saving...' : 'Save'}
                                             </button>
                                         </div>
                                     ) : (
-                                        <p className="text-xs md:text-sm font-semibold text-gray-800 mt-1 dark:text-dark-text">{adminNameFromMeta || '—'}</p>
+                                        <p className="text-xs sm:text-sm md:text-base font-semibold text-gray-800 mt-1 break-words dark:text-dark-text">{adminNameFromMeta || '—'}</p>
                                     )}
                                 </div>
                             )}
@@ -493,7 +493,7 @@ const ProfilePanelModal: React.FC<ProfilePanelModalProps> = ({
                         <div className="mt-4 md:mt-6 flex gap-2">
                             <button
                                 onClick={onClose}
-                                className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm md:text-base font-medium rounded-lg transition-colors dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
+                                className="flex-1 px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 text-xs sm:text-sm md:text-base font-medium rounded-lg transition-colors dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-dark-text"
                             >
                                 Close
                             </button>

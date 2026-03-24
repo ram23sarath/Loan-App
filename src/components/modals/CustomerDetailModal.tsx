@@ -57,6 +57,8 @@ interface CustomerDetailModalProps {
   onEditDataEntry?: (dataEntry: DataEntry) => void;
 }
 
+type CustomerDetailSection = "loans" | "subscriptions" | "entries";
+
 const backdropVariants: Variants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { duration: 0.2, ease: "easeOut" } },
@@ -173,6 +175,28 @@ const buttonVariants: Variants = {
   },
 };
 
+const panelRevealVariants: Variants = {
+  hidden: { opacity: 0, y: 12 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.4,
+      ease: "easeOut",
+      staggerChildren: 0.08,
+    },
+  },
+};
+
+const panelChildVariants: Variants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: "easeOut" },
+  },
+};
+
 const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   customer,
   loans,
@@ -191,10 +215,15 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 }) => {
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const [expandedLoanId, setExpandedLoanId] = useState<string | null>(null);
+  const [mobileActiveSection, setMobileActiveSection] =
+    useState<CustomerDetailSection>("loans");
   const [customerAvatarPath, setCustomerAvatarPath] = useState<string | null>(null);
   const [customerAvatarUpdatedAt, setCustomerAvatarUpdatedAt] =
     useState<string | null>(null);
   const noteRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const loansSectionRef = useRef<HTMLDivElement | null>(null);
+  const subscriptionsSectionRef = useRef<HTMLDivElement | null>(null);
+  const entriesSectionRef = useRef<HTMLDivElement | null>(null);
   const { session } = useData();
 
   const interestCharged = useCustomerInterest(customer.id);
@@ -352,6 +381,27 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     return buildAvatarPublicUrl(customerAvatarPath, customerAvatarUpdatedAt);
   }, [customerAvatarPath, customerAvatarUpdatedAt]);
 
+  const navigateToSection = (section: CustomerDetailSection) => {
+    setMobileActiveSection(section);
+  };
+
+  // Scroll to section after React commits the state and DOM update
+  useEffect(() => {
+    let refToScroll: HTMLDivElement | null = null;
+
+    if (mobileActiveSection === "loans") {
+      refToScroll = loansSectionRef.current;
+    } else if (mobileActiveSection === "subscriptions") {
+      refToScroll = subscriptionsSectionRef.current;
+    } else if (mobileActiveSection === "entries") {
+      refToScroll = entriesSectionRef.current;
+    }
+
+    if (refToScroll) {
+      refToScroll.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [mobileActiveSection]);
+
   return ReactDOM.createPortal(
     <motion.div
       className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-black/40 p-4"
@@ -366,32 +416,92 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
       onClick={onClose}
     >
       <motion.div
-        className="w-full max-w-6xl flex flex-col max-h-[95vh]"
+        className="relative w-full max-w-7xl h-[95vh] flex flex-col overflow-hidden"
         variants={modalVariants}
         initial="hidden"
         animate="visible"
         exit="exit"
         onClick={(e) => e.stopPropagation()}
       >
-        <CustomerDetailHeader
-          customer={customer}
-          summaryTotals={summaryTotals}
-          interestCharged={interestCharged}
-          isExporting={isExporting}
-          onExport={handleIndividualExport}
-          avatarImageUrl={customerAvatarUrl}
-          onClose={onClose}
+        <motion.div
+          className="pointer-events-none absolute -top-24 -left-24 w-64 h-64 rounded-full bg-indigo-400/20 blur-3xl"
+          animate={{ x: [0, 20, 0], y: [0, -10, 0], opacity: [0.35, 0.55, 0.35] }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="pointer-events-none absolute -bottom-24 -right-24 w-72 h-72 rounded-full bg-cyan-400/20 blur-3xl"
+          animate={{ x: [0, -18, 0], y: [0, 12, 0], opacity: [0.3, 0.5, 0.3] }}
+          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
         />
 
         <div
-          className="mt-2 sm:mt-4 space-y-3 sm:space-y-6 flex-1 min-h-0 pb-6 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-slate-600 dark:scrollbar-track-slate-800 px-2 sm:px-0"
+          className="relative z-10 mt-2 sm:mt-4 flex-1 min-h-0 px-2 sm:px-0 overflow-y-auto lg:overflow-hidden"
           style={{ paddingBottom: "calc(3rem + env(safe-area-inset-bottom))" }}
         >
-          
+          <div className="min-h-0 lg:h-full flex flex-col lg:flex-row gap-3 sm:gap-4 lg:gap-6 lg:overflow-hidden">
+            <aside className="w-full lg:w-[24rem] xl:w-[28rem] lg:shrink-0 lg:min-h-0 lg:h-full">
+              <motion.div
+                className="lg:h-full lg:overflow-y-auto lg:pr-1 space-y-3 sm:space-y-4 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-slate-600 dark:scrollbar-track-slate-800"
+                variants={panelRevealVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                <motion.div variants={panelChildVariants}>
+                <CustomerDetailHeader
+                  customer={customer}
+                  summaryTotals={summaryTotals}
+                  interestCharged={interestCharged}
+                  isExporting={isExporting}
+                  onExport={handleIndividualExport}
+                  avatarImageUrl={customerAvatarUrl}
+                  onClose={onClose}
+                  panelMode
+                />
+                </motion.div>
+              </motion.div>
+            </aside>
 
-          {/* Loans Section */}
+            <motion.section
+              className="flex-1 min-h-0 h-full pb-6 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-slate-600 dark:scrollbar-track-slate-800"
+              variants={panelRevealVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              <div className="lg:hidden sticky top-0 z-20 mb-3 pb-2 bg-white/95 dark:bg-dark-bg/95 backdrop-blur supports-[backdrop-filter]:bg-white/75 dark:supports-[backdrop-filter]:bg-dark-bg/70 border-b border-gray-200 dark:border-dark-border">
+                <div className="grid grid-cols-3 gap-2 pt-2">
+                  <button
+                    onClick={() => navigateToSection("loans")}
+                    aria-pressed={mobileActiveSection === "loans"}
+                    className={`px-2 py-2 rounded-lg text-xs font-semibold transition-colors ${mobileActiveSection === "loans" ? "bg-indigo-600 text-white" : "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-300"}`}
+                  >
+                    Loans
+                  </button>
+                  <button
+                    onClick={() => navigateToSection("subscriptions")}
+                    aria-pressed={mobileActiveSection === "subscriptions"}
+                    className={`px-2 py-2 rounded-lg text-xs font-semibold transition-colors ${mobileActiveSection === "subscriptions" ? "bg-cyan-600 text-white" : "bg-cyan-50 text-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-300"}`}
+                  >
+                    Subscriptions
+                  </button>
+                  <button
+                    onClick={() => navigateToSection("entries")}
+                    aria-pressed={mobileActiveSection === "entries"}
+                    className={`px-2 py-2 rounded-lg text-xs font-semibold transition-colors ${mobileActiveSection === "entries" ? "bg-pink-600 text-white" : "bg-pink-50 text-pink-700 dark:bg-pink-900/20 dark:text-pink-300"}`}
+                  >
+                    Expenditures
+                  </button>
+                </div>
+              </div>
+
+              <motion.div
+                ref={loansSectionRef}
+                id="customer-section-loans"
+                className={`${mobileActiveSection === "loans" ? "block" : "hidden"} lg:block mb-3 sm:mb-6`}
+                variants={panelChildVariants}
+              >
+                {/* Loans Section */}
           <GlassCard
-            className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border"
+            className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border transition-all duration-300 hover:shadow-[0_18px_45px_-28px_rgba(79,70,229,0.55)]"
             disable3D
           >
             <h3 className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-base sm:text-2xl font-semibold dark:text-dark-text">
@@ -418,7 +528,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                     e.stopPropagation();
                     setShowRecordLoan(true);
                   }}
-                  className="hidden md:inline-flex px-3 py-2 sm:py-1 rounded text-white text-xs sm:text-sm bg-indigo-600 hover:bg-indigo-700 font-semibold"
+                  className="hidden md:inline-flex px-3 py-2 sm:py-1 rounded-lg text-white text-xs sm:text-sm bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 shadow-[0_10px_24px_-14px_rgba(79,70,229,0.85)] font-semibold"
                   variants={buttonVariants}
                   initial="idle"
                   whileHover="hover"
@@ -870,10 +980,17 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               </p>
             )}
           </GlassCard>
+              </motion.div>
 
+              <motion.div
+                ref={subscriptionsSectionRef}
+                id="customer-section-subscriptions"
+                className={`${mobileActiveSection === "subscriptions" ? "block" : "hidden"} lg:block mb-3 sm:mb-6`}
+                variants={panelChildVariants}
+              >
           {/* Subscriptions Section */}
           <GlassCard
-            className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border"
+            className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border transition-all duration-300 hover:shadow-[0_18px_45px_-28px_rgba(6,182,212,0.5)]"
             disable3D
           >
             <h3 className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-3 sm:mb-4 text-base sm:text-2xl font-semibold dark:text-dark-text">
@@ -896,7 +1013,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                     e.stopPropagation();
                     setShowRecordSubscription(true);
                   }}
-                  className="hidden md:inline-flex px-3 py-2 sm:py-1 rounded bg-cyan-600 text-white text-xs sm:text-sm hover:bg-cyan-700 font-semibold"
+                  className="hidden md:inline-flex px-3 py-2 sm:py-1 rounded-lg bg-gradient-to-r from-cyan-600 to-sky-600 text-white text-xs sm:text-sm hover:from-cyan-500 hover:to-sky-500 shadow-[0_10px_24px_-14px_rgba(6,182,212,0.8)] font-semibold"
                 >
                   Record Subscription
                 </button>
@@ -1066,10 +1183,17 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               </p>
             )}
           </GlassCard>
+              </motion.div>
 
+              <motion.div
+                ref={entriesSectionRef}
+                id="customer-section-entries"
+                className={`${mobileActiveSection === "entries" ? "block" : "hidden"} lg:block`}
+                variants={panelChildVariants}
+              >
           {/* Data Entries Section */}
           <GlassCard
-            className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border"
+            className="w-full !p-3 sm:!p-6 dark:bg-dark-card dark:border-dark-border transition-all duration-300 hover:shadow-[0_18px_45px_-28px_rgba(236,72,153,0.5)]"
             disable3D
           >
             <div className="mb-3 sm:mb-4">
@@ -1081,7 +1205,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                       e.stopPropagation();
                       setShowRecordDataEntry(true);
                     }}
-                    className="hidden md:inline-flex w-full sm:w-auto px-3 py-2 sm:py-1 rounded bg-pink-600 text-white text-xs sm:text-sm hover:bg-pink-700 font-semibold"
+                    className="hidden md:inline-flex w-full sm:w-auto px-3 py-2 sm:py-1 rounded-lg bg-gradient-to-r from-pink-600 to-fuchsia-600 text-white text-xs sm:text-sm hover:from-pink-500 hover:to-fuchsia-500 shadow-[0_10px_24px_-14px_rgba(236,72,153,0.85)] font-semibold"
                   >
                     Record Entry
                   </button>
@@ -1291,6 +1415,9 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               </p>
             )}
           </GlassCard>
+              </motion.div>
+            </motion.section>
+          </div>
         </div>
 
         <AnimatePresence>

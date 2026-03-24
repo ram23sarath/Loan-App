@@ -94,8 +94,11 @@ export const toAmount = (value: unknown): number | null => {
 };
 
 export const renderScalar = (value: unknown): string => {
+  // Treat both null and empty string as the same sentinel for consistency.
+  // This allows fields like remarks that were never populated to appear the same
+  // as fields explicitly set to empty string, both displayed as "—".
   if (value === null) return "—";
-  if (value === "") return "(empty string)";
+  if (value === "") return "—";
   if (value === undefined) return "(missing)";
   return String(value);
 };
@@ -296,7 +299,8 @@ export const getFieldChangeText = (
         adminDirectory,
       ),
     );
-    // Skip lines where both values are the null sentinel
+    // Skip lines where both before and after are the null/empty sentinel ("—")
+    // This hides no-change transitions like null→null or ""→""
     if (beforeValue === "—" && afterValue === "—") return null;
     return `${label}: ${beforeValue} → ${afterValue}`;
   }).filter(Boolean) as string[];

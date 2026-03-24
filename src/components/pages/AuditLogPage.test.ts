@@ -125,6 +125,35 @@ describe("AuditLogPage field change formatting", () => {
     expect(text).not.toContain("Deleted By");
     expect(text).toContain("Date");
   });
+
+  it("treats empty string as null sentinel in update actions", () => {
+    const entry = buildEntry("update", "data_entry", {
+      changes: {
+        before: { notes: "" },
+        after: { notes: "Garland and Shall" },
+      },
+    });
+
+    const text = getFieldChangeText(entry);
+
+    // Empty string should render as — (null sentinel), not (empty string)
+    expect(text).toContain("Remarks: — → Garland and Shall");
+    expect(text).not.toContain("(empty string)");
+  });
+
+  it("filters out lines where both before and after are empty strings in update actions", () => {
+    const entry = buildEntry("update", "data_entry", {
+      changes: {
+        before: { notes: "" },
+        after: { notes: "" },
+      },
+    });
+
+    const text = getFieldChangeText(entry);
+
+    // When both are empty, the line should be filtered out (both render as —)
+    expect(text).toBeNull();
+  });
 });
 
 describe("AuditLogPage amount diff formatting", () => {

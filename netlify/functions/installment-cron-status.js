@@ -13,13 +13,20 @@ export default async (req) => {
 
   const owner = process.env.GITHUB_OWNER;
   const repo = process.env.GITHUB_REPO;
-  const token = process.env.GITHUB_TOKEN;
+  const rawToken = process.env.GITHUB_TOKEN;
+  const token = typeof rawToken === 'string' ? rawToken.trim() : '';
   const workflowFile = process.env.INSTALLMENT_CRON_WORKFLOW_FILE || 'installment-cron.yml';
 
   if (!owner || !repo || !token) {
     return jsonResponse(500, {
       error: 'Missing required GitHub configuration',
       required: ['GITHUB_OWNER', 'GITHUB_REPO', 'GITHUB_TOKEN'],
+    });
+  }
+
+  if (token.includes('\n') || token.includes('\r')) {
+    return jsonResponse(500, {
+      error: 'Invalid GitHub token configuration',
     });
   }
 
@@ -72,9 +79,9 @@ export default async (req) => {
       isSuccessful,
     });
   } catch (error) {
+    console.error('installment-cron-status failed:', error);
     return jsonResponse(500, {
       error: 'Failed to check installment cron status',
-      details: error instanceof Error ? error.message : String(error),
     });
   }
 };

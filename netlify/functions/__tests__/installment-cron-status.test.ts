@@ -24,6 +24,26 @@ describe('installment-cron-status function', () => {
     expect(body.error).toBe('Method Not Allowed');
   });
 
+  it('returns 500 when required env vars are missing', async () => {
+    delete process.env.GITHUB_TOKEN;
+    const handler = await loadHandler();
+    const response = await handler(new Request('http://localhost/.netlify/functions/installment-cron-status', { method: 'GET' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body.error).toBe('Missing required GitHub configuration');
+  });
+
+  it('returns 500 when token is malformed', async () => {
+    process.env.GITHUB_TOKEN = 'bad\ntoken';
+    const handler = await loadHandler();
+    const response = await handler(new Request('http://localhost/.netlify/functions/installment-cron-status', { method: 'GET' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body.error).toBe('Invalid GitHub token configuration');
+  });
+
   it('returns latest run and success flag', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch' as any).mockResolvedValueOnce({
       ok: true,
@@ -65,5 +85,31 @@ describe('installment-cron-status function', () => {
 
     expect(response.status).toBe(200);
     expect(body.found).toBe(false);
+  });
+
+  it('returns 502 when GitHub API returns non-ok response', async () => {
+    vi.spyOn(globalThis, 'fetch' as any).mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      text: async () => 'not found',
+    } as Response);
+
+    const handler = await loadHandler();
+    const response = await handler(new Request('http://localhost/.netlify/functions/installment-cron-status', { method: 'GET' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(502);
+    expect(body.error).toBe('Failed to fetch workflow runs');
+  });
+
+  it('returns 500 when GitHub API request throws', async () => {
+    vi.spyOn(globalThis, 'fetch' as any).mockRejectedValueOnce(new Error('network down'));
+
+    const handler = await loadHandler();
+    const response = await handler(new Request('http://localhost/.netlify/functions/installment-cron-status', { method: 'GET' }));
+    const body = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(body.error).toBe('Failed to check installment cron status');
   });
 });

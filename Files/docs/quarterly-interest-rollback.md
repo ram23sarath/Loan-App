@@ -7,7 +7,7 @@
 ## How It Works
 
 - A **Netlify scheduled function** (`quarterly-interest-cron.js`) runs at **18:30 UTC on the 1st** (00:00 IST on the 2nd) of each FY quarter month — April, July, October, January.
-- It calls the Supabase function `apply_quarterly_interest_for_customer(uuid)` for each active customer.
+- It calls the Supabase function `apply_quarterly_interest_for_all_customers()` once per run, and that server-side function processes each active customer.
 - The function calculates 3% interest on each customer's total subscription amount and:
   - Upserts the running total in `customer_interest`
   - Inserts an audit row in `interest_ledger`
@@ -302,17 +302,5 @@ Scheduled functions are not intended to be invoked directly by URL in production
 **Option B — Via Supabase SQL Editor:**
 
 ```sql
--- Run for all active customers
-DO $$
-DECLARE
-    rec RECORD;
-    result jsonb;
-BEGIN
-    FOR rec IN SELECT id, name FROM public.customers WHERE deleted_at IS NULL
-    LOOP
-        SELECT public.apply_quarterly_interest_for_customer(rec.id) INTO result;
-        RAISE NOTICE '%: %', rec.name, result;
-    END LOOP;
-END;
-$$;
+SELECT public.apply_quarterly_interest_for_all_customers();
 ```

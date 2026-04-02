@@ -110,15 +110,29 @@ export default async (req) => {
   console.log(`📅 Current FY Quarter: ${quarter.label} (${quarter.start} → ${quarter.end})`);
 
   try {
-    // 1. Fetch all active customers
-    const { data: customers, error: fetchErr } = await supabase
-      .from('customers')
-      .select('id, name, phone')
-      .is('deleted_at', null);
+    console.log('👥 Processing all active customers in bulk...');
 
-    if (fetchErr) throw fetchErr;
+    const { data, error } = await supabase.rpc(
+      'apply_quarterly_interest_for_all_customers',
+      { p_admin_uid: SUPER_ADMIN_UID || null }
+    );
 
-    if (!customers || customers.length === 0) {
+    if (error) throw error;
+    if (!data) {
+      throw new Error('Bulk quarterly interest RPC returned no data');
+    }
+    if (data.status === 'error') {
+      throw new Error(data.error || 'Bulk quarterly interest RPC reported an error');
+    }
+
+    const results = {
+      success: Number(data?.totals?.success || 0),
+      skipped: Number(data?.totals?.skipped || 0),
+      errors: Number(data?.totals?.errors || 0),
+      details: Array.isArray(data?.details) ? data.details : [],
+    };
+
+    if (results.details.length === 0) {
       console.log('ℹ️ No active customers found. Nothing to do.');
       return new Response(JSON.stringify({ status: 'no_customers' }), {
         status: 200,
@@ -126,83 +140,7 @@ export default async (req) => {
       });
     }
 
-    console.log(`👥 Processing ${customers.length} customers...`);
-
-    const results = { success: 0, skipped: 0, errors: 0, details: [] };
-
-    // 2. Apply interest for each customer using the DB function
-    for (const customer of customers) {
-      try {
-        const { data, error } = await supabase.rpc(
-          'apply_quarterly_interest_for_customer',
-          { p_customer_id: customer.id }
-        );
-
-        if (error) {
-          console.error(`❌ Error for ${customer.name} (${customer.id}):`, error.message);
-          results.errors++;
-          results.details.push({ id: customer.id, name: customer.name, status: 'error', error: error.message });
-          continue;
-        }
-
-        const result = data;
-        if (result.status === 'success') {
-          console.log(`✅ ${customer.name}: ₹${result.interest_charged} interest applied (sub total: ₹${result.subscription_total})`);
-          results.success++;
-        } else if (result.status === 'skipped') {
-          console.log(`⏭️  ${customer.name}: Skipped — ${result.reason}`);
-          results.skipped++;
-        } else if (result.status === 'error') {
-          console.error(`❌ ${customer.name}: ${result.error}`);
-          results.errors++;
-        }
-        results.details.push({ id: customer.id, name: customer.name, ...result });
-
-        await logAuditEvent(supabase, {
-          admin_uid: SUPER_ADMIN_UID,
-          action: result.status === 'success' ? 'create' : 'update',
-          entity_type: 'quarterly_interest_run',
-          entity_id: customer.id,
-          metadata: {
-            source: 'quarterly-interest-cron',
-            actor_name: 'System Cron',
-            actor_email: 'system-cron@internal',
-            customer_id: customer.id,
-            customer_name: customer.name,
-            quarter: quarter.label,
-            period_start: quarter.start,
-            period_end: quarter.end,
-            status: result.status,
-            reason: result.reason || null,
-            interest_charged: result.interest_charged || 0,
-            subscription_total: result.subscription_total || 0,
-          },
-        });
-      } catch (err) {
-        console.error(`❌ Exception for ${customer.name}:`, err.message);
-        results.errors++;
-        results.details.push({ id: customer.id, name: customer.name, status: 'error', error: err.message });
-
-        await logAuditEvent(supabase, {
-          admin_uid: SUPER_ADMIN_UID,
-          action: 'update',
-          entity_type: 'quarterly_interest_run',
-          entity_id: customer.id,
-          metadata: {
-            source: 'quarterly-interest-cron',
-            actor_name: 'System Cron',
-            actor_email: 'system-cron@internal',
-            customer_id: customer.id,
-            customer_name: customer.name,
-            quarter: quarter.label,
-            period_start: quarter.start,
-            period_end: quarter.end,
-            status: 'error',
-            error: err.message || String(err),
-          },
-        });
-      }
-    }
+    console.log(`👥 Processed ${results.details.length} customers in bulk.`);
 
     console.log('');
     console.log('📊 Summary:');

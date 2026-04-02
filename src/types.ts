@@ -460,6 +460,8 @@ export type Database = {
   }
 }
 
+export type CustomerInterest = Database['public']['Tables']['customer_interest']['Row'];
+
 // Omit types for Supabase inserts
 export type NewCustomer = Database['public']['Tables']['customers']['Insert'];
 export type NewDataEntry = Database['public']['Tables']['data_entries']['Insert'];

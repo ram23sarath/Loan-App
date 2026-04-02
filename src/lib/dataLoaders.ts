@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Customer, DataEntry, Installment, LoanWithCustomer, SubscriptionWithCustomer } from '../types';
+import type { Customer, CustomerInterest, DataEntry, Installment, LoanWithCustomer, SubscriptionWithCustomer } from '../types';
 
 export type AppDataSnapshot = {
   customers: Customer[];
@@ -7,6 +7,7 @@ export type AppDataSnapshot = {
   subscriptions: SubscriptionWithCustomer[];
   installments: Installment[];
   dataEntries: DataEntry[];
+  customerInterest: CustomerInterest[];
 };
 
 type LoaderOptions = {
@@ -52,16 +53,18 @@ export const loadAppData = async ({ isScoped, scopedCustomerId }: LoaderOptions)
 
   const promise = (async (): Promise<AppDataSnapshot> => {
     if (isScoped && scopedCustomerId) {
-      const [customerRes, loansRes, subsRes, dataEntriesRes] = await Promise.all([
+      const [customerRes, loansRes, subsRes, dataEntriesRes, customerInterestRes] = await Promise.all([
         supabase.from('customers').select('*').eq('id', scopedCustomerId).is('deleted_at', null).limit(1),
         supabase.from('loans').select('*, customers(name, phone)').eq('customer_id', scopedCustomerId).is('deleted_at', null),
         supabase.from('subscriptions').select('*, customers(name, phone)').eq('customer_id', scopedCustomerId).is('deleted_at', null).order('date', { ascending: true }),
         supabase.from('data_entries').select('*').eq('customer_id', scopedCustomerId).is('deleted_at', null),
+        supabase.from('customer_interest').select('*').eq('customer_id', scopedCustomerId).limit(1),
       ]);
       if (customerRes.error) throw customerRes.error;
       if (loansRes.error) throw loansRes.error;
       if (subsRes.error) throw subsRes.error;
       if (dataEntriesRes.error) throw dataEntriesRes.error;
+      if (customerInterestRes.error) throw customerInterestRes.error;
       const loans = (loansRes.data as unknown as LoanWithCustomer[]) || [];
       const loanIds = loans.map((loan) => loan.id);
       let installments: Installment[] = [];
@@ -76,17 +79,29 @@ export const loadAppData = async ({ isScoped, scopedCustomerId }: LoaderOptions)
         subscriptions: (subsRes.data as unknown as SubscriptionWithCustomer[]) || [],
         installments,
         dataEntries: (dataEntriesRes.data as DataEntry[]) || [],
+        customerInterest: (customerInterestRes.data as CustomerInterest[]) || [],
       };
     }
 
-    const [customers, loans, subscriptions, installments, dataEntries] = await Promise.all([
+    const fetchCustomerInterestRows = async () =>
+      fetchAllRecords<CustomerInterest>(
+        () =>
+          supabase
+            .from('customer_interest')
+            .select('*')
+            .order('updated_at', { ascending: false }),
+        'customer_interest',
+      );
+
+    const [customers, loans, subscriptions, installments, dataEntries, customerInterest] = await Promise.all([
       fetchAllRecords<Customer>(() => supabase.from('customers').select('*').is('deleted_at', null).order('created_at', { ascending: false }), 'customers'),
       fetchAllRecords<LoanWithCustomer>(() => supabase.from('loans').select('*, customers(name, phone)').is('deleted_at', null).order('created_at', { ascending: false }), 'loans'),
       fetchAllRecords<SubscriptionWithCustomer>(() => supabase.from('subscriptions').select('*, customers(name, phone)').is('deleted_at', null).order('created_at', { ascending: false }), 'subscriptions'),
       fetchAllRecords<Installment>(() => supabase.from('installments').select('*').is('deleted_at', null).order('created_at', { ascending: false }), 'installments'),
       fetchAllRecords<DataEntry>(() => supabase.from('data_entries').select('*').is('deleted_at', null).order('date', { ascending: false }), 'data_entries'),
+      fetchCustomerInterestRows(),
     ]);
-    return { customers, loans, subscriptions, installments, dataEntries };
+    return { customers, loans, subscriptions, installments, dataEntries, customerInterest };
   })();
 
   inflightDataLoads.set(cacheKey, promise);

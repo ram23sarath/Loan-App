@@ -496,26 +496,60 @@ const App = () => {
   const profileRef = React.useRef<ProfileHeaderHandle>(null);
 
   return (
-    <DataProvider>
-      <ThemeProvider>
-        <BrowserRouter>
-          <AutoLogout />
-          <RouteReadySignal>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route
-                path="/*"
-                element={
-                  <ProtectedRoute>
-                    <AppShell profileRef={profileRef} />
-                  </ProtectedRoute>
-                }
-              />
-            </Routes>
-          </RouteReadySignal>
-        </BrowserRouter>
-      </ThemeProvider>
-    </DataProvider>
+    <ErrorBoundary
+      fallback={(error) => (
+        <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4 py-8">
+          <div className="w-full max-w-xl rounded-2xl border border-red-200/20 bg-white p-6 shadow-2xl dark:bg-slate-900 dark:border-red-500/20">
+            <p className="inline-flex rounded-full bg-red-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-red-700 dark:bg-red-500/15 dark:text-red-300">
+              Startup error
+            </p>
+            <p className="mt-4 text-2xl font-bold text-gray-900 dark:text-white">
+              The app failed before the login screen could render.
+            </p>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+              This is a client-side render failure. Check the console for the stack trace.
+            </p>
+            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200">
+              {error?.message || "Unknown startup error"}
+            </div>
+            {import.meta.env.DEV && error?.stack && (
+              <pre className="mt-4 max-h-64 overflow-auto rounded-xl bg-slate-950 p-4 text-xs leading-relaxed text-slate-200">
+                {error.stack}
+              </pre>
+            )}
+            <div className="mt-5 flex flex-wrap gap-3">
+              <button
+                onClick={() => window.location.reload()}
+                className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-500"
+              >
+                Reload page
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    >
+      <DataProvider>
+        <ThemeProvider>
+          <BrowserRouter>
+            <AutoLogout />
+            <RouteReadySignal>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route
+                  path="/*"
+                  element={
+                    <ProtectedRoute>
+                      <AppShell profileRef={profileRef} />
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </RouteReadySignal>
+          </BrowserRouter>
+        </ThemeProvider>
+      </DataProvider>
+    </ErrorBoundary>
   );
 };
 

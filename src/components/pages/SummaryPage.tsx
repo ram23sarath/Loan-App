@@ -15,7 +15,6 @@ import {
   calculateSummaryData,
   expenseSubtypes,
 } from "../../utils/summaryCalculations";
-import { supabase } from "../../lib/supabase";
 
 import type { Customer, Installment, Loan, Subscription } from "../../types";
 
@@ -48,6 +47,7 @@ const SummaryPage = () => {
     customers: contextCustomers = [],
     seniorityList = [],
     isScopedCustomer = false,
+    customerInterestByCustomerId,
     summaryLoans: loans = [],
     summarySubscriptions: subscriptions = [],
     summaryInstallments: installments = [],
@@ -74,38 +74,12 @@ const SummaryPage = () => {
   }, [fetchSummaryData]);
 
   // Interest deduction for all customers (Global Quarterly Interest)
-  const [interestDeduction, setInterestDeduction] = useState(0);
-
-  // Fetch total interest collected from all customers
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchTotalInterest = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("customer_interest")
-          .select("total_interest_charged");
-
-        if (!error && data && isMounted) {
-          const total = data.reduce(
-            (sum, row) => sum + (row.total_interest_charged || 0),
-            0,
-          );
-          setInterestDeduction(total);
-        }
-      } catch (err) {
-        if (isMounted) {
-          console.error("Error fetching total interest deduction:", err);
-        }
-      }
-    };
-
-    fetchTotalInterest();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const interestDeduction = useMemo(() => {
+    return Array.from(customerInterestByCustomerId.values()).reduce(
+      (sum, row) => sum + (row.total_interest_charged || 0),
+      0,
+    );
+  }, [customerInterestByCustomerId]);
 
   // Lookup map for O(1) installment access by loan_id
   const localInstallmentsByLoanId = useMemo(() => {

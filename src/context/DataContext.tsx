@@ -14,6 +14,7 @@ import { loadAppData, loadGlobalSummaryRecords, resolveScopedCustomer } from "..
 import type { Session } from "@supabase/supabase-js";
 import type {
   Customer,
+  CustomerInterest,
   Loan,
   Subscription,
   Installment,
@@ -326,6 +327,7 @@ interface DataContextType {
   subscriptions: SubscriptionWithCustomer[];
   installments: Installment[];
   dataEntries: DataEntry[];
+  customerInterestByCustomerId: Map<string, CustomerInterest>;
   loading: boolean;
   isAuthChecking: boolean;
   isRefreshing: boolean;
@@ -474,6 +476,7 @@ const normalizeSnapshotForCompare = (snapshot: Record<string, unknown> | null) =
         subscriptions: snapshot.subscriptions || [],
         installments: snapshot.installments || [],
         dataEntries: snapshot.dataEntries || [],
+        customerInterest: snapshot.customerInterest || [],
       }
     : null;
 
@@ -784,6 +787,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [dataEntries, setDataEntries] = useState<DataEntry[]>([]);
+  const [customerInterestRows, setCustomerInterestRows] = useState<CustomerInterest[]>([]);
   const [isScopedCustomer, setIsScopedCustomer] = useState(false);
   const [scopedCustomerId, setScopedCustomerId] = useState<string | null>(null);
 
@@ -798,6 +802,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [summaryDataEntries, setSummaryDataEntries] = useState<DataEntry[]>([]);
   const summaryDataLoadedRef = useRef(false);
   const summaryDataFetchingRef = useRef(false);
+
+  const customerInterestByCustomerId = useMemo(() => {
+    return new Map(
+      customerInterestRows.map((interest) => [interest.customer_id, interest]),
+    );
+  }, [customerInterestRows]);
 
   // Lazily fetch unfiltered summary data — for admins reuses context data, for scoped users uses cache-first pattern
   const fetchSummaryData = useCallback(async () => {
@@ -887,6 +897,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setSubscriptions(snapshot.subscriptions);
     setInstallments(snapshot.installments);
     setDataEntries(snapshot.dataEntries);
+    setCustomerInterestRows(snapshot.customerInterest);
   }, []);
 
   // UPDATED: Accepts optional arguments. If provided, uses them; otherwise falls back to state.
@@ -2454,6 +2465,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             setSubscriptions(cachedData.subscriptions || []);
             setInstallments(cachedData.installments || []);
             setDataEntries(cachedData.dataEntries || []);
+            setCustomerInterestRows(cachedData.customerInterest || []);
             setSeniorityList(cachedData.seniorityList || []);
           }
 
@@ -4008,6 +4020,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         subscriptions,
         installments,
         dataEntries,
+        customerInterestByCustomerId,
         loading,
         isAuthChecking,
         isRefreshing,

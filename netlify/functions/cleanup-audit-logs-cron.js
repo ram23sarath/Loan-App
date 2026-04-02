@@ -2,7 +2,6 @@ import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const CRON_SECRET = process.env.CRON_SECRET;
 
 const json = (payload, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -11,17 +10,6 @@ const json = (payload, status = 200) =>
   });
 
 export default async (req) => {
-  if (process.env.NODE_ENV !== 'development' && !CRON_SECRET) {
-    return json({ error: 'Unauthorized' }, 401);
-  }
-
-  if (CRON_SECRET) {
-    const authHeader = req.headers.authorization || '';
-    if (authHeader !== `Bearer ${CRON_SECRET}`) {
-      return json({ error: 'Unauthorized' }, 401);
-    }
-  }
-
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
     return json({ error: 'Server configuration error' }, 500);
   }

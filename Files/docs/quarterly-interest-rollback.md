@@ -295,11 +295,9 @@ To **permanently remove**: delete the file `netlify/functions/quarterly-interest
 If the cron missed a run or you need to trigger it manually:
 
 **Option A — Via Netlify:**
-Hit the function URL directly (it's idempotent):
+Use the Netlify Functions page and click **Run now** on `quarterly-interest-cron`.
 
-```
-POST https://your-site.netlify.app/.netlify/functions/quarterly-interest-cron
-```
+Scheduled functions are not intended to be invoked directly by URL in production.
 
 **Option B — Via Supabase SQL Editor:**
 

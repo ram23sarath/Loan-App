@@ -16,17 +16,11 @@ import { NOTIFICATION_TYPES, NOTIFICATION_STATUSES } from '../../shared/notifica
  * Environment variables required:
  *   - SUPABASE_URL
  *   - SUPABASE_SERVICE_ROLE_KEY
-  *   - CRON_SECRET
-  *     - Purpose: Secret used to validate incoming cron requests. When set,
-  *       the function expects an `Authorization: Bearer <CRON_SECRET>` header
-  *       on incoming requests and will reject requests without a matching
-  *       bearer token. Provide a strong secret string (e.g. a long random
-  *       token). Required in production to prevent unauthorized executions.
+ *   - SUPER_ADMIN_UID (recommended for audit attribution)
  */
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const CRON_SECRET = process.env.CRON_SECRET;
 const SUPER_ADMIN_UID = (process.env.SUPER_ADMIN_UID || '').trim();
 
 const UUID_REGEX =
@@ -98,32 +92,6 @@ function getFYQuarter(date) {
 
 export default async (req) => {
   console.log('🕐 Quarterly Interest Cron triggered at', new Date().toISOString());
-
-  // Authenticate cron request using secret header.
-  // Require a CRON_SECRET in non-development environments so the function fails fast.
-  if (process.env.NODE_ENV !== 'development' && !CRON_SECRET) {
-    console.error('❌ Unauthorized: Missing CRON_SECRET in non-development environment');
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  // If a secret is provided, validate the Authorization header.
-  // In development, missing CRON_SECRET is allowed (warn and continue).
-  if (CRON_SECRET) {
-    const authHeader = req.headers.authorization || '';
-    const expectedAuth = `Bearer ${CRON_SECRET}`;
-    if (authHeader !== expectedAuth) {
-      console.error('❌ Unauthorized: Invalid or missing CRON_SECRET');
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-  } else {
-    console.warn('⚠️ CRON_SECRET not set; running in development mode, skipping auth check');
-  }
 
   if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
     console.error('❌ Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');

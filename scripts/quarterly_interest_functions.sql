@@ -35,15 +35,17 @@ BEGIN
         v_quarter_end   := make_date(v_year, 3, 31);
     END IF;
     
-    -- Verify customer exists
+    -- Verify customer exists and is eligible
     SELECT name INTO v_customer_name
     FROM public.customers
-    WHERE id = p_customer_id AND deleted_at IS NULL;
+    WHERE id = p_customer_id
+      AND deleted_at IS NULL
+      AND COALESCE(is_retired, false) = false;
     
     IF v_customer_name IS NULL THEN
         RETURN jsonb_build_object(
             'status', 'error',
-            'error', 'Customer not found or deleted',
+            'error', 'Customer not found, deleted, or retired',
             'customer_id', p_customer_id
         );
     END IF;
@@ -212,6 +214,7 @@ BEGIN
         SELECT id, name
         FROM public.customers
         WHERE deleted_at IS NULL
+          AND COALESCE(is_retired, false) = false
         ORDER BY name
     LOOP
         v_result := public.apply_quarterly_interest_for_customer(v_customer.id);

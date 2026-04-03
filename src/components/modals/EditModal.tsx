@@ -132,27 +132,32 @@ const EditModal: React.FC<EditModalProps> = ({
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
+    const inputValue = type === "checkbox" ? checked : value;
     if (name === "total_instalments") {
       validateLoanInstallments(value);
     }
-    setForm({ ...form, [name]: value });
+    setForm({ ...form, [name]: inputValue });
   };
 
   // For combined customer+loan form
   const handleCombinedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, dataset } = e.target;
+    const { name, value, type, checked, dataset } = e.target;
+    const inputValue = type === "checkbox" ? checked : value;
     if (dataset.section === "customer") {
-      setForm({ ...form, customer: { ...form.customer, [name]: value } });
+      setForm({
+        ...form,
+        customer: { ...form.customer, [name]: inputValue },
+      });
     } else if (dataset.section === "loan") {
       if (name === "total_instalments") {
         validateLoanInstallments(value);
       }
-      setForm({ ...form, loan: { ...form.loan, [name]: value } });
+      setForm({ ...form, loan: { ...form.loan, [name]: inputValue } });
     } else if (dataset.section === "subscription") {
       setForm({
         ...form,
-        subscription: { ...form.subscription, [name]: value },
+        subscription: { ...form.subscription, [name]: inputValue },
       });
     }
   };
@@ -267,6 +272,19 @@ const EditModal: React.FC<EditModalProps> = ({
                   maxLength={10}
                   pattern="^\d{10}$"
                 />
+              </div>
+              <div className="mt-3">
+                <label className="inline-flex items-center gap-2 text-sm font-medium dark:text-gray-200 cursor-pointer">
+                  <input
+                    name="is_retired"
+                    data-section="customer"
+                    type="checkbox"
+                    checked={!!form.customer?.is_retired}
+                    onChange={handleCombinedChange}
+                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span>Retired (exclude from quarterly interest)</span>
+                </label>
               </div>
             </div>
             {/* Loan Section */}
@@ -502,6 +520,18 @@ const EditModal: React.FC<EditModalProps> = ({
                 maxLength={10}
                 pattern="^\d{10}$"
               />
+            </div>
+            <div>
+              <label className="inline-flex items-center gap-2 text-sm font-medium dark:text-gray-200 cursor-pointer">
+                <input
+                  name="is_retired"
+                  type="checkbox"
+                  checked={!!form.is_retired}
+                  onChange={handleChange}
+                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>Retired (exclude from quarterly interest)</span>
+              </label>
             </div>
             <div className="mt-4 flex justify-end gap-2">
               <button

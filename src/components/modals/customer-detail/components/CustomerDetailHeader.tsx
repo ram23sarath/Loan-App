@@ -46,6 +46,7 @@ const CustomerDetailHeader: React.FC<CustomerDetailHeaderProps> = ({
 
     return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
   }, [customer.name]);
+  const isRetired = Boolean(customer.is_retired);
 
   return (
     <GlassCard
@@ -89,9 +90,19 @@ const CustomerDetailHeader: React.FC<CustomerDetailHeaderProps> = ({
               )}
             </motion.div>
             <div className="min-w-0 flex-1">
-              <h2 className={`${panelMode ? "text-2xl sm:text-3xl" : "text-lg sm:text-2xl md:text-3xl"} font-bold dark:text-dark-text truncate`}>
-                {customer.name}
-              </h2>
+              <div className={`${panelMode ? "flex flex-col items-center gap-2" : "flex items-center gap-2 flex-wrap"}`}>
+                <h2 className={`${panelMode ? "text-2xl sm:text-3xl" : "text-lg sm:text-2xl md:text-3xl"} font-bold dark:text-dark-text truncate`}>
+                  {customer.name}
+                </h2>
+                {isRetired && (
+                  <span
+                    className={`inline-flex items-center rounded-full border border-amber-300/80 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-200 whitespace-nowrap ${panelMode ? "sm:text-xs" : ""}`}
+                    title="Retired customer"
+                  >
+                    Retired
+                  </span>
+                )}
+              </div>
               <p
                 className={`${panelMode ? "text-sm" : "text-xs sm:text-sm md:text-base"} text-gray-500 dark:text-dark-muted ${panelMode ? "mb-0" : "mb-4"}`}
               >

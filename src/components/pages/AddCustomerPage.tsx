@@ -11,6 +11,7 @@ import PageWrapper from "../ui/PageWrapper";
 type FormInputs = {
   name: string;
   phone: string;
+  is_retired: boolean;
 };
 
 const AddCustomerPage = () => {
@@ -21,7 +22,11 @@ const AddCustomerPage = () => {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormInputs>();
+  } = useForm<FormInputs>({
+    defaultValues: {
+      is_retired: false,
+    },
+  });
 
   const [toast, setToast] = useState<{ show: boolean; message: string }>({
     show: false,
@@ -133,6 +138,28 @@ const AddCustomerPage = () => {
                   {errors.phone.message}
                 </p>
               )}
+            </div>
+            <div className="rounded-lg border border-gray-200 dark:border-dark-border bg-gray-50/70 dark:bg-dark-bg/60 px-3 py-3">
+              <label
+                htmlFor="is_retired"
+                className="flex items-start gap-3 cursor-pointer"
+              >
+                <input
+                  id="is_retired"
+                  type="checkbox"
+                  {...register("is_retired")}
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  disabled={isSubmitting}
+                />
+                <div>
+                  <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-dark-text">
+                    Mark as Retired
+                  </p>
+                  <p className="text-[11px] sm:text-xs text-gray-500 dark:text-dark-muted">
+                    Retired customers are excluded from quarterly interest.
+                  </p>
+                </div>
+              </label>
             </div>
             <motion.button
               whileHover={{ scale: 1.05 }}

@@ -37,6 +37,19 @@ const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+const CustomerRetiredBadge = ({ customer }: { customer: Customer }) => {
+  if (!customer.is_retired) return null;
+
+  return (
+    <span
+      className="inline-flex items-center rounded-full border border-amber-300/80 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-200 whitespace-nowrap"
+      title="Retired customer"
+    >
+      Retired
+    </span>
+  );
+};
+
 const CustomerListPage = () => {
   const navigate = useNavigate();
   const signalRouteReady = useRouteReady();
@@ -76,6 +89,7 @@ const CustomerListPage = () => {
   const debouncedSearchTerm = useDeferredSearch(searchTerm);
   const [sortOption, setSortOption] = useState("name-asc");
   const FILTER_OPTIONS = ["DOP", "ADFO", "SFO", "Rtd", "FM"];
+  const RETIRED_FILTER = "Rtd";
   const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null,
@@ -194,12 +208,16 @@ const CustomerListPage = () => {
 
   const categorizedCustomers = useMemo(() => {
     let processedCustomers = [...customers];
-    // Apply name-based filters when selected
+    // Apply selected filters; retired uses explicit flag and others use name match.
     if (selectedFilters.length > 0) {
-      const lowered = selectedFilters.map((s) => s.toLowerCase());
       processedCustomers = processedCustomers.filter((c) => {
         const name = (c.name || "").toLowerCase();
-        return lowered.some((f) => name.includes(f));
+        return selectedFilters.some((filterValue) => {
+          if (filterValue === RETIRED_FILTER) {
+            return Boolean(c.is_retired);
+          }
+          return name.includes(filterValue.toLowerCase());
+        });
       });
       // When filters are active, always sort by name ascending
       processedCustomers.sort((a, b) => a.name.localeCompare(b.name));
@@ -275,13 +293,17 @@ const CustomerListPage = () => {
   const filterCounts = useMemo(() => {
     const map: Record<string, number> = {};
     FILTER_OPTIONS.forEach((opt) => {
+      if (opt === RETIRED_FILTER) {
+        map[opt] = customers.filter((c) => Boolean(c.is_retired)).length;
+        return;
+      }
       const lc = opt.toLowerCase();
       map[opt] = customers.filter((c) =>
         (c.name || "").toLowerCase().includes(lc),
       ).length;
     });
     return map;
-  }, [customers]);
+  }, [customers, RETIRED_FILTER]);
 
   // Auto-expand certain panels when a filter is applied and matches exist
   React.useEffect(() => {
@@ -807,13 +829,16 @@ const CustomerListPage = () => {
                                           {rowNumber}
                                         </td>
                                         <td className="px-4 py-2 font-bold dark:border-dark-border">
-                                          <button
-                                            className="text-indigo-700 dark:text-indigo-400 hover:underline text-left"
-                                            onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); }}
-                                            onTouchStart={(e) => e.stopPropagation()}
-                                          >
-                                            {customer.name}
-                                          </button>
+                                          <div className="flex items-center gap-2 min-w-0">
+                                            <button
+                                              className="text-indigo-700 dark:text-indigo-400 hover:underline text-left"
+                                              onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); }}
+                                              onTouchStart={(e) => e.stopPropagation()}
+                                            >
+                                              {customer.name}
+                                            </button>
+                                            <CustomerRetiredBadge customer={customer} />
+                                          </div>
                                         </td>
                                         <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">
                                           {customer.phone}
@@ -924,7 +949,7 @@ const CustomerListPage = () => {
                                       transition={{ duration: 0.1 }}
                                       // Swipe actions removed as requested
                                     >
-                                      <div className="flex items-center gap-1">
+                                      <div className="flex items-center gap-1 flex-wrap">
                                         <span className="text-xs text-gray-400 dark:text-dark-muted">
                                           Sr.No {rowNumber}
                                         </span>
@@ -935,6 +960,7 @@ const CustomerListPage = () => {
                                         >
                                           {customer.name}
                                         </button>
+                                        <CustomerRetiredBadge customer={customer} />
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
                                         Phone:{" "}
@@ -1132,13 +1158,16 @@ const CustomerListPage = () => {
                                           {rowNumber}
                                         </td>
                                         <td className="px-4 py-2 font-bold dark:border-dark-border">
-                                          <button
-                                            className="text-indigo-700 dark:text-indigo-400 hover:underline text-left"
-                                            onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); }}
-                                            onTouchStart={(e) => e.stopPropagation()}
-                                          >
-                                            {customer.name}
-                                          </button>
+                                          <div className="flex items-center gap-2 min-w-0">
+                                            <button
+                                              className="text-indigo-700 dark:text-indigo-400 hover:underline text-left"
+                                              onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); }}
+                                              onTouchStart={(e) => e.stopPropagation()}
+                                            >
+                                              {customer.name}
+                                            </button>
+                                            <CustomerRetiredBadge customer={customer} />
+                                          </div>
                                         </td>
                                         <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">
                                           {customer.phone}
@@ -1240,7 +1269,7 @@ const CustomerListPage = () => {
                                       }}
                                       // Swipe actions removed as requested
                                     >
-                                      <div className="flex items-center gap-1">
+                                      <div className="flex items-center gap-1 flex-wrap">
                                         <span className="text-xs text-gray-400 dark:text-dark-muted">
                                           Sr.No {rowNumber}
                                         </span>
@@ -1251,6 +1280,7 @@ const CustomerListPage = () => {
                                         >
                                           {customer.name}
                                         </button>
+                                        <CustomerRetiredBadge customer={customer} />
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
                                         Phone:{" "}
@@ -1443,13 +1473,16 @@ const CustomerListPage = () => {
                                           {rowNumber}
                                         </td>
                                         <td className="px-4 py-2 font-bold dark:border-dark-border">
-                                          <button
-                                            className="text-indigo-700 dark:text-indigo-400 hover:underline text-left"
-                                            onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); }}
-                                            onTouchStart={(e) => e.stopPropagation()}
-                                          >
-                                            {customer.name}
-                                          </button>
+                                          <div className="flex items-center gap-2 min-w-0">
+                                            <button
+                                              className="text-indigo-700 dark:text-indigo-400 hover:underline text-left"
+                                              onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); }}
+                                              onTouchStart={(e) => e.stopPropagation()}
+                                            >
+                                              {customer.name}
+                                            </button>
+                                            <CustomerRetiredBadge customer={customer} />
+                                          </div>
                                         </td>
                                         <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">
                                           {customer.phone}
@@ -1550,7 +1583,7 @@ const CustomerListPage = () => {
                                       }}
                                       // Swipe actions removed as requested
                                     >
-                                      <div className="flex items-center gap-1">
+                                      <div className="flex items-center gap-1 flex-wrap">
                                         <span className="text-xs text-gray-400 dark:text-dark-muted">
                                           Sr.No {rowNumber}
                                         </span>
@@ -1561,6 +1594,7 @@ const CustomerListPage = () => {
                                         >
                                           {customer.name}
                                         </button>
+                                        <CustomerRetiredBadge customer={customer} />
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
                                         Phone:{" "}
@@ -1740,15 +1774,18 @@ const CustomerListPage = () => {
                                             {rowNumber}
                                           </td>
                                           <td className="px-4 py-2 font-bold dark:border-dark-border">
-                                            <button
-                                              className="text-indigo-700 dark:text-indigo-400 hover:underline text-left"
-                                              onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); }}
-                                              onTouchStart={(e) =>
-                                                e.stopPropagation()
-                                              }
-                                            >
-                                              {customer.name}
-                                            </button>
+                                            <div className="flex items-center gap-2 min-w-0">
+                                              <button
+                                                className="text-indigo-700 dark:text-indigo-400 hover:underline text-left"
+                                                onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); }}
+                                                onTouchStart={(e) =>
+                                                  e.stopPropagation()
+                                                }
+                                              >
+                                                {customer.name}
+                                              </button>
+                                              <CustomerRetiredBadge customer={customer} />
+                                            </div>
                                           </td>
                                           <td className="px-4 py-2 text-gray-500 dark:text-dark-muted dark:border-dark-border">
                                             {customer.phone}
@@ -1826,7 +1863,7 @@ const CustomerListPage = () => {
                                         }}
                                         // Swipe actions removed as requested
                                       >
-                                        <div className="flex items-center gap-1">
+                                        <div className="flex items-center gap-1 flex-wrap">
                                           <span className="text-xs text-gray-400 dark:text-dark-muted">
                                             Sr.No {rowNumber}
                                           </span>
@@ -1840,6 +1877,7 @@ const CustomerListPage = () => {
                                           >
                                             {customer.name}
                                           </Link>
+                                          <CustomerRetiredBadge customer={customer} />
                                         </div>
                                         <div className="text-xs text-gray-500 mt-1 dark:text-dark-muted">
                                           Phone:{" "}
@@ -1947,6 +1985,7 @@ const CustomerListPage = () => {
                   await updateCustomer(updated.id, {
                     name: updated.name,
                     phone: updated.phone,
+                    is_retired: !!updated.is_retired,
                   });
                 } else if (editModal.type === "loan") {
                   await updateLoan(updated.id, {
@@ -1966,6 +2005,7 @@ const CustomerListPage = () => {
                   await updateCustomer(updated.customer.id, {
                     name: updated.customer.name,
                     phone: updated.customer.phone,
+                    is_retired: !!updated.customer.is_retired,
                   });
                   if (updated.loan && updated.loan.id) {
                     await updateLoan(updated.loan.id, {

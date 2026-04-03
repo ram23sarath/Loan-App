@@ -18,6 +18,7 @@ export type Customer = {
   user_id: string;
   name: string;
   phone: string;
+  is_retired?: boolean | null;
   station_name?: string | null;
   created_at: string;
   deleted_at?: string | null;
@@ -97,6 +98,7 @@ export type Database = {
           user_id: string
           name: string
           phone: string
+          is_retired?: boolean | null
           station_name?: string | null
           created_at: string
           deleted_at?: string | null
@@ -106,11 +108,13 @@ export type Database = {
           user_id: string
           name: string
           phone: string
+          is_retired?: boolean | null
           station_name?: string | null
         }
         Update: {
           name?: string
           phone?: string
+          is_retired?: boolean | null
           station_name?: string | null
           deleted_at?: string | null
           deleted_by?: string | null

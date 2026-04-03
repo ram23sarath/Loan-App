@@ -2829,6 +2829,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         customer_name: customerData.name,
         name: customerData.name,
         phone: customerData.phone,
+        is_retired: customerData.is_retired ?? false,
         ...buildAuditChangeMetadata(null, (data as AuditSnapshot) ?? null),
       });
 

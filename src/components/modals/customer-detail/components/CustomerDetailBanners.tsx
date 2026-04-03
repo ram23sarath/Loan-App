@@ -20,7 +20,7 @@ const CustomerDetailBanners: React.FC<CustomerDetailBannersProps> = ({
 }) => {
   const ERROR_BANNER_PROPS = {
     containerClass:
-      "max-w-sm p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg shadow-lg",
+      "w-full md:w-auto md:max-w-sm p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg shadow-lg",
     iconClass: "flex-shrink-0 text-red-600 dark:text-red-400",
     titleClass: "text-sm font-medium text-red-800 dark:text-red-200",
     messageClass: "text-sm text-red-700 dark:text-red-300 mt-1",
@@ -51,7 +51,7 @@ const CustomerDetailBanners: React.FC<CustomerDetailBannersProps> = ({
       message: exportSuccess,
       title: "Export successful",
       containerClass:
-        "max-w-sm p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg shadow-lg",
+        "w-full md:w-auto md:max-w-sm p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg shadow-lg",
       iconClass: "flex-shrink-0 text-green-600 dark:text-green-400",
       titleClass: "text-sm font-medium text-green-800 dark:text-green-200",
       messageClass: "text-sm text-green-700 dark:text-green-300 mt-1",
@@ -65,7 +65,7 @@ const CustomerDetailBanners: React.FC<CustomerDetailBannersProps> = ({
   ] as const;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 items-end">
+    <div className="fixed left-3 right-3 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-50 flex flex-col gap-2 items-stretch md:left-auto md:right-4 md:bottom-4 md:items-end">
       <AnimatePresence>
         {bannerItems
           .filter((banner) => !!banner.message)

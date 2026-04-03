@@ -3,38 +3,24 @@ import { motion } from "framer-motion";
 import GlassCard from "../../../ui/GlassCard";
 
 interface CustomerDetailMobileActionsProps {
-  isExporting: boolean;
-  onExport: () => void;
   onRecordLoan: () => void;
   onRecordSubscription: () => void;
   onRecordDataEntry: () => void;
 }
 
 const CustomerDetailMobileActions: React.FC<CustomerDetailMobileActionsProps> = ({
-  isExporting,
-  onExport,
   onRecordLoan,
   onRecordSubscription,
   onRecordDataEntry,
 }) => {
   return (
-    <div className="md:hidden sticky bottom-0 z-30 mt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+    <div className="md:hidden sticky bottom-0 z-30 mt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       <p id="mobile-touch-guidance" className="sr-only">
         Mobile actions use minimum 48 by 48 pixel touch targets per Material
         Design and WCAG 2.5.5 Target Size guidance.
       </p>
       <GlassCard className="!p-2 dark:bg-dark-card dark:border-dark-border" disable3D>
-        <div className="grid grid-cols-4 gap-2">
-          <motion.button
-            onClick={onExport}
-            disabled={isExporting}
-            aria-label="Export customer details"
-            aria-describedby="mobile-touch-guidance"
-            className="min-h-12 rounded-lg bg-slate-100 dark:bg-slate-700 text-[11px] font-semibold text-slate-700 dark:text-dark-text disabled:opacity-60"
-            whileTap={{ scale: 0.98 }}
-          >
-            {isExporting ? "Exporting" : "Export"}
-          </motion.button>
+        <div className="grid grid-cols-3 gap-2">
           <motion.button
             onClick={onRecordLoan}
             aria-label="Record loan"

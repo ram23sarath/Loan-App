@@ -216,7 +216,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const [expandedLoanId, setExpandedLoanId] = useState<string | null>(null);
   const [mobileActiveSection, setMobileActiveSection] =
-    useState<CustomerDetailSection>(null);
+    useState<CustomerDetailSection>("loans");
   const [customerAvatarPath, setCustomerAvatarPath] = useState<string | null>(null);
   const [customerAvatarUpdatedAt, setCustomerAvatarUpdatedAt] =
     useState<string | null>(null);
@@ -436,7 +436,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
         <div
           className="relative z-10 mt-2 sm:mt-4 flex-1 min-h-0 px-2 sm:px-0 overflow-y-auto lg:overflow-hidden"
-          style={{ paddingBottom: "calc(3rem + env(safe-area-inset-bottom))" }}
+          style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" }}
         >
           <div className="min-h-0 lg:h-full flex flex-col lg:flex-row gap-3 sm:gap-4 lg:gap-6 lg:overflow-hidden">
             <aside className="w-full lg:w-[24rem] xl:w-[28rem] lg:shrink-0 lg:min-h-0 lg:h-full">
@@ -496,7 +496,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               <motion.div
                 ref={loansSectionRef}
                 id="customer-section-loans"
-                className={`${mobileActiveSection === "loans" ? "block" : "hidden"} lg:block mb-3 sm:mb-6`}
+                className={`${mobileActiveSection === "loans" ? "block" : "hidden"} lg:block mb-3 sm:mb-6 scroll-mt-24`}
                 variants={panelChildVariants}
               >
                 {/* Loans Section */}
@@ -586,16 +586,21 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                       const { amountPaid, totalRepayable, balance, isPaidOff } =
                         calculateLoanMetrics(loan, installmentsByLoanId);
                       const isExpanded = expandedLoanId === loan.id;
+                      const loanInstallmentsId = `loan-installments-${loan.id}`;
 
                       return (
                         <React.Fragment key={loan.id}>
                           <tr className="even:bg-gray-50/50 hover:bg-indigo-50/50 transition-colors dark:even:bg-slate-700/50 dark:hover:bg-indigo-900/30">
                             <td className="px-4 py-2 border-b dark:border-dark-border font-medium text-sm text-gray-700 dark:text-dark-text">
                               <button
+                                type="button"
                                 onClick={() =>
                                   setExpandedLoanId(isExpanded ? null : loan.id)
                                 }
-                                className="flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                aria-expanded={isExpanded}
+                                aria-controls={loanInstallmentsId}
+                                aria-label={`${isExpanded ? "Collapse" : "Expand"} installments for loan #${idx + 1}`}
+                                className="inline-flex min-h-10 min-w-10 items-center gap-1 rounded-md px-2 py-1 hover:text-indigo-600 dark:hover:text-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70"
                               >
                                 <span>{isExpanded ? "▼" : "▶"}</span>
                                 <span>{idx + 1}</span>
@@ -653,6 +658,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                           <AnimatePresence>
                             {isExpanded && loanInstallments.length > 0 && (
                               <motion.tr
+                                id={loanInstallmentsId}
                                 initial="hidden"
                                 animate="visible"
                                 exit="hidden"
@@ -763,6 +769,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                     const { amountPaid, totalRepayable, balance, isPaidOff } =
                       calculateLoanMetrics(loan, installmentsByLoanId);
                     const isExpanded = expandedLoanId === loan.id;
+                    const loanInstallmentsId = `loan-installments-${loan.id}`;
 
                     return (
                       <div
@@ -771,10 +778,14 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                       >
                         <div className="flex justify-between items-start mb-2">
                           <button
+                            type="button"
                             onClick={() =>
                               setExpandedLoanId(isExpanded ? null : loan.id)
                             }
-                            className="text-xs text-gray-500 dark:text-dark-muted flex items-center gap-1"
+                            aria-expanded={isExpanded}
+                            aria-controls={loanInstallmentsId}
+                            aria-label={`${isExpanded ? "Collapse" : "Expand"} installments for loan #${idx + 1}`}
+                            className="inline-flex min-h-10 min-w-10 items-center gap-1 rounded-md px-2 py-1 text-xs text-gray-500 dark:text-dark-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/70"
                           >
                             <span>{isExpanded ? "▼" : "▶"}</span>
                             <span>#{idx + 1}</span>
@@ -857,6 +868,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                         <AnimatePresence>
                           {isExpanded && loanInstallments.length > 0 && (
                             <motion.div
+                              id={loanInstallmentsId}
                               className="mt-3 pt-3 border-t dark:border-dark-border space-y-2"
                               initial="hidden"
                               animate="visible"
@@ -1460,8 +1472,6 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
         </AnimatePresence>
 
         <CustomerDetailMobileActions
-          isExporting={isExporting}
-          onExport={handleIndividualExport}
           onRecordLoan={() => setShowRecordLoan(true)}
           onRecordSubscription={() => setShowRecordSubscription(true)}
           onRecordDataEntry={() => setShowRecordDataEntry(true)}

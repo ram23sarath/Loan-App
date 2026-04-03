@@ -74,12 +74,21 @@ const SummaryPage = () => {
   }, [fetchSummaryData]);
 
   // Interest deduction for all customers (Global Quarterly Interest)
+  const retiredCustomerIds = useMemo(() => {
+    return new Set(
+      contextCustomers.filter((customer) => customer.is_retired).map((customer) => customer.id),
+    );
+  }, [contextCustomers]);
+
   const interestDeduction = useMemo(() => {
     return Array.from(customerInterestByCustomerId.values()).reduce(
-      (sum, row) => sum + (row.total_interest_charged || 0),
+      (sum, row) =>
+        retiredCustomerIds.has(row.customer_id)
+          ? sum
+          : sum + (row.total_interest_charged || 0),
       0,
     );
-  }, [customerInterestByCustomerId]);
+  }, [customerInterestByCustomerId, retiredCustomerIds]);
 
   // Lookup map for O(1) installment access by loan_id
   const localInstallmentsByLoanId = useMemo(() => {

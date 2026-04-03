@@ -216,11 +216,13 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   const [expandedNoteId, setExpandedNoteId] = useState<string | null>(null);
   const [expandedLoanId, setExpandedLoanId] = useState<string | null>(null);
   const [mobileActiveSection, setMobileActiveSection] =
-    useState<CustomerDetailSection>("loans");
+    useState<CustomerDetailSection>(null);
   const [customerAvatarPath, setCustomerAvatarPath] = useState<string | null>(null);
   const [customerAvatarUpdatedAt, setCustomerAvatarUpdatedAt] =
     useState<string | null>(null);
   const noteRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const mainScrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const mobileSectionsScrollRef = useRef<HTMLDivElement | null>(null);
   const loansSectionRef = useRef<HTMLDivElement | null>(null);
   const subscriptionsSectionRef = useRef<HTMLDivElement | null>(null);
   const entriesSectionRef = useRef<HTMLDivElement | null>(null);
@@ -382,11 +384,19 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   }, [customerAvatarPath, customerAvatarUpdatedAt]);
 
   const navigateToSection = (section: CustomerDetailSection) => {
-    setMobileActiveSection(section);
+    setMobileActiveSection((currentSection) =>
+      currentSection === section ? null : section,
+    );
   };
 
   // Scroll to section after React commits the state and DOM update
   useEffect(() => {
+    if (mobileActiveSection === null) {
+      mainScrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      mobileSectionsScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
     let refToScroll: HTMLDivElement | null = null;
 
     if (mobileActiveSection === "loans") {
@@ -435,8 +445,9 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
         />
 
         <div
+          ref={mainScrollContainerRef}
           className="relative z-10 mt-2 sm:mt-4 flex-1 min-h-0 px-2 sm:px-0 overflow-y-auto lg:overflow-hidden"
-          style={{ paddingBottom: "calc(5rem + env(safe-area-inset-bottom))" }}
+          style={{ paddingBottom: "calc(7rem + env(safe-area-inset-bottom))" }}
         >
           <div className="min-h-0 lg:h-full flex flex-col lg:flex-row gap-3 sm:gap-4 lg:gap-6 lg:overflow-hidden">
             <aside className="w-full lg:w-[24rem] xl:w-[28rem] lg:shrink-0 lg:min-h-0 lg:h-full">
@@ -462,6 +473,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
             </aside>
 
             <motion.section
+              ref={mobileSectionsScrollRef}
               className="flex-1 min-h-0 h-full pb-6 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-slate-600 dark:scrollbar-track-slate-800"
               variants={panelRevealVariants}
               initial="hidden"
@@ -496,7 +508,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               <motion.div
                 ref={loansSectionRef}
                 id="customer-section-loans"
-                className={`${mobileActiveSection === "loans" ? "block" : "hidden"} lg:block mb-3 sm:mb-6 scroll-mt-24`}
+                className={`${mobileActiveSection === null || mobileActiveSection === "loans" ? "block" : "hidden"} lg:block mb-3 sm:mb-6 scroll-mt-24`}
                 variants={panelChildVariants}
               >
                 {/* Loans Section */}
@@ -997,7 +1009,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               <motion.div
                 ref={subscriptionsSectionRef}
                 id="customer-section-subscriptions"
-                className={`${mobileActiveSection === "subscriptions" ? "block" : "hidden"} lg:block mb-3 sm:mb-6`}
+                className={`${mobileActiveSection === null || mobileActiveSection === "subscriptions" ? "block" : "hidden"} lg:block mb-3 sm:mb-6 scroll-mt-24`}
                 variants={panelChildVariants}
               >
           {/* Subscriptions Section */}
@@ -1200,7 +1212,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               <motion.div
                 ref={entriesSectionRef}
                 id="customer-section-entries"
-                className={`${mobileActiveSection === "entries" ? "block" : "hidden"} lg:block`}
+                className={`${mobileActiveSection === null || mobileActiveSection === "entries" ? "block" : "hidden"} lg:block scroll-mt-24`}
                 variants={panelChildVariants}
               >
           {/* Data Entries Section */}

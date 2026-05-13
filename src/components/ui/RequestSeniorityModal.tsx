@@ -103,6 +103,8 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
       // Check for specific duplicate error from addToSeniority
       if (err.message === "This customer is already in the loan seniority list.") {
         showAlert("Duplicate Entry", err.message, "info");
+      } else if (err?.message?.includes("at least 80% repayment")) {
+        showAlert("Eligibility Blocked", err.message, "info");
       } else {
         showAlert("Error", err?.message || 'Failed to create request', 'error');
       }

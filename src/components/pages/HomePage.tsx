@@ -375,7 +375,7 @@ const HomePage: React.FC = () => {
                     ? 'No existing loans. You are eligible to request your first loan.'
                     : meetsRepaymentThreshold
                       ? `Eligibility met: ${progressPercent}% of loan repayment completed.`
-                      : `Eligibility blocked until 80% repayment is completed. Current progress: ${progressPercent}%.`}
+                      : requestDisabledReason || `Eligibility blocked until 80% repayment is completed. Current progress: ${progressPercent}%.`}
               </p>
             </GlassCard>
           </motion.div>

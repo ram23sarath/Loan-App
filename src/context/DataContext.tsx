@@ -28,7 +28,7 @@ import type {
   NewDataEntry,
 } from "../types";
 import { checkAndNotifyOverdueInstallments } from "../utils/notificationHelpers";
-import { getLoanStatus } from "../utils/loanStatus";
+import { canRequestNewLoan, getLoanStatus } from "../utils/loanStatus";
 import { NOTIFICATION_TYPES, NOTIFICATION_STATUSES } from "../../shared/notificationSchema.js";
 
 // ============================================================================
@@ -1183,6 +1183,47 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         throw new Error("This customer is already in the loan seniority list.");
       }
 
+      // Enforce repayment threshold with fresh DB data to prevent stale-client bypasses.
+      const { data: loanRows, error: loansError } = await supabase
+        .from("loans")
+        .select("*, customers(name, phone)")
+        .eq("customer_id", customerId)
+        .is("deleted_at", null);
+      if (loansError) throw loansError;
+
+      const customerLoans = (loanRows as LoanWithCustomer[]) || [];
+      const loanIds = customerLoans.map((loan) => loan.id);
+      let customerInstallments: Installment[] = [];
+      if (loanIds.length > 0) {
+        const { data: installmentRows, error: installmentsError } = await supabase
+          .from("installments")
+          .select("*")
+          .in("loan_id", loanIds)
+          .is("deleted_at", null);
+        if (installmentsError) throw installmentsError;
+        customerInstallments = (installmentRows as Installment[]) || [];
+      }
+
+      const installmentsByLoanId = new Map<string, Installment[]>();
+      for (const installment of customerInstallments) {
+        const existingInstallments =
+          installmentsByLoanId.get(installment.loan_id) || [];
+        existingInstallments.push(installment);
+        installmentsByLoanId.set(installment.loan_id, existingInstallments);
+      }
+
+      const eligibility = canRequestNewLoan(
+        customerLoans,
+        installmentsByLoanId,
+        false,
+      );
+      if (!eligibility.eligible) {
+        throw new Error(
+          eligibility.reason ||
+          "You need at least 80% repayment before requesting seniority.",
+        );
+      }
+
       const payload: any = {
         user_id: session.user.id,
         customer_id: customerId,
@@ -1226,9 +1267,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
       await fetchSeniorityList();
     } catch (err: any) {
-      // Pass through the specific error message if it's our duplicate check
+      // Pass through business-rule messages as-is for clear UI feedback.
       if (
-        err.message === "This customer is already in the loan seniority list."
+        err.message === "This customer is already in the loan seniority list." ||
+        (typeof err?.message === "string" &&
+          err.message.includes("at least 80% repayment"))
       ) {
         throw err;
       }

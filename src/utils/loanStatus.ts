@@ -124,7 +124,7 @@ export type LoanEligibilityResult = {
  * Rules:
  *  – While data is still loading → ineligible (prevents race-condition flash).
  *  – No existing loans → eligible (first-time borrower).
- *  – At least one loan with ≥ 80 % repaid → eligible (uses max-across-loans).
+ *  – All existing loans must each have ≥ 80 % repaid.
  *  – Otherwise → ineligible.
  */
 export const canRequestNewLoan = (
@@ -140,21 +140,21 @@ export const canRequestNewLoan = (
     return { eligible: true, progressPercent: 0, reason: "First-time borrower — no existing loans." };
   }
 
-  let maxProgress = 0;
+  let minProgress = 100;
   for (const loan of customerLoans) {
     const installments = installmentsByLoanId.get(loan.id) || [];
     const progress = getLoanRepaymentProgress(loan, installments);
-    if (progress > maxProgress) maxProgress = progress;
+    if (progress < minProgress) minProgress = progress;
   }
 
-  const progressPercent = Math.round(maxProgress);
-  const eligible = maxProgress >= ONGOING_PAYMENT_THRESHOLD;
+  const progressPercent = Math.floor(minProgress);
+  const eligible = minProgress >= ONGOING_PAYMENT_THRESHOLD;
 
   return {
     eligible,
     progressPercent,
     reason: eligible
       ? undefined
-      : `You need at least 80% repayment (current ${progressPercent}%).`,
+      : `You need at least 80% repayment on all active loans (lowest ${progressPercent}%).`,
   };
 };

@@ -195,6 +195,7 @@ const LoanSeniorityPage = () => {
     loans,
     subscriptions,
     seniorityList,
+    loading,
     fetchSeniorityList,
     addToSeniority,
     updateSeniority,
@@ -278,7 +279,7 @@ const LoanSeniorityPage = () => {
     const customerLoans = (loans || []).filter(
       (loan) => loan.customer_id === customerId,
     );
-    return canRequestNewLoan(customerLoans, installmentsByLoanId ?? new Map(), false);
+    return canRequestNewLoan(customerLoans, installmentsByLoanId ?? new Map(), loading);
   };
 
   const matchedCustomers = useMemo(() => {
@@ -312,7 +313,9 @@ const LoanSeniorityPage = () => {
         blockReason = "Already in seniority list";
       } else if (!meetsThreshold) {
         isBlocked = true;
-        blockReason = `Requires 80% repayment (current ${progressPercent}%)`;
+        blockReason =
+          eligibility.reason ||
+          `Requires 80% repayment on all active loans (lowest ${progressPercent}%)`;
       }
 
       return { customer, isBlocked, blockReason };

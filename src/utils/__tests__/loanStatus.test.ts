@@ -180,7 +180,7 @@ describe("canRequestNewLoan", () => {
     const installments = [makeInstallment("loan-1", 79_999)];
     const result = canRequestNewLoan([loan], toMap(installments), false);
     expect(result.eligible).toBe(false);
-    expect(result.progressPercent).toBe(80); // Math.round(79.999) = 80 for display
+    expect(result.progressPercent).toBe(79);
     // But the raw progress is < 80, so still ineligible
   });
 
@@ -192,7 +192,7 @@ describe("canRequestNewLoan", () => {
     expect(result.eligible).toBe(true);
   });
 
-  it("two loans: one at 90%, one at 50% => eligible (max = 90%)", () => {
+  it("two loans: one at 90%, one at 50% => ineligible (lowest = 50%)", () => {
     const loan1 = makeLoan({ id: "loan-1", original_amount: 100_000, interest_amount: 0 });
     const loan2 = makeLoan({ id: "loan-2", original_amount: 100_000, interest_amount: 0 });
     const installments = [
@@ -200,11 +200,23 @@ describe("canRequestNewLoan", () => {
       makeInstallment("loan-2", 50_000, 1), // 50%
     ];
     const result = canRequestNewLoan([loan1, loan2], toMap(installments), false);
-    expect(result.eligible).toBe(true);
-    expect(result.progressPercent).toBe(90);
+    expect(result.eligible).toBe(false);
+    expect(result.progressPercent).toBe(50);
   });
 
-  it("two loans: one at 70%, one at 60% => ineligible (max = 70%)", () => {
+  it("two loans: one at 90%, one at 80% => eligible (lowest = 80%)", () => {
+    const loan1 = makeLoan({ id: "loan-1", original_amount: 100_000, interest_amount: 0 });
+    const loan2 = makeLoan({ id: "loan-2", original_amount: 100_000, interest_amount: 0 });
+    const installments = [
+      makeInstallment("loan-1", 90_000, 1),
+      makeInstallment("loan-2", 80_000, 1),
+    ];
+    const result = canRequestNewLoan([loan1, loan2], toMap(installments), false);
+    expect(result.eligible).toBe(true);
+    expect(result.progressPercent).toBe(80);
+  });
+
+  it("two loans: one at 70%, one at 60% => ineligible (lowest = 60%)", () => {
     const loan1 = makeLoan({ id: "loan-1", original_amount: 100_000, interest_amount: 0 });
     const loan2 = makeLoan({ id: "loan-2", original_amount: 100_000, interest_amount: 0 });
     const installments = [
@@ -213,7 +225,7 @@ describe("canRequestNewLoan", () => {
     ];
     const result = canRequestNewLoan([loan1, loan2], toMap(installments), false);
     expect(result.eligible).toBe(false);
-    expect(result.progressPercent).toBe(70);
+    expect(result.progressPercent).toBe(60);
   });
 });
 

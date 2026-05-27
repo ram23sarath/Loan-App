@@ -16,7 +16,13 @@ import {
   expenseSubtypes,
 } from "../../utils/summaryCalculations";
 
-import type { Customer, Installment, Loan, Subscription } from "../../types";
+import type {
+  Customer,
+  DataEntry,
+  Installment,
+  Loan,
+  Subscription,
+} from "../../types";
 
 const getButtonCenter = (button: HTMLElement) => {
   const rect = button.getBoundingClientRect();
@@ -239,6 +245,9 @@ const SummaryPage = () => {
     .reduce((acc, e) => acc + (e.amount || 0), 0);
 
   // FY expense subtotals by subtype
+  const isExpenseType = (type: DataEntry["type"]) =>
+    type === "expense" || (type as string) === "expenditure";
+
   const fyExpenseSubtypes = [
     "Subscription Return",
     "Retirement Gift",
@@ -252,7 +261,7 @@ const SummaryPage = () => {
 
   dataEntries.forEach((e) => {
     if (
-      e.type === "expenditure" &&
+      isExpenseType(e.type) &&
       e.subtype &&
       within(e.date) &&
       fyExpenseSubtypes.includes(e.subtype)
@@ -483,7 +492,7 @@ const SummaryPage = () => {
             id: loan.id,
             date: latestInFY,
             amount: loan.original_amount || 0,
-            receipt: loan.receipt || null,
+            receipt: loan.check_number || undefined,
             customer: loan.customers?.name || "",
             notes: `Principal recovered (FY): ${formatCurrencyIN(
               principalDuringFY,
@@ -881,11 +890,11 @@ const SummaryPage = () => {
       y: 0,
       opacity: 1,
       scale: 1,
-      transition: { type: "spring", stiffness: 100, damping: 15 },
+      transition: { type: "spring" as const, stiffness: 100, damping: 15 },
     },
     hover: {
       y: -5,
-      transition: { type: "spring", stiffness: 400, damping: 10 },
+      transition: { type: "spring" as const, stiffness: 400, damping: 10 },
     },
   };
 
@@ -1009,10 +1018,7 @@ const SummaryPage = () => {
                 </div>
                 <div className="min-w-0">
                   <div className="text-base sm:text-lg font-semibold text-white/90 uppercase tracking-wide truncate">
-                    Net Total
-                  </div>
-                  <div className="text-xs sm:text-sm text-white/70 truncate">
-                    Total Collected - Expenses - Interest
+                    Net Total = Total Collected - Expenses
                   </div>
                 </div>
               </div>

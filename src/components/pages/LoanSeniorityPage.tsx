@@ -315,7 +315,7 @@ const LoanSeniorityPage = () => {
         isBlocked = true;
         blockReason =
           eligibility.reason ||
-          `Requires 80% repayment on all active loans (lowest ${progressPercent}%)`;
+          `Requires 100% repayment on all active loans (lowest ${progressPercent}%)`;
       }
 
       return { customer, isBlocked, blockReason };

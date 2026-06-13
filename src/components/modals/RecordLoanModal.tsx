@@ -43,7 +43,7 @@ const RecordLoanModal: React.FC<Props> = ({ customer, onClose, hasOngoingLoan = 
 
   const customerLoans: LoanWithCustomer[] = useMemo(() => loans.filter(l => l.customer_id === customer.id), [loans, customer.id]);
 
-  // Filter to show only ongoing loans (< 80% paid) when in installment mode
+  // Filter to show only ongoing loans (< 100% paid) when in installment mode
   const availableLoans = useMemo(() => {
     if (mode === 'installment') {
       return customerLoans.filter(l => isLoanOngoing(l, installmentsByLoanId));

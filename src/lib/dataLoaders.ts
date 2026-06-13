@@ -13,6 +13,7 @@ export type AppDataSnapshot = {
 type LoaderOptions = {
   isScoped: boolean;
   scopedCustomerId: string | null;
+  telemetry?: (metricName: string, ms: number) => void;
 };
 
 const inflightDataLoads = new Map<string, Promise<AppDataSnapshot>>();
@@ -46,19 +47,81 @@ export const resolveScopedCustomer = async (userId: string) => {
   return { isScoped: Boolean(scopedCustomerId), scopedCustomerId };
 };
 
-export const loadAppData = async ({ isScoped, scopedCustomerId }: LoaderOptions): Promise<AppDataSnapshot> => {
+export const loadAppData = async ({ isScoped, scopedCustomerId, telemetry }: LoaderOptions): Promise<AppDataSnapshot> => {
   const cacheKey = isScoped && scopedCustomerId ? `scoped:${scopedCustomerId}` : 'admin';
   const existing = inflightDataLoads.get(cacheKey);
   if (existing) return existing;
 
   const promise = (async (): Promise<AppDataSnapshot> => {
+    const perfNow = () =>
+      typeof performance !== 'undefined' && typeof performance.now === 'function'
+        ? performance.now()
+        : Date.now();
     if (isScoped && scopedCustomerId) {
+      // Kick off the requests concurrently but wrap each promise to capture timing when it resolves.
+      const customerPromise = (async (): Promise<any> => {
+        const start = perfNow();
+        const res = await supabase
+          .from('customers')
+          .select('*')
+          .eq('id', scopedCustomerId)
+          .is('deleted_at', null)
+          .limit(1);
+        telemetry?.('customers', perfNow() - start);
+        return res;
+      })();
+
+      const loansPromise = (async (): Promise<any> => {
+        const start = perfNow();
+        const res = await supabase
+          .from('loans')
+          .select('*, customers(name, phone)')
+          .eq('customer_id', scopedCustomerId)
+          .is('deleted_at', null);
+        telemetry?.('loans', perfNow() - start);
+        return res;
+      })();
+
+      const subsPromise = (async (): Promise<any> => {
+        const start = perfNow();
+        const res = await supabase
+          .from('subscriptions')
+          .select('*, customers(name, phone)')
+          .eq('customer_id', scopedCustomerId)
+          .is('deleted_at', null)
+          .order('date', { ascending: true });
+        telemetry?.('subscriptions', perfNow() - start);
+        return res;
+      })();
+
+      const dataEntriesPromise = (async (): Promise<any> => {
+        const start = perfNow();
+        const res = await supabase
+          .from('data_entries')
+          .select('*')
+          .eq('customer_id', scopedCustomerId)
+          .is('deleted_at', null);
+        telemetry?.('data_entries', perfNow() - start);
+        return res;
+      })();
+
+      const customerInterestPromise = (async (): Promise<any> => {
+        const start = perfNow();
+        const res = await supabase
+          .from('customer_interest')
+          .select('*')
+          .eq('customer_id', scopedCustomerId)
+          .limit(1);
+        telemetry?.('customer_interest', perfNow() - start);
+        return res;
+      })();
+
       const [customerRes, loansRes, subsRes, dataEntriesRes, customerInterestRes] = await Promise.all([
-        supabase.from('customers').select('*').eq('id', scopedCustomerId).is('deleted_at', null).limit(1),
-        supabase.from('loans').select('*, customers(name, phone)').eq('customer_id', scopedCustomerId).is('deleted_at', null),
-        supabase.from('subscriptions').select('*, customers(name, phone)').eq('customer_id', scopedCustomerId).is('deleted_at', null).order('date', { ascending: true }),
-        supabase.from('data_entries').select('*').eq('customer_id', scopedCustomerId).is('deleted_at', null),
-        supabase.from('customer_interest').select('*').eq('customer_id', scopedCustomerId).limit(1),
+        customerPromise,
+        loansPromise,
+        subsPromise,
+        dataEntriesPromise,
+        customerInterestPromise,
       ]);
       if (customerRes.error) throw customerRes.error;
       if (loansRes.error) throw loansRes.error;
@@ -93,14 +156,53 @@ export const loadAppData = async ({ isScoped, scopedCustomerId }: LoaderOptions)
         'customer_interest',
       );
 
-    const [customers, loans, subscriptions, installments, dataEntries, customerInterest] = await Promise.all([
-      fetchAllRecords<Customer>(() => supabase.from('customers').select('*').is('deleted_at', null).order('created_at', { ascending: false }), 'customers'),
-      fetchAllRecords<LoanWithCustomer>(() => supabase.from('loans').select('*, customers(name, phone)').is('deleted_at', null).order('created_at', { ascending: false }), 'loans'),
-      fetchAllRecords<SubscriptionWithCustomer>(() => supabase.from('subscriptions').select('*, customers(name, phone)').is('deleted_at', null).order('created_at', { ascending: false }), 'subscriptions'),
-      fetchAllRecords<Installment>(() => supabase.from('installments').select('*').is('deleted_at', null).order('created_at', { ascending: false }), 'installments'),
-      fetchAllRecords<DataEntry>(() => supabase.from('data_entries').select('*').is('deleted_at', null).order('date', { ascending: false }), 'data_entries'),
-      fetchCustomerInterestRows(),
-    ]);
+      const customers = await ((): Promise<Customer[]> => {
+        const start = perfNow();
+        return fetchAllRecords<Customer>(() => supabase.from('customers').select('*').is('deleted_at', null).order('created_at', { ascending: false }), 'customers').then((res) => {
+          telemetry?.('customers', perfNow() - start);
+          return res;
+        });
+      })();
+
+      const loans = await ((): Promise<LoanWithCustomer[]> => {
+        const start = perfNow();
+        return fetchAllRecords<LoanWithCustomer>(() => supabase.from('loans').select('*, customers(name, phone)').is('deleted_at', null).order('created_at', { ascending: false }), 'loans').then((res) => {
+          telemetry?.('loans', perfNow() - start);
+          return res;
+        });
+      })();
+
+      const subscriptions = await ((): Promise<SubscriptionWithCustomer[]> => {
+        const start = perfNow();
+        return fetchAllRecords<SubscriptionWithCustomer>(() => supabase.from('subscriptions').select('*, customers(name, phone)').is('deleted_at', null).order('created_at', { ascending: false }), 'subscriptions').then((res) => {
+          telemetry?.('subscriptions', perfNow() - start);
+          return res;
+        });
+      })();
+
+      const installments = await ((): Promise<Installment[]> => {
+        const start = perfNow();
+        return fetchAllRecords<Installment>(() => supabase.from('installments').select('*').is('deleted_at', null).order('created_at', { ascending: false }), 'installments').then((res) => {
+          telemetry?.('installments', perfNow() - start);
+          return res;
+        });
+      })();
+
+      const dataEntries = await ((): Promise<DataEntry[]> => {
+        const start = perfNow();
+        return fetchAllRecords<DataEntry>(() => supabase.from('data_entries').select('*').is('deleted_at', null).order('date', { ascending: false }), 'data_entries').then((res) => {
+          telemetry?.('data_entries', perfNow() - start);
+          return res;
+        });
+      })();
+
+      const customerInterest = await ((): Promise<CustomerInterest[]> => {
+        const start = perfNow();
+        return fetchCustomerInterestRows().then((res) => {
+          telemetry?.('customer_interest', perfNow() - start);
+          return res;
+        });
+      })();
     return { customers, loans, subscriptions, installments, dataEntries, customerInterest };
   })();
 

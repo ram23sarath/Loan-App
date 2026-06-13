@@ -73,8 +73,8 @@ export const getLoanStatus = (
 
 // ─── Shared eligibility constants & helpers ──────────────────────────────────
 
-/** A loan is considered "ongoing" (not yet sufficiently repaid) when < this % is paid. */
-export const ONGOING_PAYMENT_THRESHOLD = 80;
+/** A loan is considered "ongoing" (not yet fully repaid) when < this % is paid. */
+export const ONGOING_PAYMENT_THRESHOLD = 100;
 
 /**
  * Calculate repayment percentage for a single loan using Decimal.js.
@@ -155,6 +155,6 @@ export const canRequestNewLoan = (
     progressPercent,
     reason: eligible
       ? undefined
-      : `You need at least 80% repayment on all active loans (lowest ${progressPercent}%).`,
+      : `You need at least 100% repayment on all active loans (lowest ${progressPercent}%).`,
   };
 };

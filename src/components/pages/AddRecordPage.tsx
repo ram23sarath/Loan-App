@@ -632,7 +632,7 @@ const AddRecordPage = () => {
                           } disabled:opacity-50 disabled:cursor-not-allowed`}
                           title={
                             hasOngoingLoan
-                              ? `Ongoing loan at ${ongoingLoanInfo?.paymentPercentage}% paid. Customer must pay >80% before recording new loan.`
+                              ? `Ongoing loan at ${ongoingLoanInfo?.paymentPercentage}% paid. Customer must pay 100% before recording new loan.`
                               : ""
                           }
                         >

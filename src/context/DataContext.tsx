@@ -1220,7 +1220,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (!eligibility.eligible) {
         throw new Error(
           eligibility.reason ||
-          "You need at least 80% repayment before requesting seniority.",
+          "You need at least 100% repayment before requesting seniority.",
         );
       }
 
@@ -1271,7 +1271,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (
         err.message === "This customer is already in the loan seniority list." ||
         (typeof err?.message === "string" &&
-          err.message.includes("at least 80% repayment"))
+          err.message.includes("at least 100% repayment"))
       ) {
         throw err;
       }
@@ -2320,6 +2320,17 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       console.log("[DataContext] Starting session initialization...");
 
+      // Lightweight startup telemetry collected for performance tuning.
+      const perfNow = () =>
+        typeof performance !== "undefined" && typeof performance.now === "function"
+          ? performance.now()
+          : Date.now();
+      const startupMetrics: Record<string, number> = {};
+      const telemetry = (name: string, ms: number) => {
+        startupMetrics[name] = (startupMetrics[name] || 0) + ms;
+      };
+      const bootStart = perfNow();
+
       // Failsafe timeout to prevent infinite loading (helps WebView issues)
       loadingTimeoutId = setTimeout(() => {
         if (isMounted) {
@@ -2415,11 +2426,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
         let sessionResult;
         try {
+          const sessionStart = perfNow();
           sessionResult = await runAuthWithRetry(
             () => supabase.auth.getSession(),
             "retrieving auth session",
             { maxRetries: 1 },
           );
+          startupMetrics.sessionFetchMs = perfNow() - sessionStart;
         } catch (sessionError: any) {
           // Handle refresh_token_not_found error
           if (
@@ -2466,7 +2479,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         if (session && session.user && session.user.id) {
           console.log("[DataContext] Stage 2: Checking user scope...");
           try {
+            const scopeStart = perfNow();
             const resolvedScope = await resolveScopedCustomer(session.user.id);
+            startupMetrics.scopeResolveMs = perfNow() - scopeStart;
             currentIsScoped = resolvedScope.isScoped;
             currentScopedId = resolvedScope.scopedCustomerId;
           } catch (err) {
@@ -2523,10 +2538,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
           // Inline the fetch logic during initialization to avoid issues with fetchData callback
           try {
+            const loadStart = perfNow();
             const freshSnapshot = await loadAppData({
               isScoped: currentIsScoped,
               scopedCustomerId: currentScopedId,
+              telemetry,
             });
+            startupMetrics.loadAppMs = perfNow() - loadStart;
 
             if (!isMounted) return;
 
@@ -2603,6 +2621,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
               .catch((err) => {
                 console.error("[DataContext] Background summary pre-fetch failed:", err);
               });
+          }
+
+          // Emit consolidated startup metrics to console for quick baseline collection.
+          try {
+            if (Object.keys(startupMetrics).length > 0) {
+              console.group("[StartupMetrics] DataContext bootstrap (ms)");
+              // include total time as measured from bootStart
+              startupMetrics.totalMs = perfNow() - bootStart;
+              console.table(startupMetrics);
+              console.groupEnd();
+            }
+          } catch (e) {
+            // best-effort telemetry; ignore errors
           }
         }
       } catch (err) {

@@ -66,10 +66,10 @@ describe("getLoanRepaymentProgress", () => {
     expect(getLoanRepaymentProgress(loan, installments)).toBe(35);
   });
 
-  it("returns 80 when exactly 80% is paid", () => {
+  it("returns 100 when exactly 100% is paid", () => {
     const loan = makeLoan({ original_amount: 100_000, interest_amount: 0 });
-    const installments = [makeInstallment("loan-1", 80_000)];
-    expect(getLoanRepaymentProgress(loan, installments)).toBe(80);
+    const installments = [makeInstallment("loan-1", 100_000)];
+    expect(getLoanRepaymentProgress(loan, installments)).toBe(100);
   });
 
   it("returns 100 when fully paid (not more)", () => {
@@ -84,10 +84,10 @@ describe("getLoanRepaymentProgress", () => {
   });
 
   it("handles interest correctly", () => {
-    // original=80k + interest=20k = total 100k; paid 80k = 80%
+    // original=80k + interest=20k = total 100k; paid 100k = 100%
     const loan = makeLoan({ original_amount: 80_000, interest_amount: 20_000 });
-    const installments = [makeInstallment("loan-1", 80_000)];
-    expect(getLoanRepaymentProgress(loan, installments)).toBe(80);
+    const installments = [makeInstallment("loan-1", 100_000)];
+    expect(getLoanRepaymentProgress(loan, installments)).toBe(100);
   });
 
   it("handles multiple installments summing correctly", () => {
@@ -113,15 +113,15 @@ describe("getLoanRepaymentProgress", () => {
 // ─── isLoanOngoing ────────────────────────────────────────────────────────────
 
 describe("isLoanOngoing", () => {
-  it("returns true when loan is < 80% paid (35% paid, balance=65k)", () => {
+  it("returns true when loan is < 100% paid (35% paid, balance=65k)", () => {
     const loan = makeLoan({ original_amount: 100_000, interest_amount: 0 });
     const installments = [makeInstallment("loan-1", 35_000)];
     expect(isLoanOngoing(loan, toMap(installments))).toBe(true);
   });
 
-  it("returns false when loan is exactly 80% paid", () => {
+  it("returns false when loan is exactly 100% paid", () => {
     const loan = makeLoan({ original_amount: 100_000, interest_amount: 0 });
-    const installments = [makeInstallment("loan-1", 80_000)];
+    const installments = [makeInstallment("loan-1", 100_000)];
     expect(isLoanOngoing(loan, toMap(installments))).toBe(false);
   });
 
@@ -164,24 +164,24 @@ describe("canRequestNewLoan", () => {
     const result = canRequestNewLoan([loan], toMap(installments), false);
     expect(result.eligible).toBe(false);
     expect(result.progressPercent).toBe(35);
-    expect(result.reason).toMatch(/80%/);
+    expect(result.reason).toMatch(/100%/);
   });
 
-  it("original=100k, balance=20k (paid=80k) => eligible", () => {
+  it("original=100k, balance=0k (paid=100k) => eligible", () => {
     const loan = makeLoan({ original_amount: 100_000, interest_amount: 0 });
-    const installments = [makeInstallment("loan-1", 80_000)];
+    const installments = [makeInstallment("loan-1", 100_000)];
     const result = canRequestNewLoan([loan], toMap(installments), false);
     expect(result.eligible).toBe(true);
-    expect(result.progressPercent).toBe(80);
+    expect(result.progressPercent).toBe(100);
   });
 
-  it("original=100k, paid=79999 (edge case just below 80%) => ineligible", () => {
+  it("original=100k, paid=99999 (edge case just below 100%) => ineligible", () => {
     const loan = makeLoan({ original_amount: 100_000, interest_amount: 0 });
-    const installments = [makeInstallment("loan-1", 79_999)];
+    const installments = [makeInstallment("loan-1", 99_999)];
     const result = canRequestNewLoan([loan], toMap(installments), false);
     expect(result.eligible).toBe(false);
-    expect(result.progressPercent).toBe(79);
-    // But the raw progress is < 80, so still ineligible
+    expect(result.progressPercent).toBe(99);
+    // But the raw progress is < 100, so still ineligible
   });
 
   it("original=0, balance=0 => ineligible (zero-value loan, no new loan)", () => {
@@ -204,16 +204,16 @@ describe("canRequestNewLoan", () => {
     expect(result.progressPercent).toBe(50);
   });
 
-  it("two loans: one at 90%, one at 80% => eligible (lowest = 80%)", () => {
+  it("two loans: one at 100%, one at 100% => eligible (lowest = 100%)", () => {
     const loan1 = makeLoan({ id: "loan-1", original_amount: 100_000, interest_amount: 0 });
     const loan2 = makeLoan({ id: "loan-2", original_amount: 100_000, interest_amount: 0 });
     const installments = [
-      makeInstallment("loan-1", 90_000, 1),
-      makeInstallment("loan-2", 80_000, 1),
+      makeInstallment("loan-1", 100_000, 1),
+      makeInstallment("loan-2", 100_000, 1),
     ];
     const result = canRequestNewLoan([loan1, loan2], toMap(installments), false);
     expect(result.eligible).toBe(true);
-    expect(result.progressPercent).toBe(80);
+    expect(result.progressPercent).toBe(100);
   });
 
   it("two loans: one at 70%, one at 60% => ineligible (lowest = 60%)", () => {
@@ -274,7 +274,7 @@ describe("getLoanStatus", () => {
 // ─── ONGOING_PAYMENT_THRESHOLD constant ───────────────────────────────────────
 
 describe("ONGOING_PAYMENT_THRESHOLD", () => {
-  it("is 80", () => {
-    expect(ONGOING_PAYMENT_THRESHOLD).toBe(80);
+  it("is 100", () => {
+    expect(ONGOING_PAYMENT_THRESHOLD).toBe(100);
   });
 });

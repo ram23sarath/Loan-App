@@ -6,13 +6,19 @@ import PageWrapper from "../ui/PageWrapper";
 import { HistoryIcon, SpinnerIcon } from "../../constants";
 import type { SubscriptionWithCustomer } from "../../types";
 import { formatDate } from "../../utils/dateFormatter";
+import { formatCurrencyIN } from "../../utils/numberFormatter";
 import DeleteConfirmationModal from "../modals/DeleteConfirmationModal";
 import { useModalBackHandler } from "../../utils/useModalBackHandler";
 
 const SubscriptionListPage = () => {
   const signalRouteReady = useRouteReady();
-  const { subscriptions, deleteSubscription, isRefreshing, isScopedCustomer } =
-    useData();
+  const {
+    subscriptions,
+    deleteSubscription,
+    isRefreshing,
+    isScopedCustomer,
+    scopedCustomerId,
+  } = useData();
 
   const [pendingDelete, setPendingDelete] =
     React.useState<SubscriptionWithCustomer | null>(null);
@@ -28,6 +34,14 @@ const SubscriptionListPage = () => {
   const handleDeleteSubscription = (sub: SubscriptionWithCustomer) => {
     setPendingDelete(sub);
   };
+
+  const customerSubscriptionTotal = React.useMemo(() => {
+    if (!isScopedCustomer) return 0;
+
+    return subscriptions
+      .filter((sub) => !scopedCustomerId || sub.customer_id === scopedCustomerId)
+      .reduce((total, sub) => total + Number(sub.amount || 0), 0);
+  }, [subscriptions, isScopedCustomer, scopedCustomerId]);
 
   // Track the ID being deleted for background animation
   const [animatingDeleteId, setAnimatingDeleteId] = React.useState<
@@ -58,6 +72,17 @@ const SubscriptionListPage = () => {
 
   return (
     <PageWrapper>
+      {isScopedCustomer && (
+        <div className="mb-4 rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-4 shadow-sm dark:border-indigo-900/50 dark:bg-indigo-950/30 sm:px-6">
+          <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+            Total Subscription Amount
+          </p>
+          <p className="mt-1 text-3xl font-bold text-gray-900 dark:text-dark-text">
+            {formatCurrencyIN(customerSubscriptionTotal)}
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4 sm:gap-0 px-2 sm:px-0">
         <h2 className="text-2xl sm:text-4xl font-bold flex items-center gap-3 sm:gap-4 text-gray-800 dark:text-dark-text">
           <HistoryIcon className="w-8 h-8 sm:w-10 sm:h-10" />

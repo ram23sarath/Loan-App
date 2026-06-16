@@ -143,7 +143,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
       });
     }
     return result;
-  }, [filteredSubscriptions, sortField, sortDirection]);
+  }, [filteredSubscriptions, sortField, sortDirection, isScopedCustomer]);
 
   // Pagination logic
   const totalPages = Math.ceil(sortedSubscriptions.length / itemsPerPage);
@@ -159,7 +159,7 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
     setCurrentPage(1);
   }, [filter]);
 
-  if (subscriptions.length === 0) {
+  if (scopedSubscriptions.length === 0) {
     const emptyMessage =
       isScopedCustomer && scopedCustomerId
         ? (() => {

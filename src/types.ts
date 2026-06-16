@@ -322,6 +322,64 @@ export type Database = {
           }
         ]
       },
+      whatsapp_message_log: {
+        Row: {
+          id: string
+          created_at: string
+          updated_at: string
+          installment_id: string
+          customer_id: string
+          phone: string
+          template_name: string
+          template_language: string
+          status: "pending" | "sent" | "failed" | "skipped"
+          message_id: string | null
+          error_message: string | null
+          attempt_count: number
+          last_attempt_at: string | null
+          metadata?: Json | null
+        }
+        Insert: {
+          installment_id: string
+          customer_id: string
+          phone: string
+          template_name: string
+          template_language?: string
+          status: "pending" | "sent" | "failed" | "skipped"
+          message_id?: string | null
+          error_message?: string | null
+          attempt_count?: number
+          last_attempt_at?: string | null
+          metadata?: Json | null
+        }
+        Update: {
+          phone?: string
+          template_name?: string
+          template_language?: string
+          status?: "pending" | "sent" | "failed" | "skipped"
+          message_id?: string | null
+          error_message?: string | null
+          attempt_count?: number
+          last_attempt_at?: string | null
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_message_log_installment_id_fkey"
+            columns: ["installment_id"]
+            isOneToOne: false
+            referencedRelation: "installments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_message_log_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          }
+        ]
+      },
       system_notifications: {
         Row: {
           id: string

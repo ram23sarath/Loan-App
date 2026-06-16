@@ -49,6 +49,11 @@ const ERROR_CATEGORY = {
 
 type ErrorCategory = typeof ERROR_CATEGORY[keyof typeof ERROR_CATEGORY];
 
+const getActorName = (session: Session | null) =>
+  (session?.user?.user_metadata?.name as string | undefined) ||
+  (session?.user?.app_metadata?.name as string | undefined) ||
+  (session?.user?.email ? String(session.user.email).split("@")[0] : null);
+
 const classifyError = (error: any): ErrorCategory => {
   if (!error) return ERROR_CATEGORY.UNKNOWN;
 
@@ -3071,6 +3076,39 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const sendInstallmentWhatsAppNotification = (
+    installmentId: string,
+  ): void => {
+    if (!installmentId || !session?.access_token) {
+      return;
+    }
+
+    void (async () => {
+      try {
+        await apiRequest("/.netlify/functions/send-installment-whatsapp", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: {
+            installment_id: installmentId,
+            admin_uid: session.user?.id ?? null,
+            actor_name: getActorName(session),
+            actor_email: session.user?.email ?? null,
+          },
+          timeoutMs: 20000,
+          retries: 1,
+          dedupeKey: `send-installment-whatsapp:${installmentId}`,
+        });
+      } catch (error) {
+        console.error(
+          "Installment was saved, but automatic WhatsApp send failed:",
+          error,
+        );
+      }
+    })();
+  };
+
   const addInstallment = async (
     installmentData: NewInstallment,
   ): Promise<Installment> => {
@@ -3144,6 +3182,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       });
       // Optimistically update local state
       setInstallments((prev) => [data as Installment, ...prev]);
+      sendInstallmentWhatsAppNotification(data.id);
       return data as Installment;
     } catch (error) {
       throw new Error(parseSupabaseError(error, "adding installment"));

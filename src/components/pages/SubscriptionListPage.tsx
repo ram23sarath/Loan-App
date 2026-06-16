@@ -72,25 +72,26 @@ const SubscriptionListPage = () => {
 
   return (
     <PageWrapper>
-      {isScopedCustomer && (
-        <div className="mb-4 rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-4 shadow-sm dark:border-indigo-900/50 dark:bg-indigo-950/30 sm:px-6">
-          <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
-            Total Subscription Amount
-          </p>
-          <p className="mt-1 text-3xl font-bold text-gray-900 dark:text-dark-text">
-            {formatCurrencyIN(customerSubscriptionTotal)}
-          </p>
-        </div>
-      )}
-
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4 sm:gap-0 px-2 sm:px-0">
-        <h2 className="text-2xl sm:text-4xl font-bold flex items-center gap-3 sm:gap-4 text-gray-800 dark:text-dark-text">
-          <HistoryIcon className="w-8 h-8 sm:w-10 sm:h-10" />
-          <span>Subscription Details</span>
-          {isRefreshing && (
-            <SpinnerIcon className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-indigo-500" />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+          <h2 className="text-2xl sm:text-4xl font-bold flex items-center gap-3 sm:gap-4 text-gray-800 dark:text-dark-text">
+            <HistoryIcon className="w-8 h-8 sm:w-10 sm:h-10" />
+            <span>Subscription Details</span>
+            {isRefreshing && (
+              <SpinnerIcon className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-indigo-500" />
+            )}
+          </h2>
+          {isScopedCustomer && (
+            <div className="w-fit rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 shadow-sm dark:border-indigo-900/50 dark:bg-indigo-950/30 sm:px-4">
+              <span className="block text-xs font-medium uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
+                Total
+              </span>
+              <span className="block text-lg font-bold leading-tight text-gray-900 dark:text-dark-text sm:text-xl">
+                {formatCurrencyIN(customerSubscriptionTotal)}
+              </span>
+            </div>
           )}
-        </h2>
+        </div>
       </div>
 
       <SubscriptionTableView

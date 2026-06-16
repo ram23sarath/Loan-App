@@ -3077,9 +3077,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const sendInstallmentWhatsAppNotification = (
-    installmentId: string,
+    installmentId: string | null | undefined,
   ): void => {
-    if (!installmentId || !session?.access_token) {
+    const resolvedInstallmentId =
+      typeof installmentId === "string" ? installmentId.trim() : "";
+
+    if (!resolvedInstallmentId || !session?.access_token) {
+      console.warn(
+        "Skipping automatic WhatsApp send because the saved installment id is missing.",
+      );
       return;
     }
 
@@ -3091,14 +3097,14 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             Authorization: `Bearer ${session.access_token}`,
           },
           body: {
-            installment_id: installmentId,
+            installment_id: resolvedInstallmentId,
             admin_uid: session.user?.id ?? null,
             actor_name: getActorName(session),
             actor_email: session.user?.email ?? null,
           },
           timeoutMs: 20000,
           retries: 1,
-          dedupeKey: `send-installment-whatsapp:${installmentId}`,
+          dedupeKey: `send-installment-whatsapp:${resolvedInstallmentId}`,
         });
       } catch (error) {
         console.error(

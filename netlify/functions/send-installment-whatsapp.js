@@ -13,7 +13,7 @@ const WHATSAPP_GRAPH_API_VERSION =
 const DEFAULT_COUNTRY_CODE = (process.env.WHATSAPP_DEFAULT_COUNTRY_CODE || '91').replace(/\D+/g, '');
 
 const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const jsonResponse = (statusCode, body) =>
   new Response(JSON.stringify(body), {

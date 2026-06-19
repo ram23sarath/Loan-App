@@ -674,7 +674,11 @@ const DataPage = () => {
                   exit="exit"
                 >
                   {/* Mobile Customer Selection Button - Hidden on Desktop */}
-                  <div className="md:hidden mb-4">
+                  <div
+                    className={
+                      isScopedCustomer ? "hidden" : "md:hidden mb-4"
+                    }
+                  >
                     <label className="block text-xs font-semibold text-gray-700 dark:text-dark-text mb-2">
                       Select Customer
                     </label>
@@ -695,7 +699,13 @@ const DataPage = () => {
 
                   <div className="flex flex-col md:flex-row gap-4">
                     {/* Desktop Customer Sidebar - Hidden on Mobile */}
-                    <div className="hidden md:block md:w-1/3 lg:w-1/4 bg-white border border-gray-200 rounded-lg shadow-sm p-3 dark:bg-dark-card dark:border-dark-border">
+                    <div
+                      className={
+                        isScopedCustomer
+                          ? "hidden"
+                          : "hidden md:block md:w-1/3 lg:w-1/4 bg-white border border-gray-200 rounded-lg shadow-sm p-3 dark:bg-dark-card dark:border-dark-border"
+                      }
+                    >
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="text-sm font-semibold text-gray-700 dark:text-dark-text">
                           Customers
@@ -1497,7 +1507,7 @@ const DataPage = () => {
         {typeof document !== "undefined" &&
           ReactDOM.createPortal(
             <AnimatePresence>
-              {showCustomerModal && (
+              {!isScopedCustomer && showCustomerModal && (
                 <motion.div
                   className="fixed inset-0 z-50 flex items-start md:items-center justify-center bg-black/30 p-4"
                   style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}

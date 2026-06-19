@@ -94,11 +94,8 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
         const aDate = a.date ? new Date(a.date).getTime() : 0;
         const bDate = b.date ? new Date(b.date).getTime() : 0;
 
-        // For scoped customers, show oldest first (Ascending)
-        if (isScopedCustomer) {
-          return aDate - bDate;
-        }
-        // For admins, show newest first (Descending)
+        // Both views default to newest first. Scoped serial numbers preserve
+        // their original chronological sequence and therefore count down.
         return bDate - aDate;
       });
     } else {
@@ -276,7 +273,10 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
         <tbody>
           <AnimatePresence mode="popLayout">
             {paginatedSubscriptions.map((sub, idx) => {
-              const actualIndex = (currentPage - 1) * itemsPerPage + idx + 1;
+              const position = (currentPage - 1) * itemsPerPage + idx;
+              const actualIndex = isScopedCustomer
+                ? sortedSubscriptions.length - position
+                : position + 1;
               const customer = sub.customers;
               const isDeleting = deletingId === sub.id;
               let message = "";
@@ -379,7 +379,10 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
       <div className="md:hidden space-y-3">
         <AnimatePresence mode="popLayout">
           {paginatedSubscriptions.map((sub, idx) => {
-            const actualIndex = (currentPage - 1) * itemsPerPage + idx + 1;
+            const position = (currentPage - 1) * itemsPerPage + idx;
+            const actualIndex = isScopedCustomer
+              ? sortedSubscriptions.length - position
+              : position + 1;
             const customer = sub.customers;
             const isDeleting = deletingId === sub.id;
             let message = "";

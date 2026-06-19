@@ -9,6 +9,7 @@ import GlassCard from '../ui/GlassCard';
 import PageWrapper from '../ui/PageWrapper';
 import RequestSeniorityModal from '../ui/RequestSeniorityModal';
 import { canRequestNewLoan } from '../../utils/loanStatus';
+import { formatCurrencyIN } from '../../utils/numberFormatter';
 
 const HomePage: React.FC = () => {
   // ── Shared data ────────────────────────────────────────────────────────────
@@ -18,6 +19,7 @@ const HomePage: React.FC = () => {
     isScopedCustomer,
     scopedCustomerId,
     loans,
+    subscriptions,
     installmentsByLoanId,
     seniorityList,
     loading,
@@ -80,6 +82,13 @@ const HomePage: React.FC = () => {
     if (!customer) return [];
     return loans.filter((loan) => loan.customer_id === customer.id);
   }, [customer, loans]);
+
+  const customerSubscriptionTotal = useMemo(() => {
+    if (!customer) return 0;
+    return subscriptions
+      .filter((subscription) => subscription.customer_id === customer.id)
+      .reduce((total, subscription) => total + Number(subscription.amount || 0), 0);
+  }, [customer, subscriptions]);
 
   const hasPendingSeniorityRequest = useMemo(() => {
     if (!customer) return false;
@@ -334,7 +343,7 @@ const HomePage: React.FC = () => {
                   onClick={() => navigate('/subscriptions')}
                   className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
                 >
-                  View Subscriptions
+                  View Subscriptions ({formatCurrencyIN(customerSubscriptionTotal)})
                 </motion.button>
                 <motion.button
                   whileHover={{ scale: 1.02 }}

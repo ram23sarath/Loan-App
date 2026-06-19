@@ -59,13 +59,23 @@ const LoanTableView: React.FC = () => {
   // This integrates with React's scheduler instead of using setTimeout
   const debouncedFilter = useDeferredSearch(filter);
   const [statusFilter, setStatusFilter] = React.useState("");
-  // Default to sorting by status so "In Progress" loans appear first
-  const [sortField, setSortField] = React.useState("status");
+  // Customer history follows serial order (latest record first); admins keep
+  // the operational status-first view.
+  const [sortField, setSortField] = React.useState(
+    isScopedCustomer ? "created_at" : "status",
+  );
   const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">(
-    "asc",
+    isScopedCustomer ? "desc" : "asc",
   );
   const [currentPage, setCurrentPage] = React.useState(1);
   const itemsPerPage = 25;
+
+  React.useEffect(() => {
+    if (isScopedCustomer) {
+      setSortField("created_at");
+      setSortDirection("desc");
+    }
+  }, [isScopedCustomer]);
 
   // Page picker popup state
   const [pagePickerOpen, setPagePickerOpen] = React.useState<
@@ -221,6 +231,10 @@ const LoanTableView: React.FC = () => {
         case "payment_date":
           aValue = a.payment_date;
           bValue = b.payment_date;
+          break;
+        case "created_at":
+          aValue = a.created_at;
+          bValue = b.created_at;
           break;
         case "status":
           aValue = aStatus.status;
@@ -528,6 +542,10 @@ const LoanTableView: React.FC = () => {
         <tbody>
           <AnimatePresence mode="popLayout">
             {paginatedLoans.map((loan: LoanWithCustomer, idx: number) => {
+              const position = (currentPage - 1) * itemsPerPage + idx;
+              const serialNumber = isScopedCustomer
+                ? sortedLoans.length - position
+                : position + 1;
               // Use O(1) lookup - installments already sorted by date in the map
               const loanInstallments = getLoanInstallments(loan.id);
               const loanStatus = getLoanStatus(loan, loanInstallments);
@@ -551,7 +569,7 @@ const LoanTableView: React.FC = () => {
                     style={{ overflow: "hidden" }}
                   >
                     <td className="px-4 py-2 border-b font-medium text-sm text-gray-700 dark:border-dark-border dark:text-dark-muted whitespace-nowrap">
-                      {(currentPage - 1) * itemsPerPage + idx + 1}
+                      {serialNumber}
                     </td>
                     <td className="px-4 py-2 border-b dark:border-dark-border">
                       <button
@@ -889,6 +907,10 @@ const LoanTableView: React.FC = () => {
       <div className="md:hidden mt-4 space-y-3">
         <AnimatePresence mode="popLayout">
           {paginatedLoans.map((loan, idx) => {
+            const position = (currentPage - 1) * itemsPerPage + idx;
+            const serialNumber = isScopedCustomer
+              ? sortedLoans.length - position
+              : position + 1;
             // Use O(1) lookup - installments already sorted by date in the map
             const loanInstallments = getLoanInstallments(loan.id);
             const loanStatus = getLoanStatus(loan, loanInstallments);
@@ -939,7 +961,7 @@ const LoanTableView: React.FC = () => {
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-1">
                       <span className="text-xs text-gray-400 dark:text-dark-muted">
-                        Sr.No {(currentPage - 1) * itemsPerPage + idx + 1}
+                        Sr.No {serialNumber}
                       </span>
                       <button
                         onClick={() =>

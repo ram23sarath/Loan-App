@@ -50,10 +50,10 @@ const SummaryPage = () => {
   const signalRouteReady = useRouteReady();
 
   const {
-    customers: contextCustomers = [],
     seniorityList = [],
     isScopedCustomer = false,
-    customerInterestByCustomerId,
+    summaryCustomers: customers = [],
+    summaryCustomerInterest: customerInterest = [],
     summaryLoans: loans = [],
     summarySubscriptions: subscriptions = [],
     summaryInstallments: installments = [],
@@ -82,19 +82,19 @@ const SummaryPage = () => {
   // Interest deduction for all customers (Global Quarterly Interest)
   const retiredCustomerIds = useMemo(() => {
     return new Set(
-      contextCustomers.filter((customer) => customer.is_retired).map((customer) => customer.id),
+      customers.filter((customer) => customer.is_retired).map((customer) => customer.id),
     );
-  }, [contextCustomers]);
+  }, [customers]);
 
   const interestDeduction = useMemo(() => {
-    return Array.from(customerInterestByCustomerId.values()).reduce(
+    return customerInterest.reduce(
       (sum, row) =>
         retiredCustomerIds.has(row.customer_id)
           ? sum
           : sum + (row.total_interest_charged || 0),
       0,
     );
-  }, [customerInterestByCustomerId, retiredCustomerIds]);
+  }, [customerInterest, retiredCustomerIds]);
 
   // Lookup map for O(1) installment access by loan_id
   const localInstallmentsByLoanId = useMemo(() => {
@@ -538,7 +538,7 @@ const SummaryPage = () => {
         .filter((e) => within(e.date))
         .map((e) => {
           const customerName =
-            contextCustomers?.find((c) => c.id === e.customer_id)?.name || "";
+            customers.find((c) => c.id === e.customer_id)?.name || "";
           return {
             id: e.id,
             date: e.date,
@@ -659,7 +659,7 @@ const SummaryPage = () => {
   const handleExportComprehensive = async () => {
     try {
       const XLSX = await import("xlsx");
-      const customerSummaryData = contextCustomers.map((customer) => {
+      const customerSummaryData = customers.map((customer) => {
         const customerLoans = loans.filter(
           (l) => l.customer_id === customer.id,
         );

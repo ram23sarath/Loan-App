@@ -427,6 +427,8 @@ interface DataContextType {
   summarySubscriptions: SubscriptionWithCustomer[];
   summaryInstallments: Installment[];
   summaryDataEntries: DataEntry[];
+  summaryCustomers: Customer[];
+  summaryCustomerInterest: CustomerInterest[];
   fetchSummaryData: () => Promise<void>;
 }
 
@@ -805,6 +807,10 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     [],
   );
   const [summaryDataEntries, setSummaryDataEntries] = useState<DataEntry[]>([]);
+  const [summaryCustomers, setSummaryCustomers] = useState<Customer[]>([]);
+  const [summaryCustomerInterest, setSummaryCustomerInterest] = useState<
+    CustomerInterest[]
+  >([]);
   const summaryDataLoadedRef = useRef(false);
   const summaryDataFetchingRef = useRef(false);
 
@@ -823,6 +829,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         setSummarySubscriptions(subscriptions);
         setSummaryInstallments(installments);
         setSummaryDataEntries(dataEntries);
+        setSummaryCustomers(customers);
+        setSummaryCustomerInterest(customerInterestRows);
       } else {
         // Scoped user: serve from cache immediately, then refresh from network
 
@@ -833,6 +841,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           setSummarySubscriptions(cached.subscriptions || []);
           setSummaryInstallments(cached.installments || []);
           setSummaryDataEntries(cached.dataEntries || []);
+          setSummaryCustomers(cached.customers || []);
+          setSummaryCustomerInterest(cached.customerInterest || []);
         }
 
         // Step 2: If already loaded from network this session, stop
@@ -849,12 +859,21 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
         try {
           // Fetch fresh data from network (background refresh)
-          const { loans: allLoans, subscriptions: allSubs, installments: allInstallments, dataEntries: allEntries } =
+          const {
+            customers: allCustomers,
+            loans: allLoans,
+            subscriptions: allSubs,
+            installments: allInstallments,
+            dataEntries: allEntries,
+            customerInterest: allCustomerInterest,
+          } =
             await loadGlobalSummaryRecords();
           setSummaryLoans(allLoans);
           setSummarySubscriptions(allSubs);
           setSummaryInstallments(allInstallments);
           setSummaryDataEntries(allEntries);
+          setSummaryCustomers(allCustomers);
+          setSummaryCustomerInterest(allCustomerInterest);
           summaryDataLoadedRef.current = true;
 
           // Step 4: Update cache for next time
@@ -863,6 +882,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             subscriptions: allSubs,
             installments: allInstallments,
             dataEntries: allEntries,
+            customers: allCustomers,
+            customerInterest: allCustomerInterest,
           });
         } finally {
           // Always reset the fetching flag, even if an error occurred
@@ -872,7 +893,15 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("Error fetching summary data:", error);
     }
-  }, [isScopedCustomer, loans, subscriptions, installments, dataEntries]);
+  }, [
+    isScopedCustomer,
+    loans,
+    subscriptions,
+    installments,
+    dataEntries,
+    customers,
+    customerInterestRows,
+  ]);
 
   // Lookup maps for O(1) access - improves performance from O(n) to O(1)
   const customerMap = useMemo(() => {
@@ -1821,6 +1850,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     setSummarySubscriptions([]);
     setSummaryInstallments([]);
     setSummaryDataEntries([]);
+    setSummaryCustomers([]);
+    setSummaryCustomerInterest([]);
   };
 
   // ... [clearClientCache function remains unchanged] ...
@@ -4199,6 +4230,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         summarySubscriptions,
         summaryInstallments,
         summaryDataEntries,
+        summaryCustomers,
+        summaryCustomerInterest,
         fetchSummaryData,
       }}
     >

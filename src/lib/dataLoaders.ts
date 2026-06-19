@@ -215,6 +215,7 @@ export const loadAppData = async ({ isScoped, scopedCustomerId, telemetry }: Loa
 };
 
 export const loadGlobalSummaryRecords = async () => {
-  const { loans, subscriptions, installments, dataEntries } = await loadAppData({ isScoped: false, scopedCustomerId: null });
-  return { loans, subscriptions, installments, dataEntries };
+  const { customers, loans, subscriptions, installments, dataEntries, customerInterest } =
+    await loadAppData({ isScoped: false, scopedCustomerId: null });
+  return { customers, loans, subscriptions, installments, dataEntries, customerInterest };
 };

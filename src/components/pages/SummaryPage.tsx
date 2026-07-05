@@ -45,6 +45,8 @@ const AnimatedNumber = ({ value }: { value: number }) => {
   return <motion.span>{display}</motion.span>;
 };
 
+const SUMMARY_VIEW_STORAGE_KEY = "loan-app-summary-view";
+
 const SummaryPage = () => {
   const { theme, toggleTheme } = useTheme();
   const signalRouteReady = useRouteReady();
@@ -68,6 +70,18 @@ const SummaryPage = () => {
   const [toastType, setToastType] = useState<"error" | "success" | "info">(
     "error",
   );
+  const [summaryViewMode, setSummaryViewMode] = useState<"cards" | "table">(
+    () => {
+      if (typeof window === "undefined") return "cards";
+
+      try {
+        const saved = localStorage.getItem(SUMMARY_VIEW_STORAGE_KEY);
+        return saved === "table" ? "table" : "cards";
+      } catch {
+        return "cards";
+      }
+    },
+  );
 
   // Signal readiness on initial mount
   useEffect(() => {
@@ -78,6 +92,14 @@ const SummaryPage = () => {
   useEffect(() => {
     fetchSummaryData();
   }, [fetchSummaryData]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SUMMARY_VIEW_STORAGE_KEY, summaryViewMode);
+    } catch {
+      // Ignore storage failures in private browsing / locked-down environments.
+    }
+  }, [summaryViewMode]);
 
   // Interest deduction for all customers (Global Quarterly Interest)
   const retiredCustomerIds = useMemo(() => {
@@ -632,6 +654,68 @@ const SummaryPage = () => {
     },
   };
 
+  const isAdminSummaryUser = !isScopedCustomer;
+  const isTabularSummaryView = isAdminSummaryUser && summaryViewMode === "table";
+  const netTotalBalance = totalCollectedWithoutPrincipal - adjustedTotalExpenses;
+
+  const overviewTableRows = [
+    {
+      label: "Subscriptions",
+      income: totalSubscriptionCollected,
+      expense: subscriptionReturnTotal,
+      balance: subscriptionBalance,
+    },
+    ...(interestDeduction > 0
+      ? [
+          {
+            label: "Subscription Interest",
+            income: 0,
+            expense: interestDeduction,
+            balance: -interestDeduction,
+          },
+        ]
+      : []),
+    {
+      label: "Interest",
+      income: totalInterestCollected,
+      expense: 0,
+      balance: totalInterestCollected,
+    },
+    {
+      label: "Late Fee",
+      income: totalLateFeeCollected,
+      expense: 0,
+      balance: totalLateFeeCollected,
+    },
+    {
+      label: "Death Fund",
+      income: 0,
+      expense: expenseTotalsBySubtype["Death Fund"] || 0,
+      balance: -(expenseTotalsBySubtype["Death Fund"] || 0),
+    },
+    {
+      label: "Retirement Gift",
+      income: 0,
+      expense: expenseTotalsBySubtype["Retirement Gift"] || 0,
+      balance: -(expenseTotalsBySubtype["Retirement Gift"] || 0),
+    },
+    {
+      label: "Misc Expense",
+      income: 0,
+      expense: expenseTotalsBySubtype["Misc Expense"] || 0,
+      balance: -(expenseTotalsBySubtype["Misc Expense"] || 0),
+    },
+  ];
+
+  const loanSummaryRows = [
+    {
+      label: "Loans",
+      given: totalLoansGiven,
+      recovery: totalPrincipalRecovered,
+      balance: loanBalance,
+    },
+  ];
+
   // --- Export Functions (xlsx loaded dynamically to reduce bundle size) ---
   const handleExportSubscriptions = async () => {
     try {
@@ -910,6 +994,30 @@ const SummaryPage = () => {
             </div>
 
             <div className="flex items-center gap-3">
+              {isAdminSummaryUser && (
+                <motion.button
+                  onClick={() =>
+                    setSummaryViewMode((current) =>
+                      current === "cards" ? "table" : "cards",
+                    )
+                  }
+                  className={`px-3 py-2 rounded-lg border text-sm font-semibold transition-colors shadow-sm ${
+                    isTabularSummaryView
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700"
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  title={
+                    isTabularSummaryView
+                      ? "Switch to card view"
+                      : "Switch to tabular view"
+                  }
+                >
+                  {isTabularSummaryView ? "Card View" : "Table View"}
+                </motion.button>
+              )}
+
               {/* Theme Toggle */}
               <motion.button
                 onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
@@ -1004,44 +1112,189 @@ const SummaryPage = () => {
           </div>
 
           {/* Net Total Bar - Full Width on Top */}
-          <motion.div
-            className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 dark:from-emerald-600 dark:to-teal-600 rounded-2xl p-4 sm:p-6 shadow-lg mb-6"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 100, damping: 15 }}
-            whileHover={{ scale: 1.01 }}
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                <div className="inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 text-white font-bold text-lg sm:text-xl flex-shrink-0">
-                  =
-                </div>
-                <div className="min-w-0">
-                  <div className="text-base sm:text-lg font-semibold text-white/90 uppercase tracking-wide truncate">
-                    Net Total = Total Collected - Expenses
+          {!isTabularSummaryView && (
+            <motion.div
+              className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 dark:from-emerald-600 dark:to-teal-600 rounded-2xl p-4 sm:p-6 shadow-lg mb-6"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: "spring", stiffness: 100, damping: 15 }}
+              whileHover={{ scale: 1.01 }}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                  <div className="inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 text-white font-bold text-lg sm:text-xl flex-shrink-0">
+                    =
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-base sm:text-lg font-semibold text-white/90 uppercase tracking-wide truncate">
+                      Net Total = Total Collected - Expenses
+                    </div>
                   </div>
                 </div>
+                <div className="text-2xl sm:text-4xl font-bold text-white flex-shrink-0">
+                  <AnimatedNumber value={netTotalBalance} />
+                </div>
               </div>
-              <div className="text-2xl sm:text-4xl font-bold text-white flex-shrink-0">
-                <AnimatedNumber
-                  value={totalCollectedWithoutPrincipal - adjustedTotalExpenses}
-                />
-              </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          )}
 
-          <motion.div
-            className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch"
-            variants={mainContainerVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            {/* Section 1: Income */}
+          {isTabularSummaryView ? (
             <motion.div
-              className="lg:col-span-1 bg-white/60 dark:bg-slate-800/60 border border-indigo-100 dark:border-indigo-800 rounded-2xl p-5 flex flex-col gap-4 shadow-sm h-full"
-              variants={mainCardVariants}
-              whileHover="hover"
+              className="w-full space-y-6"
+              variants={mainContainerVariants}
+              initial="hidden"
+              animate="visible"
             >
+              <motion.div
+                className="w-full overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm"
+                variants={mainCardVariants}
+                whileHover="hover"
+              >
+                <div className="bg-slate-50 dark:bg-slate-800 px-5 py-4 flex flex-col gap-1 border-b border-slate-200 dark:border-slate-700">
+                  <div className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                    Total Balance
+                  </div>
+                  <div className="text-3xl font-bold text-emerald-700 dark:text-emerald-400">
+                    <AnimatedNumber value={netTotalBalance} />
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                    <thead className="bg-slate-100 dark:bg-slate-800/80">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                          Description
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                          Income
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                          Expenses
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                          Balance
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                      {overviewTableRows.map((row) => (
+                        <tr key={row.label} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                          <td className="px-4 py-3 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                            {row.label}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-200">
+                            <AnimatedNumber value={row.income} />
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-200">
+                            <AnimatedNumber value={row.expense} />
+                          </td>
+                          <td
+                            className={`px-4 py-3 text-sm font-bold ${
+                              row.balance < 0
+                                ? "text-red-600 dark:text-red-400"
+                                : "text-emerald-700 dark:text-emerald-300"
+                            }`}
+                          >
+                            <AnimatedNumber value={row.balance} />
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="bg-slate-50 dark:bg-slate-800/60">
+                        <td className="px-4 py-3 text-sm font-bold text-slate-900 dark:text-slate-100">
+                          Total
+                        </td>
+                        <td className="px-4 py-3 text-sm font-bold text-slate-900 dark:text-slate-100">
+                          <AnimatedNumber value={totalCollectedWithoutPrincipal} />
+                        </td>
+                        <td className="px-4 py-3 text-sm font-bold text-slate-900 dark:text-slate-100">
+                          <AnimatedNumber value={adjustedTotalExpenses} />
+                        </td>
+                        <td
+                          className={`px-4 py-3 text-sm font-bold ${
+                            netTotalBalance < 0
+                              ? "text-red-600 dark:text-red-400"
+                              : "text-emerald-700 dark:text-emerald-300"
+                          }`}
+                        >
+                          <AnimatedNumber value={netTotalBalance} />
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </motion.div>
+
+              <motion.div
+                className="w-full overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm"
+                variants={mainCardVariants}
+                whileHover="hover"
+              >
+                <div className="bg-slate-50 dark:bg-slate-800 px-5 py-4 flex flex-col gap-1 border-b border-slate-200 dark:border-slate-700">
+                  <div className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                    Loan Details
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                    <thead className="bg-slate-100 dark:bg-slate-800/80">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                          Description
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                          Given
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                          Recovery
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                          Balance
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                      {loanSummaryRows.map((row) => (
+                        <tr key={row.label} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                          <td className="px-4 py-3 text-sm font-semibold text-slate-800 dark:text-slate-100">
+                            {row.label}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-200">
+                            <AnimatedNumber value={row.given} />
+                          </td>
+                          <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-200">
+                            <AnimatedNumber value={row.recovery} />
+                          </td>
+                          <td
+                            className={`px-4 py-3 text-sm font-bold ${
+                              row.balance < 0
+                                ? "text-red-600 dark:text-red-400"
+                                : "text-blue-700 dark:text-blue-300"
+                            }`}
+                          >
+                            <AnimatedNumber value={row.balance} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </motion.div>
+            </motion.div>
+          ) : (
+            <motion.div
+              className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch"
+              variants={mainContainerVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              {/* Section 1: Income */}
+              <motion.div
+                className="lg:col-span-1 bg-white/60 dark:bg-slate-800/60 border border-indigo-100 dark:border-indigo-800 rounded-2xl p-5 flex flex-col gap-4 shadow-sm h-full"
+                variants={mainCardVariants}
+                whileHover="hover"
+              >
               <div className="w-full flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold">
@@ -1185,14 +1438,14 @@ const SummaryPage = () => {
                   </div>
                 </div>
               </div>
-            </motion.div>
+              </motion.div>
 
-            {/* Section 2: Expenses */}
-            <motion.div
-              className="lg:col-span-1 bg-white/60 dark:bg-slate-800/60 border border-red-100 dark:border-red-800 rounded-2xl p-5 flex flex-col gap-4 shadow-sm h-full"
-              variants={mainCardVariants}
-              whileHover="hover"
-            >
+              {/* Section 2: Expenses */}
+              <motion.div
+                className="lg:col-span-1 bg-white/60 dark:bg-slate-800/60 border border-red-100 dark:border-red-800 rounded-2xl p-5 flex flex-col gap-4 shadow-sm h-full"
+                variants={mainCardVariants}
+                whileHover="hover"
+              >
               <div className="w-full flex items-center gap-3 mb-3">
                 <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 font-bold">
                   -
@@ -1237,9 +1490,7 @@ const SummaryPage = () => {
                   {Object.entries(expenseTotalsBySubtype).map(
                     ([subtype, amt]) => (
                       <div key={subtype}>
-                        <div
-                          className="flex items-center justify-between px-3 py-1 rounded-md bg-red-25/30 dark:bg-red-900/30"
-                        >
+                        <div className="flex items-center justify-between px-3 py-1 rounded-md bg-red-25/30 dark:bg-red-900/30">
                           <div className="text-sm text-gray-700 dark:text-gray-300">
                             {subtype}
                           </div>
@@ -1247,16 +1498,23 @@ const SummaryPage = () => {
                             <AnimatedNumber value={(amt as number) || 0} />
                           </div>
                         </div>
-                        {subtype === 'Retirement Gift' && (
+                        {subtype === "Retirement Gift" && (
                           <div className="ml-4 mt-1 space-y-1">
-                            {Object.entries(retirementGiftByPaymentMethod).map(([method, amount]) => (
-                              <div key={method} className="flex items-center justify-between px-3 py-1 rounded-md bg-red-25/20 dark:bg-red-900/20">
-                                <div className="text-xs text-gray-500 dark:text-gray-400">{method}</div>
-                                <div className="text-xs font-medium text-red-600 dark:text-red-400">
-                                  <AnimatedNumber value={(amount as number) || 0} />
+                            {Object.entries(retirementGiftByPaymentMethod).map(
+                              ([method, amount]) => (
+                                <div
+                                  key={method}
+                                  className="flex items-center justify-between px-3 py-1 rounded-md bg-red-25/20 dark:bg-red-900/20"
+                                >
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                                    {method}
+                                  </div>
+                                  <div className="text-xs font-medium text-red-600 dark:text-red-400">
+                                    <AnimatedNumber value={(amount as number) || 0} />
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              ),
+                            )}
                           </div>
                         )}
                       </div>
@@ -1266,6 +1524,7 @@ const SummaryPage = () => {
               </div>
             </motion.div>
           </motion.div>
+          )}
 
           {/* Financial Year Section */}
           {!isScopedCustomer && (

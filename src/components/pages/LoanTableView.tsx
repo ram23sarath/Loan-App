@@ -413,7 +413,7 @@ const LoanTableView: React.FC = () => {
   }
 
   return (
-    <GlassCard className="overflow-x-auto" disable3D>
+    <GlassCard className="overflow-visible" disable3D>
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-4">
         <div className="relative w-full sm:w-64 md:flex-1">
           <input
@@ -457,82 +457,96 @@ const LoanTableView: React.FC = () => {
         </select>
       </div>
 
-      {/* --- THIS IS THE FIX --- */}
-      {/* Added `hidden md:table` to hide on mobile and show on desktop */}
-      <table className="min-w-full border-collapse hidden md:table">
+      {/* Desktop table */}
+      <table className="hidden w-full table-fixed border-collapse text-sm xl:table">
+        <colgroup>
+          <col className="w-[4%]" />
+          <col className="w-[11%]" />
+          <col className="w-[10%]" />
+          <col className="w-[9%]" />
+          <col className="w-[7%]" />
+          <col className="w-[7%]" />
+          <col className="w-[8%]" />
+          <col className="w-[9%]" />
+          <col className="w-[8%]" />
+          <col className="w-[9%]" />
+          <col className="w-[8.5%]" />
+          <col className="w-[6.5%]" />
+          {!isScopedCustomer && <col className="w-[3%]" />}
+        </colgroup>
         <thead>
           <tr className="bg-gray-100/70 dark:bg-slate-700">
-            <th className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 dark:border-dark-border dark:text-dark-text whitespace-nowrap">
+            <th className="px-2 py-2 border-b text-left text-xs font-semibold leading-tight text-gray-600 dark:border-dark-border dark:text-dark-text">
               Sr.No
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
+              className="px-2 py-2 border-b text-left text-xs font-semibold leading-tight text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("customer")}
             >
               Customer
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
+              className="px-2 py-2 border-b text-left text-xs font-semibold leading-tight text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("total_repayable")}
             >
               Total Repayable
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
+              className="px-2 py-2 border-b text-left text-xs font-semibold leading-tight text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("loan_amount")}
             >
               Loan Amount
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
+              className="px-2 py-2 border-b text-left text-xs font-semibold leading-tight text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("interest")}
             >
               Interest
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
+              className="px-2 py-2 border-b text-left text-xs font-semibold leading-tight text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("paid")}
             >
               Paid
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
+              className="px-2 py-2 border-b text-left text-xs font-semibold leading-tight text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("balance")}
             >
               Balance
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
+              className="px-2 py-2 border-b text-left text-xs font-semibold leading-tight text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("check_number")}
             >
               Check Number
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
+              className="px-2 py-2 border-b text-left text-xs font-semibold leading-tight text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("installments")}
             >
               Installment #
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
+              className="px-2 py-2 border-b text-left text-xs font-semibold leading-tight text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("total_installments")}
             >
               Total Installments
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
+              className="px-2 py-2 border-b text-left text-xs font-semibold leading-tight text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("payment_date")}
             >
               Payment Date
             </th>
             <th
-              className="px-4 py-2 border-b text-left text-sm font-semibold text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text whitespace-nowrap"
+              className="px-2 py-2 border-b text-left text-xs font-semibold leading-tight text-gray-600 cursor-pointer dark:border-dark-border dark:text-dark-text"
               onClick={() => handleSort("status")}
             >
               Status
             </th>
             {!isScopedCustomer && (
-              <th className="px-2 py-2 border-b text-left text-sm font-semibold text-gray-600 dark:border-dark-border dark:text-dark-text whitespace-nowrap">
+              <th className="px-1 py-2 border-b text-center text-xs font-semibold leading-tight text-gray-600 dark:border-dark-border dark:text-dark-text">
                 Actions
               </th>
             )}
@@ -568,12 +582,12 @@ const LoanTableView: React.FC = () => {
                     className={`even:bg-gray-50/50 hover:bg-indigo-50/50 transition-colors dark:even:bg-slate-700/50 dark:hover:bg-slate-600/50 ${isDeleting ? "pointer-events-none" : ""}`}
                     style={{ overflow: "hidden" }}
                   >
-                    <td className="px-4 py-2 border-b font-medium text-sm text-gray-700 dark:border-dark-border dark:text-dark-muted whitespace-nowrap">
+                    <td className="px-2 py-2 border-b font-medium text-xs text-gray-700 dark:border-dark-border dark:text-dark-muted">
                       {serialNumber}
                     </td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border">
+                    <td className="px-2 py-2 border-b dark:border-dark-border">
                       <button
-                        className="font-bold text-indigo-700 hover:underline focus:outline-none text-left dark:text-indigo-400"
+                        className="break-words text-left font-bold text-indigo-700 hover:underline focus:outline-none dark:text-indigo-400"
                         onClick={() =>
                           setExpandedRow(isExpanded ? null : loan.id)
                         }
@@ -582,42 +596,42 @@ const LoanTableView: React.FC = () => {
                         {loan.customers?.name ?? "Unknown"}
                       </button>
                     </td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
+                    <td className="px-1 py-2 border-b text-center dark:border-dark-border dark:text-dark-text whitespace-nowrap">
                       {formatCurrencyIN(totalRepayable)}
                     </td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
+                    <td className="px-1 py-2 border-b text-center dark:border-dark-border dark:text-dark-text whitespace-nowrap">
                       {formatCurrencyIN(loan.original_amount)}
                     </td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
+                    <td className="px-1 py-2 border-b text-center dark:border-dark-border dark:text-dark-text whitespace-nowrap">
                       {formatCurrencyIN(loan.interest_amount)}
                     </td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
+                    <td className="px-1 py-2 border-b text-center dark:border-dark-border dark:text-dark-text whitespace-nowrap">
                       {formatCurrencyIN(paid)}
                     </td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
+                    <td className="px-1 py-2 border-b text-center dark:border-dark-border dark:text-dark-text whitespace-nowrap">
                       {formatCurrencyIN(balance)}
                     </td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
+                    <td className="px-1 py-2 border-b text-center dark:border-dark-border dark:text-dark-text whitespace-nowrap">
                       {loan.check_number || "-"}
                     </td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
+                    <td className="px-1 py-2 border-b text-center dark:border-dark-border dark:text-dark-text whitespace-nowrap">
                       {loanInstallments.length}
                     </td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
+                    <td className="px-1 py-2 border-b text-center dark:border-dark-border dark:text-dark-text whitespace-nowrap">
                       {loan.total_instalments || "-"}
                     </td>
-                    <td className="px-4 py-2 border-b dark:border-dark-border dark:text-dark-text whitespace-nowrap">
+                    <td className="px-1 py-2 border-b text-center dark:border-dark-border dark:text-dark-text whitespace-nowrap">
                       {loan.payment_date ? formatDate(loan.payment_date) : "-"}
                     </td>
                     <td
-                      className={`px-4 py-2 border-b font-semibold dark:border-dark-border whitespace-nowrap ${
+                      className={`px-2 py-2 border-b font-semibold leading-tight dark:border-dark-border ${
                         isPaidOff ? "text-green-600" : "text-orange-600"
                       }`}
                     >
                       {loanStatus.status}
                     </td>
                     {!isScopedCustomer && (
-                      <td className="px-2 py-2 border-b dark:border-dark-border">
+                      <td className="px-1 py-2 border-b text-center dark:border-dark-border">
                         <div className="relative inline-block actions-dropdown-container">
                           <motion.button
                             onClick={(e) => {
@@ -903,8 +917,8 @@ const LoanTableView: React.FC = () => {
       </table>
 
       {/* Mobile stacked cards */}
-      {/* This `md:hidden` class is correct. It hides this view on desktop */}
-      <div className="md:hidden mt-4 space-y-3">
+      {/* Uses cards below wide desktop so the dense table never clips columns. */}
+      <div className="mt-4 space-y-3 xl:hidden">
         <AnimatePresence mode="popLayout">
           {paginatedLoans.map((loan, idx) => {
             const position = (currentPage - 1) * itemsPerPage + idx;

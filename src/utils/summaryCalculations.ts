@@ -15,6 +15,8 @@ export interface SummaryData {
   subscriptionBalance: number;
   totalDataCollected: number;
   totalExpenses: number;
+  totalSavings: number;
+  totalMutualFunds: number;
   expenseTotalsBySubtype: Record<string, number>;
   retirementGiftByPaymentMethod: Record<string, number>;
   totalAllCollected: number;
@@ -32,6 +34,8 @@ export const calculateSummaryData = (
 ): SummaryData => {
   const isExpenseType = (type: DataEntry['type']) =>
     type === 'expense' || (type as string) === 'expenditure';
+  const isMutualFundsEntry = (entry: DataEntry) =>
+    entry.type === 'savings' || entry.subtype === 'Mutual Funds';
 
   // Helper to get installments for a loan (uses map if available, falls back to filter)
   const getInstallmentsForLoan = (loanId: string): Installment[] => {
@@ -84,13 +88,24 @@ export const calculateSummaryData = (
   const subscriptionBalance =
     totalSubscriptionCollected - subscriptionReturnTotal;
 
-  // Calculate Total Data Collected
+  // Calculate Total Data Collected. Savings are standalone and do not count as credit or expense.
   const totalDataCollected = dataEntries.reduce((acc, entry) => {
+    if (isMutualFundsEntry(entry)) {
+      return acc;
+    }
     if (isExpenseType(entry.type)) {
       return acc - (entry.amount || 0);
     }
     return acc + (entry.amount || 0);
   }, 0);
+
+  const totalMutualFunds = dataEntries.reduce((acc, entry) => {
+    if (isMutualFundsEntry(entry)) {
+      return acc + (entry.amount || 0);
+    }
+    return acc;
+  }, 0);
+  const totalSavings = totalMutualFunds;
 
   // Calculate Total Expenses by Subtype
   const expenseTotalsBySubtype: Record<string, number> = expenseSubtypes.reduce(
@@ -168,6 +183,8 @@ export const calculateSummaryData = (
     subscriptionBalance,
     totalDataCollected,
     totalExpenses,
+    totalSavings,
+    totalMutualFunds,
     expenseTotalsBySubtype,
     retirementGiftByPaymentMethod,
     totalAllCollected,

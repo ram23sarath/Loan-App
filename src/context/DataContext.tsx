@@ -366,6 +366,10 @@ interface DataContextType {
     updates: Partial<Installment>,
   ) => Promise<Installment>;
   addDataEntry: (entry: NewDataEntry) => Promise<DataEntry>;
+  updateDataEntry: (
+    id: string,
+    updates: Partial<DataEntry>,
+  ) => Promise<DataEntry>;
   deleteDataEntry: (id: string) => Promise<void>;
   deleteCustomer: (customerId: string) => Promise<void>;
   deleteLoan: (loanId: string) => Promise<void>;

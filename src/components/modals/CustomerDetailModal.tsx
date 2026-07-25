@@ -59,6 +59,9 @@ interface CustomerDetailModalProps {
 
 type CustomerDetailSection = "loans" | "subscriptions" | "entries" | null;
 
+const sortEntriesLatestFirst = (entries: DataEntry[]) =>
+  [...entries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
 const backdropVariants: Variants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { duration: 0.2, ease: "easeOut" } },
@@ -243,6 +246,10 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
       interestCharged,
     );
   }, [loans, subscriptions, dataEntries, interestCharged, installments]);
+  const sortedDataEntries = useMemo(
+    () => sortEntriesLatestFirst(dataEntries),
+    [dataEntries],
+  );
 
   const {
     subscriptionSortBy,
@@ -1236,7 +1243,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 </div>
               </h3>
             </div>
-            {dataEntries.length > 0 ? (
+            {sortedDataEntries.length > 0 ? (
               <div>
                 {/* Desktop Table/Grid View */}
                 <div className="hidden md:block space-y-2">
@@ -1250,7 +1257,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                     <div className="col-span-2 text-right">Actions</div>
                   </div>
                   {/* Rows */}
-                  {dataEntries.map((entry) => (
+                  {sortedDataEntries.map((entry) => (
                     <div
                       key={entry.id}
                       className="grid grid-cols-12 gap-4 px-4 py-2 text-sm items-start border-b border-pink-100 dark:border-pink-900/30 last:border-b-0 w-full"
@@ -1259,7 +1266,11 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                         {formatDate(entry.date)}
                       </div>
                       <div className="col-span-2 text-center">
-                        {entry.type === "credit" ? (
+                        {entry.type === "savings" || entry.subtype === "Mutual Funds" ? (
+                          <span className="inline-block px-2 py-1 text-xs font-semibold text-cyan-700 bg-cyan-100 rounded-full dark:bg-cyan-900/30 dark:text-cyan-300">
+                            Savings
+                          </span>
+                        ) : entry.type === "credit" ? (
                           <span className="inline-block px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full dark:bg-green-900/30 dark:text-green-400">
                             Credit
                           </span>
@@ -1270,9 +1281,9 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                         )}
                       </div>
                       <div
-                        className={`col-span-2 font-bold text-right ${entry.type === "credit" ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}
+                        className={`col-span-2 font-bold text-right ${entry.type === "savings" || entry.subtype === "Mutual Funds" ? "text-cyan-700 dark:text-cyan-300" : entry.type === "credit" ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}
                       >
-                        {entry.type === "credit" ? "+" : "-"}
+                        {entry.type === "credit" ? "+" : entry.type === "savings" || entry.subtype === "Mutual Funds" ? "" : "-"}
                         {formatCurrency(entry.amount)}
                       </div>
                       <div className="col-span-2 text-center text-gray-600 dark:text-dark-muted">
@@ -1330,7 +1341,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
                 {/* Mobile Cards View */}
                 <div className="md:hidden space-y-3">
-                  {dataEntries.map((entry, idx) => (
+                  {sortedDataEntries.map((entry, idx) => (
                     <div
                       key={entry.id}
                       className="p-3 bg-pink-50 dark:bg-pink-900/10 rounded-lg border border-pink-200 dark:border-pink-900/30"
@@ -1340,7 +1351,11 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                           #{idx + 1}
                         </div>
                         <div>
-                          {entry.type === "credit" ? (
+                          {entry.type === "savings" || entry.subtype === "Mutual Funds" ? (
+                          <span className="inline-block px-2 py-1 text-xs font-semibold text-cyan-700 bg-cyan-100 rounded-full dark:bg-cyan-900/30 dark:text-cyan-300">
+                            Savings
+                          </span>
+                        ) : entry.type === "credit" ? (
                             <span className="inline-block px-2 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-full dark:bg-green-900/30 dark:text-green-400">
                               Credit
                             </span>
@@ -1365,9 +1380,9 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                             Amount:
                           </span>
                           <span
-                            className={`font-bold ${entry.type === "credit" ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}
+                            className={`font-bold ${entry.type === "savings" || entry.subtype === "Mutual Funds" ? "text-cyan-700 dark:text-cyan-300" : entry.type === "credit" ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"}`}
                           >
-                            {entry.type === "credit" ? "+" : "-"}
+                            {entry.type === "credit" ? "+" : entry.type === "savings" || entry.subtype === "Mutual Funds" ? "" : "-"}
                             {formatCurrency(entry.amount)}
                           </span>
                         </div>

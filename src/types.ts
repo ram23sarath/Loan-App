@@ -4,7 +4,7 @@ export type DataEntry = {
   date: string;
   amount: number;
   receipt_number: string;
-  type: "credit" | "debit" | "expense"; // Type of transaction
+  type: "credit" | "debit" | "expense" | "expenditure" | "savings"; // Type of transaction
   notes?: string;
   subtype?: string | null;
   payment_method?: string | null;
@@ -243,7 +243,7 @@ export type Database = {
           date: string;
           amount: number;
           receipt_number: string;
-          type: "credit" | "debit" | "expense";
+          type: "credit" | "debit" | "expense" | "expenditure" | "savings";
           notes?: string;
           subtype?: string | null;
           payment_method?: string | null;
@@ -255,7 +255,7 @@ export type Database = {
           date: string;
           amount: number;
           receipt_number: string;
-          type: "credit" | "debit" | "expense";
+          type: "credit" | "debit" | "expense" | "expenditure" | "savings";
           notes?: string;
           subtype?: string | null;
           payment_method?: string | null;
@@ -265,7 +265,7 @@ export type Database = {
           date?: string;
           amount?: number;
           receipt_number?: string;
-          type?: "credit" | "debit" | "expense";
+          type?: "credit" | "debit" | "expense" | "expenditure" | "savings";
           notes?: string;
           subtype?: string | null;
           payment_method?: string | null;

@@ -7,11 +7,12 @@ import GlassCard from '../ui/GlassCard';
 import { useData } from '../../context/DataContext';
 import Toast from '../ui/Toast';
 import type { Customer, DataEntry } from '../../types';
+import { isSavingsEnabledForCustomer } from '../../utils/config';
 
 type Props = { customer: Customer; onClose: () => void; dataEntry?: DataEntry };
 
 type FormInputs = {
-  type: 'credit' | 'expenditure';
+  type: 'credit' | 'expenditure' | 'savings';
   subtype?: string;
   payment_method?: string;
   amount: number;
@@ -25,6 +26,8 @@ const today = () => new Date().toISOString().slice(0, 10);
 const RecordDataEntryModal: React.FC<Props> = ({ customer, onClose, dataEntry }) => {
   const { addDataEntry, updateDataEntry } = useData();
   const isEditing = !!dataEntry;
+  const isSavingsEligible = isSavingsEnabledForCustomer(customer?.id);
+
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset, setValue, watch } = useForm<FormInputs>({
     defaultValues: {
       type: 'credit',
@@ -53,7 +56,11 @@ const RecordDataEntryModal: React.FC<Props> = ({ customer, onClose, dataEntry })
   }, [isEditing, dataEntry, setValue]);
 
   useEffect(() => {
-    if (!(watchedType === 'expenditure' && watchedSubtype === 'Retirement Gift')) {
+    if (watchedType === 'savings') {
+      setValue('subtype', 'Mutual Funds');
+      setValue('receipt', '');
+      setValue('payment_method', '');
+    } else if (!(watchedType === 'expenditure' && watchedSubtype === 'Retirement Gift')) {
       setValue('payment_method', '');
     }
   }, [watchedType, watchedSubtype, setValue]);
@@ -68,14 +75,18 @@ const RecordDataEntryModal: React.FC<Props> = ({ customer, onClose, dataEntry })
 
   const onSubmit: SubmitHandler<FormInputs> = async (data) => {
     try {
+      const isMutualFunds = data.type === 'savings' && (data.subtype === 'Mutual Funds' || !data.subtype);
+      const sanitizedReceipt = isMutualFunds ? '' : (data.receipt || '');
+      const sanitizedSubtype = data.type === 'savings' ? 'Mutual Funds' : (data.subtype || null);
+
       if (isEditing && dataEntry) {
         await updateDataEntry(dataEntry.id, {
           date: data.date,
           amount: Number(data.amount),
           type: data.type as any,
-          subtype: data.subtype || null,
+          subtype: sanitizedSubtype,
           payment_method: data.payment_method || null,
-          receipt_number: data.receipt || '',
+          receipt_number: sanitizedReceipt,
           notes: data.notes === '' ? null : data.notes,
         } as any);
       } else {
@@ -84,9 +95,9 @@ const RecordDataEntryModal: React.FC<Props> = ({ customer, onClose, dataEntry })
           date: data.date,
           amount: Number(data.amount),
           type: data.type as any,
-          subtype: data.subtype || null,
+          subtype: sanitizedSubtype,
           payment_method: data.payment_method || null,
-          receipt_number: data.receipt || '',
+          receipt_number: sanitizedReceipt,
           notes: data.notes === '' ? null : data.notes,
         } as any);
       }
@@ -134,19 +145,26 @@ const RecordDataEntryModal: React.FC<Props> = ({ customer, onClose, dataEntry })
               <select {...register('type')} className="w-full p-2 border border-gray-300 rounded dark:bg-dark-bg dark:border-dark-border dark:text-dark-text">
                 <option value="credit">Credit</option>
                 <option value="expenditure">Expenditure</option>
+                {isSavingsEligible && <option value="savings">Savings</option>}
               </select>
             </div>
 
             <div>
               <label className="block text-sm text-gray-600 dark:text-dark-muted">Subtype (optional)</label>
               <select {...register('subtype')} className="w-full p-2 border border-gray-300 rounded dark:bg-dark-bg dark:border-dark-border dark:text-dark-text">
-                <option value="">None</option>
-                {watchedType !== 'credit' && (
-                  <option value="Subscription Return">Subscription Return</option>
+                {watchedType === 'savings' ? (
+                  <option value="Mutual Funds">Mutual Funds</option>
+                ) : (
+                  <>
+                    <option value="">None</option>
+                    {watchedType !== 'credit' && (
+                      <option value="Subscription Return">Subscription Return</option>
+                    )}
+                    <option value="Retirement Gift">Retirement Gift</option>
+                    <option value="Death Fund">Death Fund</option>
+                    <option value="Misc Expense">Misc Expense</option>
+                  </>
                 )}
-                <option value="Retirement Gift">Retirement Gift</option>
-                <option value="Death Fund">Death Fund</option>
-                <option value="Misc Expense">Misc Expense</option>
               </select>
             </div>
 
@@ -172,10 +190,12 @@ const RecordDataEntryModal: React.FC<Props> = ({ customer, onClose, dataEntry })
               <input type="date" {...register('date', { required: 'Required' })} className="w-full p-2 border border-gray-300 rounded dark:bg-dark-bg dark:border-dark-border dark:text-dark-text" />
             </div>
 
-            <div>
-              <label className="block text-sm text-gray-600 dark:text-dark-muted">Receipt # (optional)</label>
-              <input type="text" {...register('receipt')} className="w-full p-2 border border-gray-300 rounded dark:bg-dark-bg dark:border-dark-border dark:text-dark-text" />
-            </div>
+            {!(watchedType === 'savings' && (watchedSubtype === 'Mutual Funds' || !watchedSubtype)) && (
+              <div>
+                <label className="block text-sm text-gray-600 dark:text-dark-muted">Receipt # (optional)</label>
+                <input type="text" {...register('receipt')} className="w-full p-2 border border-gray-300 rounded dark:bg-dark-bg dark:border-dark-border dark:text-dark-text" />
+              </div>
+            )}
 
             <div>
               <label className="block text-sm text-gray-600 dark:text-dark-muted">Notes (optional)</label>

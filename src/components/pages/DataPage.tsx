@@ -14,6 +14,7 @@ import { formatDate } from "../../utils/dateFormatter";
 import { useDebounce } from "../../utils/useDebounce";
 import { formatNumberIndian } from "../../utils/numberFormatter";
 import { type DataEntry } from "../../types";
+import { isSavingsEnabledForCustomer } from "../../utils/config";
 import PageWrapper from "../ui/PageWrapper";
 import LoadingButton from "../ui/LoadingButton";
 
@@ -127,6 +128,14 @@ const DataPage = () => {
   const customerMap = useMemo(() => {
     return new Map(customers.map((c) => [c.id, c.name]));
   }, [customers]);
+  const isFormSavingsEligible = isSavingsEnabledForCustomer(form.customerId);
+  const isEditSavingsEligible =
+    editEntryForm.type === "savings" ||
+    isSavingsEnabledForCustomer(editEntryForm.customerId);
+  const isSavingsEntry = (entry: DataEntry) =>
+    entry.type === "savings" || entry.subtype === "Mutual Funds";
+  const isExpenseEntry = (entry: DataEntry) =>
+    entry.type === "expense" || entry.type === "expenditure";
 
   // Filter data entries by scoped customer if applicable
   const displayedDataEntries = useMemo(() => {
@@ -274,6 +283,175 @@ const DataPage = () => {
     );
   }, [sortedEntries, currentPage, itemsPerPage]);
 
+  const resetForm = () => {
+    setForm({
+      customerId: "",
+      date: "",
+      amount: "",
+      type: "credit",
+      subtype: "",
+      receipt: "",
+      notes: "",
+      paymentMethod: "",
+    });
+  };
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+  ) => {
+    const { name, value } = e.target;
+    setForm((prev) => {
+      if (name === "type") {
+        if (value === "savings") {
+          return {
+            ...prev,
+            type: value,
+            subtype: "Mutual Funds",
+            receipt: "",
+            paymentMethod: "",
+          };
+        }
+        return {
+          ...prev,
+          type: value,
+          subtype: prev.type === "savings" ? "" : prev.subtype,
+          paymentMethod: value === "expenditure" ? prev.paymentMethod : "",
+        };
+      }
+
+      if (name === "subtype") {
+        return {
+          ...prev,
+          subtype: value,
+          paymentMethod: value === "Retirement Gift" ? prev.paymentMethod : "",
+        };
+      }
+
+      return { ...prev, [name]: value };
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!form.customerId || !form.date || !form.amount) {
+      setToastMsg("Please fill in customer, date, and amount.");
+      setShowToast(true);
+      return;
+    }
+
+    const isMutualFunds = form.type === "savings";
+    setIsSubmitting(true);
+    try {
+      await addDataEntry({
+        customer_id: form.customerId,
+        date: form.date,
+        amount: Number(form.amount),
+        type: form.type as DataEntry["type"],
+        subtype: isMutualFunds ? "Mutual Funds" : form.subtype || null,
+        payment_method:
+          form.type === "expenditure" && form.subtype === "Retirement Gift"
+            ? form.paymentMethod || null
+            : null,
+        receipt_number: isMutualFunds ? "" : form.receipt || "",
+        notes: form.notes || null,
+      });
+      resetForm();
+      setToastMsg("Data entry saved successfully.");
+      setShowToast(true);
+    } catch (error: any) {
+      setToastMsg(error?.message || "Failed to save data entry.");
+      setShowToast(true);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCancel = () => {
+    resetForm();
+    setCustomerFilter("");
+    setShowCustomerDropdown(false);
+  };
+
+  const handleSaveEditEntry = async () => {
+    if (!editEntryId) return;
+    const isMutualFunds = editEntryForm.type === "savings";
+    setEditEntryLoading(true);
+    try {
+      await updateDataEntry(editEntryId, {
+        customer_id: editEntryForm.customerId,
+        date: editEntryForm.date,
+        amount: Number(editEntryForm.amount),
+        type: editEntryForm.type as DataEntry["type"],
+        subtype: isMutualFunds ? "Mutual Funds" : editEntryForm.subtype || null,
+        payment_method:
+          editEntryForm.type === "expenditure" &&
+          editEntryForm.subtype === "Retirement Gift"
+            ? editEntryForm.paymentMethod || null
+            : null,
+        receipt_number: isMutualFunds ? "" : editEntryForm.receipt || "",
+        notes: editEntryForm.notes || null,
+      });
+      setEditEntryId(null);
+      setToastMsg("Data entry updated successfully.");
+      setShowToast(true);
+    } catch (error: any) {
+      setToastMsg(error?.message || "Failed to update data entry.");
+      setShowToast(true);
+    } finally {
+      setEditEntryLoading(false);
+    }
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    setIsDeletingEntry(true);
+    try {
+      await deleteDataEntry(deleteId);
+      setDeleteId(null);
+      setToastMsg("Data entry moved to trash.");
+      setShowToast(true);
+    } catch (error: any) {
+      setToastMsg(error?.message || "Failed to delete data entry.");
+      setShowToast(true);
+    } finally {
+      setIsDeletingEntry(false);
+    }
+  };
+
+  const handleNoteClick = (id: string) => {
+    setExpandedNoteId((prev) => (prev === id ? null : id));
+  };
+
+  const handleSortColumn = (
+    column: "date" | "type" | "subtype" | "amount" | "receipt" | "notes",
+  ) => {
+    setSortColumn((prev) => {
+      if (prev === column) {
+        setSortDirection((direction) =>
+          direction === "asc" ? "desc" : "asc",
+        );
+        return prev;
+      }
+      setSortDirection("asc");
+      return column;
+    });
+  };
+
+  const getSortIndicator = (
+    column: "date" | "type" | "subtype" | "amount" | "receipt" | "notes",
+  ) => {
+    if (sortColumn !== column) return null;
+    return (
+      <span className="ml-1" aria-hidden="true">
+        {sortDirection === "asc" ? " asc" : " desc"}
+      </span>
+    );
+  };
+
   // Reset to page 1 when data changes
   useEffect(() => {
     setCurrentPage(1);
@@ -397,192 +575,8 @@ const DataPage = () => {
     return () => document.removeEventListener("keydown", handleEscape, true);
   }, [showCustomerModal]);
 
-  // Sorting handler
-  const handleSortColumn = (
-    column: "date" | "type" | "subtype" | "amount" | "receipt" | "notes",
-  ) => {
-    if (sortColumn === column) {
-      // Toggle direction if clicking the same column
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      // Set new column and default to ascending
-      setSortColumn(column);
-      setSortDirection("asc");
-    }
-    setCurrentPage(1);
-  };
-
-  // Helper function to render sort indicator
-  const getSortIndicator = (
-    column: "date" | "type" | "subtype" | "amount" | "receipt" | "notes",
-  ) => {
-    if (sortColumn !== column) return " ↕️";
-    return sortDirection === "asc" ? " ↑" : " ↓";
-  };
-
-  // --- HANDLERS ---
-  const handleChange = useCallback(
-    (
-      e: React.ChangeEvent<
-        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
-      >,
-    ) => {
-      const { name, value } = e.target as HTMLInputElement &
-        HTMLSelectElement &
-        HTMLTextAreaElement;
-      setForm((prevForm) => {
-        // If the user switches the type to credit, ensure we don't keep a Subscription subtype (Subscription should be hidden for credits)
-        if (name === "type") {
-          const newType = value;
-          if (
-            newType === "credit" &&
-            prevForm.subtype === "Subscription Return"
-          ) {
-            return { ...prevForm, type: newType, subtype: "", paymentMethod: "" };
-          }
-          if (newType !== "expenditure") {
-            return { ...prevForm, type: newType, paymentMethod: "" };
-          }
-          return { ...prevForm, type: newType };
-        }
-        if (name === "subtype" && value !== "Retirement Gift") {
-          return { ...prevForm, subtype: value, paymentMethod: "" };
-        }
-        return { ...prevForm, [name]: value };
-      });
-    },
-    [],
-  );
-
-  const resetForm = useCallback(() => {
-    setForm({
-      customerId: "",
-      date: "",
-      amount: "",
-      type: "credit",
-      subtype: "",
-      receipt: "",
-      notes: "",
-      paymentMethod: "",
-    });
-  }, []);
-
-  const handleCancel = useCallback(() => {
-    resetForm();
-    setCustomerFilter("");
-    setShowCustomerDropdown(false);
-  }, [resetForm]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // --- LOGIC FIX ---
-    // Added direct validation instead of relying on a hidden select element.
-    if (!form.customerId) {
-      setToastMsg("Please select a customer.");
-      setShowToast(true);
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      await addDataEntry({
-        customer_id: form.customerId,
-        date: form.date,
-        amount: Number(form.amount),
-        type: form.type,
-        subtype: form.subtype,
-        receipt_number: form.receipt,
-        notes: form.notes,
-        payment_method: form.paymentMethod || null,
-      });
-      resetForm();
-      setToastMsg("Entry added successfully!");
-      setShowToast(true);
-    } catch (err: any) {
-      setToastMsg(err.message || "Failed to add data entry.");
-      setShowToast(true);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDeleteClick = (id: string) => {
-    setDeleteId(id);
-  };
-
-  const confirmDelete = async () => {
-    if (deleteId && !isDeletingEntry) {
-      setIsDeletingEntry(true);
-      try {
-        await deleteDataEntry(deleteId);
-        setToastMsg("Entry moved to trash.");
-        setShowToast(true);
-      } catch (err: any) {
-        setToastMsg(err.message || "Failed to delete entry.");
-        setShowToast(true);
-      } finally {
-        setIsDeletingEntry(false);
-        setDeleteId(null);
-      }
-    }
-  };
-
-  // Save full entry edits
-  const handleSaveEditEntry = async () => {
-    if (!editEntryId) return;
-    setEditEntryLoading(true);
-    try {
-      await updateDataEntry(editEntryId, {
-        customer_id: editEntryForm.customerId,
-        date: editEntryForm.date,
-        amount: Number(editEntryForm.amount),
-        type: editEntryForm.type,
-        subtype: editEntryForm.subtype || null,
-        receipt_number: editEntryForm.receipt === "" ? null : editEntryForm.receipt,
-        notes: editEntryForm.notes === "" ? null : editEntryForm.notes,
-        payment_method: editEntryForm.paymentMethod || null,
-      });
-      setEditEntryId(null);
-      setToastMsg("Entry updated successfully.");
-      setShowToast(true);
-    } catch (err: any) {
-      setToastMsg(err?.message || "Failed to update entry.");
-      setShowToast(true);
-    } finally {
-      setEditEntryLoading(false);
-    }
-  };
-
-  const handleNoteClick = (id: string) => {
-    setExpandedNoteId(expandedNoteId === id ? null : id);
-  };
-
-  // --- STYLES & VARIANTS ---
-  const inputBaseStyle =
-    "w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-shadow dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted";
-  const dateInputStyle =
-    "w-full p-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-shadow text-base bg-white block dark:bg-slate-700 dark:border-dark-border dark:text-dark-text";
-  const dateInputInlineStyles = {
-    minHeight: "42px",
-    WebkitAppearance: "none" as const,
-  };
-  const labelBaseStyle =
-    "block mb-2 text-sm font-medium text-gray-700 dark:text-dark-text";
-  const viewVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.4, ease: "easeOut" },
-    },
-    exit: { opacity: 0, y: -20, transition: { duration: 0.3, ease: "easeIn" } },
-  };
-  const modalVariants = {
-    hidden: { scale: 0.9, opacity: 0 },
-    visible: { scale: 1, opacity: 1 },
-    exit: { scale: 0.95, opacity: 0 },
-  };
-  const toastVariants = {
-    hidden: { opacity: 0, x: "100%" },
+  const viewVariants: any = {
+    hidden: { opacity: 0, x: 20 },
     visible: {
       opacity: 1,
       x: 0,
@@ -594,11 +588,30 @@ const DataPage = () => {
       transition: { ease: "easeIn", duration: 0.4 },
     },
   };
-  const dropdownVariants = {
+  const modalVariants: any = {
+    hidden: { opacity: 0, y: 16, scale: 0.98 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: { type: "spring", stiffness: 260, damping: 24 },
+    },
+    exit: { opacity: 0, y: 12, scale: 0.98 },
+  };
+  const dropdownVariants: any = {
     hidden: { opacity: 0, y: -10 },
     visible: { opacity: 1, y: 0 },
     exit: { opacity: 0, y: -10 },
   };
+  const toastVariants: any = {
+    hidden: { opacity: 0, y: 16 },
+    visible: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: 16 },
+  };
+  const labelBaseStyle = "block text-xs font-semibold text-gray-700 dark:text-dark-text mb-1";
+  const inputBaseStyle = "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted";
+  const dateInputStyle = inputBaseStyle;
+  const dateInputInlineStyles: React.CSSProperties = { colorScheme: "light dark" };
 
   // Early return for scoped users with no entries - show simple message box
   if (isScopedCustomer && displayedDataEntries.length === 0) {
@@ -744,7 +757,7 @@ const DataPage = () => {
                                   .filter((e) => e.type === "credit")
                                   .reduce((sum, e) => sum + e.amount, 0);
                                 const expenseTotal = group.entries
-                                  .filter((e) => e.type !== "credit")
+                                  .filter(isExpenseEntry)
                                   .reduce((sum, e) => sum + e.amount, 0);
                                 return (
                                   <button
@@ -901,7 +914,11 @@ const DataPage = () => {
                                       {formatDate(entry.date)}
                                     </td>
                                     <td className="px-4 py-3 text-center">
-                                      {entry.type === "credit" ? (
+                                      {isSavingsEntry(entry) ? (
+                                        <span className="inline-block px-2 py-1 rounded-full bg-cyan-100 text-cyan-800 font-semibold text-xs dark:bg-cyan-900/30 dark:text-cyan-300">
+                                          Savings
+                                        </span>
+                                      ) : entry.type === "credit" ? (
                                         <span className="inline-block px-2 py-1 rounded-full bg-green-100 text-green-800 font-semibold text-xs dark:bg-green-900/30 dark:text-green-400">
                                           Credit
                                         </span>
@@ -916,9 +933,11 @@ const DataPage = () => {
                                     </td>
                                     <td
                                       className={`px-4 py-3 font-bold text-left ${
-                                        entry.type === "credit"
-                                          ? "text-green-700 dark:text-green-400"
-                                          : "text-red-700 dark:text-red-400"
+                                        isSavingsEntry(entry)
+                                          ? "text-cyan-700 dark:text-cyan-300"
+                                          : entry.type === "credit"
+                                            ? "text-green-700 dark:text-green-400"
+                                            : "text-red-700 dark:text-red-400"
                                       }`}
                                     >
                                       ₹{formatNumberIndian(entry.amount)}
@@ -927,9 +946,9 @@ const DataPage = () => {
                                       {entry.receipt_number || "-"}
                                     </td>
                                     <td
-                                      ref={(el) =>
-                                        (notesRefs.current[entry.id] = el)
-                                      }
+                                      ref={(el) => {
+                                        notesRefs.current[entry.id] = el;
+                                      }}
                                       className="px-4 py-3 text-gray-600 text-left dark:text-dark-muted"
                                     >
                                       <div
@@ -1018,9 +1037,11 @@ const DataPage = () => {
                                     <div className={`text-right flex-shrink-0`}>
                                       <div
                                         className={`font-bold text-base sm:text-lg ${
-                                          entry.type === "credit"
-                                            ? "text-green-700 dark:text-green-400"
-                                            : "text-red-700 dark:text-red-400"
+                                          isSavingsEntry(entry)
+                                            ? "text-cyan-700 dark:text-cyan-300"
+                                            : entry.type === "credit"
+                                              ? "text-green-700 dark:text-green-400"
+                                              : "text-red-700 dark:text-red-400"
                                         }`}
                                       >
                                         ₹{formatNumberIndian(entry.amount)}
@@ -1030,13 +1051,17 @@ const DataPage = () => {
 
                                   {/* Type & Subtype Badges */}
                                   <div className="flex flex-wrap gap-2 mb-3">
-                                    {entry.type === "credit" ? (
+                                    {isSavingsEntry(entry) ? (
+                                      <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-cyan-100 text-cyan-800 font-semibold text-xs dark:bg-cyan-900/30 dark:text-cyan-300">
+                                        Savings
+                                      </span>
+                                    ) : entry.type === "credit" ? (
                                       <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-green-100 text-green-800 font-semibold text-xs dark:bg-green-900/30 dark:text-green-400">
-                                        ✓ Credit
+                                        Credit
                                       </span>
                                     ) : (
                                       <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-red-100 text-red-800 font-semibold text-xs dark:bg-red-900/30 dark:text-red-400">
-                                        ↗ Expense
+                                        Expense
                                       </span>
                                     )}
                                     {entry.subtype && (
@@ -1308,7 +1333,25 @@ const DataPage = () => {
                                         : ""
                                     }`}
                                     onClick={() => {
-                                      setForm({ ...form, customerId: c.id });
+                                      setForm((prev) => ({
+                                        ...prev,
+                                        customerId: c.id,
+                                        type:
+                                          prev.type === "savings" &&
+                                          !isSavingsEnabledForCustomer(c.id)
+                                            ? "credit"
+                                            : prev.type,
+                                        subtype:
+                                          prev.type === "savings" &&
+                                          !isSavingsEnabledForCustomer(c.id)
+                                            ? ""
+                                            : prev.subtype,
+                                        receipt:
+                                          prev.type === "savings" &&
+                                          !isSavingsEnabledForCustomer(c.id)
+                                            ? prev.receipt
+                                            : prev.receipt,
+                                      }));
                                       setShowCustomerDropdown(false);
                                       setCustomerFilter("");
                                     }}
@@ -1353,6 +1396,9 @@ const DataPage = () => {
                           >
                             <option value="credit">Credit</option>
                             <option value="expenditure">Expenditure</option>
+                            {isFormSavingsEligible && (
+                              <option value="savings">Savings</option>
+                            )}
                           </select>
                         </div>
                         <div className="md:col-span-2">
@@ -1366,18 +1412,24 @@ const DataPage = () => {
                             onChange={handleChange}
                             className={`${inputBaseStyle} bg-white dark:bg-slate-700`}
                           >
-                            <option value="">None</option>
-                            {/* Show Subscription only when type is NOT credit (hidden for credit entries) */}
-                            {form.type !== "credit" && (
-                              <option value="Subscription Return">
-                                Subscription Return
-                              </option>
+                            {form.type === "savings" ? (
+                              <option value="Mutual Funds">Mutual Funds</option>
+                            ) : (
+                              <>
+                                <option value="">None</option>
+                                {/* Show Subscription only when type is NOT credit (hidden for credit entries) */}
+                                {form.type !== "credit" && (
+                                  <option value="Subscription Return">
+                                    Subscription Return
+                                  </option>
+                                )}
+                                <option value="Retirement Gift">
+                                  Retirement Gift
+                                </option>
+                                <option value="Death Fund">Death Fund</option>
+                                <option value="Misc Expense">Misc Expense</option>
+                              </>
                             )}
-                            <option value="Retirement Gift">
-                              Retirement Gift
-                            </option>
-                            <option value="Death Fund">Death Fund</option>
-                            <option value="Misc Expense">Misc Expense</option>
                           </select>
                         </div>
                         {form.type === "expenditure" && form.subtype === "Retirement Gift" && (
@@ -1415,22 +1467,24 @@ const DataPage = () => {
                           />
                         </div>
                       </div>
-                      <div>
-                        <label htmlFor="receipt" className={labelBaseStyle}>
-                          Receipt Number{" "}
-                          <span className="text-gray-400 font-normal dark:text-dark-muted">
-                            (Optional)
-                          </span>
-                        </label>
-                        <input
-                          type="text"
-                          id="receipt"
-                          name="receipt"
-                          value={form.receipt}
-                          onChange={handleChange}
-                          className={inputBaseStyle}
-                        />
-                      </div>
+                      {form.type !== "savings" && (
+                        <div>
+                          <label htmlFor="receipt" className={labelBaseStyle}>
+                            Receipt Number{" "}
+                            <span className="text-gray-400 font-normal dark:text-dark-muted">
+                              (Optional)
+                            </span>
+                          </label>
+                          <input
+                            type="text"
+                            id="receipt"
+                            name="receipt"
+                            value={form.receipt}
+                            onChange={handleChange}
+                            className={inputBaseStyle}
+                          />
+                        </div>
+                      )}
                       <div>
                         <label htmlFor="notes" className={labelBaseStyle}>
                           Notes{" "}
@@ -1609,7 +1663,7 @@ const DataPage = () => {
                             .filter((e) => e.type === "credit")
                             .reduce((sum, e) => sum + e.amount, 0);
                           const expenseTotal = group.entries
-                            .filter((e) => e.type !== "credit")
+                            .filter(isExpenseEntry)
                             .reduce((sum, e) => sum + e.amount, 0);
                           return (
                             <button
@@ -1714,10 +1768,18 @@ const DataPage = () => {
                         name="customerId"
                         value={editEntryForm.customerId}
                         onChange={(e) =>
-                          setEditEntryForm((prev) => ({
-                            ...prev,
-                            customerId: e.target.value,
-                          }))
+                          setEditEntryForm((prev) => {
+                            const nextCustomerId = e.target.value;
+                            const keepSavings =
+                              prev.type !== "savings" ||
+                              isSavingsEnabledForCustomer(nextCustomerId);
+                            return {
+                              ...prev,
+                              customerId: nextCustomerId,
+                              type: keepSavings ? prev.type : "credit",
+                              subtype: keepSavings ? prev.subtype : "",
+                            };
+                          })
                         }
                         className={inputBaseStyle}
                       >
@@ -1773,6 +1835,8 @@ const DataPage = () => {
                           setEditEntryForm((prev) => ({
                             ...prev,
                             type: e.target.value,
+                            subtype: e.target.value === "savings" ? "Mutual Funds" : prev.type === "savings" ? "" : prev.subtype,
+                            receipt: e.target.value === "savings" ? "" : prev.receipt,
                             paymentMethod: e.target.value !== "expenditure" ? "" : prev.paymentMethod,
                           }))
                         }
@@ -1780,6 +1844,9 @@ const DataPage = () => {
                       >
                         <option value="credit">Credit</option>
                         <option value="expenditure">Expenditure</option>
+                        {isEditSavingsEligible && (
+                          <option value="savings">Savings</option>
+                        )}
                       </select>
 
                       <label htmlFor="edit-subtype" className={labelBaseStyle}>Subtype</label>
@@ -1796,15 +1863,21 @@ const DataPage = () => {
                         }
                         className={inputBaseStyle}
                       >
-                        <option value="">None</option>
-                        {editEntryForm.type !== "credit" && (
-                          <option value="Subscription Return">
-                            Subscription Return
-                          </option>
+                        {editEntryForm.type === "savings" ? (
+                          <option value="Mutual Funds">Mutual Funds</option>
+                        ) : (
+                          <>
+                            <option value="">None</option>
+                            {editEntryForm.type !== "credit" && (
+                              <option value="Subscription Return">
+                                Subscription Return
+                              </option>
+                            )}
+                            <option value="Retirement Gift">Retirement Gift</option>
+                            <option value="Death Fund">Death Fund</option>
+                            <option value="Misc Expense">Misc Expense</option>
+                          </>
                         )}
-                        <option value="Retirement Gift">Retirement Gift</option>
-                        <option value="Death Fund">Death Fund</option>
-                        <option value="Misc Expense">Misc Expense</option>
                       </select>
 
                       {editEntryForm.type === "expenditure" && editEntryForm.subtype === "Retirement Gift" && (
@@ -1844,20 +1917,24 @@ const DataPage = () => {
                         className={inputBaseStyle}
                       />
 
-                      <label htmlFor="edit-receipt" className={labelBaseStyle}>Receipt Number</label>
-                      <input
-                        id="edit-receipt"
-                        type="text"
-                        name="receipt"
-                        value={editEntryForm.receipt}
-                        onChange={(e) =>
-                          setEditEntryForm((prev) => ({
-                            ...prev,
-                            receipt: e.target.value,
-                          }))
-                        }
-                        className={inputBaseStyle}
-                      />
+                      {editEntryForm.type !== "savings" && (
+                        <>
+                          <label htmlFor="edit-receipt" className={labelBaseStyle}>Receipt Number</label>
+                          <input
+                            id="edit-receipt"
+                            type="text"
+                            name="receipt"
+                            value={editEntryForm.receipt}
+                            onChange={(e) =>
+                              setEditEntryForm((prev) => ({
+                                ...prev,
+                                receipt: e.target.value,
+                              }))
+                            }
+                            className={inputBaseStyle}
+                          />
+                        </>
+                      )}
 
                       <label htmlFor="edit-notes" className={labelBaseStyle}>Notes</label>
                       <textarea

@@ -229,6 +229,7 @@ const SummaryPage = () => {
     subscriptionBalance,
     totalDataCollected,
     totalExpenses,
+    totalMutualFunds,
     expenseTotalsBySubtype,
     retirementGiftByPaymentMethod,
     totalAllCollected,
@@ -300,6 +301,10 @@ const SummaryPage = () => {
     (a, b) => a + b,
     0,
   );
+
+  const fyMutualFunds = dataEntries
+    .filter((e) => (e.type === "savings" || e.subtype === "Mutual Funds") && within(e.date))
+    .reduce((acc, e) => acc + (e.amount || 0), 0);
 
   // Late fees in FY (installments + subscriptions)
   const fyLateFees =
@@ -1537,6 +1542,23 @@ const SummaryPage = () => {
                 </div>
               </div>
 
+              {/* Savings box */}
+              <div className="w-full mt-4">
+                <div className="flex items-center justify-between p-4 rounded-lg bg-cyan-50 dark:bg-cyan-950/30 border-2 border-cyan-300 dark:border-cyan-700">
+                  <div>
+                    <div className="text-sm font-semibold text-cyan-900 dark:text-cyan-100">
+                      Mutual Funds (Savings)
+                    </div>
+                    <div className="text-xs text-cyan-700 dark:text-cyan-300">
+                      Standalone savings entries
+                    </div>
+                  </div>
+                  <div className="text-lg font-bold text-cyan-800 dark:text-cyan-200">
+                    <AnimatedNumber value={totalMutualFunds} />
+                  </div>
+                </div>
+              </div>
+
               {/* Loan Balance box */}
               <div className="w-full mt-4">
                 <div className="flex items-center justify-between p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
@@ -1918,6 +1940,11 @@ const SummaryPage = () => {
                   <motion.div whileHover={{ y: -5 }} className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 flex flex-col items-start transition-shadow hover:shadow-md">
                     <div className="flex items-center justify-between w-full"><div className="text-xs text-gray-600 dark:text-gray-200">Total (FY)</div><button onClick={() => openBreakdown("total")} className="text-xs text-indigo-600 underline">Details</button></div>
                     <div className="text-xl font-bold text-indigo-800 dark:text-indigo-200 mt-2"><AnimatedNumber value={fySubscriptionCollected + fyInterestCollected + fyLateFees} /></div>
+                  </motion.div>
+                  <motion.div whileHover={{ y: -5 }} className="p-4 rounded-xl bg-cyan-50 dark:bg-cyan-950/30 border-2 border-cyan-300 dark:border-cyan-700 flex flex-col items-start transition-shadow hover:shadow-md">
+                    <div className="flex items-center justify-between w-full"><div className="text-xs font-semibold text-cyan-900 dark:text-cyan-100">Mutual Funds (Savings)</div><div className="text-xs text-cyan-700 dark:text-cyan-300">FY</div></div>
+                    <div className="text-xl font-bold text-cyan-800 dark:text-cyan-200 mt-2"><AnimatedNumber value={fyMutualFunds} /></div>
+                    <div className="mt-2 text-xs text-cyan-700 dark:text-cyan-300">Overall <AnimatedNumber value={totalMutualFunds} /></div>
                   </motion.div>
                   <motion.div whileHover={{ y: -5 }} className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex flex-col items-start transition-shadow hover:shadow-md">
                     <div className="flex items-center justify-between w-full"><div className="text-xs text-gray-600 dark:text-gray-200">FY Expenses (selected subtypes)</div></div>

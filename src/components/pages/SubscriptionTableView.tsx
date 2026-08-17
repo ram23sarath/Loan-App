@@ -23,6 +23,59 @@ interface SubscriptionTableViewProps {
   deletingId?: string | null;
 }
 
+const compareCustomerNames = (aName?: string | null, bName?: string | null) =>
+  (aName || "").localeCompare(bName || "", undefined, {
+    sensitivity: "base",
+  });
+
+const compareReceiptValues = (aReceipt?: string | null, bReceipt?: string | null) => {
+  const normalizeReceipt = (receipt?: string | null) => {
+    const raw = (receipt || "").trim();
+    const match = raw.match(/^(\d+)(.*)$/);
+
+    if (!match) {
+      return {
+        hasNumericPrefix: false,
+        numberPart: Number.POSITIVE_INFINITY,
+        suffixPart: raw,
+        raw,
+      };
+    }
+
+    return {
+      hasNumericPrefix: true,
+      numberPart: Number(match[1]),
+      suffixPart: match[2].trim(),
+      raw,
+    };
+  };
+
+  const aKey = normalizeReceipt(aReceipt);
+  const bKey = normalizeReceipt(bReceipt);
+
+  if (aKey.hasNumericPrefix && bKey.hasNumericPrefix && aKey.numberPart !== bKey.numberPart) {
+    return aKey.numberPart - bKey.numberPart;
+  }
+
+  if (aKey.hasNumericPrefix !== bKey.hasNumericPrefix) {
+    return aKey.hasNumericPrefix ? -1 : 1;
+  }
+
+  const suffixCompare = aKey.suffixPart.localeCompare(bKey.suffixPart, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+
+  if (suffixCompare !== 0) {
+    return suffixCompare;
+  }
+
+  return aKey.raw.localeCompare(bKey.raw, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+};
+
 const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
   onDelete,
   deletingId,
@@ -125,8 +178,8 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
             bValue = b.date;
             break;
           case "receipt":
-            aValue = a.receipt || "";
-            bValue = b.receipt || "";
+            aValue = a.receipt;
+            bValue = b.receipt;
             break;
           default:
             aValue = "";
@@ -135,7 +188,15 @@ const SubscriptionTableView: React.FC<SubscriptionTableViewProps> = ({
         if (typeof aValue === "number" && typeof bValue === "number") {
           return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
         }
-        const cmp = compareMaybeNumeric(aValue, bValue);
+        let cmp =
+          sortField === "receipt"
+            ? compareReceiptValues(aValue, bValue)
+            : compareMaybeNumeric(aValue, bValue);
+
+        if (cmp === 0 && sortField === "receipt") {
+          cmp = compareCustomerNames(a.customers?.name, b.customers?.name);
+        }
+
         return sortDirection === "asc" ? cmp : -cmp;
       });
     }

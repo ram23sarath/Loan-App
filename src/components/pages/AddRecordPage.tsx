@@ -24,6 +24,7 @@ import { formatDate } from "../../utils/dateFormatter";
 import { openWhatsApp } from "../../utils/whatsapp";
 import { WhatsAppIcon } from "../../constants";
 import { isLoanOngoing, getLoanRepaymentProgress } from "../../utils/loanStatus";
+import { getRequestedLoanAmount } from "../../utils/loanAmount";
 
 type LoanInputs = {
   original_amount: number;
@@ -55,6 +56,8 @@ const AddRecordPage = () => {
     loans,
     installments,
     installmentsByLoanId,
+    subscriptions,
+    seniorityList,
     addLoan,
     addSubscription,
     addInstallment,
@@ -451,6 +454,27 @@ const AddRecordPage = () => {
   const { isSubmitting: isSubmittingSubscription } = subscriptionForm.formState;
   const { isSubmitting: isSubmittingInstallment } = installmentForm.formState;
   const hasCustomerLoans = customerLoans.length > 0;
+  const requestedLoanAmount = useMemo(() => {
+    if (!selectedCustomerId) return 0;
+    const seniorityEntry = seniorityList.find(
+      (entry: any) => entry.customer_id === selectedCustomerId,
+    );
+    return getRequestedLoanAmount(
+      [
+        ...(seniorityEntry?.customers?.subscriptions || []),
+        ...subscriptions,
+      ],
+      selectedCustomerId,
+    );
+  }, [selectedCustomerId, seniorityList, subscriptions]);
+  const startLoanEntry = useCallback(() => {
+    if (requestedLoanAmount > 0) {
+      loanForm.setValue("original_amount", requestedLoanAmount);
+    } else {
+      loanForm.resetField("original_amount");
+    }
+    setAction("loan");
+  }, [loanForm, requestedLoanAmount]);
   const isAnySubmitting =
     isSubmittingLoan || isSubmittingSubscription || isSubmittingInstallment;
 
@@ -623,7 +647,7 @@ const AddRecordPage = () => {
                         <motion.button
                           whileHover={{ scale: !hasOngoingLoan ? 1.05 : 1 }}
                           whileTap={{ scale: !hasOngoingLoan ? 0.95 : 1 }}
-                          onClick={() => setAction("loan")}
+                          onClick={startLoanEntry}
                           disabled={isAnySubmitting || hasOngoingLoan}
                           className={`font-bold py-2 px-6 rounded-lg transition-colors ${
                             hasOngoingLoan
@@ -671,7 +695,7 @@ const AddRecordPage = () => {
                         <motion.button
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
-                          onClick={() => setAction("loan")}
+                          onClick={startLoanEntry}
                           disabled={isAnySubmitting}
                           className="font-bold py-2 px-6 rounded-lg transition-colors bg-gray-100 dark:bg-gray-700 hover:bg-indigo-600 hover:text-white text-gray-800 dark:text-dark-text disabled:opacity-50 disabled:cursor-not-allowed"
                         >

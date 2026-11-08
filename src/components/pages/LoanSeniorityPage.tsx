@@ -196,6 +196,7 @@ const LoanSeniorityPage = () => {
     customers,
     loans,
     subscriptions,
+    senioritySubscriptions,
     seniorityList,
     loading,
     fetchSeniorityList,
@@ -348,10 +349,17 @@ const LoanSeniorityPage = () => {
       new Map(
         (seniorityList || []).map((entry: any) => [
           entry.customer_id,
-          getRequestedLoanAmount(subscriptions, entry.customer_id),
+          getRequestedLoanAmount(
+            [
+              ...(entry.customers?.subscriptions || []),
+              ...senioritySubscriptions,
+              ...subscriptions,
+            ],
+            entry.customer_id,
+          ),
         ]),
       ),
-    [seniorityList, subscriptions],
+    [seniorityList, senioritySubscriptions, subscriptions],
   );
 
   const addCustomerToList = async (customer: Customer) => {

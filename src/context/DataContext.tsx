@@ -330,6 +330,7 @@ interface DataContextType {
   customers: Customer[];
   loans: LoanWithCustomer[];
   subscriptions: SubscriptionWithCustomer[];
+  senioritySubscriptions: SubscriptionWithCustomer[];
   installments: Installment[];
   dataEntries: DataEntry[];
   customerInterestByCustomerId: Map<string, CustomerInterest>;
@@ -471,10 +472,36 @@ const fetchAllRecords = async <T,>(
 const buildSeniorityQuery = () =>
   supabase
     .from("loan_seniority")
-    .select("*, customers(name, phone, deleted_at)")
+    .select(
+      "*, customers(name, phone, deleted_at, subscriptions(*))",
+    )
     .is("deleted_at", null)
     .order("loan_request_date", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true });
+
+const fetchSenioritySubscriptions = async (
+  customerIds: string[],
+  scopedCustomerId: string | null,
+): Promise<SubscriptionWithCustomer[]> => {
+  let query = supabase
+    .from("subscriptions")
+    .select("*, customers(name, phone)")
+    .is("deleted_at", null)
+    .order("date", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (scopedCustomerId) {
+    query = query.eq("customer_id", scopedCustomerId);
+  } else if (customerIds.length > 0) {
+    query = query.in("customer_id", customerIds);
+  } else {
+    return [];
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data as SubscriptionWithCustomer[]) || [];
+};
 
 const buildDataCacheKey = (isScoped: boolean, scopedCustomerId: string | null) =>
   isScoped && scopedCustomerId ? `data_scoped_${scopedCustomerId}` : "data_admin";
@@ -782,6 +809,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [subscriptions, setSubscriptions] = useState<
     SubscriptionWithCustomer[]
   >([]);
+  const [senioritySubscriptions, setSenioritySubscriptions] = useState<
+    SubscriptionWithCustomer[]
+  >([]);
   const [installments, setInstallments] = useState<Installment[]>([]);
   const [seniorityList, setSeniorityList] = useState<any[]>([]);
   const [deletedSeniorityList, setDeletedSeniorityList] = useState<any[]>([]);
@@ -1013,7 +1043,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
         let query = supabase
           .from("loan_seniority")
-          .select("*, customers(name, phone, deleted_at)")
+          .select(
+            "*, customers(name, phone, deleted_at, subscriptions(*))",
+          )
           .is("deleted_at", null)
           .order("loan_request_date", { ascending: true, nullsFirst: false })
           .order("created_at", { ascending: true });
@@ -1028,12 +1060,20 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
           throw error;
         }
         const rawSeniority = (data as any[]) || [];
-        setSeniorityList(rawSeniority.filter((e: any) => !e.customers?.deleted_at));
+        const activeSeniority = rawSeniority.filter(
+          (e: any) => !e.customers?.deleted_at,
+        );
+        const senioritySubscriptionsData = await fetchSenioritySubscriptions(
+          activeSeniority.map((entry: any) => entry.customer_id),
+          effectiveIsScoped ? scopedCustomerId : null,
+        );
+        setSenioritySubscriptions(senioritySubscriptionsData);
+        setSeniorityList(activeSeniority);
       } catch (err: any) {
         console.error("Failed to fetch loan seniority list", err);
       }
     },
-    [session, isScopedCustomer],
+    [session, isScopedCustomer, scopedCustomerId],
   );
 
   // Fetch deleted seniority entries (admin only - RLS enforced)
@@ -2636,6 +2676,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             const seniorityData = ((data as any[]) || []).filter(
               (e: any) => !e.customers?.deleted_at,
             );
+            const senioritySubscriptionsData = await fetchSenioritySubscriptions(
+              seniorityData.map((entry: any) => entry.customer_id),
+              currentIsScoped ? currentScopedId : null,
+            );
+            if (isMounted) {
+              setSenioritySubscriptions(senioritySubscriptionsData);
+            }
             // Only update seniority state if it changed vs what was served
             if (
               !cachedSeniority ||
@@ -4202,6 +4249,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         deleteInstallment,
         adjustSubscriptionForMisc,
         seniorityList,
+        senioritySubscriptions,
         deletedSeniorityList,
         fetchSeniorityList,
         fetchDeletedSeniorityList,

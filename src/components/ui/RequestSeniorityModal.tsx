@@ -19,7 +19,8 @@ type Props = {
 };
 
 const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaultStation = '', defaultLoanType = 'General', defaultDate = '', isScopedCustomer = false }: Props) => {
-  const { addToSeniority, seniorityList, subscriptions } = useData();
+  const { addToSeniority, seniorityList, subscriptions, senioritySubscriptions } =
+    useData();
   const navigate = useNavigate();
   const [stationName, setStationName] = React.useState(defaultStation);
   const [loanType, setLoanType] = React.useState(defaultLoanType);
@@ -84,13 +85,45 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
   const alreadyRequested = React.useMemo(() => {
     return seniorityList.some((entry) => entry.customer_id === customerId);
   }, [seniorityList, customerId]);
+  const seniorityEntrySubscriptions = React.useMemo(
+    () =>
+      seniorityList.find((entry) => entry.customer_id === customerId)
+        ?.customers?.subscriptions || [],
+    [seniorityList, customerId],
+  );
   const lastSubscription = React.useMemo(
-    () => getLastSubscription(subscriptions, customerId),
-    [subscriptions, customerId],
+    () =>
+      getLastSubscription(
+        [
+          ...seniorityEntrySubscriptions,
+          ...senioritySubscriptions,
+          ...subscriptions,
+        ],
+        customerId,
+      ),
+    [
+      seniorityEntrySubscriptions,
+      senioritySubscriptions,
+      subscriptions,
+      customerId,
+    ],
   );
   const requestedLoanAmount = React.useMemo(
-    () => getRequestedLoanAmount(subscriptions, customerId),
-    [subscriptions, customerId],
+    () =>
+      getRequestedLoanAmount(
+        [
+          ...seniorityEntrySubscriptions,
+          ...senioritySubscriptions,
+          ...subscriptions,
+        ],
+        customerId,
+      ),
+    [
+      seniorityEntrySubscriptions,
+      senioritySubscriptions,
+      subscriptions,
+      customerId,
+    ],
   );
 
   const handleSubmit = async () => {

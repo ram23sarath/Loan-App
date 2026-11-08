@@ -23,6 +23,8 @@ import { useReducedMotion } from "../hooks/useReducedMotion";
 import AlertPopup from "../ui/AlertPopup";
 import LoadingButton from "../ui/LoadingButton";
 import { canRequestNewLoan } from "../../utils/loanStatus";
+import { formatCurrencyIN } from "../../utils/numberFormatter";
+import { getRequestedLoanAmount } from "../../utils/loanAmount";
 
 // Animation variants
 const listContainerVariants: Variants = {
@@ -340,6 +342,17 @@ const LoanSeniorityPage = () => {
     const end = start + itemsPerPage;
     return (filteredSeniorityList || []).slice(start, end);
   }, [filteredSeniorityList, currentPage, itemsPerPage]);
+
+  const requestedLoanAmounts = useMemo(
+    () =>
+      new Map(
+        (seniorityList || []).map((entry: any) => [
+          entry.customer_id,
+          getRequestedLoanAmount(subscriptions, entry.customer_id),
+        ]),
+      ),
+    [seniorityList, subscriptions],
+  );
 
   const addCustomerToList = async (customer: Customer) => {
     setModalCustomer({ id: customer.id, name: customer.name });
@@ -1123,6 +1136,9 @@ const LoanSeniorityPage = () => {
                     <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
                       Requested
                     </th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
+                      Requested Loan Amount
+                    </th>
                     {!isScopedCustomer && (
                       <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600 dark:text-dark-text">
                         Actions
@@ -1167,6 +1183,11 @@ const LoanSeniorityPage = () => {
                           {entry.loan_request_date
                             ? formatDate(entry.loan_request_date)
                             : "-"}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-semibold text-indigo-700 dark:text-indigo-400">
+                          {formatCurrencyIN(
+                            requestedLoanAmounts.get(entry.customer_id) || 0,
+                          )}
                         </td>
                         {!isScopedCustomer && (
                           <td className="px-4 py-3">
@@ -1277,6 +1298,14 @@ const LoanSeniorityPage = () => {
                               </span>
                             </div>
                           )}
+                          <div>
+                            Requested Loan Amount:{" "}
+                            <span className="font-semibold text-indigo-700 dark:text-indigo-400">
+                              {formatCurrencyIN(
+                                requestedLoanAmounts.get(entry.customer_id) || 0,
+                              )}
+                            </span>
+                          </div>
                         </motion.div>
                       </div>
                       {!isScopedCustomer && (

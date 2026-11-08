@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../../context/DataContext';
 import { useNavigate } from 'react-router-dom';
 import AlertPopup from './AlertPopup';
+import { formatCurrencyIN } from '../../utils/numberFormatter';
+import { getLastSubscription, getRequestedLoanAmount } from '../../utils/loanAmount';
 
 type Props = {
   customerId: string;
@@ -17,7 +19,7 @@ type Props = {
 };
 
 const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaultStation = '', defaultLoanType = 'General', defaultDate = '', isScopedCustomer = false }: Props) => {
-  const { addToSeniority, seniorityList } = useData();
+  const { addToSeniority, seniorityList, subscriptions } = useData();
   const navigate = useNavigate();
   const [stationName, setStationName] = React.useState(defaultStation);
   const [loanType, setLoanType] = React.useState(defaultLoanType);
@@ -82,6 +84,14 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
   const alreadyRequested = React.useMemo(() => {
     return seniorityList.some((entry) => entry.customer_id === customerId);
   }, [seniorityList, customerId]);
+  const lastSubscription = React.useMemo(
+    () => getLastSubscription(subscriptions, customerId),
+    [subscriptions, customerId],
+  );
+  const requestedLoanAmount = React.useMemo(
+    () => getRequestedLoanAmount(subscriptions, customerId),
+    [subscriptions, customerId],
+  );
 
   const handleSubmit = async () => {
     if (alreadyRequested) {
@@ -194,6 +204,22 @@ const RequestSeniorityModal = ({ customerId, customerName, open, onClose, defaul
                   className="w-full border border-gray-300 rounded px-3 py-2 text-base text-gray-800 bg-white block focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 dark:bg-slate-700 dark:border-dark-border dark:text-dark-text dark:placeholder-dark-muted disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{ minHeight: '42px', WebkitAppearance: 'none' }}
                 />
+              </div>
+              <div className="rounded-lg bg-indigo-50 px-3 py-2 text-sm dark:bg-indigo-900/20">
+                <div className="text-gray-600 dark:text-dark-muted">
+                  Last paid subscription:{" "}
+                  <span className="font-semibold text-gray-800 dark:text-dark-text">
+                    {lastSubscription
+                      ? formatCurrencyIN(lastSubscription.amount)
+                      : "No payment found"}
+                  </span>
+                </div>
+                <div className="mt-1 text-gray-600 dark:text-dark-muted">
+                  Requested loan amount:{" "}
+                  <span className="font-semibold text-indigo-700 dark:text-indigo-400">
+                    {formatCurrencyIN(requestedLoanAmount)}
+                  </span>
+                </div>
               </div>
             </div>
             <div className="mt-4 flex justify-end gap-2">
